@@ -170,7 +170,7 @@ npm run build
 
 ### Testing
 
-Run unit and integrations tests.
+Run unit and integration tests.
 NB! Integration tests require docker to be installed.
 
 ```bash
@@ -258,7 +258,7 @@ const token = new Token(
 
 ### Token Transfer
 
-This example begins after the previous example: here we assume that the tokens have already been minted and we wish to send the tokens to a new recipient.
+This example begins after the previous example. Here we assume that the tokens have already been minted and we wish to send the tokens to a new recipient.
 
 Note that the examples here are using some utility functions and classes that are defined below in a separate section.
 
@@ -314,7 +314,7 @@ const importedTransaction = await Transaction.fromJSON(
   new PredicateFactory(),
 );
 
-// The receipient finishes the transaction with the recipient predicate
+// The recipient finishes the transaction with the recipient predicate
 const updateToken = await client.finishTransaction(
   importedToken,
   await TokenState.create(recipientPredicate, new TextEncoder().encode('my custom data')),
