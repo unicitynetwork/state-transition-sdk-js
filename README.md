@@ -24,6 +24,8 @@ npm install @unicitylabs/state-transition-sdk
 
 ## Quick Start
 
+Note: for more complete examples, see further down in the [Examples section](#examples) or browse around in the [tests folder](./tests) of this SDK.
+
 ### Basic Usage
 
 Minting
@@ -84,6 +86,7 @@ The main SDK interface for token operations:
 
 - `submitMintTransaction()` - Create mint commitment
 - `submitTransaction()` - Create transfer commitment
+- `submitBurnTransactionForSplit()` - Create burn commitment as the first step of a token split (the next and final step is the mint operation)
 - `createTransaction()` - Create transactions from commitments
 - `finishTransaction()` - Complete token transfers
 - `getTokenStatus()` - Check token status via inclusion proofs
@@ -97,9 +100,10 @@ To use address sent by someone:
 const address = await DirectAddress.fromJSON('DIRECT://582200004d8489e2b1244335ad8784a23826228e653658a2ecdb0abc17baa143f4fe560d9c81365b');
 ```
 
-To use address for minting or to send it someone, reference from predicate is needed:
+To obtain an address for minting, or for sending the address to someone, the address is calculated from a predicate reference. Such addresses add privacy and unlinkability in the case of the masked predicate:
 ```typescript
 const address = await DirectAddress.create(MaskedPredicate.calculateReference(/* Reference parameters */));
+console.log(address.toJSON()) // --> DIRECT://582200004d8489e2b1244335ad8784a23826228e653658a2ecdb0abc17baa143f4fe560d9c81365b
 ```
 
 ### Predicate System
@@ -142,11 +146,17 @@ const tokenData = new TokenCoinData([
 ## Architecture
 
 ### Token Structure
+
 Tokens contain:
-- **tokenId**: Unique 256-bit identifier
-- **tokenType**: Token class identifier
+- **id**: Unique 256-bit identifier
+- **type**: Token class identifier
+- **version**: Token format version
 - **predicate**: Current ownership condition
-- **data**: Token-specific data (value for fungible, name-tag for addressing)
+value for fungible
+- **coins**: Coins of various types and amounts owned by this token (for example, the coins can also represent the tokens of other blockchains)
+- **nametagTokens** Name tags for addressing
+- **data**: Token-specific data
+- **transactions**: The history of transactions performed with this token
 
 ### Privacy Model
 - **Commitment-based**: Only cryptographic commitments published on-chain
