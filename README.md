@@ -51,7 +51,7 @@ const token = new Token(
 Transfer
 ```typescript
 // Create aggregator client
-const aggregatorClient = new AggregatorClient('https://gateway-test.unicity.network:443');
+const aggregatorClient = new AggregatorClient('https://gateway-test.unicity.network');
 const client = new StateTransitionClient(aggregatorClient);
 
 // Transfer token to recipient
@@ -192,7 +192,7 @@ npm run test:integration
 Run end-to-end tests only.
 
 ```bash
-AGGREGATOR_URL='https://aggregator.devnet.alphabill.org' npm run test:e2e
+AGGREGATOR_URL='https://gateway-test.unicity.network' npm run test:e2e
 ```
 
 ### Linting
@@ -203,7 +203,7 @@ npm run lint
 
 ## Network Configuration
 
-- **Test Gateway**: `https://gateway-test.unicity.network:443`
+- **Test Gateway**: `https://gateway-test.unicity.network`
 - **Default Token Type**: Configurable via TokenType enum
 
 ## Examples
@@ -335,7 +335,7 @@ const status = await client.getTokenStatus(token);
 ### The Token Split Operation
 
 ```typescript
-const client = new StateTransitionClient(new AggregatorClient('https://gateway-test.unicity.network:443'));
+const client = new StateTransitionClient(new AggregatorClient('https://gateway-test.unicity.network'));
 
 // First, let's mint a token in the usual way.
 const sumTreeHasherFactory = new DataHasherFactory(NodeDataHasher);
@@ -627,7 +627,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - **Repository**: [GitHub](https://github.com/unicitynetwork/state-transition-sdk)
 - **Issues**: [GitHub Issues](https://github.com/unicitynetwork/state-transition-sdk/issues)
-- **Gateway API**: `https://gateway-test.unicity.network:443`
+- **Gateway API**: `https://gateway-test.unicity.network`
 
 ---
 
