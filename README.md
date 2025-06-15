@@ -1,6 +1,6 @@
 # State Transition SDK
 
-Generic State Transition Flow engine for value-carrier agents on the Unicity Network.
+An SDK for defining and managing the lifecycle of stateful assets on the Unicity Protocol.
 
 ## Overview
 
