@@ -1,6 +1,6 @@
 # State Transition SDK
 
-An SDK for defining and managing the lifecycle of stateful assets on the Unicity Protocol.
+An SDK for managing assets on the Unicity Protocol, supporting off-chain state with on-chain security guarantees.
 
 ## Overview
 
