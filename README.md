@@ -246,7 +246,7 @@ const mintCommitment = await client.submitMintTransaction(
   data.tokenData,
   data.coinData,
   data.salt,
-  await new DataHasher(HashAlgorithm.SHA256).update(data.data).digest(),
+  await new DataHasher(HashAlgorithm.SHA256).update(data.stateData).digest(),
   null
 );
 
@@ -260,7 +260,7 @@ const token = new Token(
   data.tokenType,
   data.tokenData,
   data.coinData,
-  await TokenState.create(data.predicate, data.data),
+  await TokenState.create(data.predicate, data.stateData),
   [mintTransaction],
 );
 ```
@@ -367,7 +367,7 @@ const mintCommitment = await client.submitMintTransaction(
   mintTokenData.tokenData,
   mintTokenData.coinData,
   mintTokenData.salt,
-  await new DataHasher(HashAlgorithm.SHA256).update(mintTokenData.data).digest(),
+  await new DataHasher(HashAlgorithm.SHA256).update(mintTokenData.stateData).digest(),
   null,
 );
 
@@ -381,7 +381,7 @@ const token = new Token(
   mintTokenData.tokenType,
   mintTokenData.tokenData,
   mintTokenData.coinData,
-  await TokenState.create(mintTokenData.predicate, mintTokenData.data),
+  await TokenState.create(mintTokenData.predicate, mintTokenData.stateData),
   [mintTransaction],
 );
 
@@ -442,7 +442,7 @@ const splitTokens = await Promise.all(
       tokenData.tokenData,
       tokenData.coinData,
       tokenData.salt,
-      await new DataHasher(HashAlgorithm.SHA256).update(tokenData.data).digest(),
+      await new DataHasher(HashAlgorithm.SHA256).update(tokenData.stateData).digest(),
       new SplitProof(updatedToken, burnProofs),
     );
     const mintTransaction = await client.createTransaction(
@@ -454,7 +454,7 @@ const splitTokens = await Promise.all(
       tokenData.tokenType,
       tokenData.tokenData,
       tokenData.coinData,
-      await TokenState.create(tokenData.predicate, tokenData.data),
+      await TokenState.create(tokenData.predicate, tokenData.stateData),
       [mintTransaction],
     );
   }),
@@ -499,7 +499,7 @@ async function createMintData(secret: Uint8Array, coinData: TokenCoinData): Prom
   const tokenType = TokenType.create(crypto.getRandomValues(new Uint8Array(32)));
   const tokenData = new TestTokenData(crypto.getRandomValues(new Uint8Array(32)));
 
-  const data = crypto.getRandomValues(new Uint8Array(32));
+  const stateData = crypto.getRandomValues(new Uint8Array(32));
 
   const salt = crypto.getRandomValues(new Uint8Array(32));
   const nonce = crypto.getRandomValues(new Uint8Array(32));
@@ -514,7 +514,7 @@ async function createMintData(secret: Uint8Array, coinData: TokenCoinData): Prom
 
   return {
     coinData,
-    data,
+    stateData,
     nonce,
     predicate,
     salt,
@@ -529,7 +529,7 @@ interface IMintData {
   tokenType: TokenType;
   tokenData: TestTokenData;
   coinData: TokenCoinData;
-  data: Uint8Array;
+  stateData: Uint8Array;
   salt: Uint8Array;
   nonce: Uint8Array;
   predicate: MaskedPredicate;
