@@ -152,9 +152,8 @@ Tokens contain:
 - **type**: Token class identifier
 - **version**: Token format version
 - **predicate**: Current ownership condition
-value for fungible
-- **coins**: Coins of various types and amounts owned by this token (for example, the coins can also represent the tokens of other blockchains)
-- **nametagTokens** Name tags for addressing
+- **coins**: Coins of various types and amounts owned by this token (the coins can also represent tokens from other blockchains)
+- **nametagTokens**: Name tags for addressing
 - **data**: Token-specific data
 - **transactions**: The history of transactions performed with this token
 
