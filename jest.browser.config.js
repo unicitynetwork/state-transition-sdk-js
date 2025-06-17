@@ -1,10 +1,10 @@
 export default {
   preset: 'jest-puppeteer',
-  testMatch: ['<rootDir>/tests/browser/**/*.test.js'],
+  testMatch: ['<rootDir>/tests/browser/**/*.test.ts'],
   testEnvironment: 'jest-environment-puppeteer',
   testTimeout: 30000,
   transform: {
-    '^.+\\.js$': 'babel-jest'
+    '^.+\\.ts$': 'babel-jest'
   },
   transformIgnorePatterns: [
     'node_modules/(?!(puppeteer|jest-puppeteer)/)'
