@@ -4,10 +4,14 @@
   "description": "Generic State Transition Flow engine for value-carrier agents",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
+  "browser": "./dist/unicity-sdk.min.js",
+  "unpkg": "./dist/unicity-sdk.min.js",
+  "jsdelivr": "./dist/unicity-sdk.min.js",
   "type": "module",
   "scripts": {
-    "prebuild": "rm -rf lib",
-    "build": "tsc",
+    "prebuild": "rm -rf lib dist",
+    "build": "npm run build:node && npm run build:browser",
+    "build:node": "tsc",
     "build:browser": "webpack",
     "build:check": "tsc --noEmit",
     "lint": "eslint \"src/**/*\"",
@@ -27,6 +31,7 @@
   },
   "files": [
     "lib/**/*",
+    "dist/**/*",
     "LICENSE",
     "README.md"
   ],
