@@ -1,7 +1,7 @@
 import * as exports from './index.js';
 
 const UnicitySDK = {
-  ...exports
+  ...exports,
 };
 
 export default UnicitySDK;
