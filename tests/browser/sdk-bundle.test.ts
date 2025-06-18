@@ -79,7 +79,9 @@ describe('Unicity SDK Browser Bundle', (): void => {
         'TokenId', 'CoinId', 'TokenCoinData', 'AggregatorClient', 
         'Commitment', 'TransactionData', 'MintTransactionData',
         // Critical Commons classes
-        'SigningService', 'Signature', 'DataHasher', 'DataHash', 'HexConverter'
+        'SigningService', 'Signature', 'DataHasher', 'DataHash', 'HexConverter',
+        // API/Inclusion Proof classes
+        'InclusionProof', 'RequestId', 'Authenticator', 'SubmitCommitmentRequest', 'SubmitCommitmentResponse'
       ];
       
       const available: Record<string, boolean> = {};
@@ -279,5 +281,54 @@ describe('Unicity SDK Browser Bundle', (): void => {
       expect(operationResult.hexRoundTrip).toBe(true);
       expect(operationResult.sha256Value).toBeDefined();
     }
+  });
+
+  test('should have inclusion proof verification capabilities', async (): Promise<void> => {
+    await page.evaluate(sdkContent);
+    
+    const inclusionProofResult = await page.evaluate(() => {
+      const sdk = (window as any).UnicitySDK;
+      
+      return {
+        // Critical InclusionProofVerificationStatus enum
+        hasInclusionProofVerificationStatus: typeof sdk.InclusionProofVerificationStatus === 'object',
+        hasOKStatus: sdk.InclusionProofVerificationStatus?.OK !== undefined,
+        hasErrorStatus: sdk.InclusionProofVerificationStatus?.ERROR !== undefined,
+        
+        // InclusionProof class
+        hasInclusionProof: typeof sdk.InclusionProof === 'function',
+        
+        // Supporting API classes
+        hasRequestId: typeof sdk.RequestId === 'function',
+        hasAuthenticator: typeof sdk.Authenticator === 'function',
+        hasSubmitCommitmentRequest: typeof sdk.SubmitCommitmentRequest === 'function',
+        hasSubmitCommitmentResponse: typeof sdk.SubmitCommitmentResponse === 'function',
+        hasSubmitCommitmentStatus: typeof sdk.SubmitCommitmentStatus === 'object',
+        
+        // Debug info
+        verificationStatusKeys: sdk.InclusionProofVerificationStatus ? Object.keys(sdk.InclusionProofVerificationStatus) : [],
+        verificationStatusValues: sdk.InclusionProofVerificationStatus ? Object.values(sdk.InclusionProofVerificationStatus) : []
+      };
+    });
+    
+    // Verify critical InclusionProofVerificationStatus enum
+    expect(inclusionProofResult.hasInclusionProofVerificationStatus).toBe(true);
+    expect(inclusionProofResult.hasOKStatus).toBe(true);
+    
+    // Verify InclusionProof class
+    expect(inclusionProofResult.hasInclusionProof).toBe(true);
+    
+    // Verify supporting API classes
+    expect(inclusionProofResult.hasRequestId).toBe(true);
+    expect(inclusionProofResult.hasAuthenticator).toBe(true);
+    expect(inclusionProofResult.hasSubmitCommitmentRequest).toBe(true);
+    expect(inclusionProofResult.hasSubmitCommitmentResponse).toBe(true);
+    expect(inclusionProofResult.hasSubmitCommitmentStatus).toBe(true);
+    
+    // Verify enum has all expected values
+    expect(inclusionProofResult.verificationStatusKeys).toContain('OK');
+    expect(inclusionProofResult.verificationStatusKeys).toContain('NOT_AUTHENTICATED');
+    expect(inclusionProofResult.verificationStatusKeys).toContain('PATH_NOT_INCLUDED');
+    expect(inclusionProofResult.verificationStatusKeys).toContain('PATH_INVALID');
   });
 });
