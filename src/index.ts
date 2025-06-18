@@ -40,3 +40,18 @@ export * from './transaction/TransactionData.js';
 export * from './ISerializable.js';
 export * from './StateTransitionClient.js';
 export * from './hash/createDefaultDataHasherFactory.js';
+
+// Commons exports - Signing
+export { SigningService } from '@unicitylabs/commons/lib/signing/SigningService.js';
+export { Signature } from '@unicitylabs/commons/lib/signing/Signature.js';
+export type { ISigningService } from '@unicitylabs/commons/lib/signing/ISigningService.js';
+export type { ISignature } from '@unicitylabs/commons/lib/signing/ISignature.js';
+
+// Commons exports - Hashing
+export { HashAlgorithm } from '@unicitylabs/commons/lib/hash/HashAlgorithm.js';
+export { DataHasher } from '@unicitylabs/commons/lib/hash/DataHasher.js';
+export { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
+export type { IDataHasher } from '@unicitylabs/commons/lib/hash/IDataHasher.js';
+
+// Commons exports - Utilities
+export { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';

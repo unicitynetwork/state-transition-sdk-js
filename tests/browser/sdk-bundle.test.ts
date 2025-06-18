@@ -73,10 +73,13 @@ describe('Unicity SDK Browser Bundle', (): void => {
     const classNames = await page.evaluate((): Record<string, boolean> => {
       const sdk = (window as any).UnicitySDK;
       const classes: string[] = [
+        // Core SDK classes
         'StateTransitionClient', 'Token', 'TokenFactory', 'Transaction',
         'DirectAddress', 'MaskedPredicate', 'UnmaskedPredicate', 'PredicateFactory',
         'TokenId', 'CoinId', 'TokenCoinData', 'AggregatorClient', 
-        'Commitment', 'TransactionData', 'MintTransactionData'
+        'Commitment', 'TransactionData', 'MintTransactionData',
+        // Critical Commons classes
+        'SigningService', 'Signature', 'DataHasher', 'DataHash', 'HexConverter'
       ];
       
       const available: Record<string, boolean> = {};
@@ -122,6 +125,50 @@ describe('Unicity SDK Browser Bundle', (): void => {
     
     // At minimum, AddressScheme should be available
     expect(enums.addressSchemeType).toBe('object');
+  });
+
+  test('should have critical cryptographic classes for token operations', async (): Promise<void> => {
+    await page.evaluate(sdkContent);
+    
+    const cryptoResult = await page.evaluate(() => {
+      const sdk = (window as any).UnicitySDK;
+      
+      return {
+        // Critical for signing operations
+        hasSigningService: typeof sdk.SigningService === 'function',
+        hasSigningServiceCreateFromSecret: typeof sdk.SigningService?.createFromSecret === 'function',
+        
+        // Critical for hash operations
+        hasHashAlgorithm: typeof sdk.HashAlgorithm === 'object',
+        hasHashAlgorithmSHA256: sdk.HashAlgorithm?.SHA256 !== undefined,
+        
+        // Critical for data hashing
+        hasDataHasher: typeof sdk.DataHasher === 'function',
+        hasDataHash: typeof sdk.DataHash === 'function',
+        
+        // Utility for hex conversions
+        hasHexConverter: typeof sdk.HexConverter === 'function',
+        hasHexConverterEncode: typeof sdk.HexConverter?.encode === 'function',
+        hasHexConverterDecode: typeof sdk.HexConverter?.decode === 'function'
+      };
+    });
+    
+    // Verify critical SigningService functionality
+    expect(cryptoResult.hasSigningService).toBe(true);
+    expect(cryptoResult.hasSigningServiceCreateFromSecret).toBe(true);
+    
+    // Verify HashAlgorithm enum
+    expect(cryptoResult.hasHashAlgorithm).toBe(true);
+    expect(cryptoResult.hasHashAlgorithmSHA256).toBe(true);
+    
+    // Verify DataHasher
+    expect(cryptoResult.hasDataHasher).toBe(true);
+    expect(cryptoResult.hasDataHash).toBe(true);
+    
+    // Verify HexConverter utilities
+    expect(cryptoResult.hasHexConverter).toBe(true);
+    expect(cryptoResult.hasHexConverterEncode).toBe(true);
+    expect(cryptoResult.hasHexConverterDecode).toBe(true);
   });
 
   test('should successfully instantiate basic objects', async (): Promise<void> => {
@@ -175,8 +222,62 @@ describe('Unicity SDK Browser Bundle', (): void => {
       };
     });
     
-    // Should have a substantial number of exports (29 is close to 30)
-    expect(exportInfo.count).toBeGreaterThan(25);
+    // Should have increased substantially with Commons exports (from 29 to 35+)
+    expect(exportInfo.count).toBeGreaterThan(30);
     console.log(`Bundle contains ${exportInfo.count} exports, including:`, exportInfo.exports);
+  });
+
+  test('should enable basic cryptographic operations', async (): Promise<void> => {
+    await page.evaluate(sdkContent);
+    
+    const operationResult = await page.evaluate(async () => {
+      const sdk = (window as any).UnicitySDK;
+      
+      try {
+        // Test SigningService.createFromSecret - Critical for token minting
+        const secret = new Uint8Array(32).fill(1);
+        const nonce = new Uint8Array(32).fill(2);
+        const signingService = await sdk.SigningService.createFromSecret(secret, nonce);
+        
+        // Test HexConverter - Critical for data conversion
+        const testData = new Uint8Array([1, 2, 3, 4]);
+        const hexString = sdk.HexConverter.encode(testData);
+        const decodedData = sdk.HexConverter.decode(hexString);
+        
+        // Test HashAlgorithm enum access
+        const sha256Value = sdk.HashAlgorithm.SHA256;
+        
+        return {
+          success: true,
+          hasSigningService: !!signingService,
+          hasPublicKey: !!signingService.publicKey,
+          publicKeyLength: signingService.publicKey?.length || 0,
+          hexEncoded: hexString,
+          hexRoundTrip: decodedData.length === testData.length,
+          sha256Value: sha256Value
+        };
+      } catch (error: any) {
+        return {
+          success: false,
+          error: error.message,
+          stack: error.stack
+        };
+      }
+    });
+    
+    if (!operationResult.success) {
+      console.error('Basic crypto operation failed:', operationResult.error);
+    }
+    
+    expect(operationResult.success).toBe(true);
+    
+    if (operationResult.success) {
+      expect(operationResult.hasSigningService).toBe(true);
+      expect(operationResult.hasPublicKey).toBe(true);
+      expect(operationResult.publicKeyLength).toBeGreaterThan(0);
+      expect(operationResult.hexEncoded).toBe('01020304');
+      expect(operationResult.hexRoundTrip).toBe(true);
+      expect(operationResult.sha256Value).toBeDefined();
+    }
   });
 });
