@@ -1,6 +1,6 @@
 # State Transition SDK
 
-An SDK for defining and managing the lifecycle of stateful assets on the Unicity Protocol.
+An SDK for managing assets on the Unicity Protocol, supporting off-chain state with on-chain security guarantees.
 
 ## Overview
 
@@ -23,6 +23,8 @@ npm install @unicitylabs/state-transition-sdk
 ```
 
 ## Quick Start
+
+Note: for more complete examples, see further down in the [Examples section](#examples) or browse around in the [tests folder](./tests) of this SDK.
 
 ### Basic Usage
 
@@ -106,6 +108,7 @@ The main SDK interface for token operations:
 
 - `submitMintTransaction()` - Create mint commitment
 - `submitTransaction()` - Create transfer commitment
+- `submitBurnTransactionForSplit()` - Create burn commitment as the first step of a token split (the next and final step is the mint operation)
 - `createTransaction()` - Create transactions from commitments
 - `finishTransaction()` - Complete token transfers
 - `getTokenStatus()` - Check token status via inclusion proofs
@@ -119,9 +122,10 @@ To use address sent by someone:
 const address = await DirectAddress.fromJSON('DIRECT://582200004d8489e2b1244335ad8784a23826228e653658a2ecdb0abc17baa143f4fe560d9c81365b');
 ```
 
-To use address for minting or to send it someone, reference from predicate is needed:
+To obtain an address for minting, or for sending the address to someone, the address is calculated from a predicate reference. Such addresses add privacy and unlinkability in the case of the masked predicate:
 ```typescript
 const address = await DirectAddress.create(MaskedPredicate.calculateReference(/* Reference parameters */));
+console.log(address.toJSON()) // --> DIRECT://582200004d8489e2b1244335ad8784a23826228e653658a2ecdb0abc17baa143f4fe560d9c81365b
 ```
 
 ### Predicate System
@@ -184,11 +188,16 @@ J --> K[End]
 ## Architecture
 
 ### Token Structure
+
 Tokens contain:
-- **tokenId**: Unique 256-bit identifier
-- **tokenType**: Token class identifier
+- **id**: Unique 256-bit identifier
+- **type**: Token class identifier
+- **version**: Token format version
 - **predicate**: Current ownership condition
-- **data**: Token-specific data (value for fungible, name-tag for addressing)
+- **coins**: Coins of various types and amounts owned by this token (the coins can also represent tokens from other blockchains)
+- **nametagTokens**: Name tags for addressing
+- **data**: Token-specific data
+- **transactions**: The history of transactions performed with this token
 
 ### Privacy Model
 - **Commitment-based**: Only cryptographic commitments published on-chain
@@ -212,7 +221,7 @@ npm run build
 
 ### Testing
 
-Run unit and integrations tests.
+Run unit and integration tests.
 NB! Integration tests require docker to be installed.
 
 ```bash
@@ -279,7 +288,7 @@ const mintCommitment = await client.submitMintTransaction(
   data.tokenData,
   data.coinData,
   data.salt,
-  await new DataHasher(HashAlgorithm.SHA256).update(data.data).digest(),
+  await new DataHasher(HashAlgorithm.SHA256).update(data.stateData).digest(),
   null
 );
 
@@ -293,14 +302,14 @@ const token = new Token(
   data.tokenType,
   data.tokenData,
   data.coinData,
-  await TokenState.create(data.predicate, data.data),
+  await TokenState.create(data.predicate, data.stateData),
   [mintTransaction],
 );
 ```
 
 ### Token Transfer
 
-This example begins after the previous example: here we assume that the tokens have already been minted and we wish to send the tokens to a new recipient.
+This example begins after the previous example. Here we assume that the tokens have already been minted and we wish to send the tokens to a new recipient.
 
 Note that the examples here are using some utility functions and classes that are defined below in a separate section.
 
@@ -356,7 +365,7 @@ const importedTransaction = await Transaction.fromJSON(
   new PredicateFactory(),
 );
 
-// The receipient finishes the transaction with the recipient predicate
+// The recipient finishes the transaction with the recipient predicate
 const updateToken = await client.finishTransaction(
   importedToken,
   await TokenState.create(recipientPredicate, new TextEncoder().encode('my custom data')),
@@ -400,7 +409,7 @@ const mintCommitment = await client.submitMintTransaction(
   mintTokenData.tokenData,
   mintTokenData.coinData,
   mintTokenData.salt,
-  await new DataHasher(HashAlgorithm.SHA256).update(mintTokenData.data).digest(),
+  await new DataHasher(HashAlgorithm.SHA256).update(mintTokenData.stateData).digest(),
   null,
 );
 
@@ -414,7 +423,7 @@ const token = new Token(
   mintTokenData.tokenType,
   mintTokenData.tokenData,
   mintTokenData.coinData,
-  await TokenState.create(mintTokenData.predicate, mintTokenData.data),
+  await TokenState.create(mintTokenData.predicate, mintTokenData.stateData),
   [mintTransaction],
 );
 
@@ -475,7 +484,7 @@ const splitTokens = await Promise.all(
       tokenData.tokenData,
       tokenData.coinData,
       tokenData.salt,
-      await new DataHasher(HashAlgorithm.SHA256).update(tokenData.data).digest(),
+      await new DataHasher(HashAlgorithm.SHA256).update(tokenData.stateData).digest(),
       new SplitProof(updatedToken, burnProofs),
     );
     const mintTransaction = await client.createTransaction(
@@ -487,7 +496,7 @@ const splitTokens = await Promise.all(
       tokenData.tokenType,
       tokenData.tokenData,
       tokenData.coinData,
-      await TokenState.create(tokenData.predicate, tokenData.data),
+      await TokenState.create(tokenData.predicate, tokenData.stateData),
       [mintTransaction],
     );
   }),
@@ -532,7 +541,7 @@ async function createMintData(secret: Uint8Array, coinData: TokenCoinData): Prom
   const tokenType = TokenType.create(crypto.getRandomValues(new Uint8Array(32)));
   const tokenData = new TestTokenData(crypto.getRandomValues(new Uint8Array(32)));
 
-  const data = crypto.getRandomValues(new Uint8Array(32));
+  const stateData = crypto.getRandomValues(new Uint8Array(32));
 
   const salt = crypto.getRandomValues(new Uint8Array(32));
   const nonce = crypto.getRandomValues(new Uint8Array(32));
@@ -547,7 +556,7 @@ async function createMintData(secret: Uint8Array, coinData: TokenCoinData): Prom
 
   return {
     coinData,
-    data,
+    stateData,
     nonce,
     predicate,
     salt,
@@ -562,7 +571,7 @@ interface IMintData {
   tokenType: TokenType;
   tokenData: TestTokenData;
   coinData: TokenCoinData;
-  data: Uint8Array;
+  stateData: Uint8Array;
   salt: Uint8Array;
   nonce: Uint8Array;
   predicate: MaskedPredicate;
