@@ -13,7 +13,7 @@ export * from './predicate/DefaultPredicate.js';
 export * from './predicate/IPredicate.js';
 export * from './predicate/IPredicateFactory.js';
 export * from './predicate/MaskedPredicate.js';
-export * from './predicate/PredicateFactory.js';
+export * from './predicate/PredicateJsonFactory.js';
 export * from './predicate/PredicateType.js';
 export * from './predicate/UnmaskedPredicate.js';
 
@@ -39,4 +39,3 @@ export * from './transaction/TransactionData.js';
 // Core exports
 export * from './ISerializable.js';
 export * from './StateTransitionClient.js';
-export * from './hash/createDefaultDataHasherFactory.js';

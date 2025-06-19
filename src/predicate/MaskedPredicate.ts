@@ -1,3 +1,4 @@
+import { CborDecoder } from '@unicitylabs/commons/lib/cbor/CborDecoder.js';
 import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
 import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
 import { DataHasher } from '@unicitylabs/commons/lib/hash/DataHasher.js';
@@ -44,30 +45,41 @@ export class MaskedPredicate extends DefaultPredicate {
    * @param hashAlgorithm Hash algorithm used to hash transaction.
    * @param nonce Nonce value used during creation, providing uniqueness.
    */
-  public static async create(
+  public static create(
     tokenId: TokenId,
     tokenType: TokenType,
     signingService: ISigningService<ISignature>,
     hashAlgorithm: HashAlgorithm,
     nonce: Uint8Array,
   ): Promise<MaskedPredicate> {
-    const reference = await MaskedPredicate.calculateReference(
+    return MaskedPredicate.createFromPublicKey(
+      tokenId,
       tokenType,
       signingService.algorithm,
       signingService.publicKey,
       hashAlgorithm,
       nonce,
     );
-    const hash = await MaskedPredicate.calculateHash(reference, tokenId);
+  }
 
-    return new MaskedPredicate(
-      signingService.publicKey,
-      signingService.algorithm,
+  public static async createFromPublicKey(
+    tokenId: TokenId,
+    tokenType: TokenType,
+    signingAlgorithm: string,
+    publicKey: Uint8Array,
+    hashAlgorithm: HashAlgorithm,
+    nonce: Uint8Array,
+  ): Promise<MaskedPredicate> {
+    const reference = await MaskedPredicate.calculateReference(
+      tokenType,
+      signingAlgorithm,
+      publicKey,
       hashAlgorithm,
       nonce,
-      reference,
-      hash,
     );
+    const hash = await MaskedPredicate.calculateHash(reference, tokenId);
+
+    return new MaskedPredicate(publicKey, signingAlgorithm, hashAlgorithm, nonce, reference, hash);
   }
 
   /**
@@ -76,23 +88,41 @@ export class MaskedPredicate extends DefaultPredicate {
    * @param tokenType Token type.
    * @param data JSON data representing the masked predicate.
    */
-  public static async fromJSON(tokenId: TokenId, tokenType: TokenType, data: unknown): Promise<MaskedPredicate> {
-    if (!DefaultPredicate.isJSON(data)) {
-      throw new Error('Invalid one time address predicate json');
+  public static fromJSON(tokenId: TokenId, tokenType: TokenType, data: unknown): Promise<MaskedPredicate> {
+    if (!DefaultPredicate.isJSON(data) || data.type !== TYPE) {
+      throw new Error('Invalid masked predicate json.');
     }
 
-    const publicKey = HexConverter.decode(data.publicKey);
-    const nonce = HexConverter.decode(data.nonce);
-    const reference = await MaskedPredicate.calculateReference(
+    return MaskedPredicate.createFromPublicKey(
+      tokenId,
       tokenType,
       data.algorithm,
-      publicKey,
+      HexConverter.decode(data.publicKey),
       data.hashAlgorithm,
-      nonce,
+      HexConverter.decode(data.nonce),
     );
-    const hash = await MaskedPredicate.calculateHash(reference, tokenId);
+  }
 
-    return new MaskedPredicate(publicKey, data.algorithm, data.hashAlgorithm, nonce, reference, hash);
+  public static fromCBOR(tokenId: TokenId, tokenType: TokenType, bytes: Uint8Array): Promise<MaskedPredicate> {
+    const data = CborDecoder.readArray(bytes);
+    const type = CborDecoder.readTextString(data[0]);
+    if (type !== PredicateType.MASKED) {
+      throw new Error(`Invalid predicate type: expected ${PredicateType.MASKED}, got ${type}`);
+    }
+
+    const hashAlgorithm = CborDecoder.readTextString(data[3]) as unknown as HashAlgorithm;
+    if (!HashAlgorithm[hashAlgorithm]) {
+      throw new Error(`Invalid hash algorithm: ${hashAlgorithm}`);
+    }
+
+    return MaskedPredicate.createFromPublicKey(
+      tokenId,
+      tokenType,
+      CborDecoder.readTextString(data[2]),
+      CborDecoder.readByteString(data[1]),
+      hashAlgorithm,
+      CborDecoder.readByteString(data[4]),
+    );
   }
 
   /**

@@ -32,5 +32,4 @@ describe('Transition', function () {
     const client = new StateTransitionClient(new AggregatorClient(aggregatorUrl));
     await testSplitFlowAfterTransfer(client);
   }, 25000);
-
 });

@@ -36,7 +36,7 @@ export class AggregatorClient implements IAggregatorClient {
 
     const response = await this.transport.request('submit_commitment', request.toJSON());
 
-    return SubmitCommitmentResponse.fromJSON(response)
+    return SubmitCommitmentResponse.fromJSON(response);
   }
 
   /**

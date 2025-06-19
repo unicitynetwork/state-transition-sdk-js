@@ -1,3 +1,4 @@
+import { CborDecoder } from '@unicitylabs/commons/lib/cbor/CborDecoder.js';
 import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
 import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
 
@@ -14,8 +15,24 @@ export class CoinId {
    * Creates a new CoinId from raw bytes.
    * @param data Raw byte representation
    */
-  public static fromDto(data: string): CoinId {
+  public static fromJSON(data: string): CoinId {
     return new CoinId(HexConverter.decode(data));
+  }
+
+  /**
+   * Creates a CoinId from a byte array encoded in CBOR.
+   * @param data
+   */
+  public static fromCBOR(data: Uint8Array): CoinId {
+    return new CoinId(CborDecoder.readByteString(data));
+  }
+
+  /**
+   * Creates a CoinId from a bigint.
+   * @param value bigint represantation of coin id
+   */
+  public static fromBigInt(value: bigint): CoinId {
+    return CoinId.fromCBOR(HexConverter.decode(value.toString(16).slice(1)));
   }
 
   /** Hex string representation. */
@@ -26,5 +43,12 @@ export class CoinId {
   /** CBOR serialization. */
   public toCBOR(): Uint8Array {
     return CborEncoder.encodeByteString(this.data);
+  }
+
+  /**
+   * Converts the CoinId to a BigInt representation.
+   */
+  public toBigInt(): bigint {
+    return BigInt(`0x01${HexConverter.encode(this.toCBOR())}`);
   }
 }

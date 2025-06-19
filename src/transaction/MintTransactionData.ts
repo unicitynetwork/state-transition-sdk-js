@@ -7,12 +7,26 @@ import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
 import { dedent } from '@unicitylabs/commons/lib/util/StringUtils.js';
 
 import { ISerializable } from '../ISerializable.js';
-import { TokenCoinData } from '../token/fungible/TokenCoinData.js';
+import { TokenCoinData, TokenCoinDataJson } from '../token/fungible/TokenCoinData.js';
 import { TokenId } from '../token/TokenId.js';
 import { TokenType } from '../token/TokenType.js';
 
+// TOKENID string SHA-256 hash
+/**
+ * Constant suffix used when deriving the mint initial state.
+ */
+const MINT_SUFFIX = HexConverter.decode('9e82002c144d7c5796c50f6db50a0c7bbd7f717ae3af6c6c71a3e9eba3022730');
+
+export interface IMintReasonJson {
+  readonly type: string;
+}
+
 /** JSON representation of {@link MintTransactionData}. */
 export interface IMintTransactionDataJson {
+  readonly tokenId: string;
+  readonly tokenType: string;
+  readonly tokenData: string;
+  readonly coins: TokenCoinDataJson | null;
   readonly recipient: string;
   readonly salt: string;
   readonly dataHash: string | null;
@@ -25,6 +39,10 @@ export interface IMintTransactionDataJson {
 export class MintTransactionData<R extends ISerializable | null> {
   /**
    * @param hash        Hash of the encoded transaction
+   * @param tokenId     Token identifier
+   * @param tokenType   Token type identifier
+   * @param _tokenData  Immutable token data used for the mint
+   * @param coinData    Fungible coin data, or null if none
    * @param sourceState Pseudo input state used for the mint
    * @param recipient   Address of the first owner
    * @param _salt       Random salt used to derive predicates
@@ -33,13 +51,23 @@ export class MintTransactionData<R extends ISerializable | null> {
    */
   private constructor(
     public readonly hash: DataHash,
+    public readonly tokenId: TokenId,
+    public readonly tokenType: TokenType,
+    private readonly _tokenData: Uint8Array,
+    public readonly coinData: TokenCoinData | null,
     public readonly sourceState: RequestId,
     public readonly recipient: string,
     private readonly _salt: Uint8Array,
     public readonly dataHash: DataHash | null,
     public readonly reason: R,
   ) {
+    this._tokenData = new Uint8Array(_tokenData);
     this._salt = new Uint8Array(_salt);
+  }
+
+  /** Immutable token data used for the mint. */
+  public get tokenData(): Uint8Array {
+    return new Uint8Array(this._tokenData);
   }
 
   /** Salt used during predicate creation. */
@@ -58,7 +86,6 @@ export class MintTransactionData<R extends ISerializable | null> {
    * @param tokenType Token type identifier
    * @param tokenData Token data object
    * @param coinData Fungible coin data, or null if none
-   * @param sourceState Mint source state
    * @param recipient Address of the first token owner
    * @param salt User selected salt
    * @param dataHash Hash pointing to next state data
@@ -67,15 +94,15 @@ export class MintTransactionData<R extends ISerializable | null> {
   public static async create<R extends ISerializable | null>(
     tokenId: TokenId,
     tokenType: TokenType,
-    tokenData: ISerializable,
+    tokenData: Uint8Array,
     coinData: TokenCoinData | null,
-    sourceState: RequestId,
     recipient: string,
     salt: Uint8Array,
     dataHash: DataHash | null,
     reason: R,
   ): Promise<MintTransactionData<R>> {
-    const tokenDataHash = await new DataHasher(HashAlgorithm.SHA256).update(tokenData.toCBOR()).digest();
+    const sourceState = await RequestId.createFromImprint(tokenId.bytes, MINT_SUFFIX);
+    const tokenDataHash = await new DataHasher(HashAlgorithm.SHA256).update(tokenData).digest();
     return new MintTransactionData(
       await new DataHasher(HashAlgorithm.SHA256)
         .update(
@@ -91,6 +118,10 @@ export class MintTransactionData<R extends ISerializable | null> {
           ]),
         )
         .digest(),
+      tokenId,
+      tokenType,
+      tokenData,
+      coinData,
       sourceState,
       recipient,
       salt,
@@ -102,18 +133,26 @@ export class MintTransactionData<R extends ISerializable | null> {
   /** Serialize this object to JSON object. */
   public toJSON(): IMintTransactionDataJson {
     return {
+      coins: this.coinData?.toJSON() ?? null,
       dataHash: this.dataHash?.toJSON() ?? null,
       reason: this.reason?.toJSON() ?? null,
       recipient: this.recipient,
-      salt: HexConverter.encode(this.salt),
+      salt: HexConverter.encode(this._salt),
+      tokenData: HexConverter.encode(this._tokenData),
+      tokenId: this.tokenId.toJSON(),
+      tokenType: this.tokenType.toJSON(),
     };
   }
 
   /** Serialize this object to CBOR. */
   public toCBOR(): Uint8Array {
     return CborEncoder.encodeArray([
+      this.tokenId.toCBOR(),
+      this.tokenType.toCBOR(),
+      CborEncoder.encodeByteString(this._tokenData),
+      this.coinData?.toCBOR() ?? CborEncoder.encodeNull(),
       CborEncoder.encodeTextString(this.recipient),
-      CborEncoder.encodeByteString(this.salt),
+      CborEncoder.encodeByteString(this._salt),
       this.dataHash?.toCBOR() ?? CborEncoder.encodeNull(),
       this.reason?.toCBOR() ?? CborEncoder.encodeNull(),
     ]);
@@ -123,6 +162,10 @@ export class MintTransactionData<R extends ISerializable | null> {
   public toString(): string {
     return dedent`
       MintTransactionData:
+        Token ID: ${this.tokenId.toString()}
+        Token Type: ${this.tokenType.toString()}
+        Token Data: ${HexConverter.encode(this._tokenData)}
+        Coins: ${this.coinData?.toString() ?? null}
         Recipient: ${this.recipient}
         Salt: ${HexConverter.encode(this.salt)}
         Data: ${this.dataHash?.toString() ?? null}

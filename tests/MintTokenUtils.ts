@@ -89,16 +89,18 @@ export async function createMintTokenDataForSplit(
 export async function mintToken(
   client: StateTransitionClient,
   data: IMintData,
-): Promise<Token<TestTokenData, MintTransactionData<null>>> {
+): Promise<Token<Transaction<MintTransactionData<null>>>> {
   const mintCommitment = await client.submitMintTransaction(
-    await DirectAddress.create(data.predicate.reference),
-    data.tokenId,
-    data.tokenType,
-    data.tokenData,
-    data.coinData,
-    data.salt,
-    await new DataHasher(HashAlgorithm.SHA256).update(data.data).digest(),
-    null,
+    await MintTransactionData.create(
+      data.tokenId,
+      data.tokenType,
+      data.tokenData.toCBOR(),
+      data.coinData,
+      (await DirectAddress.create(data.predicate.reference)).toString(),
+      data.salt,
+      await new DataHasher(HashAlgorithm.SHA256).update(data.data).digest(),
+      null,
+    ),
   );
 
   const mintTransaction = await client.createTransaction(
@@ -106,19 +108,12 @@ export async function mintToken(
     await waitInclusionProof(client, mintCommitment),
   );
 
-  return new Token(
-    data.tokenId,
-    data.tokenType,
-    data.tokenData,
-    data.coinData,
-    await TokenState.create(data.predicate, data.data),
-    [mintTransaction],
-  );
+  return new Token(await TokenState.create(data.predicate, data.data), mintTransaction, []);
 }
 
 export async function sendToken(
   client: StateTransitionClient,
-  token: Token<ISerializable, MintTransactionData<ISerializable | null>>,
+  token: Token<Transaction<MintTransactionData<ISerializable | null>>>,
   signingService: SigningService,
   recipient: DirectAddress,
 ): Promise<Transaction<TransactionData>> {
