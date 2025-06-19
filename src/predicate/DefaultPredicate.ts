@@ -108,7 +108,7 @@ export abstract class DefaultPredicate implements IPredicate {
    * @inheritDoc
    */
   public async verify(
-    transaction: Transaction<MintTransactionData<ISerializable> | TransactionData>,
+    transaction: Transaction<MintTransactionData<ISerializable | null> | TransactionData>,
   ): Promise<boolean> {
     if (!transaction.inclusionProof.authenticator || !transaction.inclusionProof.transactionHash) {
       return false;

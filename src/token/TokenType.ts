@@ -4,10 +4,14 @@ import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
 /** Unique identifier describing the type/category of a token. */
 export class TokenType {
   /**
-   * @param _id Byte representation of the token type
+   * @param _bytes Byte representation of the token type
    */
-  public constructor(private readonly _id: Uint8Array) {
-    this._id = new Uint8Array(_id);
+  public constructor(private readonly _bytes: Uint8Array) {
+    this._bytes = new Uint8Array(_bytes);
+  }
+
+  public get bytes(): Uint8Array {
+    return new Uint8Array(this._bytes);
   }
 
   /** Create an instance from raw bytes. */
@@ -15,23 +19,18 @@ export class TokenType {
     return new TokenType(id);
   }
 
-  /** Raw bytes of the token type. */
-  public encode(): Uint8Array {
-    return new Uint8Array(this._id);
-  }
-
   /** Hex representation for JSON serialization. */
   public toJSON(): string {
-    return HexConverter.encode(this._id);
+    return HexConverter.encode(this._bytes);
   }
 
   /** CBOR serialization. */
   public toCBOR(): Uint8Array {
-    return CborEncoder.encodeByteString(this._id);
+    return CborEncoder.encodeByteString(this._bytes);
   }
 
   /** Convert instance to readable string */
   public toString(): string {
-    return `TokenType[${HexConverter.encode(this._id)}]`;
+    return `TokenType[${HexConverter.encode(this._bytes)}]`;
   }
 }

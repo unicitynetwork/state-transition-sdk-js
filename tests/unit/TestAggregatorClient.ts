@@ -7,7 +7,7 @@ import {
   SubmitCommitmentStatus,
 } from '@unicitylabs/commons/lib/api/SubmitCommitmentResponse.js';
 import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
-import { SparseMerkleTree } from '@unicitylabs/commons/lib/smt/SparseMerkleTree.js';
+import { SparseMerkleTreeBuilder } from '@unicitylabs/commons/lib/smt/SparseMerkleTreeBuilder.js';
 
 import { IAggregatorClient } from '../../src/api/IAggregatorClient.js';
 
@@ -21,7 +21,7 @@ class Transaction {
 export class TestAggregatorClient implements IAggregatorClient {
   private readonly requests: Map<bigint, Transaction> = new Map();
 
-  public constructor(private readonly smt: SparseMerkleTree) {}
+  public constructor(private readonly smt: SparseMerkleTreeBuilder) {}
 
   public async submitTransaction(
     requestId: RequestId,
@@ -39,10 +39,10 @@ export class TestAggregatorClient implements IAggregatorClient {
 
   public async getInclusionProof(requestId: RequestId): Promise<InclusionProof> {
     const transaction = this.requests.get(requestId.toBigInt());
-    // TODO: If element does not exist, authenticator and transactionHash should be null
+    const root = await this.smt.calculateRoot();
     return Promise.resolve(
       new InclusionProof(
-        await this.smt.getPath(requestId.toBigInt()),
+        root.getPath(requestId.toBigInt()),
         transaction?.authenticator ?? null,
         transaction?.transactionHash ?? null,
       ),

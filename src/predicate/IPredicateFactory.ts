@@ -1,4 +1,4 @@
-import { IPredicate, IPredicateJson } from './IPredicate.js';
+import { IPredicate } from './IPredicate.js';
 import { TokenId } from '../token/TokenId.js';
 import { TokenType } from '../token/TokenType.js';
 
@@ -13,5 +13,5 @@ export interface IPredicateFactory {
    * @param tokenType  Token type
    * @param data       JSON representation of the predicate
    */
-  create(tokenId: TokenId, tokenType: TokenType, data: IPredicateJson): Promise<IPredicate>;
+  create(tokenId: TokenId, tokenType: TokenType, data: unknown): Promise<IPredicate>;
 }
