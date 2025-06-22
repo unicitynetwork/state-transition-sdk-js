@@ -9,6 +9,8 @@ import { TransactionData } from './TransactionData.js';
  * Result returned when submitting a transaction to the aggregator.
  */
 export class Commitment<T extends TransactionData | MintTransactionData<ISerializable | null>> {
+  private readonly _brand: string = 'Commitment';
+
   /**
    * @param requestId       Request identifier used for submission
    * @param transactionData Submitted transaction data

@@ -30,7 +30,7 @@ export class StateTransitionClient {
   /**
    * @param client Implementation used to talk to an aggregator
    */
-  public constructor(private readonly client: IAggregatorClient) {}
+  public constructor(public readonly client: IAggregatorClient) {}
 
   /**
    * Create and submit a mint transaction for a new token.
