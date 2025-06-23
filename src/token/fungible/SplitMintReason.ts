@@ -1,6 +1,6 @@
 import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
+import { BigintConverter } from '@unicitylabs/commons/lib/util/BigintConverter.js';
 
-import { BigintConverter } from '../../../../commons/src/util/BigintConverter.js';
 import { ISerializable } from '../../ISerializable.js';
 import { MintTransactionData } from '../../transaction/MintTransactionData.js';
 import { Transaction } from '../../transaction/Transaction.js';

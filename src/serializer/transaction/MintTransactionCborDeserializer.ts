@@ -1,10 +1,10 @@
 import { InclusionProof } from '@unicitylabs/commons/lib/api/InclusionProof.js';
+import { CborDecoder } from '@unicitylabs/commons/lib/cbor/CborDecoder.js';
 import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
 import { MerkleSumTreePath } from '@unicitylabs/commons/lib/smst/MerkleSumTreePath.js';
 import { MerkleTreePath } from '@unicitylabs/commons/lib/smt/MerkleTreePath.js';
+import { BigintConverter } from '@unicitylabs/commons/lib/util/BigintConverter.js';
 
-import { CborDecoder } from '../../../../commons/src/cbor/CborDecoder.js';
-import { BigintConverter } from '../../../../commons/src/util/BigintConverter.js';
 import { ISerializable } from '../../ISerializable.js';
 import { SplitMintReason } from '../../token/fungible/SplitMintReason.js';
 import { SplitMintReasonProof } from '../../token/fungible/SplitMintReasonProof.js';
