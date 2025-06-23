@@ -670,6 +670,30 @@ async function sendToken(
 }
 ```
 
+## Unicity Signature Standard
+
+The Unicity Network uses a standardized signature format to ensure data integrity and cryptographic proof of ownership. All cryptographic operations use the **`secp256k1`** elliptic curve, **SHA-256** hashing, and **33-byte compressed public keys**.
+
+The standard is designed for efficiency and broad compatibility across different programming environments, including Node.js, browsers, and Go.
+
+### Signature Format
+
+A Unicity signature is a **65-byte** array, structured as the concatenation of three components: `[R || S || V]`.
+
+| Component    | Size (bytes) | Offset | Description                                                                                                   |
+| :----------- | :------------- | :----- | :------------------------------------------------------------------------------------------------------------ |
+| **R**        | 32             | 0      | The `R` value of the ECDSA signature.                                                                         |
+| **S**        | 32             | 32     | The `S` value of the ECDSA signature.                                                                         |
+| **V**        | 1              | 64     | The **recovery ID** (`0` or `1`). This value allows for the recovery of the public key directly from the signature. |
+
+### Process Overview
+
+**1. Signing**
+The raw message data is first hashed using **SHA-256**. The resulting 32-byte hash is then signed using the signer's 32-byte `secp256k1` private key to produce the 65-byte signature.
+
+**2. Verification**
+The verifier hashes the original message using **SHA-256**. Using this hash and the signature, the verifier recovers the public key. The recovered key is then serialized into the compressed format and compared byte-for-byte against the expected **33-byte compressed public key** to confirm validity.
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
