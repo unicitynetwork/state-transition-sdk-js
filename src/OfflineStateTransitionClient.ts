@@ -13,7 +13,7 @@ import { Transaction } from './transaction/Transaction.js';
 /**
  * High level client implementing the token state transition workflow.
  */
-export class StateTransitionOfflineClient extends StateTransitionClient {
+export class OfflineStateTransitionClient extends StateTransitionClient {
   /**
    * Create an offline commitment for a transaction (does not post it to the aggregator).
    *
