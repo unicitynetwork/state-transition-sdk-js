@@ -53,7 +53,7 @@ export class UnmaskedPredicate extends DefaultPredicate {
     salt: Uint8Array,
   ): Promise<UnmaskedPredicate> {
     const saltHash = await new DataHasher(HashAlgorithm.SHA256).update(salt).digest();
-    const nonce = await signingService.sign(saltHash.imprint);
+    const nonce = await signingService.sign(saltHash);
 
     return UnmaskedPredicate.createFromPublicKey(
       tokenId,

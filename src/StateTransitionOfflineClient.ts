@@ -6,29 +6,21 @@ import { SigningService } from '@unicitylabs/commons/lib/signing/SigningService.
 import { StateTransitionClient } from './StateTransitionClient.js';
 import { Commitment } from './transaction/Commitment.js';
 import { TransactionData } from './transaction/TransactionData.js';
-
-/**
- * Result returned when submitting a transaction to the aggregator.
- */
-class OfflineCommitment {
-  private readonly _brand: string = 'OfflineCommitment';
-
-  /**
-   * @param requestId       Request identifier used for submission
-   * @param transactionData Submitted transaction data
-   * @param authenticator   Signature over the payload
-   */
-  public constructor(
-    public readonly requestId: RequestId,
-    public readonly transactionData: TransactionData,
-    public readonly authenticator: Authenticator,
-  ) {}
-}
+import { OfflineCommitment } from "./transaction/OfflineCommitment.js";
+import {waitInclusionProof} from "../tests/InclusionProofUtils.js";
+import {Transaction} from "./transaction/Transaction.js";
 
 /**
  * High level client implementing the token state transition workflow.
  */
 export class StateTransitionOfflineClient extends StateTransitionClient {
+
+  /**
+   * Create an offline commitment for a transaction (does not post it to the aggregator).
+   *
+   * @param transactionData
+   * @param signingService
+   */
   public async createOfflineCommitment(
     transactionData: TransactionData,
     signingService: SigningService,
@@ -49,22 +41,24 @@ export class StateTransitionOfflineClient extends StateTransitionClient {
   }
 
   /**
+   * Submit an offline transaction commitment to the aggregator.
    *
    * @param requestId
    * @param transactionData
    * @param authenticator
    */
-  public async submitOfflineCommitment({
+  public async submitOfflineTransaction({
     requestId,
     transactionData,
     authenticator,
-  }: OfflineCommitment): Promise<Commitment<TransactionData>> {
-    const result = await this.client.submitTransaction(requestId, transactionData.hash, authenticator);
+  }: OfflineCommitment): Promise<Transaction<TransactionData>> {
+    const result = await this.client.submitTransaction(requestId, transactionData.hash, authenticator, false);
 
     if (result.status !== SubmitCommitmentStatus.SUCCESS) {
       throw new Error(`Could not submit transaction: ${result.status}`);
     }
 
-    return new Commitment(requestId, transactionData, authenticator);
+    const commitment = new Commitment(requestId, transactionData, authenticator);
+    return await this.createTransaction(commitment, await waitInclusionProof(this, commitment));
   }
 }
