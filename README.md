@@ -13,6 +13,7 @@ In this system, tokens are self-contained entities containing complete transacti
 - **Off-chain Privacy**: Cryptographic commitments contain no information about tokens, their state, or transaction nature
 - **Horizontal Scalability**: Millions of transaction commitments per block capability  
 - **Zero-Knowledge Transactions**: Observers cannot determine if commitments refer to token transactions or other processes
+- **Offline Transaction Support**: Create and serialize transactions without network connectivity
 - **TypeScript Support**: Full type safety and modern development experience
 - **Modular Architecture**: Pluggable address schemes, predicates, and token types
 
@@ -113,6 +114,13 @@ The main SDK interface for token operations:
 - `finishTransaction()` - Complete token transfers
 - `getTokenStatus()` - Check token status via inclusion proofs
 
+### StateTransitionOfflineClient
+
+Extended client for offline transaction operations:
+
+- `createOfflineCommitment()` - Create offline commitment for a transaction (does not post to aggregator)
+- `submitOfflineTransaction()` - Submit a previously created offline transaction commitment
+
 ### Address System
 
 **DirectAddress**: Cryptographic addresses with checksums for immediate ownership
@@ -184,6 +192,24 @@ I --> J[Recipient Finishes Transaction]
 J --> K[End]
 ```
 
+#### Offline Transfer flow
+
+For situations where immediate network connectivity isn't available, the SDK supports offline transaction creation:
+
+```text
+A[Start] 
+A --> B[Recipient Generates Address]
+B --> C[Recipient Shares Address with Sender]
+C --> D[Sender Creates Offline Commitment]
+D --> E[Sender Serializes OfflineTransaction to JSON]
+E --> F[Sender Transfers JSON File Offline to Recipient]
+F --> G[Recipient Deserializes OfflineTransaction from JSON]
+G --> H[Recipient Submits Offline Transaction to Network]
+H --> I[Recipient Retrieves Inclusion Proof]
+I --> J[Recipient Finishes Transaction]
+J --> K[End]
+```
+
 
 ## Architecture
 
@@ -198,6 +224,19 @@ Tokens contain:
 - **nametagTokens**: Name tags for addressing
 - **data**: Token-specific data
 - **transactions**: The history of transactions performed with this token
+
+### Offline Transaction Components
+
+**OfflineTransaction**: A serializable container for offline token transfers containing:
+- **commitment**: The OfflineCommitment with transaction details
+- **token**: The complete token being transferred
+- **toJSON()**: Serializes the entire package for offline transfer
+- **fromJSON()**: Deserializes from JSON with proper factory-based reconstruction
+
+**OfflineCommitment**: A transaction commitment created without network submission containing:
+- **requestId**: Unique request identifier for the transaction
+- **transactionData**: The transaction details and state transition
+- **authenticator**: Cryptographic signature over the transaction
 
 ### Privacy Model
 - **Commitment-based**: Only cryptographic commitments published on-chain
@@ -370,6 +409,53 @@ const updateToken = await client.finishTransaction(
   importedToken,
   await TokenState.create(recipientPredicate, new TextEncoder().encode('my custom data')),
   importedTransaction,
+);
+```
+
+### Offline Token Transfer
+
+For scenarios with limited network connectivity, tokens can be transferred using offline transaction packages:
+
+```typescript
+import { StateTransitionOfflineClient } from '@unicitylabs/state-transition-sdk';
+import { OfflineTransaction } from '@unicitylabs/state-transition-sdk';
+
+// Create offline client
+const offlineClient = new StateTransitionOfflineClient(new AggregatorClient('https://gateway-test.unicity.network'));
+
+// Sender creates offline commitment (no network required)
+const salt = crypto.getRandomValues(new Uint8Array(32));
+const transactionData = await TransactionData.create(
+  token.state,
+  recipient.toJSON(),
+  salt,
+  await new DataHasher(HashAlgorithm.SHA256).update(new TextEncoder().encode('my custom data')).digest(),
+  new TextEncoder().encode('my message'),
+  token.nametagTokens,
+);
+
+const offlineCommitment = await offlineClient.createOfflineCommitment(
+  transactionData,
+  await SigningService.createFromSecret(initialOwnerSecret, data.nonce)
+);
+
+// Create offline transaction package
+const offlineTransaction = new OfflineTransaction(offlineCommitment, token);
+
+// Serialize to JSON for offline transfer (file, USB, QR code, etc.)
+const offlineTransactionJson = offlineTransaction.toJSON();
+
+// ... Transfer JSON file offline to recipient ...
+
+// Recipient deserializes and submits when network is available
+const importedOfflineTransaction = await OfflineTransaction.fromJSON(offlineTransactionJson);
+const finalTransaction = await offlineClient.submitOfflineTransaction(importedOfflineTransaction.commitment);
+
+// Complete the transfer
+const updatedToken = await client.finishTransaction(
+  importedOfflineTransaction.token,
+  await TokenState.create(recipientPredicate, new TextEncoder().encode('my custom data')),
+  finalTransaction,
 );
 ```
 
