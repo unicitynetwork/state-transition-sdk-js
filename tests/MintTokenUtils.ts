@@ -2,7 +2,6 @@ import { DataHasher } from '@unicitylabs/commons/lib/hash/DataHasher.js';
 import { HashAlgorithm } from '@unicitylabs/commons/lib/hash/HashAlgorithm.js';
 import { SigningService } from '@unicitylabs/commons/lib/signing/SigningService.js';
 
-import { waitInclusionProof } from './InclusionProofUtils.js';
 import { TestTokenData } from './TestTokenData.js';
 import { DirectAddress } from '../src/address/DirectAddress.js';
 import { ISerializable } from '../src/ISerializable.js';
@@ -16,6 +15,7 @@ import { TokenType } from '../src/token/TokenType.js';
 import { MintTransactionData } from '../src/transaction/MintTransactionData.js';
 import { Transaction } from '../src/transaction/Transaction.js';
 import { TransactionData } from '../src/transaction/TransactionData.js';
+import {waitInclusionProof} from "../src/utils/InclusionProofUtils.js";
 
 export interface IMintData {
   tokenId: TokenId;

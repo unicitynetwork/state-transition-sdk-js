@@ -1,11 +1,11 @@
 import { InclusionProof, InclusionProofVerificationStatus } from '@unicitylabs/commons/lib/api/InclusionProof.js';
 import { JsonRpcNetworkError } from '@unicitylabs/commons/lib/json-rpc/JsonRpcNetworkError.js';
 
-import { ISerializable } from '../src/ISerializable.js';
-import { StateTransitionClient } from '../src/StateTransitionClient.js';
-import { Commitment } from '../src/transaction/Commitment.js';
-import { MintTransactionData } from '../src/transaction/MintTransactionData.js';
-import { TransactionData } from '../src/transaction/TransactionData.js';
+import { ISerializable } from '../ISerializable.js';
+import { StateTransitionClient } from '../StateTransitionClient.js';
+import { Commitment } from '../transaction/Commitment.js';
+import { MintTransactionData } from '../transaction/MintTransactionData.js';
+import { TransactionData } from '../transaction/TransactionData.js';
 
 class SleepError extends Error {
   public constructor(message: string) {
