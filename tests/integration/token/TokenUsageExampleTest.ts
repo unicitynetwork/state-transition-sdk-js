@@ -4,7 +4,12 @@ import { DockerComposeEnvironment, StartedDockerComposeEnvironment, Wait } from 
 
 import { AggregatorClient } from '../../../src/api/AggregatorClient.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
-import { testTransferFlow, testSplitFlow, testSplitFlowAfterTransfer } from '../../token/CommonTestFlow.js';
+import {
+  testTransferFlow,
+  testSplitFlow,
+  testSplitFlowAfterTransfer,
+  testOfflineTransferFlow
+} from '../../token/CommonTestFlow.js';
 
 const aggregatorPort = 3000; // the port defined in docker-compose.yml
 const containerName = 'aggregator-test'; // the container name defined in docker-compose.yml
@@ -39,6 +44,10 @@ describe('Transition', function () {
 
   it('should verify the token latest state', async () => {
     await testTransferFlow(client);
+  }, 30000);
+
+  it('should verify the token offline transfer', async () => {
+    await testOfflineTransferFlow(client);
   }, 30000);
 
   it('should split tokens', async () => {
