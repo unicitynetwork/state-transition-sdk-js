@@ -12,7 +12,7 @@ import { TokenType } from '../token/TokenType.js';
 /**
  * Default implementation of {@link IPredicateFactory}.
  */
-export class PredicateJsonFactory implements IPredicateFactory {
+export class PredicateCborFactory implements IPredicateFactory {
   /**
    * @inheritDoc
    */
