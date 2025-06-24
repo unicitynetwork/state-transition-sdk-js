@@ -56,4 +56,19 @@ export class AggregatorClient implements IAggregatorClient {
     const data = { requestId: requestId.toJSON() };
     return this.transport.request('get_no_deletion_proof', data);
   }
+
+  public async getBlockHeight(): Promise<bigint> {
+    const response = await this.transport.request('get_block_height', {});
+    if (
+      response &&
+      typeof response === 'object' &&
+      'blockNumber' in response &&
+      (typeof response.blockNumber === 'string' ||
+        typeof response.blockNumber === 'number' ||
+        typeof response.blockNumber === 'bigint')
+    ) {
+      return BigInt(response.blockNumber);
+    }
+    throw new Error('Invalid response format for block height');
+  }
 }

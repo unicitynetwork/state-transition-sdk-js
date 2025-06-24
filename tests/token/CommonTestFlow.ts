@@ -25,6 +25,7 @@ import {ITransactionJson, Transaction} from '../../src/transaction/Transaction.j
 import {ITransactionDataJson, TransactionData} from '../../src/transaction/TransactionData.js';
 import {waitInclusionProof} from '../InclusionProofUtils.js';
 import {createMintData, mintToken, sendToken} from '../MintTokenUtils.js';
+import {TestTokenData} from '../TestTokenData.js';
 import {StateTransitionOfflineClient} from "../../src/StateTransitionOfflineClient.js";
 import {DataHasher} from "@unicitylabs/commons/lib/hash/DataHasher.js";
 import {OfflineCommitment} from "../../src/transaction/OfflineCommitment.js";
@@ -183,7 +184,7 @@ export async function testOfflineTransferFlow(client: StateTransitionClient): Pr
 
     const offlineTxJson = new OfflineTransaction(offlineCommitment, token).toJSON();
     //...sender sends the "package" offline to the recipient
-    offlineTxPackage = OfflineTransaction.fromJson(offlineTxJson);
+    offlineTxPackage = await OfflineTransaction.fromJSON(offlineTxJson);
   }
 
   // Recipient imports token (offline json file transfer)
