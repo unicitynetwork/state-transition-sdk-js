@@ -1,34 +1,41 @@
-import { InclusionProofVerificationStatus } from '@unicitylabs/commons/lib/api/InclusionProof.js';
-import { DataHasherFactory } from '@unicitylabs/commons/lib/hash/DataHasherFactory.js';
-import { HashAlgorithm } from '@unicitylabs/commons/lib/hash/HashAlgorithm.js';
-import { NodeDataHasher } from '@unicitylabs/commons/lib/hash/NodeDataHasher.js';
-import { SigningService } from '@unicitylabs/commons/lib/signing/SigningService.js';
+import {InclusionProofVerificationStatus} from '@unicitylabs/commons/lib/api/InclusionProof.js';
+import {DataHasherFactory} from '@unicitylabs/commons/lib/hash/DataHasherFactory.js';
+import {HashAlgorithm} from '@unicitylabs/commons/lib/hash/HashAlgorithm.js';
+import {NodeDataHasher} from '@unicitylabs/commons/lib/hash/NodeDataHasher.js';
+import {SigningService} from '@unicitylabs/commons/lib/signing/SigningService.js';
 
-import { DirectAddress } from '../../src/address/DirectAddress.js';
-import { ISerializable } from '../../src/ISerializable.js';
-import { BurnPredicate } from '../../src/predicate/BurnPredicate.js';
-import { MaskedPredicate } from '../../src/predicate/MaskedPredicate.js';
-import { PredicateJsonFactory } from '../../src/predicate/PredicateJsonFactory.js';
-import { TokenJsonDeserializer } from '../../src/serializer/token/TokenJsonDeserializer.js';
-import { TransactionJsonDeserializer } from '../../src/serializer/transaction/TransactionJsonDeserializer.js';
-import { StateTransitionClient } from '../../src/StateTransitionClient.js';
-import { CoinId } from '../../src/token/fungible/CoinId.js';
-import { TokenCoinData } from '../../src/token/fungible/TokenCoinData.js';
-import { Token } from '../../src/token/Token.js';
-import { TokenFactory } from '../../src/token/TokenFactory.js';
-import { TokenId } from '../../src/token/TokenId.js';
-import { TokenState } from '../../src/token/TokenState.js';
-import { TokenType } from '../../src/token/TokenType.js';
-import { MintTransactionData } from '../../src/transaction/MintTransactionData.js';
-import { TokenSplitBuilder } from '../../src/transaction/TokenSplitBuilder.js';
-import { ITransactionJson, Transaction } from '../../src/transaction/Transaction.js';
-import { ITransactionDataJson, TransactionData } from '../../src/transaction/TransactionData.js';
-import { waitInclusionProof } from '../InclusionProofUtils.js';
-import { createMintData, mintToken, sendToken } from '../MintTokenUtils.js';
+import {DirectAddress} from '../../src/address/DirectAddress.js';
+import {ISerializable} from '../../src/ISerializable.js';
+import {BurnPredicate} from '../../src/predicate/BurnPredicate.js';
+import {MaskedPredicate} from '../../src/predicate/MaskedPredicate.js';
+import {PredicateJsonFactory} from '../../src/predicate/PredicateJsonFactory.js';
+import {TokenJsonDeserializer} from '../../src/serializer/token/TokenJsonDeserializer.js';
+import {TransactionJsonDeserializer} from '../../src/serializer/transaction/TransactionJsonDeserializer.js';
+import {StateTransitionClient} from '../../src/StateTransitionClient.js';
+import {CoinId} from '../../src/token/fungible/CoinId.js';
+import {TokenCoinData} from '../../src/token/fungible/TokenCoinData.js';
+import {Token} from '../../src/token/Token.js';
+import {TokenFactory} from '../../src/token/TokenFactory.js';
+import {TokenId} from '../../src/token/TokenId.js';
+import {TokenState} from '../../src/token/TokenState.js';
+import {TokenType} from '../../src/token/TokenType.js';
+import {MintTransactionData} from '../../src/transaction/MintTransactionData.js';
+import {TokenSplitBuilder} from '../../src/transaction/TokenSplitBuilder.js';
+import {ITransactionJson, Transaction} from '../../src/transaction/Transaction.js';
+import {ITransactionDataJson, TransactionData} from '../../src/transaction/TransactionData.js';
+import {waitInclusionProof} from '../InclusionProofUtils.js';
+import {createMintData, mintToken, sendToken} from '../MintTokenUtils.js';
+import {StateTransitionOfflineClient} from "../../src/StateTransitionOfflineClient.js";
+import {DataHasher} from "@unicitylabs/commons/lib/hash/DataHasher.js";
+import {OfflineCommitment} from "../../src/transaction/OfflineCommitment.js";
+import {OfflineTransaction} from "../../src/transaction/OfflineTransaction.js";
 
 const textEncoder = new TextEncoder();
-const initialOwnerSecret = new TextEncoder().encode('secret');
-const receiverSecret = new TextEncoder().encode('tere');
+const initialOwnerSecret = textEncoder.encode('secret');
+const receiverSecret = textEncoder.encode('tere');
+const predicateFactory = new PredicateJsonFactory();
+const tokenFactory = new TokenFactory(new TokenJsonDeserializer(predicateFactory));
+const transactionDeserializer = new TransactionJsonDeserializer(predicateFactory);
 
 async function createMintToken(
   client: StateTransitionClient,
@@ -91,10 +98,6 @@ export async function testTransferFlow(client: StateTransitionClient): Promise<v
     await DirectAddress.create(recipientPredicate.reference),
   );
 
-  const predicateFactory = new PredicateJsonFactory();
-  const tokenFactory = new TokenFactory(new TokenJsonDeserializer(predicateFactory));
-  const transactionDeserializer = new TransactionJsonDeserializer(predicateFactory);
-
   // Recipient imports token
   const importedToken = await tokenFactory.create(token.toJSON());
   // Recipient gets transaction from sender
@@ -128,6 +131,89 @@ export async function testTransferFlow(client: StateTransitionClient): Promise<v
   expect(transferredTokenStatus).toEqual(InclusionProofVerificationStatus.PATH_NOT_INCLUDED);
 }
 
+export async function testOfflineTransferFlow(client: StateTransitionClient): Promise<void> {
+  let token;
+  let mintDataNonce;
+  let firstOwnerSigningService: SigningService;
+  {
+    const data = await createMintData(
+        initialOwnerSecret,
+        TokenCoinData.create([
+          [new CoinId(crypto.getRandomValues(new Uint8Array(32))), BigInt(Math.round(Math.random() * 90)) + 10n],
+          [new CoinId(crypto.getRandomValues(new Uint8Array(32))), BigInt(Math.round(Math.random() * 90)) + 10n],
+        ]),
+    );
+    mintDataNonce = data.nonce;
+    firstOwnerSigningService = await SigningService.createFromSecret(initialOwnerSecret, mintDataNonce)
+    token = await mintToken(client, data);
+
+    await expect(DirectAddress.create(data.predicate.reference)).resolves.toEqual(
+        await DirectAddress.fromJSON(token.genesis.data.recipient),
+    );
+  }
+
+  // Recipient prepares the info for the transfer
+  const nonce = crypto.getRandomValues(new Uint8Array(32));
+  const receiverSigningService = await SigningService.createFromSecret(receiverSecret, nonce);
+  const recipientPredicate = await MaskedPredicate.create(
+      token.id,
+      token.type,
+      receiverSigningService,
+      HashAlgorithm.SHA256,
+      nonce,
+  );
+
+  let offlineTxPackage: OfflineTransaction;
+  const offlineBuilder = new StateTransitionOfflineClient(client.client)
+
+  {
+    const receivingAddress = await DirectAddress.create(recipientPredicate.reference)
+
+    const transactionData = await TransactionData.create(
+        token.state,
+        receivingAddress.toJSON(),
+        crypto.getRandomValues(new Uint8Array(32)),
+        await new DataHasher(HashAlgorithm.SHA256).update(textEncoder.encode('my custom data')).digest(),
+        textEncoder.encode('my message'),
+        token.nametagTokens,
+    );
+
+    // sender signs the transaction data
+    const offlineCommitment: OfflineCommitment = await offlineBuilder.createOfflineCommitment(transactionData, firstOwnerSigningService);
+
+    const offlineTxJson = new OfflineTransaction(offlineCommitment, token).toJSON();
+    //...sender sends the "package" offline to the recipient
+    offlineTxPackage = OfflineTransaction.fromJson(offlineTxJson);
+  }
+
+  // Recipient imports token (offline json file transfer)
+  const importedToken = offlineTxPackage.token;
+  const confirmedTx = await offlineBuilder.submitOfflineTransaction(offlineTxPackage.commitment);
+
+  // Finish the transaction with the recipient predicate
+  const updateToken = await client.finishTransaction(
+    importedToken,
+    await TokenState.create(recipientPredicate, textEncoder.encode('my custom data')),
+      confirmedTx,
+  );
+
+  const signingService = await SigningService.createFromSecret(receiverSecret, token.state.unlockPredicate.nonce);
+  expect(importedToken.state.unlockPredicate.isOwner(signingService.publicKey)).toBeTruthy();
+  expect(updateToken.id).toEqual(token.id);
+  expect(updateToken.type).toEqual(token.type);
+  expect(updateToken.data).toEqual(token.data);
+  expect(updateToken.coins?.toJSON()).toEqual(token.coins?.toJSON());
+
+  // Verify the original minted token has been spent
+  const senderSigningService = await SigningService.createFromSecret(initialOwnerSecret, mintDataNonce);
+  const mintedTokenStatus = await client.getTokenStatus(token, senderSigningService.publicKey);
+  expect(mintedTokenStatus).toEqual(InclusionProofVerificationStatus.OK);
+
+  // Verify the updated token has not been spent
+  const transferredTokenStatus = await client.getTokenStatus(updateToken, signingService.publicKey);
+  expect(transferredTokenStatus).toEqual(InclusionProofVerificationStatus.PATH_NOT_INCLUDED);
+}
+
 export async function testSplitFlow(client: StateTransitionClient): Promise<void> {
   // First, let's mint a token in the usual way.
   const unicityToken = new CoinId(crypto.getRandomValues(new Uint8Array(32)));
@@ -137,9 +223,6 @@ export async function testSplitFlow(client: StateTransitionClient): Promise<void
     [unicityToken, 10n],
     [alphaToken, 20n],
   ]);
-
-  const predicateFactory = new PredicateJsonFactory();
-  const tokenFactory = new TokenFactory(new TokenJsonDeserializer(predicateFactory));
 
   const mintTokenData = await createMintData(initialOwnerSecret, coinData);
   const token = await mintToken(client, mintTokenData);
@@ -183,12 +266,8 @@ export async function testSplitFlowAfterTransfer(client: StateTransitionClient):
     [alphaToken, 100n],
   ]);
 
-  const predicateFactory = new PredicateJsonFactory();
-  const tokenFactory = new TokenFactory(new TokenJsonDeserializer(predicateFactory));
-
   const mintTokenData = await createMintData(initialOwnerSecret, coinData);
   const token = await mintToken(client, mintTokenData);
-  const transactionDeserializer = new TransactionJsonDeserializer(predicateFactory);
 
   // Perfrom 1st split
   const coinsPerNewTokens = [

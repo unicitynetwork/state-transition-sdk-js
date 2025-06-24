@@ -14,6 +14,7 @@ export interface IAggregatorClient {
    * @param requestId       Unique request identifier
    * @param transactionHash Hash of the transaction payload
    * @param authenticator   Authenticator proving request ownership
+   * @param receipt         Require a signed receipt of the commitment
    * @returns Result status from the aggregator
    */
   submitTransaction(
