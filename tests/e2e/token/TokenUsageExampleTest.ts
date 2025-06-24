@@ -4,7 +4,7 @@ import {
   testTransferFlow,
   testSplitFlow,
   testSplitFlowAfterTransfer,
-  testOfflineTransferFlow
+  testOfflineTransferFlow,
 } from '../../token/CommonTestFlow.js';
 
 describe('Transition', function () {
@@ -15,8 +15,8 @@ describe('Transition', function () {
       return;
     }
     const client = new AggregatorClient(aggregatorUrl);
-    const bh = await client.getBlockHeight()
-    console.log("block height: ", bh);
+    const bh = await client.getBlockHeight();
+    console.log('block height: ', bh);
   });
 
   it('should verify the token latest state', async () => {
