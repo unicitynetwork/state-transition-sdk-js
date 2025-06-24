@@ -1,14 +1,13 @@
 import { Authenticator } from '@unicitylabs/commons/lib/api/Authenticator.js';
 import { RequestId } from '@unicitylabs/commons/lib/api/RequestId.js';
 
-import { Commitment } from './Commitment.js';
 import { TransactionData } from './TransactionData.js';
 
 /**
  * Result returned when submitting a transaction to the aggregator.
  */
-export class OfflineCommitment extends Commitment<TransactionData> {
-  // protected readonly _brand: string = 'OfflineCommitment';
+export class OfflineCommitment {
+  private readonly _brand: string = 'OfflineCommitment';
 
   /**
    * @param requestId       Request identifier used for submission
@@ -19,7 +18,5 @@ export class OfflineCommitment extends Commitment<TransactionData> {
     public readonly requestId: RequestId,
     public readonly transactionData: TransactionData,
     public readonly authenticator: Authenticator,
-  ) {
-    super(requestId, transactionData, authenticator);
-  }
+  ) {}
 }
