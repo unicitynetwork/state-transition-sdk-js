@@ -5,16 +5,15 @@ import { SigningService } from '@unicitylabs/commons/lib/signing/SigningService.
 
 import { StateTransitionClient } from './StateTransitionClient.js';
 import { Commitment } from './transaction/Commitment.js';
+import { OfflineCommitment } from './transaction/OfflineCommitment.js';
 import { TransactionData } from './transaction/TransactionData.js';
-import { OfflineCommitment } from "./transaction/OfflineCommitment.js";
-import {waitInclusionProof} from "../tests/InclusionProofUtils.js";
-import {Transaction} from "./transaction/Transaction.js";
+import { waitInclusionProof } from '../tests/InclusionProofUtils.js';
+import { Transaction } from './transaction/Transaction.js';
 
 /**
  * High level client implementing the token state transition workflow.
  */
 export class StateTransitionOfflineClient extends StateTransitionClient {
-
   /**
    * Create an offline commitment for a transaction (does not post it to the aggregator).
    *
