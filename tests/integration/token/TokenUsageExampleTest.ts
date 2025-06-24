@@ -8,7 +8,7 @@ import {
   testTransferFlow,
   testSplitFlow,
   testSplitFlowAfterTransfer,
-  testOfflineTransferFlow
+  testOfflineTransferFlow,
 } from '../../token/CommonTestFlow.js';
 
 const aggregatorPort = 3000; // the port defined in docker-compose.yml
@@ -59,7 +59,7 @@ describe('Transition', function () {
   }, 30000);
 
   it('should verify block height', async () => {
-    const bh = await (client.client as AggregatorClient).getBlockHeight()
-    expect(bh).toBeGreaterThan(0)
+    const bh = await (client.client as AggregatorClient).getBlockHeight();
+    expect(bh).toBeGreaterThan(0);
   });
 });

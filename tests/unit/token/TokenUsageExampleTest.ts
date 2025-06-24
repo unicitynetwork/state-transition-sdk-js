@@ -8,7 +8,7 @@ import {
   testTransferFlow,
   testSplitFlow,
   testSplitFlowAfterTransfer,
-  testOfflineTransferFlow
+  testOfflineTransferFlow,
 } from '../../token/CommonTestFlow.js';
 import { TestAggregatorClient } from '../TestAggregatorClient.js';
 

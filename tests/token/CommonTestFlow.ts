@@ -1,35 +1,34 @@
-import {InclusionProofVerificationStatus} from '@unicitylabs/commons/lib/api/InclusionProof.js';
-import {DataHasherFactory} from '@unicitylabs/commons/lib/hash/DataHasherFactory.js';
-import {HashAlgorithm} from '@unicitylabs/commons/lib/hash/HashAlgorithm.js';
-import {NodeDataHasher} from '@unicitylabs/commons/lib/hash/NodeDataHasher.js';
-import {SigningService} from '@unicitylabs/commons/lib/signing/SigningService.js';
+import { InclusionProofVerificationStatus } from '@unicitylabs/commons/lib/api/InclusionProof.js';
+import { DataHasher } from '@unicitylabs/commons/lib/hash/DataHasher.js';
+import { DataHasherFactory } from '@unicitylabs/commons/lib/hash/DataHasherFactory.js';
+import { HashAlgorithm } from '@unicitylabs/commons/lib/hash/HashAlgorithm.js';
+import { NodeDataHasher } from '@unicitylabs/commons/lib/hash/NodeDataHasher.js';
+import { SigningService } from '@unicitylabs/commons/lib/signing/SigningService.js';
 
-import {DirectAddress} from '../../src/address/DirectAddress.js';
-import {ISerializable} from '../../src/ISerializable.js';
-import {BurnPredicate} from '../../src/predicate/BurnPredicate.js';
-import {MaskedPredicate} from '../../src/predicate/MaskedPredicate.js';
-import {PredicateJsonFactory} from '../../src/predicate/PredicateJsonFactory.js';
-import {TokenJsonDeserializer} from '../../src/serializer/token/TokenJsonDeserializer.js';
-import {TransactionJsonDeserializer} from '../../src/serializer/transaction/TransactionJsonDeserializer.js';
-import {StateTransitionClient} from '../../src/StateTransitionClient.js';
-import {CoinId} from '../../src/token/fungible/CoinId.js';
-import {TokenCoinData} from '../../src/token/fungible/TokenCoinData.js';
-import {Token} from '../../src/token/Token.js';
-import {TokenFactory} from '../../src/token/TokenFactory.js';
-import {TokenId} from '../../src/token/TokenId.js';
-import {TokenState} from '../../src/token/TokenState.js';
-import {TokenType} from '../../src/token/TokenType.js';
-import {MintTransactionData} from '../../src/transaction/MintTransactionData.js';
-import {TokenSplitBuilder} from '../../src/transaction/TokenSplitBuilder.js';
-import {ITransactionJson, Transaction} from '../../src/transaction/Transaction.js';
-import {ITransactionDataJson, TransactionData} from '../../src/transaction/TransactionData.js';
-import {createMintData, mintToken, sendToken} from '../MintTokenUtils.js';
-import {TestTokenData} from '../TestTokenData.js';
-import {OfflineStateTransitionClient} from "../../src/OfflineStateTransitionClient.js";
-import {DataHasher} from "@unicitylabs/commons/lib/hash/DataHasher.js";
-import {OfflineCommitment} from "../../src/transaction/OfflineCommitment.js";
-import {OfflineTransaction} from "../../src/transaction/OfflineTransaction.js";
-import {waitInclusionProof} from "../../src/utils/InclusionProofUtils.js";
+import { DirectAddress } from '../../src/address/DirectAddress.js';
+import { ISerializable } from '../../src/ISerializable.js';
+import { OfflineStateTransitionClient } from '../../src/OfflineStateTransitionClient.js';
+import { BurnPredicate } from '../../src/predicate/BurnPredicate.js';
+import { MaskedPredicate } from '../../src/predicate/MaskedPredicate.js';
+import { PredicateJsonFactory } from '../../src/predicate/PredicateJsonFactory.js';
+import { TokenJsonDeserializer } from '../../src/serializer/token/TokenJsonDeserializer.js';
+import { TransactionJsonDeserializer } from '../../src/serializer/transaction/TransactionJsonDeserializer.js';
+import { StateTransitionClient } from '../../src/StateTransitionClient.js';
+import { CoinId } from '../../src/token/fungible/CoinId.js';
+import { TokenCoinData } from '../../src/token/fungible/TokenCoinData.js';
+import { Token } from '../../src/token/Token.js';
+import { TokenFactory } from '../../src/token/TokenFactory.js';
+import { TokenId } from '../../src/token/TokenId.js';
+import { TokenState } from '../../src/token/TokenState.js';
+import { TokenType } from '../../src/token/TokenType.js';
+import { MintTransactionData } from '../../src/transaction/MintTransactionData.js';
+import { OfflineCommitment } from '../../src/transaction/OfflineCommitment.js';
+import { OfflineTransaction } from '../../src/transaction/OfflineTransaction.js';
+import { TokenSplitBuilder } from '../../src/transaction/TokenSplitBuilder.js';
+import { ITransactionJson, Transaction } from '../../src/transaction/Transaction.js';
+import { ITransactionDataJson, TransactionData } from '../../src/transaction/TransactionData.js';
+import { waitInclusionProof } from '../../src/utils/InclusionProofUtils.js';
+import { createMintData, mintToken, sendToken } from '../MintTokenUtils.js';
 
 const textEncoder = new TextEncoder();
 const initialOwnerSecret = textEncoder.encode('secret');
@@ -138,18 +137,18 @@ export async function testOfflineTransferFlow(client: StateTransitionClient): Pr
   let firstOwnerSigningService: SigningService;
   {
     const data = await createMintData(
-        initialOwnerSecret,
-        TokenCoinData.create([
-          [new CoinId(crypto.getRandomValues(new Uint8Array(32))), BigInt(Math.round(Math.random() * 90)) + 10n],
-          [new CoinId(crypto.getRandomValues(new Uint8Array(32))), BigInt(Math.round(Math.random() * 90)) + 10n],
-        ]),
+      initialOwnerSecret,
+      TokenCoinData.create([
+        [new CoinId(crypto.getRandomValues(new Uint8Array(32))), BigInt(Math.round(Math.random() * 90)) + 10n],
+        [new CoinId(crypto.getRandomValues(new Uint8Array(32))), BigInt(Math.round(Math.random() * 90)) + 10n],
+      ]),
     );
     mintDataNonce = data.nonce;
-    firstOwnerSigningService = await SigningService.createFromSecret(initialOwnerSecret, mintDataNonce)
+    firstOwnerSigningService = await SigningService.createFromSecret(initialOwnerSecret, mintDataNonce);
     token = await mintToken(client, data);
 
     await expect(DirectAddress.create(data.predicate.reference)).resolves.toEqual(
-        await DirectAddress.fromJSON(token.genesis.data.recipient),
+      await DirectAddress.fromJSON(token.genesis.data.recipient),
     );
   }
 
@@ -157,30 +156,33 @@ export async function testOfflineTransferFlow(client: StateTransitionClient): Pr
   const nonce = crypto.getRandomValues(new Uint8Array(32));
   const receiverSigningService = await SigningService.createFromSecret(receiverSecret, nonce);
   const recipientPredicate = await MaskedPredicate.create(
-      token.id,
-      token.type,
-      receiverSigningService,
-      HashAlgorithm.SHA256,
-      nonce,
+    token.id,
+    token.type,
+    receiverSigningService,
+    HashAlgorithm.SHA256,
+    nonce,
   );
 
   let offlineTxPackage: OfflineTransaction;
-  const offlineBuilder = new OfflineStateTransitionClient(client.client)
+  const offlineBuilder = new OfflineStateTransitionClient(client.client);
 
   {
-    const receivingAddress = await DirectAddress.create(recipientPredicate.reference)
+    const receivingAddress = await DirectAddress.create(recipientPredicate.reference);
 
     const transactionData = await TransactionData.create(
-        token.state,
-        receivingAddress.toJSON(),
-        crypto.getRandomValues(new Uint8Array(32)),
-        await new DataHasher(HashAlgorithm.SHA256).update(textEncoder.encode('my custom data')).digest(),
-        textEncoder.encode('my message'),
-        token.nametagTokens,
+      token.state,
+      receivingAddress.toJSON(),
+      crypto.getRandomValues(new Uint8Array(32)),
+      await new DataHasher(HashAlgorithm.SHA256).update(textEncoder.encode('my custom data')).digest(),
+      textEncoder.encode('my message'),
+      token.nametagTokens,
     );
 
     // sender signs the transaction data
-    const offlineCommitment: OfflineCommitment = await offlineBuilder.createOfflineCommitment(transactionData, firstOwnerSigningService);
+    const offlineCommitment: OfflineCommitment = await offlineBuilder.createOfflineCommitment(
+      transactionData,
+      firstOwnerSigningService,
+    );
 
     const offlineTxJson = new OfflineTransaction(offlineCommitment, token).toJSON();
     //...sender sends the "package" offline to the recipient
@@ -195,7 +197,7 @@ export async function testOfflineTransferFlow(client: StateTransitionClient): Pr
   const updateToken = await client.finishTransaction(
     importedToken,
     await TokenState.create(recipientPredicate, textEncoder.encode('my custom data')),
-      confirmedTx,
+    confirmedTx,
   );
 
   const signingService = await SigningService.createFromSecret(receiverSecret, token.state.unlockPredicate.nonce);
