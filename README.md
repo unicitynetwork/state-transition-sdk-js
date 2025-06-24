@@ -114,7 +114,7 @@ The main SDK interface for token operations:
 - `finishTransaction()` - Complete token transfers
 - `getTokenStatus()` - Check token status via inclusion proofs
 
-### StateTransitionOfflineClient
+### OfflineStateTransitionClient
 
 Extended client for offline transaction operations:
 
@@ -417,11 +417,11 @@ const updateToken = await client.finishTransaction(
 For scenarios with limited network connectivity, tokens can be transferred using offline transaction packages:
 
 ```typescript
-import { StateTransitionOfflineClient } from '@unicitylabs/state-transition-sdk';
+import { OfflineStateTransitionClient } from '@unicitylabs/state-transition-sdk';
 import { OfflineTransaction } from '@unicitylabs/state-transition-sdk';
 
 // Create offline client
-const offlineClient = new StateTransitionOfflineClient(new AggregatorClient('https://gateway-test.unicity.network'));
+const offlineClient = new OfflineStateTransitionClient(new AggregatorClient('https://gateway-test.unicity.network'));
 
 // Sender creates offline commitment (no network required)
 const salt = crypto.getRandomValues(new Uint8Array(32));

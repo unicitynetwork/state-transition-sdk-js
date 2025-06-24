@@ -26,7 +26,7 @@ import {ITransactionDataJson, TransactionData} from '../../src/transaction/Trans
 import {waitInclusionProof} from '../InclusionProofUtils.js';
 import {createMintData, mintToken, sendToken} from '../MintTokenUtils.js';
 import {TestTokenData} from '../TestTokenData.js';
-import {StateTransitionOfflineClient} from "../../src/StateTransitionOfflineClient.js";
+import {OfflineStateTransitionClient} from "../../src/OfflineStateTransitionClient.js";
 import {DataHasher} from "@unicitylabs/commons/lib/hash/DataHasher.js";
 import {OfflineCommitment} from "../../src/transaction/OfflineCommitment.js";
 import {OfflineTransaction} from "../../src/transaction/OfflineTransaction.js";
@@ -165,7 +165,7 @@ export async function testOfflineTransferFlow(client: StateTransitionClient): Pr
   );
 
   let offlineTxPackage: OfflineTransaction;
-  const offlineBuilder = new StateTransitionOfflineClient(client.client)
+  const offlineBuilder = new OfflineStateTransitionClient(client.client)
 
   {
     const receivingAddress = await DirectAddress.create(recipientPredicate.reference)
