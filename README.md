@@ -287,8 +287,14 @@ AGGREGATOR_URL='https://gateway-test.unicity.network' npm run test:e2e
 
 ### Linting
 
+Lint all code (source and tests):
 ```bash
 npm run lint
+```
+
+Lint with auto-fix:
+```bash
+npm run lint:fix
 ```
 
 ## Network Configuration
