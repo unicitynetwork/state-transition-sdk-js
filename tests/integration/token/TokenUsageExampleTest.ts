@@ -42,11 +42,6 @@ describe('Transition', function () {
     }
   }, 30000);
 
-  it('should verify block height', async () => {
-    const bh = await (client.client as AggregatorClient).getBlockHeight()
-    expect(bh).toBeGreaterThan(0)
-  });
-
   it('should verify the token latest state', async () => {
     await testTransferFlow(client);
   }, 30000);
@@ -62,4 +57,9 @@ describe('Transition', function () {
   it('should split tokens after transfer', async () => {
     await testSplitFlowAfterTransfer(client);
   }, 30000);
+
+  it('should verify block height', async () => {
+    const bh = await (client.client as AggregatorClient).getBlockHeight()
+    expect(bh).toBeGreaterThan(0)
+  });
 });
