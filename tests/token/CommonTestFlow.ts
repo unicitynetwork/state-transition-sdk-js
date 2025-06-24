@@ -23,13 +23,13 @@ import {MintTransactionData} from '../../src/transaction/MintTransactionData.js'
 import {TokenSplitBuilder} from '../../src/transaction/TokenSplitBuilder.js';
 import {ITransactionJson, Transaction} from '../../src/transaction/Transaction.js';
 import {ITransactionDataJson, TransactionData} from '../../src/transaction/TransactionData.js';
-import {waitInclusionProof} from '../InclusionProofUtils.js';
 import {createMintData, mintToken, sendToken} from '../MintTokenUtils.js';
 import {TestTokenData} from '../TestTokenData.js';
 import {OfflineStateTransitionClient} from "../../src/OfflineStateTransitionClient.js";
 import {DataHasher} from "@unicitylabs/commons/lib/hash/DataHasher.js";
 import {OfflineCommitment} from "../../src/transaction/OfflineCommitment.js";
 import {OfflineTransaction} from "../../src/transaction/OfflineTransaction.js";
+import {waitInclusionProof} from "../../src/utils/InclusionProofUtils.js";
 
 const textEncoder = new TextEncoder();
 const initialOwnerSecret = textEncoder.encode('secret');

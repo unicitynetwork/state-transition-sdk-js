@@ -11,6 +11,8 @@
     "build:check": "tsc --noEmit",
     "lint": "eslint \"src/**/*\"",
     "lint:fix": "eslint \"src/**/*\" --fix",
+    "test:lint": "eslint \"tests/**/*\"",
+    "test:lint:fix": "eslint \"tests/**/*\" --fix",
     "test": "jest --testPathPatterns=tests --testPathIgnorePatterns=tests/e2e",
     "test:unit": "jest --testPathPatterns=tests/unit",
     "test:integration": "jest --testPathPatterns=tests/integration",

@@ -6,9 +6,9 @@ import { SigningService } from '@unicitylabs/commons/lib/signing/SigningService.
 import { StateTransitionClient } from './StateTransitionClient.js';
 import { Commitment } from './transaction/Commitment.js';
 import { OfflineCommitment } from './transaction/OfflineCommitment.js';
-import { TransactionData } from './transaction/TransactionData.js';
-import { waitInclusionProof } from '../tests/InclusionProofUtils.js';
 import { Transaction } from './transaction/Transaction.js';
+import { TransactionData } from './transaction/TransactionData.js';
+import { waitInclusionProof } from './utils/InclusionProofUtils.js';
 
 /**
  * High level client implementing the token state transition workflow.
