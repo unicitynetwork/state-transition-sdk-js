@@ -57,8 +57,24 @@ export class TokenCoinData implements ISerializable {
     }
 
     const coins: [bigint, bigint][] = [];
+
+    // Helper function to safely parse values that might have been corrupted by JSON.stringify()
+    const parseValue = (v: unknown): bigint => {
+      if (typeof v === 'bigint') return v;
+      if (typeof v === 'string' || typeof v === 'number') return BigInt(v);
+      if (v === null) {
+        throw new Error(`Cannot convert null to BigInt. This indicates a JSON serialization issue with BigInt values.`);
+      }
+      if (typeof v === 'object') {
+        throw new Error(
+          `Cannot convert object to BigInt. This indicates a JSON serialization issue with BigInt values. Received: ${JSON.stringify(v)}`,
+        );
+      }
+      throw new Error(`Unsupported type for BigInt conversion: ${typeof v}. Expected string, number, or bigint.`);
+    };
+
     for (const [key, value] of data) {
-      coins.push([BigInt(key), BigInt(value)]);
+      coins.push([parseValue(key), parseValue(value)]);
     }
 
     return new TokenCoinData(coins);
