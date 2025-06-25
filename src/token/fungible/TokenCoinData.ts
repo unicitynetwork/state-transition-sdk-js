@@ -16,7 +16,7 @@ export class TokenCoinData implements ISerializable {
   private readonly _coins: Map<bigint, bigint>;
 
   /**
-   * @param coins Array of coin id and balance pairs
+   * @param coins Array of coin id serialized to bigint and balance pairs
    */
   public constructor(coins: [bigint, bigint][]) {
     this._coins = new Map(coins);
@@ -31,6 +31,10 @@ export class TokenCoinData implements ISerializable {
     return new Map(Array.from(this._coins.entries()).map(([key, value]) => [CoinId.fromBigInt(key), value]));
   }
 
+  /**
+   * Create a new coin data object from an array of coin id and balance pairs.
+   * @param coins Array of tuples of CoinId and bigint.
+   */
   public static create(coins: [CoinId, bigint][]): TokenCoinData {
     return new TokenCoinData(coins.map(([key, value]) => [key.toBigInt(), value]));
   }
@@ -52,29 +56,20 @@ export class TokenCoinData implements ISerializable {
 
   /** Parse from a JSON representation. */
   public static fromJSON(data: unknown): TokenCoinData {
-    if (!Array.isArray(data)) {
+    if (
+      !Array.isArray(data) ||
+      !data.every(
+        (value) =>
+          Array.isArray(value) && value.length === 2 && typeof value[0] === 'string' && typeof value[1] === 'string',
+      )
+    ) {
       throw new Error('Invalid coin data JSON format');
     }
 
     const coins: [bigint, bigint][] = [];
 
-    // Helper function to safely parse values that might have been corrupted by JSON.stringify()
-    const parseValue = (v: unknown): bigint => {
-      if (typeof v === 'bigint') return v;
-      if (typeof v === 'string' || typeof v === 'number') return BigInt(v);
-      if (v === null) {
-        throw new Error(`Cannot convert null to BigInt. This indicates a JSON serialization issue with BigInt values.`);
-      }
-      if (typeof v === 'object') {
-        throw new Error(
-          `Cannot convert object to BigInt. This indicates a JSON serialization issue with BigInt values. Received: ${JSON.stringify(v)}`,
-        );
-      }
-      throw new Error(`Unsupported type for BigInt conversion: ${typeof v}. Expected string, number, or bigint.`);
-    };
-
     for (const [key, value] of data) {
-      coins.push([parseValue(key), parseValue(value)]);
+      coins.push([BigInt(key), BigInt(value)]);
     }
 
     return new TokenCoinData(coins);

@@ -14,7 +14,6 @@ import { TokenJsonDeserializer } from '../serializer/token/TokenJsonDeserializer
 import { ITokenJson, Token } from '../token/Token.js';
 import { TokenFactory } from '../token/TokenFactory.js';
 import { TokenState } from '../token/TokenState.js';
-import { JsonUtils } from '../utils/JsonUtils.js';
 
 /** JSON representation of an {@link OfflineTransaction}. */
 export interface IOfflineTransactionJson {
@@ -81,18 +80,6 @@ export class OfflineTransaction implements ISerializable {
   }
 
   /**
-   * Create OfflineTransaction from JSON string.
-   * This method can handle JSON strings that were created with toJSONString().
-   *
-   * @param jsonString JSON string representation
-   * @returns Promise<OfflineTransaction>
-   */
-  public static fromJSONString(jsonString: string): Promise<OfflineTransaction> {
-    const parsed = JsonUtils.parse(jsonString);
-    return OfflineTransaction.fromJSON(parsed);
-  }
-
-  /**
    * Type guard to check if data is valid OfflineTransaction JSON.
    * @param data Data to validate
    */
@@ -129,19 +116,5 @@ export class OfflineTransaction implements ISerializable {
       },
       token: this.token.toJSON(),
     };
-  }
-
-  /**
-   * Serialize to JSON string with BigInt support.
-   * This method handles potential BigInt values that might exist in the object graph
-   * and converts them to strings to prevent JSON serialization errors.
-   *
-   * Use this method when you need to serialize for actual transfer (e.g., NFC, file, etc.).
-   *
-   * @param space Optional spacing for formatting
-   * @returns JSON string with BigInt values safely converted
-   */
-  public toJSONString(space?: string | number): string {
-    return JsonUtils.safeStringify(this, space);
   }
 }
