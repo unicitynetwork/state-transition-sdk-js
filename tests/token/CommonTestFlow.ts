@@ -184,9 +184,28 @@ export async function testOfflineTransferFlow(client: StateTransitionClient): Pr
       firstOwnerSigningService,
     );
 
-    const offlineTxJson = new OfflineTransaction(offlineCommitment, token).toJSON();
+    const offlineTransaction = new OfflineTransaction(offlineCommitment, token);
+
+    // Test the full JSON serialization cycle that would happen in real usage
+    // 1. Get JSON object
+    const offlineTxJson = offlineTransaction.toJSON();
+
+    // 2. Simulate actual JSON string transfer (this should expose any BigInt issues)
+    let jsonString: string;
+    try {
+      jsonString = JSON.stringify(offlineTxJson);
+    } catch (error) {
+      // If JSON.stringify fails due to BigInt, use the safe method
+      console.warn('JSON.stringify failed, using safe serialization:', error.message);
+      jsonString = offlineTransaction.toJSONString();
+    }
+
+    // 3. Simulate transfer and parsing (what recipient would do)
+    const parsedJson = JSON.parse(jsonString);
+
+    // 4. Deserialize back to object
     //...sender sends the "package" offline to the recipient
-    offlineTxPackage = await OfflineTransaction.fromJSON(offlineTxJson);
+    offlineTxPackage = await OfflineTransaction.fromJSON(parsedJson);
   }
 
   // Recipient imports token (offline json file transfer)

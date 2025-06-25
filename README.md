@@ -238,6 +238,20 @@ Tokens contain:
 - **transactionData**: The transaction details and state transition
 - **authenticator**: Cryptographic signature over the transaction
 
+### BigInt JSON Serialization
+
+The SDK handles BigInt values that may cause JSON serialization issues:
+
+**JsonUtils**: Utility for BigInt-safe JSON operations:
+- **stringify()**: JSON.stringify with automatic BigInt to string conversion
+- **safeStringify()**: Calls toJSON() first, then applies BigInt-safe stringify
+- **parse()**: Standard JSON.parse (use class-specific fromJSON for proper deserialization)
+
+**Recommended Usage**:
+- Use `OfflineTransaction.toJSONString()` for actual transfer/storage
+- Use `OfflineTransaction.fromJSONString()` for deserialization
+- For manual operations: `JsonUtils.safeStringify(obj)` and `JsonUtils.parse(str)`
+
 ### Privacy Model
 - **Commitment-based**: Only cryptographic commitments published on-chain
 - **Self-contained**: Tokens include complete transaction history
@@ -448,13 +462,14 @@ const offlineCommitment = await offlineClient.createOfflineCommitment(
 // Create offline transaction package
 const offlineTransaction = new OfflineTransaction(offlineCommitment, token);
 
-// Serialize to JSON for offline transfer (file, USB, QR code, etc.)
-const offlineTransactionJson = offlineTransaction.toJSON();
+// Serialize to JSON string for offline transfer (file, USB, QR code, etc.)
+// Use toJSONString() for BigInt-safe serialization
+const offlineTransactionJsonString = offlineTransaction.toJSONString();
 
-// ... Transfer JSON file offline to recipient ...
+// ... Transfer JSON string offline to recipient ...
 
 // Recipient deserializes and submits when network is available
-const importedOfflineTransaction = await OfflineTransaction.fromJSON(offlineTransactionJson);
+const importedOfflineTransaction = await OfflineTransaction.fromJSONString(offlineTransactionJsonString);
 const finalTransaction = await offlineClient.submitOfflineTransaction(importedOfflineTransaction.commitment);
 
 // Complete the transfer
