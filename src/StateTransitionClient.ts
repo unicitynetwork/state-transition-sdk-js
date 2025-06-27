@@ -104,7 +104,7 @@ export class StateTransitionClient {
     { requestId, transactionData }: Commitment<T>,
     inclusionProof: InclusionProof,
   ): Promise<Transaction<T>> {
-    const status = await inclusionProof.verify(requestId.toBigInt());
+    const status = await inclusionProof.verify(requestId);
     if (status != InclusionProofVerificationStatus.OK) {
       throw new Error('Inclusion proof verification failed.');
     }
@@ -180,7 +180,7 @@ export class StateTransitionClient {
     const requestId = await RequestId.create(publicKey, token.state.hash);
     const inclusionProof = await this.client.getInclusionProof(requestId);
     // TODO: Check ownership?
-    return inclusionProof.verify(requestId.toBigInt());
+    return inclusionProof.verify(requestId);
   }
 
   /**

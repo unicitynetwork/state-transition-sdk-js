@@ -129,7 +129,7 @@ export abstract class DefaultPredicate implements IPredicate {
 
     // Verify inclusion proof path.
     const requestId = await RequestId.create(this.publicKey, transaction.data.sourceState.hash);
-    const status = await transaction.inclusionProof.verify(requestId.toBigInt());
+    const status = await transaction.inclusionProof.verify(requestId);
     return status === InclusionProofVerificationStatus.OK;
   }
 

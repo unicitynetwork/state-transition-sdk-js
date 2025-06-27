@@ -187,23 +187,13 @@ export async function testOfflineTransferFlow(client: StateTransitionClient): Pr
     const offlineTransaction = new OfflineTransaction(offlineCommitment, token);
 
     // Test the full JSON serialization cycle that would happen in real usage
-    // 1. Get JSON object
-    const offlineTxJson = offlineTransaction.toJSON();
+    // 1. Get JSON representation of the offline transaction
+    const offlineTxJson = JSON.stringify(offlineTransaction.toJSON());
 
-    // 2. Simulate actual JSON string transfer (this should expose any BigInt issues)
-    let jsonString: string;
-    try {
-      jsonString = JSON.stringify(offlineTxJson);
-    } catch (error) {
-      // If JSON.stringify fails due to BigInt, use the safe method
-      console.warn('JSON.stringify failed, using safe serialization:', error.message);
-      jsonString = offlineTransaction.toJSONString();
-    }
+    // 2. Simulate transfer and parsing (what recipient would do)
+    const parsedJson = JSON.parse(offlineTxJson);
 
-    // 3. Simulate transfer and parsing (what recipient would do)
-    const parsedJson = JSON.parse(jsonString);
-
-    // 4. Deserialize back to object
+    // 3. Deserialize back to object
     //...sender sends the "package" offline to the recipient
     offlineTxPackage = await OfflineTransaction.fromJSON(parsedJson);
   }
@@ -411,7 +401,7 @@ async function splitToken(
     const signingService = await SigningService.createFromSecret(ownerSecret, nonce);
 
     const predicate = await MaskedPredicate.create(tokenId, tokenType, signingService, HashAlgorithm.SHA256, nonce);
-    predicates.set(tokenId.toBigInt(), predicate);
+    predicates.set(tokenId.toBitString().toBigInt(), predicate);
 
     const token = builder.createToken(
       tokenId,
@@ -456,9 +446,10 @@ async function splitToken(
   const mintTransactions = await splitData.toMintTransactionDataList(updatedToken);
   return Promise.all(
     mintTransactions.map((data) =>
-      TokenState.create(predicates.get(data.tokenId.toBigInt())!, textEncoder.encode(customDataString)).then((state) =>
-        createMintToken(client, data, state),
-      ),
+      TokenState.create(
+        predicates.get(data.tokenId.toBitString().toBigInt())!,
+        textEncoder.encode(customDataString),
+      ).then((state) => createMintToken(client, data, state)),
     ),
   );
 }

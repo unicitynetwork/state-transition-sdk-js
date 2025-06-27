@@ -1,5 +1,7 @@
 import { CborDecoder } from '@unicitylabs/commons/lib/cbor/CborDecoder.js';
 import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
+import { BigintConverter } from '@unicitylabs/commons/lib/util/BigintConverter.js';
+import { BitString } from '@unicitylabs/commons/lib/util/BitString.js';
 import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
 
 /** Identifier for a fungible coin type. */
@@ -32,7 +34,7 @@ export class CoinId {
    * @param value bigint represantation of coin id
    */
   public static fromBigInt(value: bigint): CoinId {
-    return CoinId.fromCBOR(HexConverter.decode(value.toString(16).slice(1)));
+    return CoinId.fromCBOR(BigintConverter.encode(value).slice(1));
   }
 
   /** Hex string representation. */
@@ -48,7 +50,7 @@ export class CoinId {
   /**
    * Converts the CoinId to a BigInt representation.
    */
-  public toBigInt(): bigint {
-    return BigInt(`0x01${HexConverter.encode(this.toCBOR())}`);
+  public toBitString(): BitString {
+    return new BitString(this.toCBOR());
   }
 }
