@@ -105,7 +105,11 @@ export class TokenFactory {
         return false;
       }
 
-      if (transaction.data.coinData.size !== reason.proofs.size) {
+      const coins = new Map(
+        transaction.data.coinData?.coins.map(([id, value]) => [id.toBitString().toBigInt(), value]) ?? [],
+      );
+
+      if (coins?.size !== reason.proofs.size) {
         return false;
       }
 
@@ -126,7 +130,7 @@ export class TokenFactory {
         }
 
         const sumPathLeaf = proof.coinTreePath.steps.at(0)?.branch?.sum;
-        if (transaction.data.coinData?.getByKey(coinId) !== sumPathLeaf) {
+        if (coins.get(coinId) !== sumPathLeaf) {
           return false;
         }
 

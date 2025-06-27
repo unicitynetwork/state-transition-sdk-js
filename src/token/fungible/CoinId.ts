@@ -1,6 +1,5 @@
 import { CborDecoder } from '@unicitylabs/commons/lib/cbor/CborDecoder.js';
 import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
-import { BigintConverter } from '@unicitylabs/commons/lib/util/BigintConverter.js';
 import { BitString } from '@unicitylabs/commons/lib/util/BitString.js';
 import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
 
@@ -27,14 +26,6 @@ export class CoinId {
    */
   public static fromCBOR(data: Uint8Array): CoinId {
     return new CoinId(CborDecoder.readByteString(data));
-  }
-
-  /**
-   * Creates a CoinId from a bigint.
-   * @param value bigint represantation of coin id
-   */
-  public static fromBigInt(value: bigint): CoinId {
-    return CoinId.fromCBOR(BigintConverter.encode(value).slice(1));
   }
 
   /** Hex string representation. */

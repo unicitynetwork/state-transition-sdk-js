@@ -1,6 +1,7 @@
 import { CborDecoder } from '@unicitylabs/commons/lib/cbor/CborDecoder.js';
 import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
 import { BigintConverter } from '@unicitylabs/commons/lib/util/BigintConverter.js';
+import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
 import { dedent } from '@unicitylabs/commons/lib/util/StringUtils.js';
 
 import { CoinId } from './CoinId.js';
@@ -13,42 +14,37 @@ export type TokenCoinDataJson = [string, string][];
  * Container for fungible coin balances attached to a token.
  */
 export class TokenCoinData implements ISerializable {
-  private readonly _coins: Map<bigint, bigint>;
-
   /**
-   * @param coins Array of coin id serialized to bigint and balance pairs
+   * @param _coins Map of coin id bytes hex and their balances.
    */
-  private constructor(coins: [bigint, bigint][]) {
-    this._coins = new Map(coins);
-  }
+  private constructor(private readonly _coins: Map<string, bigint>) {}
 
-  /** Get total number of different coins */
-  public get size(): number {
-    return this._coins.size;
-  }
-
-  public get coins(): Map<CoinId, bigint> {
-    return new Map(Array.from(this._coins.entries()).map(([key, value]) => [CoinId.fromBigInt(key), value]));
+  public get coins(): [CoinId, bigint][] {
+    return Array.from(this._coins.entries()).map(([key, value]) => [CoinId.fromJSON(key), value]);
   }
 
   /**
    * Create a new coin data object from an array of coin id and balance pairs.
-   * @param coins Array of tuples of CoinId and bigint.
+   * @param data Array of tuples of CoinId and bigint.
    */
-  public static create(coins: [CoinId, bigint][]): TokenCoinData {
-    return new TokenCoinData(coins.map(([key, value]) => [key.toBitString().toBigInt(), value]));
+  public static create(data: [CoinId, bigint][]): TokenCoinData {
+    const coins = new Map<string, bigint>();
+    for (const [coinId, balance] of data) {
+      coins.set(coinId.toJSON(), balance);
+    }
+    return new TokenCoinData(coins);
   }
 
   /** Create a coin data object from CBOR. */
   public static fromCBOR(data: Uint8Array): TokenCoinData {
-    const coins: [bigint, bigint][] = [];
+    const coins = new Map<string, bigint>();
     const entries = CborDecoder.readArray(data);
     for (const item of entries) {
       const [key, value] = CborDecoder.readArray(item);
-      coins.push([
-        BigintConverter.decode(CborDecoder.readByteString(key)),
+      coins.set(
+        HexConverter.encode(CborDecoder.readByteString(key)),
         BigintConverter.decode(CborDecoder.readByteString(value)),
-      ]);
+      );
     }
 
     return new TokenCoinData(coins);
@@ -66,23 +62,7 @@ export class TokenCoinData implements ISerializable {
       throw new Error('Invalid coin data JSON format');
     }
 
-    const coins: [bigint, bigint][] = [];
-
-    for (const [key, value] of data) {
-      coins.push([BigInt(key), BigInt(value)]);
-    }
-
-    return new TokenCoinData(coins);
-  }
-
-  /** Get the balance of a specific coin. */
-  public get(coinId: CoinId): bigint | undefined {
-    return this._coins.get(coinId.toBitString().toBigInt());
-  }
-
-  /** Get the balance of a coin by its internal map key. */
-  public getByKey(coinId: bigint): bigint | undefined {
-    return this._coins.get(coinId);
+    return new TokenCoinData(new Map(data.map(([key, value]) => [key, BigInt(value)])));
   }
 
   /** @inheritDoc */
@@ -90,7 +70,7 @@ export class TokenCoinData implements ISerializable {
     return CborEncoder.encodeArray(
       Array.from(this._coins.entries()).map(([key, value]) =>
         CborEncoder.encodeArray([
-          CborEncoder.encodeByteString(BigintConverter.encode(key)),
+          CborEncoder.encodeByteString(HexConverter.decode(key)),
           CborEncoder.encodeByteString(BigintConverter.encode(value)),
         ]),
       ),
@@ -105,7 +85,7 @@ export class TokenCoinData implements ISerializable {
   /** Convert instance to readable string */
   public toString(): string {
     return dedent`
-      FungibleTokenData
+      TokenCoinData:
         ${Array.from(this._coins.entries())
           .map(([key, value]) => `${key}: ${value}`)
           .join('\n')}`;

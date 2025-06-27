@@ -24,7 +24,7 @@ import { TokenType } from '../../src/token/TokenType.js';
 import { MintTransactionData } from '../../src/transaction/MintTransactionData.js';
 import { OfflineCommitment } from '../../src/transaction/OfflineCommitment.js';
 import { OfflineTransaction } from '../../src/transaction/OfflineTransaction.js';
-import { TokenSplitBuilder } from '../../src/transaction/TokenSplitBuilder.js';
+import { TokenSplitBuilder } from '../../src/transaction/split/TokenSplitBuilder.js';
 import { ITransactionJson, Transaction } from '../../src/transaction/Transaction.js';
 import { ITransactionDataJson, TransactionData } from '../../src/transaction/TransactionData.js';
 import { waitInclusionProof } from '../../src/utils/InclusionProofUtils.js';
@@ -412,7 +412,7 @@ async function splitToken(
       crypto.getRandomValues(new Uint8Array(32)),
     );
 
-    for (const [id, amount] of coins.coins.entries()) {
+    for (const [id, amount] of coins.coins) {
       token.addCoin(id, amount);
     }
   }
