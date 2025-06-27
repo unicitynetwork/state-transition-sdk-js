@@ -52,7 +52,7 @@ class SplitToken {
       throw new Error('Amount must be greater than zero');
     }
 
-    this._coins.set(coinId.toBigInt(), amount);
+    this._coins.set(coinId.toBitString().toBigInt(), amount);
     return this;
   }
 }
@@ -80,7 +80,7 @@ class TokenSplitData {
 
     const transactions: MintTransactionData<SplitMintReason>[] = [];
     for (const [tokenId, splitToken] of this.tokens.entries()) {
-      const coinData: [bigint, bigint][] = [];
+      const coinData: [CoinId, bigint][] = [];
       const proofs = new Map<bigint, SplitMintReasonProof>();
       for (const [coinId, amount] of splitToken.coins.entries()) {
         proofs.set(
@@ -90,7 +90,7 @@ class TokenSplitData {
             this._coinTrees.get(coinId)?.getPath(tokenId) as MerkleSumTreePath,
           ),
         );
-        coinData.push([coinId, amount]);
+        coinData.push([CoinId.fromBigInt(coinId), amount]);
       }
 
       transactions.push(
@@ -98,7 +98,7 @@ class TokenSplitData {
           splitToken.tokenId,
           splitToken.tokenType,
           splitToken.data,
-          new TokenCoinData(coinData),
+          TokenCoinData.create(coinData),
           splitToken.recipient,
           splitToken.salt,
           splitToken.dataHash,
@@ -122,12 +122,12 @@ export class TokenSplitBuilder {
     dataHash: DataHash,
     salt: Uint8Array,
   ): SplitToken {
-    if (this.tokens.has(id.toBigInt())) {
+    if (this.tokens.has(id.toBitString().toBigInt())) {
       throw new Error('Token already exists in split request');
     }
 
     const builder = new SplitToken(id, type, data, recipient, dataHash, salt);
-    this.tokens.set(id.toBigInt(), builder);
+    this.tokens.set(id.toBitString().toBigInt(), builder);
     return builder;
   }
 

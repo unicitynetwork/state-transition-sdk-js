@@ -28,7 +28,7 @@ export class TestAggregatorClient implements IAggregatorClient {
     transactionHash: DataHash,
     authenticator: Authenticator,
   ): Promise<SubmitCommitmentResponse> {
-    const path = requestId.toBigInt();
+    const path = requestId.toBitString().toBigInt();
     const transaction = new Transaction(authenticator, transactionHash);
     const leafValue = await LeafValue.create(authenticator, transactionHash);
     this.smt.addLeaf(path, leafValue.bytes);
@@ -38,11 +38,11 @@ export class TestAggregatorClient implements IAggregatorClient {
   }
 
   public async getInclusionProof(requestId: RequestId): Promise<InclusionProof> {
-    const transaction = this.requests.get(requestId.toBigInt());
+    const transaction = this.requests.get(requestId.toBitString().toBigInt());
     const root = await this.smt.calculateRoot();
     return Promise.resolve(
       new InclusionProof(
-        root.getPath(requestId.toBigInt()),
+        root.getPath(requestId.toBitString().toBigInt()),
         transaction?.authenticator ?? null,
         transaction?.transactionHash ?? null,
       ),

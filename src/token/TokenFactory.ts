@@ -115,7 +115,7 @@ export class TokenFactory {
           return false;
         }
 
-        const coinPathResult = await proof.coinTreePath.verify(transaction.data.tokenId.toBigInt());
+        const coinPathResult = await proof.coinTreePath.verify(transaction.data.tokenId.toBitString().toBigInt());
         if (!coinPathResult.result) {
           return false;
         }
@@ -139,7 +139,7 @@ export class TokenFactory {
 
     // Verify inclusion proof path.
     const requestId = await RequestId.create(signingService.publicKey, transaction.data.sourceState.hash);
-    const status = await transaction.inclusionProof.verify(requestId.toBigInt());
+    const status = await transaction.inclusionProof.verify(requestId);
     return status === InclusionProofVerificationStatus.OK;
   }
 }

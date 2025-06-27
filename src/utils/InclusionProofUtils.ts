@@ -37,7 +37,7 @@ export async function waitInclusionProof(
   while (true) {
     try {
       const inclusionProof = await client.getInclusionProof(commitment);
-      if ((await inclusionProof.verify(commitment.requestId.toBigInt())) === InclusionProofVerificationStatus.OK) {
+      if ((await inclusionProof.verify(commitment.requestId)) === InclusionProofVerificationStatus.OK) {
         return inclusionProof;
       }
     } catch (err) {

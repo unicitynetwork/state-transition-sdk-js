@@ -18,7 +18,7 @@ export class TokenCoinData implements ISerializable {
   /**
    * @param coins Array of coin id serialized to bigint and balance pairs
    */
-  public constructor(coins: [bigint, bigint][]) {
+  private constructor(coins: [bigint, bigint][]) {
     this._coins = new Map(coins);
   }
 
@@ -36,7 +36,7 @@ export class TokenCoinData implements ISerializable {
    * @param coins Array of tuples of CoinId and bigint.
    */
   public static create(coins: [CoinId, bigint][]): TokenCoinData {
-    return new TokenCoinData(coins.map(([key, value]) => [key.toBigInt(), value]));
+    return new TokenCoinData(coins.map(([key, value]) => [key.toBitString().toBigInt(), value]));
   }
 
   /** Create a coin data object from CBOR. */
@@ -77,7 +77,7 @@ export class TokenCoinData implements ISerializable {
 
   /** Get the balance of a specific coin. */
   public get(coinId: CoinId): bigint | undefined {
-    return this._coins.get(coinId.toBigInt());
+    return this._coins.get(coinId.toBitString().toBigInt());
   }
 
   /** Get the balance of a coin by its internal map key. */

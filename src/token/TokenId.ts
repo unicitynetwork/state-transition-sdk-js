@@ -1,4 +1,5 @@
 import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
+import { BitString } from '@unicitylabs/commons/lib/util/BitString.js';
 import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
 
 /**
@@ -37,9 +38,9 @@ export class TokenId {
   }
 
   /**
-   * Converts the TokenId to a BigInt representation.
+   * Converts the TokenId to a bitstring representation.
    */
-  public toBigInt(): bigint {
-    return BigInt(`0x01${HexConverter.encode(this.toCBOR())}`);
+  public toBitString(): BitString {
+    return new BitString(this.toCBOR());
   }
 }
