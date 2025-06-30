@@ -110,8 +110,8 @@ export class MaskedPredicate extends DefaultPredicate {
       throw new Error(`Invalid predicate type: expected ${PredicateType.MASKED}, got ${type}`);
     }
 
-    const hashAlgorithm = CborDecoder.readTextString(data[3]) as unknown as HashAlgorithm;
-    if (!HashAlgorithm[hashAlgorithm]) {
+    const hashAlgorithm = Number(CborDecoder.readUnsignedInteger(data[3]));
+    if (HashAlgorithm[hashAlgorithm] == null) {
       throw new Error(`Invalid hash algorithm: ${hashAlgorithm}`);
     }
 
