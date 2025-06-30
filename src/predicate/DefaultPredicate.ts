@@ -99,7 +99,7 @@ export abstract class DefaultPredicate implements IPredicate {
       CborEncoder.encodeTextString(this.type),
       CborEncoder.encodeByteString(this.publicKey),
       CborEncoder.encodeTextString(this.algorithm),
-      CborEncoder.encodeTextString(HashAlgorithm[this.hashAlgorithm]),
+      CborEncoder.encodeUnsignedInteger(this.hashAlgorithm),
       CborEncoder.encodeByteString(this.nonce),
     ]);
   }

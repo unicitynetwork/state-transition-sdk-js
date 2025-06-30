@@ -59,7 +59,7 @@ export class MintTransactionDataCborSerializer {
       CborDecoder.readTextString(data[4]),
       CborDecoder.readByteString(data[5]),
       CborDecoder.readOptional(data[6], DataHash.fromCBOR),
-      data[7] ? await this.createMintReason(data[7]) : null,
+      await CborDecoder.readOptional(data[7], this.createMintReason),
     );
   }
 
