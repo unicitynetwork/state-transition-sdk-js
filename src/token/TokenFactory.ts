@@ -10,7 +10,7 @@ import { MINTER_SECRET } from '../StateTransitionClient.js';
 import { Token } from './Token.js';
 import { BurnPredicate } from '../predicate/BurnPredicate.js';
 import { PredicateType } from '../predicate/PredicateType.js';
-import { ITokenDeserializer } from '../serializer/token/ITokenDeserializer.js';
+import { ITokenSerializer } from '../serializer/token/ITokenSerializer.js';
 import { MintTransactionData } from '../transaction/MintTransactionData.js';
 import { Transaction } from '../transaction/Transaction.js';
 import { TransactionData } from '../transaction/TransactionData.js';
@@ -23,7 +23,7 @@ export class TokenFactory {
   /**
    * @param deserializer token deserializer to use for parsing tokens from CBOR or JSON
    */
-  public constructor(private readonly deserializer: ITokenDeserializer) {}
+  public constructor(private readonly deserializer: ITokenSerializer) {}
 
   /**
    * Deserialize a token from JSON.

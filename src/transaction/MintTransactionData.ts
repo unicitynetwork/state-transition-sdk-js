@@ -7,7 +7,7 @@ import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
 import { dedent } from '@unicitylabs/commons/lib/util/StringUtils.js';
 
 import { ISerializable } from '../ISerializable.js';
-import { TokenCoinData, TokenCoinDataJson } from '../token/fungible/TokenCoinData.js';
+import { TokenCoinData } from '../token/fungible/TokenCoinData.js';
 import { TokenId } from '../token/TokenId.js';
 import { TokenType } from '../token/TokenType.js';
 
@@ -16,22 +16,6 @@ import { TokenType } from '../token/TokenType.js';
  * Constant suffix used when deriving the mint initial state.
  */
 const MINT_SUFFIX = HexConverter.decode('9e82002c144d7c5796c50f6db50a0c7bbd7f717ae3af6c6c71a3e9eba3022730');
-
-export interface IMintReasonJson {
-  readonly type: string;
-}
-
-/** JSON representation of {@link MintTransactionData}. */
-export interface IMintTransactionDataJson {
-  readonly tokenId: string;
-  readonly tokenType: string;
-  readonly tokenData: string;
-  readonly coins: TokenCoinDataJson | null;
-  readonly recipient: string;
-  readonly salt: string;
-  readonly dataHash: string | null;
-  readonly reason: unknown | null;
-}
 
 /**
  * Data object describing a token mint operation.
@@ -128,34 +112,6 @@ export class MintTransactionData<R extends ISerializable | null> {
       dataHash,
       reason,
     );
-  }
-
-  /** Serialize this object to JSON object. */
-  public toJSON(): IMintTransactionDataJson {
-    return {
-      coins: this.coinData?.toJSON() ?? null,
-      dataHash: this.dataHash?.toJSON() ?? null,
-      reason: this.reason?.toJSON() ?? null,
-      recipient: this.recipient,
-      salt: HexConverter.encode(this._salt),
-      tokenData: HexConverter.encode(this._tokenData),
-      tokenId: this.tokenId.toJSON(),
-      tokenType: this.tokenType.toJSON(),
-    };
-  }
-
-  /** Serialize this object to CBOR. */
-  public toCBOR(): Uint8Array {
-    return CborEncoder.encodeArray([
-      this.tokenId.toCBOR(),
-      this.tokenType.toCBOR(),
-      CborEncoder.encodeByteString(this._tokenData),
-      this.coinData?.toCBOR() ?? CborEncoder.encodeNull(),
-      CborEncoder.encodeTextString(this.recipient),
-      CborEncoder.encodeByteString(this._salt),
-      this.dataHash?.toCBOR() ?? CborEncoder.encodeNull(),
-      this.reason?.toCBOR() ?? CborEncoder.encodeNull(),
-    ]);
   }
 
   /** Convert instance to readable string */
