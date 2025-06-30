@@ -5,13 +5,7 @@ import { HashAlgorithm } from '@unicitylabs/commons/lib/hash/HashAlgorithm.js';
 import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
 import { dedent } from '@unicitylabs/commons/lib/util/StringUtils.js';
 
-import { IPredicate, IPredicateJson } from '../predicate/IPredicate.js';
-
-/** JSON representation of {@link TokenState}. */
-export interface ITokenStateJson {
-  readonly unlockPredicate: IPredicateJson;
-  readonly data: string | null;
-}
+import { IPredicate } from '../predicate/IPredicate.js';
 
 /**
  * Represents a snapshot of token ownership and associated data.
@@ -56,22 +50,6 @@ export class TokenState {
         )
         .digest(),
     );
-  }
-
-  /** Serialize the state to JSON. */
-  public toJSON(): ITokenStateJson {
-    return {
-      data: this._data ? HexConverter.encode(this._data) : null,
-      unlockPredicate: this.unlockPredicate.toJSON(),
-    };
-  }
-
-  /** Encode the state as CBOR. */
-  public toCBOR(): Uint8Array {
-    return CborEncoder.encodeArray([
-      this.unlockPredicate.toCBOR(),
-      CborEncoder.encodeOptional(this._data, CborEncoder.encodeByteString),
-    ]);
   }
 
   /** Convert instance to readable string */

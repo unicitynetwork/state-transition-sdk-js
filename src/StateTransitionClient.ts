@@ -1,7 +1,9 @@
-import { Authenticator } from '@unicitylabs/commons/lib/api/Authenticator.js';
 import { InclusionProof, InclusionProofVerificationStatus } from '@unicitylabs/commons/lib/api/InclusionProof.js';
 import { RequestId } from '@unicitylabs/commons/lib/api/RequestId.js';
-import { SubmitCommitmentStatus } from '@unicitylabs/commons/lib/api/SubmitCommitmentResponse.js';
+import {
+  SubmitCommitmentResponse,
+  SubmitCommitmentStatus,
+} from '@unicitylabs/commons/lib/api/SubmitCommitmentResponse.js';
 import { HashAlgorithm } from '@unicitylabs/commons/lib/hash/HashAlgorithm.js';
 import { SigningService } from '@unicitylabs/commons/lib/signing/SigningService.js';
 import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
@@ -57,17 +59,28 @@ export class StateTransitionClient {
   public async submitMintTransaction<T extends MintTransactionData<ISerializable | null>>(
     transactionData: T,
   ): Promise<Commitment<T>> {
-    return this.sendTransaction(
+    const commitment = await Commitment.create(
       transactionData,
       await SigningService.createFromSecret(MINTER_SECRET, transactionData.tokenId.bytes),
     );
+
+    const result = await this.client.submitTransaction(
+      commitment.requestId,
+      commitment.transactionData.hash,
+      commitment.authenticator,
+    );
+
+    if (result.status !== SubmitCommitmentStatus.SUCCESS) {
+      throw new Error(`Could not submit transaction: ${result.status}`);
+    }
+
+    return commitment;
   }
 
   /**
    * Submit a state transition for an existing token.
    *
-   * @param transactionData Data describing the transition
-   * @param signingService   Signing service for the current owner
+   * @param {Commitment} commitment Commitment containing the request information
    * @returns Commitment ready for inclusion proof retrieval
    * @throws Error if ownership verification fails or aggregator rejects
    *
@@ -76,15 +89,16 @@ export class StateTransitionClient {
    * const commitment = await client.submitTransaction(data, signingService);
    * ```
    */
-  public async submitTransaction(
-    transactionData: TransactionData,
-    signingService: SigningService,
-  ): Promise<Commitment<TransactionData>> {
-    if (!(await transactionData.sourceState.unlockPredicate.isOwner(signingService.publicKey))) {
-      throw new Error('Failed to unlock token');
+  public submitCommitment(commitment: Commitment<TransactionData>): Promise<SubmitCommitmentResponse> {
+    if (!commitment.transactionData.sourceState.unlockPredicate.isOwner(commitment.authenticator.publicKey)) {
+      throw new Error('Ownership verification failed: Authenticator does not match source state predicate.');
     }
 
-    return this.sendTransaction(transactionData, signingService);
+    return this.client.submitTransaction(
+      commitment.requestId,
+      commitment.transactionData.hash,
+      commitment.authenticator,
+    );
   }
 
   /**
@@ -195,25 +209,5 @@ export class StateTransitionClient {
     commitment: Commitment<TransactionData | MintTransactionData<ISerializable | null>>,
   ): Promise<InclusionProof> {
     return this.client.getInclusionProof(commitment.requestId);
-  }
-
-  private async sendTransaction<TD extends TransactionData | MintTransactionData<ISerializable | null>>(
-    transactionData: TD,
-    signingService: SigningService,
-  ): Promise<Commitment<TD>> {
-    const requestId = await RequestId.create(signingService.publicKey, transactionData.sourceState.hash);
-
-    const authenticator = await Authenticator.create(
-      signingService,
-      transactionData.hash,
-      transactionData.sourceState.hash,
-    );
-    const result = await this.client.submitTransaction(requestId, transactionData.hash, authenticator);
-
-    if (result.status !== SubmitCommitmentStatus.SUCCESS) {
-      throw new Error(`Could not submit transaction: ${result.status}`);
-    }
-
-    return new Commitment(requestId, transactionData, authenticator);
   }
 }

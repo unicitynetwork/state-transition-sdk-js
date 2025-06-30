@@ -1,3 +1,4 @@
+import { SubmitCommitmentStatus } from '@unicitylabs/commons/lib/api/SubmitCommitmentResponse.js';
 import { DataHasher } from '@unicitylabs/commons/lib/hash/DataHasher.js';
 import { HashAlgorithm } from '@unicitylabs/commons/lib/hash/HashAlgorithm.js';
 import { SigningService } from '@unicitylabs/commons/lib/signing/SigningService.js';
@@ -12,6 +13,7 @@ import { Token } from '../src/token/Token.js';
 import { TokenId } from '../src/token/TokenId.js';
 import { TokenState } from '../src/token/TokenState.js';
 import { TokenType } from '../src/token/TokenType.js';
+import { Commitment } from '../src/transaction/Commitment.js';
 import { MintTransactionData } from '../src/transaction/MintTransactionData.js';
 import { Transaction } from '../src/transaction/Transaction.js';
 import { TransactionData } from '../src/transaction/TransactionData.js';
@@ -127,6 +129,11 @@ export async function sendToken(
     token.nametagTokens,
   );
 
-  const commitment = await client.submitTransaction(transactionData, signingService);
-  return await client.createTransaction(commitment, await waitInclusionProof(client, commitment));
+  const commitment = await Commitment.create(transactionData, signingService);
+  const response = await client.submitCommitment(commitment);
+  if (response.status !== SubmitCommitmentStatus.SUCCESS) {
+    throw new Error(`Failed to submit transaction commitment: ${response.status}`);
+  }
+
+  return client.createTransaction(commitment, await waitInclusionProof(client, commitment));
 }

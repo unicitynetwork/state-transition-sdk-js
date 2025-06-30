@@ -1,24 +1,10 @@
-import type { IInclusionProofJson } from '@unicitylabs/commons/lib/api/InclusionProof.js';
 import { InclusionProof } from '@unicitylabs/commons/lib/api/InclusionProof.js';
-import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
 import { DataHasher } from '@unicitylabs/commons/lib/hash/DataHasher.js';
 import { dedent } from '@unicitylabs/commons/lib/util/StringUtils.js';
 
-import { IMintTransactionDataJson, MintTransactionData } from './MintTransactionData.js';
-import { ITransactionDataJson, TransactionData } from './TransactionData.js';
+import { MintTransactionData } from './MintTransactionData.js';
+import { TransactionData } from './TransactionData.js';
 import { ISerializable } from '../ISerializable.js';
-
-type TransactionDataType<T> = T extends TransactionData
-  ? ITransactionDataJson
-  : T extends MintTransactionData<ISerializable | null>
-    ? IMintTransactionDataJson
-    : never;
-
-/** JSON representation of a {@link Transaction}. */
-export interface ITransactionJson<T extends ITransactionDataJson | IMintTransactionDataJson> {
-  readonly data: T;
-  readonly inclusionProof: IInclusionProofJson;
-}
 
 /**
  * A transaction along with its verified inclusion proof.
@@ -32,19 +18,6 @@ export class Transaction<T extends TransactionData | MintTransactionData<ISerial
     public readonly data: T,
     public readonly inclusionProof: InclusionProof,
   ) {}
-
-  /** Serialize transaction and proof to JSON. */
-  public toJSON(): ITransactionJson<TransactionDataType<T>> {
-    return {
-      data: this.data.toJSON() as TransactionDataType<T>,
-      inclusionProof: this.inclusionProof.toJSON(),
-    };
-  }
-
-  /** Serialize transaction and proof to CBOR. */
-  public toCBOR(): Uint8Array {
-    return CborEncoder.encodeArray([this.data.toCBOR(), this.inclusionProof.toCBOR()]);
-  }
 
   /**
    * Verify if the provided data matches the optional data hash.
