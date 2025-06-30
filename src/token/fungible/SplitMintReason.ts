@@ -2,9 +2,10 @@ import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
 import { BigintConverter } from '@unicitylabs/commons/lib/util/BigintConverter.js';
 
 import { ISerializable } from '../../ISerializable.js';
+import { ITokenJson } from '../../serializer/json/token/TokenJsonSerializer.js';
 import { MintTransactionData } from '../../transaction/MintTransactionData.js';
 import { Transaction } from '../../transaction/Transaction.js';
-import { ITokenJson, Token } from '../Token.js';
+import { Token } from '../Token.js';
 import { ISplitMintReasonProofJson, SplitMintReasonProof } from './SplitMintReasonProof.js';
 import { MintReasonType } from '../../transaction/MintReasonType.js';
 

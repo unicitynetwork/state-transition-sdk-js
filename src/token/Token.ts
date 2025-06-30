@@ -1,29 +1,19 @@
-import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
 import { dedent } from '@unicitylabs/commons/lib/util/StringUtils.js';
 
 import { NameTagToken } from './NameTagToken.js';
 import { TokenId } from './TokenId.js';
-import { ITokenStateJson, TokenState } from './TokenState.js';
+import { TokenState } from './TokenState.js';
 import { TokenType } from './TokenType.js';
 import { ISerializable } from '../ISerializable.js';
-import { ITransactionJson, Transaction } from '../transaction/Transaction.js';
+import { TokenCborSerializer } from '../serializer/cbor/token/TokenCborSerializer.js';
+import { Transaction } from '../transaction/Transaction.js';
 import { TokenCoinData } from './fungible/TokenCoinData.js';
-import { IMintTransactionDataJson, MintTransactionData } from '../transaction/MintTransactionData.js';
-import { ITransactionDataJson, TransactionData } from '../transaction/TransactionData.js';
+import { ITokenJson, TokenJsonSerializer } from '../serializer/json/token/TokenJsonSerializer.js';
+import { MintTransactionData } from '../transaction/MintTransactionData.js';
+import { TransactionData } from '../transaction/TransactionData.js';
 
 /** Current serialization version for tokens. */
 export const TOKEN_VERSION = '2.0';
-
-/**
- * JSON representation of a {@link Token}.
- */
-export interface ITokenJson {
-  readonly version: string;
-  readonly state: ITokenStateJson;
-  readonly genesis: ITransactionJson<IMintTransactionDataJson>;
-  readonly transactions: ITransactionJson<ITransactionDataJson>[];
-  readonly nametagTokens: ITokenJson[];
-}
 
 /**
  * In-memory representation of a token including its transaction history.
@@ -79,24 +69,12 @@ export class Token<MT extends Transaction<MintTransactionData<ISerializable | nu
 
   /** Serialize this token to JSON. */
   public toJSON(): ITokenJson {
-    return {
-      genesis: this.genesis.toJSON(),
-      nametagTokens: [],
-      state: this.state.toJSON(),
-      transactions: this.transactions.map((transaction) => transaction.toJSON()),
-      version: this.version,
-    };
+    return TokenJsonSerializer.serialize(this);
   }
 
   /** Serialize this token to CBOR. */
   public toCBOR(): Uint8Array {
-    return CborEncoder.encodeArray([
-      CborEncoder.encodeTextString(this.version),
-      this.genesis.toCBOR(),
-      CborEncoder.encodeArray(this.transactions.map((transaction) => transaction.toCBOR())),
-      this.state.toCBOR(),
-      CborEncoder.encodeArray(this.nametagTokens.map((token) => token.toCBOR())),
-    ]);
+    return TokenCborSerializer.serialize(this);
   }
 
   /** Convert instance to readable string */
