@@ -81,11 +81,11 @@ export async function testTransferFlow(client: StateTransitionClient): Promise<v
 
   // Recipient prepares the info for the transfer
   const nonce = crypto.getRandomValues(new Uint8Array(32));
-  const signingservice = await SigningService.createFromSecret(receiverSecret, nonce);
+  const signingService = await SigningService.createFromSecret(receiverSecret, nonce);
   const recipientPredicate = await MaskedPredicate.create(
     token.id,
     token.type,
-    signingservice,
+    signingService,
     HashAlgorithm.SHA256,
     nonce,
   );
@@ -114,8 +114,14 @@ export async function testTransferFlow(client: StateTransitionClient): Promise<v
     importedTransaction,
   );
 
-  const signingService = await SigningService.createFromSecret(receiverSecret, token.state.unlockPredicate.nonce);
-  expect(importedToken.state.unlockPredicate.isOwner(signingService.publicKey)).toBeTruthy();
+  const minterSigningService = await SigningService.createFromSecret(
+    initialOwnerSecret,
+    token.state.unlockPredicate.nonce,
+  );
+  await expect(updateToken.state.unlockPredicate.isOwner(signingService.publicKey)).resolves.toBeTruthy();
+  await expect(
+    updateToken.transactions.at(-1)?.data.sourceState.unlockPredicate.isOwner(minterSigningService.publicKey),
+  ).resolves.toBeTruthy();
   expect(updateToken.id).toEqual(token.id);
   expect(updateToken.type).toEqual(token.type);
   expect(updateToken.data).toEqual(token.data);
