@@ -452,7 +452,7 @@ async function splitToken(
       const commitment = await client.submitMintTransaction(data.transactionData);
 
       // Since submit takes time, inclusion proof might not be immediately available
-      const inclusionProof = await client.getInclusionProof(commitment);
+      const inclusionProof = await waitInclusionProof(client, commitment);
       const transaction = await client.createTransaction(commitment, inclusionProof);
 
       return new Token(data.state, transaction, []);
