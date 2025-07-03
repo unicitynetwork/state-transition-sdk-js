@@ -1,4 +1,3 @@
-import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
 import { DataHasherFactory } from '@unicitylabs/commons/lib/hash/DataHasherFactory.js';
 import type { IDataHasher } from '@unicitylabs/commons/lib/hash/IDataHasher.js';
 import { MerkleSumTreeRootNode } from '@unicitylabs/commons/lib/smst/MerkleSumTreeRootNode.js';
@@ -11,6 +10,7 @@ import { SplitToken } from './SplitToken.js';
 import { SplitTokenBuilder } from './SplitTokenBuilder.js';
 import { CoinId } from '../../token/fungible/CoinId.js';
 import { TokenId } from '../../token/TokenId.js';
+import { TokenState } from '../../token/TokenState.js';
 import { TokenType } from '../../token/TokenType.js';
 
 export class TokenSplitBuilder {
@@ -21,7 +21,8 @@ export class TokenSplitBuilder {
     type: TokenType,
     data: Uint8Array,
     recipient: string,
-    dataHash: DataHash,
+    state: TokenState,
+    stateDataHasherFactory: DataHasherFactory<IDataHasher>,
     salt: Uint8Array,
   ): SplitTokenBuilder {
     const idHex = HexConverter.encode(id.bytes);
@@ -29,7 +30,7 @@ export class TokenSplitBuilder {
       throw new Error('Token already exists in split request');
     }
 
-    const builder = new SplitTokenBuilder(id, type, data, recipient, dataHash, salt);
+    const builder = new SplitTokenBuilder(id, type, data, recipient, state, stateDataHasherFactory, salt);
     this.tokens.set(idHex, builder);
     return builder;
   }
@@ -38,8 +39,8 @@ export class TokenSplitBuilder {
     const aggregationTree = new SparseMerkleTreeBuilder(factory);
     const trees = new Map<string, SparseMerkleSumTreeBuilder>();
     const tokens: SplitToken[] = [];
-    for (const [, builder] of this.tokens.entries()) {
-      const token = builder.toSplitToken();
+    for (const builder of this.tokens.values()) {
+      const token = builder.build();
       for (const [coinId, amount] of token.coins) {
         const treesKey = coinId.toJSON();
         let tree = trees.get(treesKey);

@@ -60,34 +60,6 @@ export async function createMintData(secret: Uint8Array, coinData: TokenCoinData
   };
 }
 
-export async function createMintTokenDataForSplit(
-  tokenId: TokenId,
-  secret: Uint8Array,
-  tokenType: TokenType,
-  coinData: TokenCoinData,
-): Promise<IMintData> {
-  const tokenData = new TestTokenData(crypto.getRandomValues(new Uint8Array(32)));
-
-  const data = crypto.getRandomValues(new Uint8Array(32));
-
-  const salt = crypto.getRandomValues(new Uint8Array(32));
-  const nonce = crypto.getRandomValues(new Uint8Array(32));
-
-  const signingService = await SigningService.createFromSecret(secret, nonce);
-  const predicate = await MaskedPredicate.create(tokenId, tokenType, signingService, HashAlgorithm.SHA256, nonce);
-
-  return {
-    coinData,
-    data,
-    nonce,
-    predicate,
-    salt,
-    tokenData,
-    tokenId,
-    tokenType,
-  };
-}
-
 export async function mintToken(
   client: StateTransitionClient,
   data: IMintData,
