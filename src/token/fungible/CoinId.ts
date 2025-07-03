@@ -42,6 +42,6 @@ export class CoinId {
    * Converts the CoinId to a bitstring representation.
    */
   public toBitString(): BitString {
-    return new BitString(this.toCBOR());
+    return new BitString(this.data);
   }
 }
