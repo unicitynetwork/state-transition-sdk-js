@@ -37,16 +37,6 @@ const predicateFactory = new PredicateJsonFactory();
 const tokenFactory = new TokenFactory(new TokenJsonSerializer(predicateFactory));
 const transactionDeserializer = new TransactionJsonSerializer(predicateFactory);
 
-async function createMintToken(
-  client: StateTransitionClient,
-  data: MintTransactionData<ISerializable>,
-  state: TokenState,
-): Promise<Token<Transaction<MintTransactionData<ISerializable | null>>>> {
-  const commitment = await client.submitMintTransaction(data);
-  const transaction = await client.createTransaction(commitment, await waitInclusionProof(client, commitment));
-  return new Token(state, transaction);
-}
-
 function performCheckForSplitTokens(
   actualTokens: Token<Transaction<MintTransactionData<ISerializable | null>>>[],
   expectedCoinDataList: TokenCoinData[],
@@ -411,12 +401,14 @@ async function splitToken(
     const predicate = await MaskedPredicate.create(tokenId, tokenType, signingService, HashAlgorithm.SHA256, nonce);
     predicates.set(tokenId.toBitString().toBigInt(), predicate);
 
+    const address = await DirectAddress.create(predicate.reference);
     const token = builder.createToken(
       tokenId,
       tokenType,
       new Uint8Array(),
-      (await DirectAddress.create(predicate.reference)).toString(),
-      await new NodeDataHasher(HashAlgorithm.SHA256).update(textEncoder.encode(customDataString)).digest(),
+      address.toString(),
+      await TokenState.create(predicate, textEncoder.encode(customDataString)),
+      new DataHasherFactory(HashAlgorithm.SHA256, DataHasher),
       crypto.getRandomValues(new Uint8Array(32)),
     );
 
@@ -425,13 +417,13 @@ async function splitToken(
     }
   }
 
-  const splitData = await builder.build(new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher));
+  const splitResult = await builder.build(new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher));
 
   const burnPredicate = await BurnPredicate.create(
     token.id,
     token.type,
     crypto.getRandomValues(new Uint8Array(32)),
-    splitData.rootHash,
+    splitResult.rootHash,
   );
 
   const commitment = await Commitment.create(
@@ -454,13 +446,16 @@ async function splitToken(
     transaction,
   );
 
-  const mintTransactions = await splitData.toMintTransactionDataList(updatedToken);
+  const splitTokenDataList = await splitResult.getSplitTokenDataList(updatedToken);
   return Promise.all(
-    mintTransactions.map((data) =>
-      TokenState.create(
-        predicates.get(data.tokenId.toBitString().toBigInt())!,
-        textEncoder.encode(customDataString),
-      ).then((state) => createMintToken(client, data, state)),
-    ),
+    splitTokenDataList.map(async (data) => {
+      const commitment = await client.submitMintTransaction(data.transactionData);
+
+      // Since submit takes time, inclusion proof might not be immediately available
+      const inclusionProof = await client.getInclusionProof(commitment);
+      const transaction = await client.createTransaction(commitment, inclusionProof);
+
+      return new Token(data.state, transaction, []);
+    }),
   );
 }

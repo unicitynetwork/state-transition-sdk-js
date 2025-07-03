@@ -11,8 +11,14 @@ import { SplitMintReason } from '../../token/fungible/SplitMintReason.js';
 import { SplitMintReasonProof } from '../../token/fungible/SplitMintReasonProof.js';
 import { TokenCoinData } from '../../token/fungible/TokenCoinData.js';
 import { Token } from '../../token/Token.js';
+import { TokenState } from '../../token/TokenState.js';
 import { MintTransactionData } from '../MintTransactionData.js';
 import { Transaction } from '../Transaction.js';
+
+interface ISplitTokenResult {
+  readonly transactionData: MintTransactionData<SplitMintReason>;
+  readonly state: TokenState;
+}
 
 export class SplitResult {
   public constructor(
@@ -25,10 +31,14 @@ export class SplitResult {
     return this._aggregationTree.hash;
   }
 
-  public async toMintTransactionDataList(
+  public async getSplitTokenDataList(
     token: Token<Transaction<MintTransactionData<ISerializable | null>>>,
-  ): Promise<MintTransactionData<SplitMintReason>[]> {
+  ): Promise<ISplitTokenResult[]> {
     const tokenCoins = new Map(token.coins?.coins.map(([id, value]) => [id.toJSON(), value]) ?? []);
+    if (this._coinTrees.size !== tokenCoins.size) {
+      throw new Error(`Invalid token split: Different amount of coins.`);
+    }
+
     for (const [coinId, tree] of this._coinTrees) {
       const tokenAmount = tokenCoins.get(coinId);
       if (tokenAmount !== tree.sum) {
@@ -36,7 +46,7 @@ export class SplitResult {
       }
     }
 
-    const transactions: MintTransactionData<SplitMintReason>[] = [];
+    const result: ISplitTokenResult[] = [];
     for (const splitToken of this.tokens) {
       const coinData: [CoinId, bigint][] = [];
       const proofs = new Map<bigint, SplitMintReasonProof>();
@@ -54,20 +64,23 @@ export class SplitResult {
         coinData.push([coinId, amount]);
       }
 
-      transactions.push(
-        await MintTransactionData.create(
+      result.push({
+        state: splitToken.state,
+        transactionData: await MintTransactionData.create(
           splitToken.tokenId,
           splitToken.tokenType,
           splitToken.data,
           TokenCoinData.create(coinData),
           splitToken.recipient,
           splitToken.salt,
-          splitToken.dataHash,
+          splitToken.state.data
+            ? await splitToken.stateDataHasherFactory.create().update(splitToken.state.data).digest()
+            : null,
           new SplitMintReason(token, proofs),
         ),
-      );
+      });
     }
 
-    return transactions;
+    return result;
   }
 }
