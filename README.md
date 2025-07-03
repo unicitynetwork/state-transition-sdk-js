@@ -39,7 +39,7 @@ const client = new StateTransitionClient(aggregatorClient);
 const secret = crypto.getRandomValues(new Uint8Array(128)); // User secret key
 const tokenId = TokenId.create(crypto.getRandomValues(new Uint8Array(32))); // Chosen ID
 const tokenType = TokenType.create(crypto.getRandomValues(new Uint8Array(32))); // Token type
-const tokenData = new TestTokenData(); /* Your own token data object with ISerializable attributes */
+const tokenData = new Uint8Array(0); /* Your own token data object with ISerializable attributes */
 const coinData = new TokenCoinData([/* [CoinId, value] elements to have coins in token */]);
 const salt = crypto.getRandomValues(new Uint8Array(32)); /* Your random salt bytes */
 const stateData = new Uint8Array()/* Your state data bytes */;
@@ -47,58 +47,73 @@ const stateData = new Uint8Array()/* Your state data bytes */;
 const nonce = crypto.getRandomValues(new Uint8Array(32)); /* Your random nonce bytes */
 const signingService = await SigningService.createFromSecret(secret, nonce);
 const predicate = await MaskedPredicate.create(tokenId, tokenType, signingService, HashAlgorithm.SHA256, nonce);
+const recipient = await DirectAddress.create(data.predicate.reference);
 
 const commitment = await client.submitMintTransaction(
-  await DirectAddress.create(predicate.reference),
-  tokenId,
-  tokenType,
-  tokenData,
-  coinData,
-  salt,
-  await new DataHasher(HashAlgorithm.SHA256).update(stateData).digest(),
-  null,
+  await MintTransactionData.create(
+    tokenId,
+    tokenType,
+    tokenData,
+    coinData,
+    recipient.toString(),
+    data.salt,
+    await new DataHasher(HashAlgorithm.SHA256).update(data.data).digest(),
+    null,
+  ),
 );
+
 // Since submit takes time, inclusion proof might not be immediately available
 const inclusionProof = await client.getInclusionProof(commitment);
 const mintTransaction = await client.createTransaction(commitment, inclusionProof);
 
-// Create token from transaction
-const token = new Token(
-  tokenId,
-  tokenType,
-  tokenData,
-  coinData,
-  await TokenState.create(predicate, stateData),
-  [mintTransaction],
-);
+const token = new Token(await TokenState.create(data.predicate, data.data), mintTransaction, []);
 ```
 
 Transfer
+
 ```typescript
+const textEncoder = new TextEncoder();
+
 // Create aggregator client
 const aggregatorClient = new AggregatorClient('https://gateway-test.unicity.network');
 const client = new StateTransitionClient(aggregatorClient);
 
-// Transfer token to recipient
-const commitment = await client.submitTransaction(/* transfer parameters */);
+// Assume you have a token object from previous minting
+let token: Token;
+// Sender secret
+let secret: Uint8Array;
+
+// Recipient address (obtained from recipient)
+let recipient: string;
+// Recipient 
+let recipientDataHash: DataHash;
+
+// secret is the secret key of the sender
+const signingService = await SigningService.createFromSecret(secret, token.state.unlockPredicate.nonce);
+const transactionData = await TransactionData.create(
+  token.state,
+  recipient,
+  crypto.getRandomValues(new Uint8Array(32)),
+  recipientDataHash,
+  textEncoder.encode('user defined transaction message'),
+  token.nametagTokens,
+);
+
+const commitment = await Commitment.create(transactionData, signingService);
+const response = await client.submitCommitment(commitment);
+if (response.status !== SubmitCommitmentStatus.SUCCESS) {
+  throw new Error(`Failed to submit transaction commitment: ${response.status}`);
+}
+
 // Since submit takes time, inclusion proof might not be immediately available
 const inclusionProof = await client.getInclusionProof(commitment);
-const transaction = await client.createTransaction(commitment, inclusionProof);
+const transaction = client.createTransaction(commitment, inclusionProof);
 
-// Recipient takes transaction and finishes it
-await client.finishTransaction(/* transaction parameters */);
-```
-
-### Browser Usage
-
-When used in a browser environment, hashing automatically falls back to the Web
-Crypto API. Use `createDefaultDataHasherFactory()` when constructing prefix hash
-trees:
-
-```typescript
-import { createDefaultDataHasherFactory } from '@unicitylabs/state-transition-sdk';
-
-const hasherFactory = createDefaultDataHasherFactory();
+recipientToken = await client.finishTransaction(
+  token,
+  await TokenState.create(recipientPredicate, new TextEncoder().encode('my custom data')),
+  transaction,
+);
 ```
 
 ## Core Components
@@ -107,19 +122,12 @@ const hasherFactory = createDefaultDataHasherFactory();
 
 The main SDK interface for token operations:
 
-- `submitMintTransaction()` - Create mint commitment
-- `submitTransaction()` - Create transfer commitment
-- `submitBurnTransactionForSplit()` - Create burn commitment as the first step of a token split (the next and final step is the mint operation)
+- `submitMintTransaction()` - Create mint commitment and send to aggregator
+- `submitCommitment()` - Submit transaction commitment to aggregator
 - `createTransaction()` - Create transactions from commitments
 - `finishTransaction()` - Complete token transfers
 - `getTokenStatus()` - Check token status via inclusion proofs
-
-### OfflineStateTransitionClient
-
-Extended client for offline transaction operations:
-
-- `createOfflineCommitment()` - Create offline commitment for a transaction (does not post to aggregator)
-- `submitOfflineTransaction()` - Submit a previously created offline transaction commitment
+- `getInclusionProof()` - Retrieve inclusion proof for a commitment
 
 ### Address System
 
@@ -161,9 +169,12 @@ const maskedPredicate = await MaskedPredicate.create(
 ### Token Types
 
 **Fungible Tokens**: Standard value-bearing tokens
+
 ```typescript
+const textEncoder = new TextEncoder();
+
 const tokenData = new TokenCoinData([
-  { coinId: CoinId.ALPHA_COIN, value: BigInt(1000) }
+  { coinId: new CoinId(textEncoder.encode('ALPHA_COIN')), value: BigInt(1000) }
 ]);
 ```
 
@@ -181,35 +192,36 @@ Recipient knows some info about token, like token type for generating address.
 ```text
 A[Start] 
 A --> B[Recipient Generates Address]
-B --> C[Recipient Shares Address with Sender]
-C --> D[Sender Submits Transaction Commitment]
-D --> E[Sender Retrieves Inclusion Proof]
-E --> F[Sender Creates Transaction]
-F --> G[Sender Sends Transaction and Token to Recipient]
-G --> H[Recipient Imports Token and Transaction]
-H --> I[Recipient Verifies Transaction]
-I --> J[Recipient Finishes Transaction]
-J --> K[End]
+B --> C[Recipient Shares Address And New Data Hash with Sender]
+C --> D[Sender Creates Transaction Commitment]
+D --> E[Sender Submits Transaction Commitment]
+E --> F[Sender Retrieves Inclusion Proof]
+F --> G[Sender Creates Transaction]
+G --> H[Sender Sends Transaction and Token to Recipient]
+H --> I[Recipient Imports Token and Transaction]
+I --> J[Recipient Verifies Transaction]
+J --> K[Recipient Finishes Transaction]
+K --> L[End]
 ```
 
 #### Offline Transfer flow
 
-For situations where immediate network connectivity isn't available, the SDK supports offline transaction creation:
+For situations where immediate network connectivity isn't available:
 
 ```text
 A[Start] 
 A --> B[Recipient Generates Address]
-B --> C[Recipient Shares Address with Sender]
-C --> D[Sender Creates Offline Commitment]
-D --> E[Sender Serializes OfflineTransaction to JSON]
-E --> F[Sender Transfers JSON File Offline to Recipient]
-F --> G[Recipient Deserializes OfflineTransaction from JSON]
-G --> H[Recipient Submits Offline Transaction to Network]
-H --> I[Recipient Retrieves Inclusion Proof]
-I --> J[Recipient Finishes Transaction]
-J --> K[End]
+B --> C[Recipient Shares Address And New Data Hash with Sender]
+C --> D[Sender Creates Transaction Commitment]
+D --> E[Recipient Submits Transaction Commitment]
+E --> F[Recipient Retrieves Inclusion Proof]
+F --> G[Recipient Creates Transaction]
+G --> H[Recipient Sends Transaction and Token to Recipient]
+H --> I[Recipient Imports Token and Transaction]
+I --> J[Recipient Verifies Transaction]
+J --> K[Recipient Finishes Transaction]
+K --> L[End]
 ```
-
 
 ## Architecture
 
@@ -224,33 +236,6 @@ Tokens contain:
 - **nametagTokens**: Name tags for addressing
 - **data**: Token-specific data
 - **transactions**: The history of transactions performed with this token
-
-### Offline Transaction Components
-
-**OfflineTransaction**: A serializable container for offline token transfers containing:
-- **commitment**: The OfflineCommitment with transaction details
-- **token**: The complete token being transferred
-- **toJSON()**: Serializes the entire package for offline transfer
-- **fromJSON()**: Deserializes from JSON with proper factory-based reconstruction
-
-**OfflineCommitment**: A transaction commitment created without network submission containing:
-- **requestId**: Unique request identifier for the transaction
-- **transactionData**: The transaction details and state transition
-- **authenticator**: Cryptographic signature over the transaction
-
-### BigInt JSON Serialization
-
-The SDK handles BigInt values that may cause JSON serialization issues:
-
-**JsonUtils**: Utility for BigInt-safe JSON operations:
-- **stringify()**: JSON.stringify with automatic BigInt to string conversion
-- **safeStringify()**: Calls toJSON() first, then applies BigInt-safe stringify
-- **parse()**: Standard JSON.parse (use class-specific fromJSON for proper deserialization)
-
-**Recommended Usage**:
-- Use `OfflineTransaction.toJSONString()` for actual transfer/storage
-- Use `OfflineTransaction.fromJSONString()` for deserialization
-- For manual operations: `JsonUtils.safeStringify(obj)` and `JsonUtils.parse(str)`
 
 ### Privacy Model
 - **Commitment-based**: Only cryptographic commitments published on-chain
@@ -323,47 +308,41 @@ npm run lint:fix
 Note that the examples here are using some utility functions and classes that are defined below in a separate section.
 
 ```typescript
-// In real usage, this secret must be persisted in order to keep access to your tokens
-// This secret belongs to the minter and like all secrets, should be kept private
-const initialOwnerSecret = crypto.getRandomValues(new Uint8Array(32));
+// Create aggregator client
+const aggregatorClient = new AggregatorClient('https://gateway-test.unicity.network:443');
+const client = new StateTransitionClient(aggregatorClient);
 
-// Connect to the testnet
-const client = new StateTransitionClient(new AggregatorClient('https://gateway-test.unicity.network:443'));
+const secret = crypto.getRandomValues(new Uint8Array(128)); // User secret key
+const tokenId = TokenId.create(crypto.getRandomValues(new Uint8Array(32))); // Chosen ID
+const tokenType = TokenType.create(crypto.getRandomValues(new Uint8Array(32))); // Token type
+const tokenData = new Uint8Array(0); /* Your own token data object with ISerializable attributes */
+const coinData = new TokenCoinData([/* [CoinId, value] elements to have coins in token */]);
+const salt = crypto.getRandomValues(new Uint8Array(32)); /* Your random salt bytes */
+const stateData = new Uint8Array()/* Your state data bytes */;
 
-// Using randomized coin IDs and amounts here for testing purposes.
-// We mint 2 different coins.
-const data = await createMintData(
-  initialOwnerSecret,
-  new TokenCoinData([
-    [new CoinId(crypto.getRandomValues(new Uint8Array(32))), BigInt(Math.round(Math.random() * 90)) + 10n],
-    [new CoinId(crypto.getRandomValues(new Uint8Array(32))), BigInt(Math.round(Math.random() * 90)) + 10n],
-  ]),
+const nonce = crypto.getRandomValues(new Uint8Array(32)); /* Your random nonce bytes */
+const signingService = await SigningService.createFromSecret(secret, nonce);
+const predicate = await MaskedPredicate.create(tokenId, tokenType, signingService, HashAlgorithm.SHA256, nonce);
+const recipient = await DirectAddress.create(predicate.reference);
+
+const commitment = await client.submitMintTransaction(
+  await MintTransactionData.create(
+    tokenId,
+    tokenType,
+    tokenData,
+    coinData,
+    recipient.toString(),
+    salt,
+    await new DataHasher(HashAlgorithm.SHA256).update(stateData).digest(),
+    null,
+  ),
 );
 
-const mintCommitment = await client.submitMintTransaction(
-  await DirectAddress.create(data.predicate.reference),
-  data.tokenId,
-  data.tokenType,
-  data.tokenData,
-  data.coinData,
-  data.salt,
-  await new DataHasher(HashAlgorithm.SHA256).update(data.stateData).digest(),
-  null
-);
+// Since submit takes time, inclusion proof might not be immediately available
+const inclusionProof = await client.getInclusionProof(commitment);
+const mintTransaction = await client.createTransaction(commitment, inclusionProof);
 
-const mintTransaction = await client.createTransaction(
-  mintCommitment,
-  await waitInclusionProof(client, mintCommitment),
-);
-
-const token = new Token(
-  data.tokenId,
-  data.tokenType,
-  data.tokenData,
-  data.coinData,
-  await TokenState.create(data.predicate, data.stateData),
-  [mintTransaction],
-);
+const token = new Token(await TokenState.create(predicate, stateData), mintTransaction, []);
 ```
 
 ### Token Transfer
@@ -373,6 +352,10 @@ This example begins after the previous example. Here we assume that the tokens h
 Note that the examples here are using some utility functions and classes that are defined below in a separate section.
 
 ```typescript
+// Assume that token has already been minted or received and is available
+let token: Token;
+let senderSecret: Uint8Array; // Sender's secret key
+
 // This secret belongs to the receiver that the token is sent to 
 const receiverSecret = crypto.getRandomValues(new Uint8Array(32));
 
@@ -388,41 +371,49 @@ const recipientPredicate = await MaskedPredicate.create(
 );
 
 const recipient = await DirectAddress.create(recipientPredicate.reference);
+const recipientDataHash = await new DataHasher(HashAlgorithm.SHA256).update(new TextEncoder().encode('my custom data')).digest();
 
 // The sender creates the transfer transaction, using recipientPredicate.reference sent by the receiver
 const salt = crypto.getRandomValues(new Uint8Array(32));
+const senderSigningService = await SigningService.createFromSecret(senderSecret, token.state.unlockPredicate.nonce);
+
 const transactionData = await TransactionData.create(
   token.state,
-  recipient.toJSON(),
+  recipient.toString(),
   salt,
-  await new DataHasher(HashAlgorithm.SHA256).update(new TextEncoder().encode('my custom data')).digest(),
-  new TextEncoder().encode('my message'),
+  recipientDataHash,
+  new TextEncoder().encode('my transaction message'),
   token.nametagTokens,
 );
 
-const commitment = await client.submitTransaction(
-  transactionData, 
-  await SigningService.createFromSecret(initialOwnerSecret, data.nonce));
+const commitment = await Commitment.create(transactionData, senderSigningService);
+const response = await client.submitCommitment(commitment);
+if (response.status !== SubmitCommitmentStatus.SUCCESS) {
+  throw new Error(`Failed to submit transaction commitment: ${response.status}`);
+}
 
-const transaction = await client.createTransaction(commitment, await waitInclusionProof(client, commitment));
+// Since submit takes time, inclusion proof might not be immediately available
+const inclusionProof = await client.getInclusionProof(commitment);
+const transaction = await client.createTransaction(commitment, inclusionProof);
 
 // The sender serializes the resulting transaction and sends it to the receiver
-const sendingTransactionJson = transaction.toJSON() as ITransactionJson<ITransactionDataJson>;
-
+const transactionJson = TransactionJsonSerializer.serialize(transaction);
 // The sender also serializes the token into JSON and sends it to the receiver
-const tokenAsJson = token.toJSON();
+const tokenJson = token.toJSON();
 
-// The receiver imports the token from the given JSON file 
-const tokenFactory = new TokenFactory(new PredicateFactory());
-const importedToken = await tokenFactory.create(tokenAsJson, TestTokenData.fromJSON);
+const predicateFactory = new PredicateFactory();
+const tokenFactory = new TokenFactory(new TokenJsonSerializer(predicateFactory));
+const transactionSerializer = new TransactionJsonSerializer(predicateFactory);
+
+// The receiver imports the token from the given JSON file
+const importedToken = await tokenFactory.create(tokenJson);
 
 // Recipient gets transaction from sender
-const importedTransaction = await Transaction.fromJSON(
+const importedTransaction = await transactionDeserializer.deserialize(
   importedToken.id,
   importedToken.type,
-  sendingTransactionJson,
-  new PredicateFactory(),
-);
+  transactionJson,
+);;
 
 // The recipient finishes the transaction with the recipient predicate
 const updateToken = await client.finishTransaction(
@@ -437,46 +428,74 @@ const updateToken = await client.finishTransaction(
 For scenarios with limited network connectivity, tokens can be transferred using offline transaction packages:
 
 ```typescript
-import { OfflineStateTransitionClient } from '@unicitylabs/state-transition-sdk';
-import { OfflineTransaction } from '@unicitylabs/state-transition-sdk';
+// Assume that token has already been minted or received and is available
+let token: Token;
+let senderSecret: Uint8Array; // Sender's secret key
 
-// Create offline client
-const offlineClient = new OfflineStateTransitionClient(new AggregatorClient('https://gateway-test.unicity.network'));
+// This secret belongs to the receiver that the token is sent to 
+const receiverSecret = crypto.getRandomValues(new Uint8Array(32));
+const recipientTransactionData = new TextEncoder().encode('my custom data');
 
-// Sender creates offline commitment (no network required)
+// Recipient prepares the info for the transfer using token ID and type from the sender.
+const nonce = crypto.getRandomValues(new Uint8Array(32));
+const receiverSigningService = await SigningService.createFromSecret(receiverSecret, nonce);
+const recipientPredicate = await MaskedPredicate.create(
+  token.id,
+  token.type,
+  receiverSigningService,
+  HashAlgorithm.SHA256,
+  nonce,
+);
+
+const recipient = await DirectAddress.create(recipientPredicate.reference);
+const recipientDataHash = await new DataHasher(HashAlgorithm.SHA256).update(recipientTransactionData).digest();
+
+// The sender creates the transfer transaction, using recipientPredicate.reference sent by the receiver
 const salt = crypto.getRandomValues(new Uint8Array(32));
+const senderSigningService = await SigningService.createFromSecret(senderSecret, token.state.unlockPredicate.nonce);
+
 const transactionData = await TransactionData.create(
   token.state,
-  recipient.toJSON(),
+  recipient.toString(),
   salt,
-  await new DataHasher(HashAlgorithm.SHA256).update(new TextEncoder().encode('my custom data')).digest(),
-  new TextEncoder().encode('my message'),
+  recipientDataHash,
+  new TextEncoder().encode('my transaction message'),
   token.nametagTokens,
 );
 
-const offlineCommitment = await offlineClient.createOfflineCommitment(
-  transactionData,
-  await SigningService.createFromSecret(initialOwnerSecret, data.nonce)
+const commitment = await Commitment.create(transactionData, senderSigningService);
+
+// Sender serializes commitment
+const commitmentJson = CommitmentJsonSerializer.serialize(commitment);
+
+// Sender serializes token
+const tokenJson = token.toJSON();
+
+const predicateFactory = new PredicateFactory();
+const tokenFactory = new TokenFactory(new TokenJsonSerializer(predicateFactory));
+const commitmentSerializer = await new CommitmentJsonSerializer(predicateFactory);
+
+const importedToken = await tokenFactory.create(tokenJson);
+const importedCommitment = commitmentSerializer.deserialize(
+  importedToken.id,
+  importedToken.type,
+  parsedJson.commitment,
 );
 
-// Create offline transaction package
-const offlineTransaction = new OfflineTransaction(offlineCommitment, token);
+const response = await client.submitCommitment(importedCommitment);
+if (response.status !== SubmitCommitmentStatus.SUCCESS) {
+  throw new Error(`Failed to submit transaction commitment: ${response.status}`);
+}
 
-// Serialize to JSON string for offline transfer (file, USB, QR code, etc.)
-// Use toJSONString() for BigInt-safe serialization
-const offlineTransactionJsonString = offlineTransaction.toJSONString();
+// Since submit takes time, inclusion proof might not be immediately available
+const inclusionProof = await client.getInclusionProof(importedCommitment);
+const transaction = await client.createTransaction(importedCommitment, inclusionProof);
 
-// ... Transfer JSON string offline to recipient ...
-
-// Recipient deserializes and submits when network is available
-const importedOfflineTransaction = await OfflineTransaction.fromJSONString(offlineTransactionJsonString);
-const finalTransaction = await offlineClient.submitOfflineTransaction(importedOfflineTransaction.commitment);
-
-// Complete the transfer
-const updatedToken = await client.finishTransaction(
-  importedOfflineTransaction.token,
-  await TokenState.create(recipientPredicate, new TextEncoder().encode('my custom data')),
-  finalTransaction,
+// The recipient finishes the transaction with the recipient predicate
+const updateToken = await client.finishTransaction(
+  importedToken,
+  await TokenState.create(recipientPredicate, recipientTransactionData),
+  transaction,
 );
 ```
 
@@ -493,288 +512,125 @@ const status = await client.getTokenStatus(token);
 ### The Token Split Operation
 
 ```typescript
-const client = new StateTransitionClient(new AggregatorClient('https://gateway-test.unicity.network'));
+// Create aggregator client
+const aggregatorClient = new AggregatorClient('https://gateway-test.unicity.network:443');
+const client = new StateTransitionClient(aggregatorClient);
 
-// First, let's mint a token in the usual way.
-const sumTreeHasherFactory = new DataHasherFactory(NodeDataHasher);
-const sumTreeHashAlgorithm = HashAlgorithm.SHA256;
 
-const secret = new TextEncoder().encode('secret');
+const textEncoder = new TextEncoder();
+const coinId = new CoinId(textEncoder.encode('COIN'));
 
-const unicityToken = new CoinId(crypto.getRandomValues(new Uint8Array(32)));
-const alphaToken = new CoinId(crypto.getRandomValues(new Uint8Array(32)));
+const secret = crypto.getRandomValues(new Uint8Array(128)); // User secret key
+const tokenId = TokenId.create(crypto.getRandomValues(new Uint8Array(32))); // Chosen ID
+const tokenType = TokenType.create(crypto.getRandomValues(new Uint8Array(32))); // Token type
+const tokenData = new Uint8Array(0); /* Your own token data object with ISerializable attributes */
+const coinData = TokenCoinData.create([[coinId, 100n]]);
+const salt = crypto.getRandomValues(new Uint8Array(32)); /* Your random salt bytes */
+const stateData = new Uint8Array(0); /* Your state data bytes */
 
-const coinData = new TokenCoinData([
-  [unicityToken, 10n],
-  [alphaToken, 20n],
-]);
-const mintTokenData = await createMintData(secret, coinData);
+const nonce = crypto.getRandomValues(new Uint8Array(32)); /* Your random nonce bytes */
+const signingService = await SigningService.createFromSecret(secret, nonce);
+const predicate = await MaskedPredicate.create(tokenId, tokenType, signingService, HashAlgorithm.SHA256, nonce);
+const recipient = await DirectAddress.create(predicate.reference);
+
 const mintCommitment = await client.submitMintTransaction(
-  await DirectAddress.create(mintTokenData.predicate.reference),
-  mintTokenData.tokenId,
-  mintTokenData.tokenType,
-  mintTokenData.tokenData,
-  mintTokenData.coinData,
-  mintTokenData.salt,
-  await new DataHasher(HashAlgorithm.SHA256).update(mintTokenData.stateData).digest(),
-  null,
-);
-
-const mintTransaction = await client.createTransaction(
-  mintCommitment,
-  await waitInclusionProof(client, mintCommitment),
-);
-
-const token = new Token(
-  mintTokenData.tokenId,
-  mintTokenData.tokenType,
-  mintTokenData.tokenData,
-  mintTokenData.coinData,
-  await TokenState.create(mintTokenData.predicate, mintTokenData.stateData),
-  [mintTransaction],
-);
-
-// Now let's split that token into 2 tokens.
-
-const coinsPerNewTokens = [
-  new TokenCoinData([
-    [unicityToken, 10n],
-    [alphaToken, 5n],
-  ]),
-  new TokenCoinData([[alphaToken, 15n]]),
-];
-
-const { commitment, recipientPredicate, newTokenIds, allCoinsTree, coinTrees } =
-  await client.submitBurnTransactionForSplit(
-    token,
-    coinsPerNewTokens,
-    sumTreeHasherFactory,
-    sumTreeHashAlgorithm,
-    secret,
-    mintTokenData.nonce,
-    await new DataHasher(HashAlgorithm.SHA256).update(new TextEncoder().encode('my custom data')).digest(),
-    new TextEncoder().encode('my message'),
-  );
-
-const transaction = await client.createTransaction(commitment, await waitInclusionProof(client, commitment));
-
-const updatedToken = await client.finishTransaction(
-  token,
-  await TokenState.create(recipientPredicate, new TextEncoder().encode('my custom data')),
-  transaction,
-);
-
-const splitTokenData: IMintData[] = await Promise.all(
-  coinsPerNewTokens.map(
-    async (tokenCoinData, index) =>
-      await createMintTokenDataForSplit(newTokenIds[index], secret, mintTokenData.tokenType, tokenCoinData),
+  await MintTransactionData.create(
+    tokenId,
+    tokenType,
+    tokenData,
+    coinData,
+    recipient.toString(),
+    salt,
+    await new DataHasher(HashAlgorithm.SHA256).update(stateData).digest(),
+    null,
   ),
 );
 
-const splitTokens = await Promise.all(
-  splitTokenData.map(async (tokenData) => {
-    const burnProofs: Map<string, [Path, SumPath]> = new Map();
-    for (const [coinId] of tokenData.coinData.coins) {
-      const pathToCoinTree = await allCoinsTree.getProof(
-        BigintConverter.decode(HexConverter.decode(coinId.toJSON())),
-      );
-      const pathToCoinAmount = await coinTrees
-        .get(coinId.toJSON())!
-        .getProof(BigintConverter.decode(HexConverter.decode(tokenData.tokenId.toJSON())));
-      burnProofs.set(coinId.toJSON(), [pathToCoinTree, pathToCoinAmount]);
-    }
+// Since submit takes time, inclusion proof might not be immediately available
+const mintInclusionProof = await client.getInclusionProof(mintCommitment);
+const mintTransaction = await client.createTransaction(mintCommitment, mintInclusionProof);
 
-    const mintCommitment = await client.submitMintTransaction(
-      await DirectAddress.create(tokenData.predicate.reference),
-      tokenData.tokenId,
-      tokenData.tokenType,
-      tokenData.tokenData,
-      tokenData.coinData,
-      tokenData.salt,
-      await new DataHasher(HashAlgorithm.SHA256).update(tokenData.stateData).digest(),
-      new SplitProof(updatedToken, burnProofs),
-    );
-    const mintTransaction = await client.createTransaction(
-      mintCommitment,
-      await waitInclusionProof(client, mintCommitment),
-    );
-    return new Token(
-      tokenData.tokenId,
-      tokenData.tokenType,
-      tokenData.tokenData,
-      tokenData.coinData,
-      await TokenState.create(tokenData.predicate, tokenData.stateData),
-      [mintTransaction],
-    );
-  }),
-);
+const token = new Token(await TokenState.create(predicate, stateData), mintTransaction, []);
 
-async function createMintTokenDataForSplit(
-  tokenId: TokenId,
-  secret: Uint8Array,
-  tokenType: TokenType,
-  coinData: TokenCoinData,
-): Promise<IMintData> {
-  const tokenData = new TestTokenData(crypto.getRandomValues(new Uint8Array(32)));
-
-  const data = crypto.getRandomValues(new Uint8Array(32));
-
-  const salt = crypto.getRandomValues(new Uint8Array(32));
-  const nonce = crypto.getRandomValues(new Uint8Array(32));
-
-  const signingService = await SigningService.createFromSecret(secret, nonce);
-  const predicate = await MaskedPredicate.create(tokenId, tokenType, signingService, HashAlgorithm.SHA256, nonce);
-
-  return {
-    coinData,
-    data,
-    nonce,
-    predicate,
-    salt,
-    tokenData,
-    tokenId,
-    tokenType,
-  };
-}
-```
-
-### Utility methods and classes 
-
-The above code examples are using utility methods and classes, included here:
-
-```typescript
-async function createMintData(secret: Uint8Array, coinData: TokenCoinData): Promise<IMintData> {
+const builder = new TokenSplitBuilder();
+const predicates = new Map<bigint, MaskedPredicate>();
+const splits: [CoinId, bigint][] = [
+  [coinId, 10n],
+  [coinId, 20n],
+  [coinId, 70n],
+];
+for (const [id, amount] of splits) {
   const tokenId = TokenId.create(crypto.getRandomValues(new Uint8Array(32)));
   const tokenType = TokenType.create(crypto.getRandomValues(new Uint8Array(32)));
-  const tokenData = new TestTokenData(crypto.getRandomValues(new Uint8Array(32)));
-
-  const stateData = crypto.getRandomValues(new Uint8Array(32));
-
-  const salt = crypto.getRandomValues(new Uint8Array(32));
   const nonce = crypto.getRandomValues(new Uint8Array(32));
+  const signingService = await SigningService.createFromSecret(secret, nonce);
+  const stateData = new Uint8Array(); // Your state data bytes
 
-  const predicate = await MaskedPredicate.create(
+  const predicate = await MaskedPredicate.create(tokenId, tokenType, signingService, HashAlgorithm.SHA256, nonce);
+  predicates.set(tokenId.toBitString().toBigInt(), predicate);
+
+  const address = await DirectAddress.create(predicate.reference);
+  const splitTokenBuilder = builder.createToken(
     tokenId,
     tokenType,
-    await SigningService.createFromSecret(secret, nonce),
-    HashAlgorithm.SHA256,
-    nonce,
+    new Uint8Array(),
+    address.toString(),
+    await TokenState.create(predicate, stateData),
+    new DataHasherFactory(HashAlgorithm.SHA256, DataHasher),
+    crypto.getRandomValues(new Uint8Array(32)),
   );
 
-  return {
-    coinData,
-    stateData,
-    nonce,
-    predicate,
-    salt,
-    tokenData,
-    tokenId,
-    tokenType,
-  };
+  splitTokenBuilder.addCoin(id, amount);
 }
 
-interface IMintData {
-  tokenId: TokenId;
-  tokenType: TokenType;
-  tokenData: TestTokenData;
-  coinData: TokenCoinData;
-  stateData: Uint8Array;
-  salt: Uint8Array;
-  nonce: Uint8Array;
-  predicate: MaskedPredicate;
-}
+const splitResult = await builder.build(new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher));
 
-class TestTokenData implements ISerializable {
-  public constructor(private readonly _data: Uint8Array) {
-    this._data = new Uint8Array(_data);
-  }
+const burnPredicate = await BurnPredicate.create(
+  token.id,
+  token.type,
+  crypto.getRandomValues(new Uint8Array(32)),
+  splitResult.rootHash,
+);
 
-  public get data(): Uint8Array {
-    return new Uint8Array(this._data);
-  }
+const burnData = textEncoder.encode('custom burn token data');
 
-  public static fromJSON(data: unknown): Promise<TestTokenData> {
-    if (typeof data !== 'string') {
-      throw new Error('Invalid test token data');
-    }
-
-    return Promise.resolve(new TestTokenData(HexConverter.decode(data)));
-  }
-
-  public toJSON(): string {
-    return HexConverter.encode(this._data);
-  }
-
-  public toCBOR(): Uint8Array {
-    return this.data;
-  }
-
-  /** Convert instance to readable string */
-  public toString(): string {
-    return dedent`
-      TestTokenData: ${HexConverter.encode(this.data)}`;
-  }
-}
-
-async function waitInclusionProof(
-  client: StateTransitionClient,
-  commitment: Commitment<TransactionData | MintTransactionData<ISerializable | null>>,
-  signal: AbortSignal = AbortSignal.timeout(10000),
-  interval: number = 1000,
-): Promise<InclusionProof> {
-  while (true) {
-    try {
-      const inclusionProof = await client.getInclusionProof(commitment);
-      if ((await inclusionProof.verify(commitment.requestId.toBigInt())) === InclusionProofVerificationStatus.OK) {
-        return inclusionProof;
-      }
-    } catch (err) {
-      if (!(err instanceof JsonRpcNetworkError && err.status === 404)) {
-        throw err;
-      }
-    }
-
-    try {
-      await sleep(interval, signal);
-    } catch (err) {
-      throw new Error(String(err || 'Sleep was aborted'));
-    }
-  }
-}
-
-async function sleep(ms: number, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(resolve, ms);
-    signal.addEventListener(
-      'abort',
-      () => {
-        clearTimeout(timeout);
-        reject(signal.reason);
-      },
-      { once: true },
-    );
-  });
-}
-
-async function sendToken(
-  client: StateTransitionClient,
-  token: Token<ISerializable, MintTransactionData<ISerializable | null>>,
-  signingService: SigningService,
-  recipient: DirectAddress,
-): Promise<Transaction<TransactionData>> {
-  const salt = crypto.getRandomValues(new Uint8Array(32));
-  const transactionData = await TransactionData.create(
+const burnCommitment = await Commitment.create(
+  await TransactionData.create(
     token.state,
-    recipient.toJSON(),
-    salt,
-    await new DataHasher(HashAlgorithm.SHA256).update(new TextEncoder().encode('my custom data')).digest(),
-    new TextEncoder().encode('my message'),
-    token.nametagTokens,
-  );
+    (await DirectAddress.create(burnPredicate.reference)).toString(),
+    crypto.getRandomValues(new Uint8Array(32)),
+    await new DataHasher(HashAlgorithm.SHA256).update(burnData).digest(),
+    textEncoder.encode('custom transaction message'),
+  ),
+  await SigningService.createFromSecret(secret, token.state.unlockPredicate.nonce),
+);
 
-  const commitment = await client.submitTransaction(transactionData, signingService);
-  return await client.createTransaction(commitment, await waitInclusionProof(client, commitment));
+const burnCommitmentResponse = await client.submitCommitment(burnCommitment);
+if (burnCommitmentResponse.status !== SubmitCommitmentStatus.SUCCESS) {
+  throw new Error(`Failed to submit burn commitment: ${burnCommitmentResponse.status}`);
 }
+
+// Since submit takes time, inclusion proof might not be immediately available
+const burnInclusionProof = await client.getInclusionProof(burnCommitment);
+
+const burnToken = await client.finishTransaction(
+  token,
+  await TokenState.create(burnPredicate, burnData),
+  await client.createTransaction(burnCommitment, burnInclusionProof),
+);
+
+const splitTokenDataList = await splitResult.getSplitTokenDataList(burnToken);
+const splitTokens = await Promise.all(
+  splitTokenDataList.map(async (data) => {
+    const commitment = await client.submitMintTransaction(data.transactionData);
+
+    // Since submit takes time, inclusion proof might not be immediately available
+    const inclusionProof = await client.getInclusionProof(commitment);
+    const transaction = await client.createTransaction(commitment, inclusionProof);
+
+    return new Token(data.state, transaction, []);
+  }),
+);
 ```
 
 ## Unicity Signature Standard

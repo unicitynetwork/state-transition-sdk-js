@@ -1,7 +1,9 @@
-import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
+import { DataHasherFactory } from '@unicitylabs/commons/lib/hash/DataHasherFactory.js';
+import type { IDataHasher } from '@unicitylabs/commons/lib/hash/IDataHasher.js';
 
 import { CoinId } from '../../token/fungible/CoinId.js';
 import { TokenId } from '../../token/TokenId.js';
+import { TokenState } from '../../token/TokenState.js';
 import { TokenType } from '../../token/TokenType.js';
 
 export class SplitToken {
@@ -10,7 +12,8 @@ export class SplitToken {
     public readonly tokenType: TokenType,
     private readonly _data: Uint8Array,
     public readonly recipient: string,
-    public readonly dataHash: DataHash,
+    public readonly state: TokenState,
+    public readonly stateDataHasherFactory: DataHasherFactory<IDataHasher>,
     private readonly _salt: Uint8Array,
     private readonly _coins: Map<string, bigint>,
   ) {
