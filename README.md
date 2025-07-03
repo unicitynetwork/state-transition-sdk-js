@@ -40,7 +40,7 @@ const secret = crypto.getRandomValues(new Uint8Array(128)); // User secret key
 const tokenId = TokenId.create(crypto.getRandomValues(new Uint8Array(32))); // Chosen ID
 const tokenType = TokenType.create(crypto.getRandomValues(new Uint8Array(32))); // Token type
 const tokenData = new Uint8Array(0); /* Your own token data object with ISerializable attributes */
-const coinData = new TokenCoinData([/* [CoinId, value] elements to have coins in token */]);
+const coinData = TokenCoinData.create([/* [CoinId, value] elements to have coins in token */]);
 const salt = crypto.getRandomValues(new Uint8Array(32)); /* Your random salt bytes */
 const stateData = new Uint8Array()/* Your state data bytes */;
 
@@ -173,8 +173,8 @@ const maskedPredicate = await MaskedPredicate.create(
 ```typescript
 const textEncoder = new TextEncoder();
 
-const tokenData = new TokenCoinData([
-  { coinId: new CoinId(textEncoder.encode('ALPHA_COIN')), value: BigInt(1000) }
+const tokenData = TokenCoinData.create([
+  [new CoinId(textEncoder.encode('ALPHA_COIN')), BigInt(1000)]
 ]);
 ```
 
@@ -316,7 +316,7 @@ const secret = crypto.getRandomValues(new Uint8Array(128)); // User secret key
 const tokenId = TokenId.create(crypto.getRandomValues(new Uint8Array(32))); // Chosen ID
 const tokenType = TokenType.create(crypto.getRandomValues(new Uint8Array(32))); // Token type
 const tokenData = new Uint8Array(0); /* Your own token data object with ISerializable attributes */
-const coinData = new TokenCoinData([/* [CoinId, value] elements to have coins in token */]);
+const coinData = TokenCoinData.create([/* [CoinId, value] elements to have coins in token */]);
 const salt = crypto.getRandomValues(new Uint8Array(32)); /* Your random salt bytes */
 const stateData = new Uint8Array()/* Your state data bytes */;
 
@@ -502,7 +502,9 @@ const updateToken = await client.finishTransaction(
 ### Checking Token Status
 
 ```typescript
-const status = await client.getTokenStatus(token);
+// You need the public key of the current owner to check token status
+const publicKey = signingService.getPublicKey();
+const status = await client.getTokenStatus(token, publicKey);
 /* 
   status InclusionProofVerificationStatus.OK is spent
   status InclusionProofVerificationStatus.PATH_NOT_INCLUDED is unspent
