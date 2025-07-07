@@ -114,12 +114,14 @@ export abstract class DefaultPredicate implements IPredicate {
       return false;
     }
 
-    // Verify if input state and public key are correct.
-    if (
-      HexConverter.encode(transaction.inclusionProof.authenticator.publicKey) !== HexConverter.encode(this.publicKey) ||
-      !transaction.inclusionProof.authenticator.stateHash.equals(transaction.data.sourceState.hash)
-    ) {
-      return false; // input mismatch
+    // Verify if public key is correct.
+    if (HexConverter.encode(transaction.inclusionProof.authenticator.publicKey) !== HexConverter.encode(this.publicKey)) {
+      return false;
+    }
+
+    // Verify if input state is correct.
+    if (!transaction.inclusionProof.authenticator.stateHash.equals(transaction.data.sourceState.hash)) {
+      return false;
     }
 
     // Verify if transaction data is valid.
