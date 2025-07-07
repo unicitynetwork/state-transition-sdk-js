@@ -90,13 +90,15 @@ export async function sendToken(
   token: Token<Transaction<MintTransactionData<ISerializable | null>>>,
   signingService: SigningService,
   recipient: DirectAddress,
+  tokenState: string | null = 'my custom data',
 ): Promise<Transaction<TransactionData>> {
   const textEncoder = new TextEncoder();
+  const stateHash = tokenState ? await new DataHasher(HashAlgorithm.SHA256).update(textEncoder.encode(tokenState)).digest() : null;
   const transactionData = await TransactionData.create(
     token.state,
     recipient.toJSON(),
     crypto.getRandomValues(new Uint8Array(32)),
-    await new DataHasher(HashAlgorithm.SHA256).update(textEncoder.encode('my custom data')).digest(),
+    stateHash,
     textEncoder.encode('my message'),
     token.nametagTokens,
   );
