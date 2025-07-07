@@ -72,6 +72,7 @@ export async function testTransferFlow(client: StateTransitionClient): Promise<v
   );
 
   // Recipient (Bob) prepares the info for the transfer
+  const bobTokenState = 'Bob\'s custom data'; // Bob gives this custom data to the Alice to use in the transfer
   const bobNonce = crypto.getRandomValues(new Uint8Array(32));
   const bobSigningService = await SigningService.createFromSecret(bobSecret, bobNonce);
   const bobPredicate = await MaskedPredicate.create(
@@ -88,6 +89,7 @@ export async function testTransferFlow(client: StateTransitionClient): Promise<v
     aliceToken,
     await SigningService.createFromSecret(initialOwnerSecret, data.nonce),
     await DirectAddress.create(bobPredicate.reference),
+    bobTokenState,
   );
 
   // Recipient imports token
@@ -102,7 +104,7 @@ export async function testTransferFlow(client: StateTransitionClient): Promise<v
   // Finish the transaction with the recipient predicate
   const bobToken = await client.finishTransaction(
     importedToken,
-    await TokenState.create(bobPredicate, textEncoder.encode('my custom data')),
+    await TokenState.create(bobPredicate, textEncoder.encode(bobTokenState)),
     importedTransaction,
   );
 
@@ -141,6 +143,7 @@ export async function testTransferFlow(client: StateTransitionClient): Promise<v
       bobToken,
       bobSigningService,
       carolAddress,
+      null, // NB! Carol has to provide Bob the token state hash. If she doesn't, Bob uses 'null'.
   );
 
   // Carol imports token
@@ -162,9 +165,10 @@ export async function testTransferFlow(client: StateTransitionClient): Promise<v
   );
 
   // Finish the transaction with the Carol predicate
+  expect(carolTransaction.data.dataHash).toBeNull()
   const finalizedCarolToken = await client.finishTransaction(
       carolToken,
-      await TokenState.create(carolPredicate, textEncoder.encode('Carol custom data')),
+      await TokenState.create(carolPredicate, null),
       carolTransaction,
   );
 
