@@ -19,7 +19,7 @@ describe('Transition', function () {
     console.log('block height: ', bh);
   });
 
-  it('should verify the token latest state', async () => {
+  it('should verify the token online transfer', async () => {
     const aggregatorUrl = process.env.AGGREGATOR_URL;
     if (!aggregatorUrl) {
       console.warn('Skipping test: AGGREGATOR_URL environment variable is not set');
@@ -29,7 +29,7 @@ describe('Transition', function () {
     await testTransferFlow(client);
   }, 15000);
 
-  it('should verify the token latest state', async () => {
+  it('should verify the token offline transfer', async () => {
     const aggregatorUrl = process.env.AGGREGATOR_URL;
     if (!aggregatorUrl) {
       console.warn('Skipping test: AGGREGATOR_URL environment variable is not set');
