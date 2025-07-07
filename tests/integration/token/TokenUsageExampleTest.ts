@@ -42,7 +42,7 @@ describe('Transition', function () {
     }
   }, 30000);
 
-  it('should verify the token latest state', async () => {
+  it('should verify the token transfer', async () => {
     await testTransferFlow(client);
   }, 30000);
 

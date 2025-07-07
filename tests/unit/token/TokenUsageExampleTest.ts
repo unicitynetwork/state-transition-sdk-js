@@ -17,7 +17,7 @@ describe('Transition', function () {
     new TestAggregatorClient(new SparseMerkleTreeBuilder(new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher))),
   );
 
-  it('should verify the token latest state', async () => {
+  it('should verify the token transfer', async () => {
     await testTransferFlow(client);
   }, 15000);
 
