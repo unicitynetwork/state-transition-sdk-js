@@ -33,7 +33,7 @@ import { UnmaskedPredicate } from "../../src/predicate/UnmaskedPredicate.js";
 
 const textEncoder = new TextEncoder();
 const initialOwnerSecret = textEncoder.encode('Alice');
-const receiverSecret = textEncoder.encode('Bob');
+const bobSecret = textEncoder.encode('Bob');
 const predicateFactory = new PredicateJsonFactory();
 const tokenFactory = new TokenFactory(new TokenJsonSerializer(predicateFactory));
 const transactionDeserializer = new TransactionJsonSerializer(predicateFactory);
@@ -72,14 +72,14 @@ export async function testTransferFlow(client: StateTransitionClient): Promise<v
   );
 
   // Recipient (Bob) prepares the info for the transfer
-  const nonce = crypto.getRandomValues(new Uint8Array(32));
-  const signingService = await SigningService.createFromSecret(receiverSecret, nonce);
-  const recipientPredicate = await MaskedPredicate.create(
+  const bobNonce = crypto.getRandomValues(new Uint8Array(32));
+  const bobSigningService = await SigningService.createFromSecret(bobSecret, bobNonce);
+  const bobPredicate = await MaskedPredicate.create(
     token.id,
     token.type,
-    signingService,
+    bobSigningService,
     HashAlgorithm.SHA256,
-    nonce,
+    bobNonce,
   );
 
   // Create transfer transaction
@@ -87,7 +87,7 @@ export async function testTransferFlow(client: StateTransitionClient): Promise<v
     client,
     token,
     await SigningService.createFromSecret(initialOwnerSecret, data.nonce),
-    await DirectAddress.create(recipientPredicate.reference),
+    await DirectAddress.create(bobPredicate.reference),
   );
 
   // Recipient imports token
@@ -102,7 +102,7 @@ export async function testTransferFlow(client: StateTransitionClient): Promise<v
   // Finish the transaction with the recipient predicate
   const updateToken = await client.finishTransaction(
     importedToken,
-    await TokenState.create(recipientPredicate, textEncoder.encode('my custom data')),
+    await TokenState.create(bobPredicate, textEncoder.encode('my custom data')),
     importedTransaction,
   );
 
@@ -110,7 +110,7 @@ export async function testTransferFlow(client: StateTransitionClient): Promise<v
     initialOwnerSecret,
     token.state.unlockPredicate.nonce,
   );
-  await expect(updateToken.state.unlockPredicate.isOwner(signingService.publicKey)).resolves.toBeTruthy();
+  await expect(updateToken.state.unlockPredicate.isOwner(bobSigningService.publicKey)).resolves.toBeTruthy();
   await expect(
     updateToken.transactions.at(-1)?.data.sourceState.unlockPredicate.isOwner(minterSigningService.publicKey),
   ).resolves.toBeTruthy();
@@ -125,7 +125,7 @@ export async function testTransferFlow(client: StateTransitionClient): Promise<v
   expect(mintedTokenStatus).toEqual(InclusionProofVerificationStatus.OK);
 
   // Verify the updated token has not been spent
-  const transferredTokenStatus = await client.getTokenStatus(updateToken, signingService.publicKey);
+  const transferredTokenStatus = await client.getTokenStatus(updateToken, bobSigningService.publicKey);
   expect(transferredTokenStatus).toEqual(InclusionProofVerificationStatus.PATH_NOT_INCLUDED);
 
   // Transfer to the third owner (Carol) with UnmaskedPredicate
@@ -139,7 +139,7 @@ export async function testTransferFlow(client: StateTransitionClient): Promise<v
   const txToCarol = await sendToken(
       client,
       token,
-      signingService,
+      bobSigningService,
       carolAddress,
   );
 
@@ -194,7 +194,7 @@ export async function testOfflineTransferFlow(client: StateTransitionClient): Pr
 
   // Recipient prepares the info for the transfer
   const nonce = crypto.getRandomValues(new Uint8Array(32));
-  const receiverSigningService = await SigningService.createFromSecret(receiverSecret, nonce);
+  const receiverSigningService = await SigningService.createFromSecret(bobSecret, nonce);
   const recipientPredicate = await MaskedPredicate.create(
     token.id,
     token.type,
@@ -248,7 +248,7 @@ export async function testOfflineTransferFlow(client: StateTransitionClient): Pr
     confirmedTx,
   );
 
-  const signingService = await SigningService.createFromSecret(receiverSecret, token.state.unlockPredicate.nonce);
+  const signingService = await SigningService.createFromSecret(bobSecret, token.state.unlockPredicate.nonce);
   expect(importedToken.state.unlockPredicate.isOwner(signingService.publicKey)).toBeTruthy();
   expect(updateToken.id).toEqual(token.id);
   expect(updateToken.type).toEqual(token.type);
@@ -345,7 +345,7 @@ export async function testSplitFlowAfterTransfer(client: StateTransitionClient):
   performCheckForSplitTokens(splitTokens, coinsPerNewTokens);
 
   const receiverNonce = crypto.getRandomValues(new Uint8Array(32));
-  const recipientSigningService = await SigningService.createFromSecret(receiverSecret, receiverNonce);
+  const recipientSigningService = await SigningService.createFromSecret(bobSecret, receiverNonce);
 
   const reference = await MaskedPredicate.calculateReference(
     splitTokens[0].type,
@@ -415,7 +415,7 @@ export async function testSplitFlowAfterTransfer(client: StateTransitionClient):
   const splitTokens2 = await splitToken(
     updateToken,
     coinsPerNewTokens2,
-    receiverSecret,
+    bobSecret,
     receiverNonce,
     'my custom data',
     'my custom message',
