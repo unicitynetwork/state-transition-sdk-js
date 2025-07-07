@@ -19,7 +19,7 @@ describe('Transition', function () {
     console.log('block height: ', bh);
   });
 
-  it('should verify the token online transfer', async () => {
+  it('should verify the token transfer', async () => {
     const aggregatorUrl = process.env.AGGREGATOR_URL;
     if (!aggregatorUrl) {
       console.warn('Skipping test: AGGREGATOR_URL environment variable is not set');
