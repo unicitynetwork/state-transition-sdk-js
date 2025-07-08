@@ -58,20 +58,20 @@ function performCheckForSplitTokens(
 
 export async function testTransferFlow(client: StateTransitionClient): Promise<void> {
   // Alice
-  const data = await createMintData(
+  const mintData = await createMintData(
     initialOwnerSecret,
     TokenCoinData.create([
       [new CoinId(crypto.getRandomValues(new Uint8Array(32))), BigInt(Math.round(Math.random() * 90)) + 10n],
       [new CoinId(crypto.getRandomValues(new Uint8Array(32))), BigInt(Math.round(Math.random() * 90)) + 10n],
     ]),
   );
-  const aliceToken = await mintToken(client, data);
+  const aliceToken = await mintToken(client, mintData);
 
-  await expect(DirectAddress.create(data.predicate.reference)).resolves.toEqual(
+  await expect(DirectAddress.create(mintData.predicate.reference)).resolves.toEqual(
     await DirectAddress.fromJSON(aliceToken.genesis.data.recipient),
   );
 
-  // Recipient (Bob) prepares the info for the transfer
+  // Recipient (Bob) prepares the info for the transfer: new state and address
   const bobTokenState = 'Bob\'s custom data'; // Bob gives this custom data to the Alice to use in the transfer
   const bobNonce = crypto.getRandomValues(new Uint8Array(32));
   const bobSigningService = await SigningService.createFromSecret(bobSecret, bobNonce);
@@ -82,17 +82,19 @@ export async function testTransferFlow(client: StateTransitionClient): Promise<v
     HashAlgorithm.SHA256,
     bobNonce,
   );
+  const bobAddress = await DirectAddress.create(bobPredicate.reference);
 
-  // Create transfer transaction
+  // IRL Bob should send Alice the state hash (sha256('bobTokenState')) to use in the transfer.
+  // Alice creates transfer transaction using Bob's address and new token state and sends commitment to the aggregator.
   const transaction = await sendToken(
     client,
     aliceToken,
-    await SigningService.createFromSecret(initialOwnerSecret, data.nonce),
-    await DirectAddress.create(bobPredicate.reference),
+    await SigningService.createFromSecret(initialOwnerSecret, mintData.nonce),
+    bobAddress,
     bobTokenState,
   );
 
-  // Recipient imports token
+  // Bob imports token+transaction
   const importedToken = await tokenFactory.create(aliceToken.toJSON());
   // Recipient gets transaction from sender
   const importedTransaction = await transactionDeserializer.deserialize(
@@ -101,7 +103,7 @@ export async function testTransferFlow(client: StateTransitionClient): Promise<v
     TransactionJsonSerializer.serialize(transaction),
   );
 
-  // Finish the transaction with the recipient predicate
+  // Finish the transaction with the Bob's predicate
   const bobToken = await client.finishTransaction(
     importedToken,
     await TokenState.create(bobPredicate, textEncoder.encode(bobTokenState)),
@@ -122,7 +124,7 @@ export async function testTransferFlow(client: StateTransitionClient): Promise<v
   expect(bobToken.coins?.toJSON()).toEqual(aliceToken.coins?.toJSON());
 
   // Verify the original minted token has been spent
-  const senderSigningService = await SigningService.createFromSecret(initialOwnerSecret, data.nonce);
+  const senderSigningService = await SigningService.createFromSecret(initialOwnerSecret, mintData.nonce);
   const mintedTokenStatus = await client.getTokenStatus(aliceToken, senderSigningService.publicKey);
   expect(mintedTokenStatus).toEqual(InclusionProofVerificationStatus.OK);
 
