@@ -40,7 +40,10 @@ jobs:
           CI: true
           GITHUB_SHA: ${{ github.sha }}
           
-      - name: Publish on release # (tag must be ancestor of main)
+      - name: Fetch all branches and tags
+        run: git fetch origin +refs/heads/main:refs/remotes/origin/main --tags --prune
+
+      - name: Publish on release (tag must be ancestor of main)
         if: github.event_name == 'release'
         run: |
           TAG_COMMIT=$(git rev-parse ${{ github.event.release.tag_name }})
