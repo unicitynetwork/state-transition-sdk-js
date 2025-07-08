@@ -40,22 +40,11 @@ jobs:
           CI: true
           GITHUB_SHA: ${{ github.sha }}
           
-      - name: Fetch all branches and tags
-        run: git fetch origin +refs/heads/main:refs/remotes/origin/main --tags --prune
-
-      - name: Publish on release (tag must be ancestor of main)
+      - name: Publish on release
         if: github.event_name == 'release'
         run: |
-          TAG_COMMIT=$(git rev-parse ${{ github.event.release.tag_name }})
-          MAIN_COMMIT=$(git rev-parse origin/main)
-          if git merge-base --is-ancestor "$TAG_COMMIT" "$MAIN_COMMIT"; then
-            echo "Tag is on main's history, proceeding with publish."
-            npm run build
-            npm publish --access public
-          else
-            echo "Tag commit is not in main's history. Skipping publish."
-            exit 0
-          fi
+          npm run build
+          npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPMJS_PUBLISH }}
           CI: true
