@@ -1,8 +1,8 @@
 import { DataHasherFactory } from '@unicitylabs/commons/lib/hash/DataHasherFactory.js';
 import type { IDataHasher } from '@unicitylabs/commons/lib/hash/IDataHasher.js';
 import { MerkleSumTreeRootNode } from '@unicitylabs/commons/lib/smst/MerkleSumTreeRootNode.js';
-import { SparseMerkleSumTreeBuilder } from '@unicitylabs/commons/lib/smst/SparseMerkleSumTreeBuilder.js';
-import { SparseMerkleTreeBuilder } from '@unicitylabs/commons/lib/smt/SparseMerkleTreeBuilder.js';
+import { SparseMerkleSumTree } from '@unicitylabs/commons/lib/smst/SparseMerkleSumTree.js';
+import { SparseMerkleTree } from '@unicitylabs/commons/lib/smt/SparseMerkleTree.js';
 import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
 
 import { SplitResult } from './SplitResult.js';
@@ -36,8 +36,8 @@ export class TokenSplitBuilder {
   }
 
   public async build(factory: DataHasherFactory<IDataHasher>): Promise<SplitResult> {
-    const aggregationTree = new SparseMerkleTreeBuilder(factory);
-    const trees = new Map<string, SparseMerkleSumTreeBuilder>();
+    const aggregationTree = new SparseMerkleTree(factory);
+    const trees = new Map<string, SparseMerkleSumTree>();
     const tokens: SplitToken[] = [];
     for (const builder of this.tokens.values()) {
       const token = builder.build();
@@ -45,7 +45,7 @@ export class TokenSplitBuilder {
         const treesKey = coinId.toJSON();
         let tree = trees.get(treesKey);
         if (!tree) {
-          tree = new SparseMerkleSumTreeBuilder(factory);
+          tree = new SparseMerkleSumTree(factory);
           trees.set(treesKey, tree);
         }
         tree.addLeaf(builder.tokenId.toBitString().toBigInt(), coinId.toCBOR(), amount);

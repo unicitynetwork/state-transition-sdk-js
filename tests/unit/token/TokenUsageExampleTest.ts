@@ -1,7 +1,7 @@
 import { DataHasherFactory } from '@unicitylabs/commons/lib/hash/DataHasherFactory.js';
 import { HashAlgorithm } from '@unicitylabs/commons/lib/hash/HashAlgorithm.js';
 import { NodeDataHasher } from '@unicitylabs/commons/lib/hash/NodeDataHasher.js';
-import { SparseMerkleTreeBuilder } from '@unicitylabs/commons/lib/smt/SparseMerkleTreeBuilder.js';
+import { SparseMerkleTree } from '@unicitylabs/commons/lib/smt/SparseMerkleTree.js';
 
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
 import {
@@ -14,7 +14,7 @@ import { TestAggregatorClient } from '../TestAggregatorClient.js';
 
 describe('Transition', function () {
   const client = new StateTransitionClient(
-    new TestAggregatorClient(new SparseMerkleTreeBuilder(new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher))),
+    new TestAggregatorClient(new SparseMerkleTree(new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher))),
   );
 
   it('should verify the token transfer', async () => {
