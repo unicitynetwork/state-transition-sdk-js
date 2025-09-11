@@ -62,7 +62,7 @@ services:
       - '3000' # port inside the container; host port is chosen randomly
     environment:
       - MONGODB_URI=mongodb://mongo1:27017
-      - USE_MOCK_ALPHABILL=true
-      - ALPHABILL_PRIVATE_KEY=FF00000000000000000000000000000000000000000000000000000000000000 # must be specified for some reason, even though we use the mock
+      - USE_MOCK_BFT=true
+      - BFT_PRIVATE_KEY=FF00000000000000000000000000000000000000000000000000000000000000 # must be specified for some reason, even though we use the mock
       - DISABLE_HIGH_AVAILABILITY=true
       - PORT=3000
