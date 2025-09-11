@@ -7,7 +7,7 @@ import {
   SubmitCommitmentStatus,
 } from '@unicitylabs/commons/lib/api/SubmitCommitmentResponse.js';
 import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
-import { SparseMerkleTreeBuilder } from '@unicitylabs/commons/lib/smt/SparseMerkleTreeBuilder.js';
+import { SparseMerkleTree } from '@unicitylabs/commons/lib/smt/SparseMerkleTree.js';
 
 import { IAggregatorClient } from '../../src/api/IAggregatorClient.js';
 
@@ -21,7 +21,7 @@ class Transaction {
 export class TestAggregatorClient implements IAggregatorClient {
   private readonly requests: Map<bigint, Transaction> = new Map();
 
-  public constructor(private readonly smt: SparseMerkleTreeBuilder) {}
+  public constructor(private readonly smt: SparseMerkleTree) {}
 
   public async submitTransaction(
     requestId: RequestId,
