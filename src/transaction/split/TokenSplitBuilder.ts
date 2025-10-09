@@ -1,17 +1,16 @@
-import { DataHasherFactory } from '@unicitylabs/commons/lib/hash/DataHasherFactory.js';
-import type { IDataHasher } from '@unicitylabs/commons/lib/hash/IDataHasher.js';
-import { MerkleSumTreeRootNode } from '@unicitylabs/commons/lib/smst/MerkleSumTreeRootNode.js';
-import { SparseMerkleSumTree } from '@unicitylabs/commons/lib/smst/SparseMerkleSumTree.js';
-import { SparseMerkleTree } from '@unicitylabs/commons/lib/smt/SparseMerkleTree.js';
-import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
-
 import { SplitResult } from './SplitResult.js';
 import { SplitToken } from './SplitToken.js';
 import { SplitTokenBuilder } from './SplitTokenBuilder.js';
+import { DataHasherFactory } from '../../hash/DataHasherFactory.js';
+import { IDataHasher } from '../../hash/IDataHasher.js';
+import { SparseMerkleTree } from '../../mtree/plain/SparseMerkleTree.js';
+import { MerkleSumTreeRootNode } from '../../mtree/sum/MerkleSumTreeRootNode.js';
+import { SparseMerkleSumTree } from '../../mtree/sum/SparseMerkleSumTree.js';
 import { CoinId } from '../../token/fungible/CoinId.js';
 import { TokenId } from '../../token/TokenId.js';
 import { TokenState } from '../../token/TokenState.js';
 import { TokenType } from '../../token/TokenType.js';
+import { HexConverter } from '../../util/HexConverter.js';
 
 export class TokenSplitBuilder {
   private readonly tokens = new Map<string, SplitTokenBuilder>();

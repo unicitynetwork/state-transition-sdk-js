@@ -1,23 +1,19 @@
-import { InclusionProof, InclusionProofVerificationStatus } from '@unicitylabs/commons/lib/api/InclusionProof.js';
-import { RequestId } from '@unicitylabs/commons/lib/api/RequestId.js';
-import {
-  SubmitCommitmentResponse,
-  SubmitCommitmentStatus,
-} from '@unicitylabs/commons/lib/api/SubmitCommitmentResponse.js';
-import { HashAlgorithm } from '@unicitylabs/commons/lib/hash/HashAlgorithm.js';
-import { SigningService } from '@unicitylabs/commons/lib/signing/SigningService.js';
-import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
-
 import { DirectAddress } from './address/DirectAddress.js';
 import { IAggregatorClient } from './api/IAggregatorClient.js';
+import { RequestId } from './api/RequestId.js';
+import { SubmitCommitmentResponse, SubmitCommitmentStatus } from './api/SubmitCommitmentResponse.js';
+import { HashAlgorithm } from './hash/HashAlgorithm.js';
 import { ISerializable } from './ISerializable.js';
+import { SigningService } from './sign/SigningService.js';
 import { NameTagToken } from './token/NameTagToken.js';
 import { Token } from './token/Token.js';
 import { TokenState } from './token/TokenState.js';
 import { Commitment } from './transaction/Commitment.js';
+import { InclusionProof, InclusionProofVerificationStatus } from './transaction/InclusionProof.js';
 import { MintTransactionData } from './transaction/MintTransactionData.js';
 import { Transaction } from './transaction/Transaction.js';
 import { TransactionData } from './transaction/TransactionData.js';
+import { HexConverter } from './util/HexConverter.js';
 
 // I_AM_UNIVERSAL_MINTER_FOR_ string bytes
 /**

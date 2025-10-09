@@ -1,11 +1,7 @@
-import { CborDecoder } from '@unicitylabs/commons/lib/cbor/CborDecoder.js';
-import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
-import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
-import { MerkleSumTreePath } from '@unicitylabs/commons/lib/smst/MerkleSumTreePath.js';
-import { MerkleTreePath } from '@unicitylabs/commons/lib/smt/MerkleTreePath.js';
-import { BigintConverter } from '@unicitylabs/commons/lib/util/BigintConverter.js';
-
+import { DataHash } from '../../../hash/DataHash.js';
 import { ISerializable } from '../../../ISerializable.js';
+import { MerkleTreePath } from '../../../mtree/plain/MerkleTreePath.js';
+import { MerkleSumTreePath } from '../../../mtree/sum/MerkleSumTreePath.js';
 import { SplitMintReason } from '../../../token/fungible/SplitMintReason.js';
 import { SplitMintReasonProof } from '../../../token/fungible/SplitMintReasonProof.js';
 import { TokenCoinData } from '../../../token/fungible/TokenCoinData.js';
@@ -13,7 +9,10 @@ import { TokenId } from '../../../token/TokenId.js';
 import { TokenType } from '../../../token/TokenType.js';
 import { MintReasonType } from '../../../transaction/MintReasonType.js';
 import { MintTransactionData } from '../../../transaction/MintTransactionData.js';
+import { BigintConverter } from '../../../util/BigintConverter.js';
 import { ITokenSerializer } from '../../token/ITokenSerializer.js';
+import { CborDecoder } from '../CborDecoder.js';
+import { CborEncoder } from '../CborEncoder.js';
 
 /**
  * A serializer for {@link MintTransactionData} objects using CBOR encoding.

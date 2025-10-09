@@ -1,11 +1,10 @@
-import { CborDecoder } from '@unicitylabs/commons/lib/cbor/CborDecoder.js';
-
 import { BurnPredicate } from './BurnPredicate.js';
 import { IPredicate } from './IPredicate.js';
 import { IPredicateFactory } from './IPredicateFactory.js';
 import { MaskedPredicate } from './MaskedPredicate.js';
 import { PredicateType } from './PredicateType.js';
 import { UnmaskedPredicate } from './UnmaskedPredicate.js';
+import { CborDecoder } from '../serializer/cbor/CborDecoder.js';
 import { TokenId } from '../token/TokenId.js';
 import { TokenType } from '../token/TokenType.js';
 

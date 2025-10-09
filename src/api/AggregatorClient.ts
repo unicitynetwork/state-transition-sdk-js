@@ -1,12 +1,11 @@
-import { Authenticator } from '@unicitylabs/commons/lib/api/Authenticator.js';
-import { InclusionProof } from '@unicitylabs/commons/lib/api/InclusionProof.js';
-import { RequestId } from '@unicitylabs/commons/lib/api/RequestId.js';
-import { SubmitCommitmentRequest } from '@unicitylabs/commons/lib/api/SubmitCommitmentRequest.js';
-import { SubmitCommitmentResponse } from '@unicitylabs/commons/lib/api/SubmitCommitmentResponse.js';
-import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
-import { JsonRpcHttpTransport } from '@unicitylabs/commons/lib/json-rpc/JsonRpcHttpTransport.js';
-
+import { Authenticator } from './Authenticator.js';
 import { IAggregatorClient } from './IAggregatorClient.js';
+import { JsonRpcHttpTransport } from './json-rpc/JsonRpcHttpTransport.js';
+import { RequestId } from './RequestId.js';
+import { SubmitCommitmentRequest } from './SubmitCommitmentRequest.js';
+import { SubmitCommitmentResponse } from './SubmitCommitmentResponse.js';
+import { DataHash } from '../hash/DataHash.js';
+import { InclusionProof } from '../transaction/InclusionProof.js';
 
 /**
  * Client implementation for communicating with an aggregator via JSON-RPC.

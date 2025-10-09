@@ -1,11 +1,10 @@
-import { InclusionProof } from '@unicitylabs/commons/lib/api/InclusionProof.js';
-import { CborDecoder } from '@unicitylabs/commons/lib/cbor/CborDecoder.js';
-import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
-
 import { MintTransactionDataCborSerializer } from './MintTransactionDataCborSerializer.js';
 import { ISerializable } from '../../../ISerializable.js';
+import { InclusionProof } from '../../../transaction/InclusionProof.js';
 import { MintTransactionData } from '../../../transaction/MintTransactionData.js';
 import { Transaction } from '../../../transaction/Transaction.js';
+import { CborDecoder } from '../CborDecoder.js';
+import { CborEncoder } from '../CborEncoder.js';
 import { TokenCborSerializer } from '../token/TokenCborSerializer.js';
 
 /**

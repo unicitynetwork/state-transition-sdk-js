@@ -1,10 +1,9 @@
-import { InclusionProof } from '@unicitylabs/commons/lib/api/InclusionProof.js';
-import { DataHasher } from '@unicitylabs/commons/lib/hash/DataHasher.js';
-import { dedent } from '@unicitylabs/commons/lib/util/StringUtils.js';
-
 import { MintTransactionData } from './MintTransactionData.js';
 import { TransactionData } from './TransactionData.js';
 import { ISerializable } from '../ISerializable.js';
+import { InclusionProof } from './InclusionProof.js';
+import { DataHasher } from '../hash/DataHasher.js';
+import { dedent } from '../util/StringUtils.js';
 
 /**
  * A transaction along with its verified inclusion proof.

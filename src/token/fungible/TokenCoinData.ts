@@ -1,11 +1,10 @@
-import { CborDecoder } from '@unicitylabs/commons/lib/cbor/CborDecoder.js';
-import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
-import { BigintConverter } from '@unicitylabs/commons/lib/util/BigintConverter.js';
-import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
-import { dedent } from '@unicitylabs/commons/lib/util/StringUtils.js';
-
 import { CoinId } from './CoinId.js';
 import { ISerializable } from '../../ISerializable.js';
+import { CborDecoder } from '../../serializer/cbor/CborDecoder.js';
+import { CborEncoder } from '../../serializer/cbor/CborEncoder.js';
+import { BigintConverter } from '../../util/BigintConverter.js';
+import { HexConverter } from '../../util/HexConverter.js';
+import { dedent } from '../../util/StringUtils.js';
 
 /** JSON representation for coin balances. */
 export type TokenCoinDataJson = [string, string][];

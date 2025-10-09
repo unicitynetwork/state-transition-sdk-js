@@ -1,8 +1,7 @@
-import { InclusionProof } from '@unicitylabs/commons/lib/api/InclusionProof.js';
-
 import { ITransactionJson } from './ITransactionJson.js';
 import { IMintTransactionDataJson, MintTransactionDataJsonSerializer } from './MintTransactionDataJsonSerializer.js';
 import { ISerializable } from '../../../ISerializable.js';
+import { InclusionProof } from '../../../transaction/InclusionProof.js';
 import { MintTransactionData } from '../../../transaction/MintTransactionData.js';
 import { Transaction } from '../../../transaction/Transaction.js';
 import { TokenJsonSerializer } from '../token/TokenJsonSerializer.js';

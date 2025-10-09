@@ -1,15 +1,14 @@
-import { RequestId } from '@unicitylabs/commons/lib/api/RequestId.js';
-import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
-import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
-import { DataHasher } from '@unicitylabs/commons/lib/hash/DataHasher.js';
-import { HashAlgorithm } from '@unicitylabs/commons/lib/hash/HashAlgorithm.js';
-import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
-import { dedent } from '@unicitylabs/commons/lib/util/StringUtils.js';
-
+import { RequestId } from '../api/RequestId.js';
+import { DataHash } from '../hash/DataHash.js';
+import { DataHasher } from '../hash/DataHasher.js';
+import { HashAlgorithm } from '../hash/HashAlgorithm.js';
 import { ISerializable } from '../ISerializable.js';
+import { CborEncoder } from '../serializer/cbor/CborEncoder.js';
 import { TokenCoinData } from '../token/fungible/TokenCoinData.js';
 import { TokenId } from '../token/TokenId.js';
 import { TokenType } from '../token/TokenType.js';
+import { HexConverter } from '../util/HexConverter.js';
+import { dedent } from '../util/StringUtils.js';
 
 // TOKENID string SHA-256 hash
 /**

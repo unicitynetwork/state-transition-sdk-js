@@ -1,10 +1,9 @@
-import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
-
 import { IPredicateJson } from '../../../predicate/IPredicate.js';
 import { IPredicateFactory } from '../../../predicate/IPredicateFactory.js';
 import { TokenId } from '../../../token/TokenId.js';
 import { TokenState } from '../../../token/TokenState.js';
 import { TokenType } from '../../../token/TokenType.js';
+import { HexConverter } from '../../../util/HexConverter.js';
 
 /** JSON representation of {@link TokenState}. */
 export interface ITokenStateJson {

@@ -1,12 +1,11 @@
-import { SubmitCommitmentStatus } from '@unicitylabs/commons/lib/api/SubmitCommitmentResponse.js';
-import { DataHasher } from '@unicitylabs/commons/lib/hash/DataHasher.js';
-import { HashAlgorithm } from '@unicitylabs/commons/lib/hash/HashAlgorithm.js';
-import { SigningService } from '@unicitylabs/commons/lib/signing/SigningService.js';
-
 import { TestTokenData } from './TestTokenData.js';
 import { DirectAddress } from '../src/address/DirectAddress.js';
+import { SubmitCommitmentStatus } from '../src/api/SubmitCommitmentResponse.js';
+import { DataHasher } from '../src/hash/DataHasher.js';
+import { HashAlgorithm } from '../src/hash/HashAlgorithm.js';
 import { ISerializable } from '../src/ISerializable.js';
 import { MaskedPredicate } from '../src/predicate/MaskedPredicate.js';
+import { SigningService } from '../src/sign/SigningService.js';
 import { StateTransitionClient } from '../src/StateTransitionClient.js';
 import { TokenCoinData } from '../src/token/fungible/TokenCoinData.js';
 import { Token } from '../src/token/Token.js';
@@ -17,7 +16,7 @@ import { Commitment } from '../src/transaction/Commitment.js';
 import { MintTransactionData } from '../src/transaction/MintTransactionData.js';
 import { Transaction } from '../src/transaction/Transaction.js';
 import { TransactionData } from '../src/transaction/TransactionData.js';
-import { waitInclusionProof } from '../src/utils/InclusionProofUtils.js';
+import { waitInclusionProof } from '../src/util/InclusionProofUtils.js';
 
 export interface IMintData {
   tokenId: TokenId;
@@ -93,7 +92,9 @@ export async function sendToken(
   tokenState: string | null = 'my custom data',
 ): Promise<Transaction<TransactionData>> {
   const textEncoder = new TextEncoder();
-  const stateHash = tokenState ? await new DataHasher(HashAlgorithm.SHA256).update(textEncoder.encode(tokenState)).digest() : null;
+  const stateHash = tokenState
+    ? await new DataHasher(HashAlgorithm.SHA256).update(textEncoder.encode(tokenState)).digest()
+    : null;
   const transactionData = await TransactionData.create(
     token.state,
     recipient.toJSON(),

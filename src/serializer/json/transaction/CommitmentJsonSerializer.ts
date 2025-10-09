@@ -1,8 +1,6 @@
-import type { IAuthenticatorJson } from '@unicitylabs/commons/lib/api/Authenticator.js';
-import { Authenticator } from '@unicitylabs/commons/lib/api/Authenticator.js';
-import { RequestId } from '@unicitylabs/commons/lib/api/RequestId.js';
-
 import { ITransactionDataJson, TransactionDataJsonSerializer } from './TransactionDataJsonSerializer.js';
+import { Authenticator, IAuthenticatorJson } from '../../../api/Authenticator.js';
+import { RequestId } from '../../../api/RequestId.js';
 import { IPredicateFactory } from '../../../predicate/IPredicateFactory.js';
 import { TokenId } from '../../../token/TokenId.js';
 import { TokenType } from '../../../token/TokenType.js';

@@ -1,8 +1,7 @@
-import { DataHasherFactory } from '@unicitylabs/commons/lib/hash/DataHasherFactory.js';
-import { HashAlgorithm } from '@unicitylabs/commons/lib/hash/HashAlgorithm.js';
-import { NodeDataHasher } from '@unicitylabs/commons/lib/hash/NodeDataHasher.js';
-import { SparseMerkleTree } from '@unicitylabs/commons/lib/smt/SparseMerkleTree.js';
-
+import { DataHasherFactory } from '../../../src/hash/DataHasherFactory.js';
+import { HashAlgorithm } from '../../../src/hash/HashAlgorithm.js';
+import { NodeDataHasher } from '../../../src/hash/NodeDataHasher.js';
+import { SparseMerkleTree } from '../../../src/mtree/plain/SparseMerkleTree.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
 import {
   testTransferFlow,

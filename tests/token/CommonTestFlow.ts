@@ -1,19 +1,18 @@
-import { InclusionProofVerificationStatus } from '@unicitylabs/commons/lib/api/InclusionProof.js';
-import { SubmitCommitmentStatus } from '@unicitylabs/commons/lib/api/SubmitCommitmentResponse.js';
-import { DataHasher } from '@unicitylabs/commons/lib/hash/DataHasher.js';
-import { DataHasherFactory } from '@unicitylabs/commons/lib/hash/DataHasherFactory.js';
-import { HashAlgorithm } from '@unicitylabs/commons/lib/hash/HashAlgorithm.js';
-import { NodeDataHasher } from '@unicitylabs/commons/lib/hash/NodeDataHasher.js';
-import { SigningService } from '@unicitylabs/commons/lib/signing/SigningService.js';
-
 import { DirectAddress } from '../../src/address/DirectAddress.js';
+import { SubmitCommitmentStatus } from '../../src/api/SubmitCommitmentResponse.js';
+import { DataHasher } from '../../src/hash/DataHasher.js';
+import { DataHasherFactory } from '../../src/hash/DataHasherFactory.js';
+import { HashAlgorithm } from '../../src/hash/HashAlgorithm.js';
+import { NodeDataHasher } from '../../src/hash/NodeDataHasher.js';
 import { ISerializable } from '../../src/ISerializable.js';
 import { BurnPredicate } from '../../src/predicate/BurnPredicate.js';
 import { MaskedPredicate } from '../../src/predicate/MaskedPredicate.js';
 import { PredicateJsonFactory } from '../../src/predicate/PredicateJsonFactory.js';
+import { UnmaskedPredicate } from '../../src/predicate/UnmaskedPredicate.js';
 import { TokenJsonSerializer } from '../../src/serializer/json/token/TokenJsonSerializer.js';
 import { CommitmentJsonSerializer } from '../../src/serializer/json/transaction/CommitmentJsonSerializer.js';
 import { TransactionJsonSerializer } from '../../src/serializer/json/transaction/TransactionJsonSerializer.js';
+import { SigningService } from '../../src/sign/SigningService.js';
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
 import { CoinId } from '../../src/token/fungible/CoinId.js';
 import { TokenCoinData } from '../../src/token/fungible/TokenCoinData.js';
@@ -23,13 +22,13 @@ import { TokenId } from '../../src/token/TokenId.js';
 import { TokenState } from '../../src/token/TokenState.js';
 import { TokenType } from '../../src/token/TokenType.js';
 import { Commitment } from '../../src/transaction/Commitment.js';
+import { InclusionProofVerificationStatus } from '../../src/transaction/InclusionProof.js';
 import { MintTransactionData } from '../../src/transaction/MintTransactionData.js';
 import { TokenSplitBuilder } from '../../src/transaction/split/TokenSplitBuilder.js';
 import { Transaction } from '../../src/transaction/Transaction.js';
 import { TransactionData } from '../../src/transaction/TransactionData.js';
-import { waitInclusionProof } from '../../src/utils/InclusionProofUtils.js';
+import { waitInclusionProof } from '../../src/util/InclusionProofUtils.js';
 import { createMintData, mintToken, sendToken } from '../MintTokenUtils.js';
-import { UnmaskedPredicate } from "../../src/predicate/UnmaskedPredicate.js";
 
 const textEncoder = new TextEncoder();
 const initialOwnerSecret = textEncoder.encode('Alice');
@@ -72,7 +71,7 @@ export async function testTransferFlow(client: StateTransitionClient): Promise<v
   );
 
   // Recipient (Bob) prepares the info for the transfer: new state and address
-  const bobTokenState = 'Bob\'s custom data'; // Bob gives this custom data to the Alice to use in the transfer
+  const bobTokenState = "Bob's custom data"; // Bob gives this custom data to the Alice to use in the transfer
   const bobNonce = crypto.getRandomValues(new Uint8Array(32));
   const bobSigningService = await SigningService.createFromSecret(bobSecret, bobNonce);
   const bobPredicate = await MaskedPredicate.create(
@@ -136,42 +135,47 @@ export async function testTransferFlow(client: StateTransitionClient): Promise<v
   const carolSecret = textEncoder.encode('Carol');
   const carolNonce = crypto.getRandomValues(new Uint8Array(32));
   const carolSigningService = await SigningService.createFromSecret(carolSecret, carolNonce);
-  const carolRef = await UnmaskedPredicate.calculateReference(aliceToken.type, carolSigningService.algorithm, carolSigningService.publicKey, HashAlgorithm.SHA256);
+  const carolRef = await UnmaskedPredicate.calculateReference(
+    aliceToken.type,
+    carolSigningService.algorithm,
+    carolSigningService.publicKey,
+    HashAlgorithm.SHA256,
+  );
   const carolAddress = await DirectAddress.create(carolRef);
 
   // Create transfer transaction Bob -> Carol
   const txToCarol = await sendToken(
-      client,
-      bobToken,
-      bobSigningService,
-      carolAddress,
-      null, // NB! Carol has to provide Bob the token state hash. If she doesn't, Bob uses 'null'.
+    client,
+    bobToken,
+    bobSigningService,
+    carolAddress,
+    null, // NB! Carol has to provide Bob the token state hash. If she doesn't, Bob uses 'null'.
   );
 
   // Carol imports token
   const carolToken = await tokenFactory.create(bobToken.toJSON());
   // Carol gets transaction from Bob
   const carolTransaction = await transactionDeserializer.deserialize(
-      carolToken.id,
-      carolToken.type,
-      TransactionJsonSerializer.serialize(txToCarol),
+    carolToken.id,
+    carolToken.type,
+    TransactionJsonSerializer.serialize(txToCarol),
   );
 
   // now Carol can create an UnmaskedPredicate knowing token information
   const carolPredicate = await UnmaskedPredicate.create(
-      carolToken.id,
-      carolToken.type,
-      carolSigningService,
-      HashAlgorithm.SHA256,
-      carolNonce,
+    carolToken.id,
+    carolToken.type,
+    carolSigningService,
+    HashAlgorithm.SHA256,
+    carolNonce,
   );
 
   // Finish the transaction with the Carol predicate
-  expect(carolTransaction.data.dataHash).toBeNull()
+  expect(carolTransaction.data.dataHash).toBeNull();
   const finalizedCarolToken = await client.finishTransaction(
-      carolToken,
-      await TokenState.create(carolPredicate, null),
-      carolTransaction,
+    carolToken,
+    await TokenState.create(carolPredicate, null),
+    carolTransaction,
   );
 
   expect(finalizedCarolToken.transactions).toHaveLength(2);

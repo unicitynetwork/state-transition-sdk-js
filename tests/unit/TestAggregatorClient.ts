@@ -1,15 +1,11 @@
-import { Authenticator } from '@unicitylabs/commons/lib/api/Authenticator.js';
-import { InclusionProof } from '@unicitylabs/commons/lib/api/InclusionProof.js';
-import { LeafValue } from '@unicitylabs/commons/lib/api/LeafValue.js';
-import { RequestId } from '@unicitylabs/commons/lib/api/RequestId.js';
-import {
-  SubmitCommitmentResponse,
-  SubmitCommitmentStatus,
-} from '@unicitylabs/commons/lib/api/SubmitCommitmentResponse.js';
-import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
-import { SparseMerkleTree } from '@unicitylabs/commons/lib/smt/SparseMerkleTree.js';
-
+import { Authenticator } from '../../src/api/Authenticator.js';
 import { IAggregatorClient } from '../../src/api/IAggregatorClient.js';
+import { LeafValue } from '../../src/api/LeafValue.js';
+import { RequestId } from '../../src/api/RequestId.js';
+import { SubmitCommitmentResponse, SubmitCommitmentStatus } from '../../src/api/SubmitCommitmentResponse.js';
+import { DataHash } from '../../src/hash/DataHash.js';
+import { SparseMerkleTree } from '../../src/mtree/plain/SparseMerkleTree.js';
+import { InclusionProof } from '../../src/transaction/InclusionProof.js';
 
 class Transaction {
   public constructor(

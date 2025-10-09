@@ -1,5 +1,3 @@
-import { dedent } from '@unicitylabs/commons/lib/util/StringUtils.js';
-
 import { NameTagToken } from './NameTagToken.js';
 import { TokenId } from './TokenId.js';
 import { TokenState } from './TokenState.js';
@@ -11,6 +9,7 @@ import { TokenCoinData } from './fungible/TokenCoinData.js';
 import { ITokenJson, TokenJsonSerializer } from '../serializer/json/token/TokenJsonSerializer.js';
 import { MintTransactionData } from '../transaction/MintTransactionData.js';
 import { TransactionData } from '../transaction/TransactionData.js';
+import { dedent } from '../util/StringUtils.js';
 
 /** Current serialization version for tokens. */
 export const TOKEN_VERSION = '2.0';

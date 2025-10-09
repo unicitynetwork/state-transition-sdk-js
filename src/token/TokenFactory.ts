@@ -1,20 +1,19 @@
-import { InclusionProofVerificationStatus } from '@unicitylabs/commons/lib/api/InclusionProof.js';
-import { RequestId } from '@unicitylabs/commons/lib/api/RequestId.js';
-import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
-import { SigningService } from '@unicitylabs/commons/lib/signing/SigningService.js';
-import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
-
 import { DirectAddress } from '../address/DirectAddress.js';
 import { ISerializable } from '../ISerializable.js';
 import { MINTER_SECRET } from '../StateTransitionClient.js';
 import { Token } from './Token.js';
+import { RequestId } from '../api/RequestId.js';
+import { DataHash } from '../hash/DataHash.js';
 import { BurnPredicate } from '../predicate/BurnPredicate.js';
 import { PredicateType } from '../predicate/PredicateType.js';
 import { ITokenSerializer } from '../serializer/token/ITokenSerializer.js';
+import { InclusionProofVerificationStatus } from '../transaction/InclusionProof.js';
 import { MintTransactionData } from '../transaction/MintTransactionData.js';
 import { Transaction } from '../transaction/Transaction.js';
 import { TransactionData } from '../transaction/TransactionData.js';
 import { SplitMintReason } from './fungible/SplitMintReason.js';
+import { SigningService } from '../sign/SigningService.js';
+import { HexConverter } from '../util/HexConverter.js';
 
 /**
  * Utility for constructing tokens from their serialized form.

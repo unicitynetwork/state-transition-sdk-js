@@ -1,8 +1,6 @@
-import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
-import type { IMerkleSumTreePathJson } from '@unicitylabs/commons/lib/smst/MerkleSumTreePath.js';
-import { MerkleSumTreePath } from '@unicitylabs/commons/lib/smst/MerkleSumTreePath.js';
-import type { IMerkleTreePathJson } from '@unicitylabs/commons/lib/smt/MerkleTreePath.js';
-import { MerkleTreePath } from '@unicitylabs/commons/lib/smt/MerkleTreePath.js';
+import { IMerkleTreePathJson, MerkleTreePath } from '../../mtree/plain/MerkleTreePath.js';
+import { IMerkleSumTreePathJson, MerkleSumTreePath } from '../../mtree/sum/MerkleSumTreePath.js';
+import { CborEncoder } from '../../serializer/cbor/CborEncoder.js';
 
 export interface ISplitMintReasonProofJson {
   readonly aggregationPath: IMerkleTreePathJson;

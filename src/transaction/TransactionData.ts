@@ -1,12 +1,11 @@
-import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
-import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
-import { DataHasher } from '@unicitylabs/commons/lib/hash/DataHasher.js';
-import { HashAlgorithm } from '@unicitylabs/commons/lib/hash/HashAlgorithm.js';
-import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
-import { dedent } from '@unicitylabs/commons/lib/util/StringUtils.js';
-
+import { DataHash } from '../hash/DataHash.js';
+import { DataHasher } from '../hash/DataHasher.js';
+import { HashAlgorithm } from '../hash/HashAlgorithm.js';
+import { CborEncoder } from '../serializer/cbor/CborEncoder.js';
 import { NameTagToken } from '../token/NameTagToken.js';
 import { TokenState } from '../token/TokenState.js';
+import { HexConverter } from '../util/HexConverter.js';
+import { dedent } from '../util/StringUtils.js';
 
 /**
  * Data describing a standard token transfer.

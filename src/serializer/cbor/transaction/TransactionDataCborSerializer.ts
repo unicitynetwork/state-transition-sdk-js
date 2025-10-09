@@ -1,11 +1,10 @@
-import { CborDecoder } from '@unicitylabs/commons/lib/cbor/CborDecoder.js';
-import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
-import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
-
+import { DataHash } from '../../../hash/DataHash.js';
 import { IPredicateFactory } from '../../../predicate/IPredicateFactory.js';
 import { TokenId } from '../../../token/TokenId.js';
 import { TokenType } from '../../../token/TokenType.js';
 import { TransactionData } from '../../../transaction/TransactionData.js';
+import { CborDecoder } from '../CborDecoder.js';
+import { CborEncoder } from '../CborEncoder.js';
 import { TokenStateCborSerializer } from '../token/TokenStateCborSerializer.js';
 
 /**

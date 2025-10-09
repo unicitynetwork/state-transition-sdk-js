@@ -1,8 +1,8 @@
-import { Authenticator } from '@unicitylabs/commons/lib/api/Authenticator.js';
-import { InclusionProof } from '@unicitylabs/commons/lib/api/InclusionProof.js';
-import { RequestId } from '@unicitylabs/commons/lib/api/RequestId.js';
-import { SubmitCommitmentResponse } from '@unicitylabs/commons/lib/api/SubmitCommitmentResponse.js';
-import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
+import { Authenticator } from './Authenticator.js';
+import { RequestId } from './RequestId.js';
+import { SubmitCommitmentResponse } from './SubmitCommitmentResponse.js';
+import { DataHash } from '../hash/DataHash.js';
+import { InclusionProof } from '../transaction/InclusionProof.js';
 
 /**
  * Client interface for interacting with an aggregator service.

@@ -1,6 +1,5 @@
-import { DataHasherFactory } from '@unicitylabs/commons/lib/hash/DataHasherFactory.js';
-import type { IDataHasher } from '@unicitylabs/commons/lib/hash/IDataHasher.js';
-
+import { DataHasherFactory } from '../../hash/DataHasherFactory.js';
+import { IDataHasher } from '../../hash/IDataHasher.js';
 import { CoinId } from '../../token/fungible/CoinId.js';
 import { TokenId } from '../../token/TokenId.js';
 import { TokenState } from '../../token/TokenState.js';

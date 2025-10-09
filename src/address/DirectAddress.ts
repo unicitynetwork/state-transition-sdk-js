@@ -1,11 +1,10 @@
-import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
-import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
-import { DataHasher } from '@unicitylabs/commons/lib/hash/DataHasher.js';
-import { HashAlgorithm } from '@unicitylabs/commons/lib/hash/HashAlgorithm.js';
-import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
-
 import { AddressScheme } from './AddressScheme.js';
 import { IAddress } from './IAddress.js';
+import { DataHash } from '../hash/DataHash.js';
+import { DataHasher } from '../hash/DataHasher.js';
+import { HashAlgorithm } from '../hash/HashAlgorithm.js';
+import { CborEncoder } from '../serializer/cbor/CborEncoder.js';
+import { HexConverter } from '../util/HexConverter.js';
 
 /**
  * Address that directly references a predicate.

@@ -1,10 +1,9 @@
-import { InclusionProof } from '@unicitylabs/commons/lib/api/InclusionProof.js';
-
 import { ITransactionJson } from './ITransactionJson.js';
 import { ITransactionDataJson, TransactionDataJsonSerializer } from './TransactionDataJsonSerializer.js';
 import { IPredicateFactory } from '../../../predicate/IPredicateFactory.js';
 import { TokenId } from '../../../token/TokenId.js';
 import { TokenType } from '../../../token/TokenType.js';
+import { InclusionProof } from '../../../transaction/InclusionProof.js';
 import { Transaction } from '../../../transaction/Transaction.js';
 import { TransactionData } from '../../../transaction/TransactionData.js';
 

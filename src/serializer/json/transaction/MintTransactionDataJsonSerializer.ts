@@ -1,9 +1,7 @@
-import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
-import { MerkleSumTreePath } from '@unicitylabs/commons/lib/smst/MerkleSumTreePath.js';
-import { MerkleTreePath } from '@unicitylabs/commons/lib/smt/MerkleTreePath.js';
-import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
-
+import { DataHash } from '../../../hash/DataHash.js';
 import { ISerializable } from '../../../ISerializable.js';
+import { MerkleTreePath } from '../../../mtree/plain/MerkleTreePath.js';
+import { MerkleSumTreePath } from '../../../mtree/sum/MerkleSumTreePath.js';
 import { ISplitMintReasonJson, SplitMintReason } from '../../../token/fungible/SplitMintReason.js';
 import { SplitMintReasonProof } from '../../../token/fungible/SplitMintReasonProof.js';
 import { TokenCoinData, TokenCoinDataJson } from '../../../token/fungible/TokenCoinData.js';
@@ -11,6 +9,7 @@ import { TokenId } from '../../../token/TokenId.js';
 import { TokenType } from '../../../token/TokenType.js';
 import { MintReasonType } from '../../../transaction/MintReasonType.js';
 import { MintTransactionData } from '../../../transaction/MintTransactionData.js';
+import { HexConverter } from '../../../util/HexConverter.js';
 import { TokenJsonSerializer } from '../token/TokenJsonSerializer.js';
 
 /**

@@ -1,5 +1,5 @@
-import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
-import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
+import { CborEncoder } from '../serializer/cbor/CborEncoder.js';
+import { HexConverter } from '../util/HexConverter.js';
 
 /** Unique identifier describing the type/category of a token. */
 export class TokenType {

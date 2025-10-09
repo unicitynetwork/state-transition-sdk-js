@@ -1,7 +1,6 @@
-import type { IInclusionProofJson } from '@unicitylabs/commons/lib/api/InclusionProof.js';
-
 import { IMintTransactionDataJson } from './MintTransactionDataJsonSerializer.js';
 import { ITransactionDataJson } from './TransactionDataJsonSerializer.js';
+import { IInclusionProofJson } from '../../../transaction/InclusionProof.js';
 
 /**
  * JSON representation of a transaction, which can either be a standard transaction or a mint transaction.

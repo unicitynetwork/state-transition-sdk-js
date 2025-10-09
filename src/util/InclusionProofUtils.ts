@@ -1,9 +1,8 @@
-import { InclusionProof, InclusionProofVerificationStatus } from '@unicitylabs/commons/lib/api/InclusionProof.js';
-import { JsonRpcNetworkError } from '@unicitylabs/commons/lib/json-rpc/JsonRpcNetworkError.js';
-
+import { JsonRpcNetworkError } from '../api/json-rpc/JsonRpcNetworkError.js';
 import { ISerializable } from '../ISerializable.js';
 import { StateTransitionClient } from '../StateTransitionClient.js';
 import { Commitment } from '../transaction/Commitment.js';
+import { InclusionProof, InclusionProofVerificationStatus } from '../transaction/InclusionProof.js';
 import { MintTransactionData } from '../transaction/MintTransactionData.js';
 import { TransactionData } from '../transaction/TransactionData.js';
 

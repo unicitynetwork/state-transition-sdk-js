@@ -1,17 +1,16 @@
-import { InclusionProofVerificationStatus } from '@unicitylabs/commons/lib/api/InclusionProof.js';
-import { RequestId } from '@unicitylabs/commons/lib/api/RequestId.js';
-import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
-import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
-import { HashAlgorithm } from '@unicitylabs/commons/lib/hash/HashAlgorithm.js';
-import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
-import { dedent } from '@unicitylabs/commons/lib/util/StringUtils.js';
-
 import { IPredicate } from './IPredicate.js';
 import { PredicateType } from './PredicateType.js';
+import { RequestId } from '../api/RequestId.js';
+import { DataHash } from '../hash/DataHash.js';
+import { HashAlgorithm } from '../hash/HashAlgorithm.js';
 import { ISerializable } from '../ISerializable.js';
+import { CborEncoder } from '../serializer/cbor/CborEncoder.js';
+import { InclusionProofVerificationStatus } from '../transaction/InclusionProof.js';
 import { MintTransactionData } from '../transaction/MintTransactionData.js';
 import { Transaction } from '../transaction/Transaction.js';
 import { TransactionData } from '../transaction/TransactionData.js';
+import { HexConverter } from '../util/HexConverter.js';
+import { dedent } from '../util/StringUtils.js';
 
 interface IPredicateJson {
   readonly type: PredicateType;
@@ -115,7 +114,9 @@ export abstract class DefaultPredicate implements IPredicate {
     }
 
     // Verify if public key is correct.
-    if (HexConverter.encode(transaction.inclusionProof.authenticator.publicKey) !== HexConverter.encode(this.publicKey)) {
+    if (
+      HexConverter.encode(transaction.inclusionProof.authenticator.publicKey) !== HexConverter.encode(this.publicKey)
+    ) {
       return false;
     }
 

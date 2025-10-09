@@ -1,10 +1,9 @@
-import { CborDecoder } from '@unicitylabs/commons/lib/cbor/CborDecoder.js';
-import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
-
 import { IPredicateFactory } from '../../../predicate/IPredicateFactory.js';
 import { TokenId } from '../../../token/TokenId.js';
 import { TokenState } from '../../../token/TokenState.js';
 import { TokenType } from '../../../token/TokenType.js';
+import { CborDecoder } from '../CborDecoder.js';
+import { CborEncoder } from '../CborEncoder.js';
 
 /**
  * A serializer for {@link TokenState} objects using CBOR encoding.

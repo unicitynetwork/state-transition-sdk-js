@@ -1,11 +1,10 @@
-import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
-import { MerkleSumTreePath } from '@unicitylabs/commons/lib/smst/MerkleSumTreePath.js';
-import { MerkleSumTreeRootNode } from '@unicitylabs/commons/lib/smst/MerkleSumTreeRootNode.js';
-import { MerkleTreePath } from '@unicitylabs/commons/lib/smt/MerkleTreePath.js';
-import { MerkleTreeRootNode } from '@unicitylabs/commons/lib/smt/MerkleTreeRootNode.js';
-
 import { SplitToken } from './SplitToken.js';
+import { DataHash } from '../../hash/DataHash.js';
 import { ISerializable } from '../../ISerializable.js';
+import { MerkleTreePath } from '../../mtree/plain/MerkleTreePath.js';
+import { MerkleTreeRootNode } from '../../mtree/plain/MerkleTreeRootNode.js';
+import { MerkleSumTreePath } from '../../mtree/sum/MerkleSumTreePath.js';
+import { MerkleSumTreeRootNode } from '../../mtree/sum/MerkleSumTreeRootNode.js';
 import { CoinId } from '../../token/fungible/CoinId.js';
 import { SplitMintReason } from '../../token/fungible/SplitMintReason.js';
 import { SplitMintReasonProof } from '../../token/fungible/SplitMintReasonProof.js';

@@ -1,6 +1,6 @@
-import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
-import { BitString } from '@unicitylabs/commons/lib/util/BitString.js';
-import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
+import { CborEncoder } from '../serializer/cbor/CborEncoder.js';
+import { BitString } from '../util/BitString.js';
+import { HexConverter } from '../util/HexConverter.js';
 
 /**
  * Globally unique identifier of a token.

@@ -1,20 +1,19 @@
-import { InclusionProof } from '@unicitylabs/commons/lib/api/InclusionProof.js';
-import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
-import { DataHasher } from '@unicitylabs/commons/lib/hash/DataHasher.js';
-import { HashAlgorithm } from '@unicitylabs/commons/lib/hash/HashAlgorithm.js';
-import { SigningService } from '@unicitylabs/commons/lib/signing/SigningService.js';
-import { MerkleTreePath } from '@unicitylabs/commons/lib/smt/MerkleTreePath.js';
-
 import { DirectAddress } from '../../../../src/address/DirectAddress.js';
+import { DataHash } from '../../../../src/hash/DataHash.js';
+import { DataHasher } from '../../../../src/hash/DataHasher.js';
+import { HashAlgorithm } from '../../../../src/hash/HashAlgorithm.js';
+import { MerkleTreePath } from '../../../../src/mtree/plain/MerkleTreePath.js';
 import { MaskedPredicate } from '../../../../src/predicate/MaskedPredicate.js';
 import { PredicateCborFactory } from '../../../../src/predicate/PredicateCborFactory.js';
 import { PredicateJsonFactory } from '../../../../src/predicate/PredicateJsonFactory.js';
 import { TokenCborSerializer } from '../../../../src/serializer/cbor/token/TokenCborSerializer.js';
 import { TokenJsonSerializer } from '../../../../src/serializer/json/token/TokenJsonSerializer.js';
+import { SigningService } from '../../../../src/sign/SigningService.js';
 import { Token, TOKEN_VERSION } from '../../../../src/token/Token.js';
 import { TokenId } from '../../../../src/token/TokenId.js';
 import { TokenState } from '../../../../src/token/TokenState.js';
 import { TokenType } from '../../../../src/token/TokenType.js';
+import { InclusionProof } from '../../../../src/transaction/InclusionProof.js';
 import { MintTransactionData } from '../../../../src/transaction/MintTransactionData.js';
 import { Transaction } from '../../../../src/transaction/Transaction.js';
 import { TransactionData } from '../../../../src/transaction/TransactionData.js';

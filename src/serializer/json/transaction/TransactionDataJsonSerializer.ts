@@ -1,10 +1,9 @@
-import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
-import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
-
+import { DataHash } from '../../../hash/DataHash.js';
 import { IPredicateFactory } from '../../../predicate/IPredicateFactory.js';
 import { TokenId } from '../../../token/TokenId.js';
 import { TokenType } from '../../../token/TokenType.js';
 import { TransactionData } from '../../../transaction/TransactionData.js';
+import { HexConverter } from '../../../util/HexConverter.js';
 import { ITokenJson } from '../token/TokenJsonSerializer.js';
 import { ITokenStateJson, TokenStateJsonSerializer } from '../token/TokenStateJsonSerializer.js';
 

@@ -1,6 +1,3 @@
-import { CborDecoder } from '@unicitylabs/commons/lib/cbor/CborDecoder.js';
-import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
-
 import { TokenStateCborSerializer } from './TokenStateCborSerializer.js';
 import { ISerializable } from '../../../ISerializable.js';
 import { IPredicateFactory } from '../../../predicate/IPredicateFactory.js';
@@ -9,6 +6,8 @@ import { MintTransactionData } from '../../../transaction/MintTransactionData.js
 import { Transaction } from '../../../transaction/Transaction.js';
 import { TransactionData } from '../../../transaction/TransactionData.js';
 import { ITokenSerializer } from '../../token/ITokenSerializer.js';
+import { CborDecoder } from '../CborDecoder.js';
+import { CborEncoder } from '../CborEncoder.js';
 import { MintTransactionCborSerializer } from '../transaction/MintTransactionCborSerializer.js';
 import { TransactionCborSerializer } from '../transaction/TransactionCborSerializer.js';
 

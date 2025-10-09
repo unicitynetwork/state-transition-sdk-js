@@ -1,10 +1,9 @@
-import { Authenticator } from '@unicitylabs/commons/lib/api/Authenticator.js';
-import { RequestId } from '@unicitylabs/commons/lib/api/RequestId.js';
-import { SigningService } from '@unicitylabs/commons/lib/signing/SigningService.js';
-
 import { ISerializable } from '../ISerializable.js';
 import { MintTransactionData } from './MintTransactionData.js';
 import { TransactionData } from './TransactionData.js';
+import { Authenticator } from '../api/Authenticator.js';
+import { RequestId } from '../api/RequestId.js';
+import { SigningService } from '../sign/SigningService.js';
 
 /**
  * Represents a commitment to a transaction, including its request ID, transaction data,

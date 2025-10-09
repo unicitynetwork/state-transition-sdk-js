@@ -1,16 +1,15 @@
-import { CborDecoder } from '@unicitylabs/commons/lib/cbor/CborDecoder.js';
-import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
-import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
-import { DataHasher } from '@unicitylabs/commons/lib/hash/DataHasher.js';
-import { HashAlgorithm } from '@unicitylabs/commons/lib/hash/HashAlgorithm.js';
-import type { ISignature } from '@unicitylabs/commons/lib/signing/ISignature.js';
-import type { ISigningService } from '@unicitylabs/commons/lib/signing/ISigningService.js';
-import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
-
 import { DefaultPredicate } from './DefaultPredicate.js';
 import { PredicateType } from './PredicateType.js';
+import { DataHash } from '../hash/DataHash.js';
+import { DataHasher } from '../hash/DataHasher.js';
+import { HashAlgorithm } from '../hash/HashAlgorithm.js';
+import { CborDecoder } from '../serializer/cbor/CborDecoder.js';
+import { CborEncoder } from '../serializer/cbor/CborEncoder.js';
+import { ISignature } from '../sign/ISignature.js';
+import { ISigningService } from '../sign/ISigningService.js';
 import { TokenId } from '../token/TokenId.js';
 import { TokenType } from '../token/TokenType.js';
+import { HexConverter } from '../util/HexConverter.js';
 
 const TYPE = PredicateType.MASKED;
 

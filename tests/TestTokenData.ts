@@ -1,7 +1,6 @@
-import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
-import { dedent } from '@unicitylabs/commons/lib/util/StringUtils.js';
-
 import { ISerializable } from '../src/ISerializable.js';
+import { HexConverter } from '../src/util/HexConverter.js';
+import { dedent } from '../src/util/StringUtils.js';
 
 export class TestTokenData implements ISerializable {
   public constructor(private readonly _data: Uint8Array) {
