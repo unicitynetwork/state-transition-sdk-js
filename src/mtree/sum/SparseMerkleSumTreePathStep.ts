@@ -7,7 +7,7 @@ import { BigintConverter } from '../../util/BigintConverter.js';
 import { HexConverter } from '../../util/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
 
-type SparseMerkleSumTreePathStepBranchJson = [string, string | null];
+type SparseMerkleSumTreePathStepBranchJson = [string | null, string];
 
 class SparseMerkleSumTreePathStepBranch {
   public constructor(
@@ -52,7 +52,7 @@ class SparseMerkleSumTreePathStepBranch {
   }
 
   public toJSON(): SparseMerkleSumTreePathStepBranchJson {
-    return [this.counter.toString(), this._value ? HexConverter.encode(this._value) : null];
+    return [this._value ? HexConverter.encode(this._value) : null, this.counter.toString()];
   }
 
   public toString(): string {
