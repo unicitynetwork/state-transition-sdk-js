@@ -1,7 +1,7 @@
 import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
-import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
 import { CborMap } from '../serializer/cbor/CborMap.js';
 import { CborMapEntry } from '../serializer/cbor/CborMapEntry.js';
+import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
 
 /**
  * UnicitySeal represents a seal in the Unicity BFT system, containing metadata and signatures.
@@ -15,9 +15,8 @@ export class UnicitySeal {
     public readonly timestamp: bigint,
     private readonly _previousHash: Uint8Array | null,
     private readonly _hash: Uint8Array,
-    private readonly _signatures: Map<string, Uint8Array> | null
-  ) {
-  }
+    private readonly _signatures: Map<string, Uint8Array> | null,
+  ) {}
 
   public get previousHash(): Uint8Array | null {
     return this._previousHash ? new Uint8Array(this._previousHash) : null;
@@ -31,24 +30,6 @@ export class UnicitySeal {
     return this._signatures
       ? new Map(Array.from(this._signatures.entries()).map(([key, value]) => [key, new Uint8Array(value)]))
       : null;
-  }
-
-  /**
-   * Create a new UnicitySeal instance without the signatures.
-   *
-   * @return a new UnicitySeal instance without the signatures
-   */
-  public withoutSignatures(): UnicitySeal {
-    return new UnicitySeal(
-      this.version,
-      this.networkId,
-      this.rootChainRoundNumber,
-      this.epoch,
-      this.timestamp,
-      this.previousHash,
-      this.hash,
-      null
-    );
   }
 
   /**
@@ -72,9 +53,27 @@ export class UnicitySeal {
       new Map(
         CborDeserializer.readMap(data[7]).map((entry) => [
           CborDeserializer.readTextString(entry.key),
-          CborDeserializer.readByteString(entry.value)
-        ])
-      )
+          CborDeserializer.readByteString(entry.value),
+        ]),
+      ),
+    );
+  }
+
+  /**
+   * Create a new UnicitySeal instance without the signatures.
+   *
+   * @return a new UnicitySeal instance without the signatures
+   */
+  public withoutSignatures(): UnicitySeal {
+    return new UnicitySeal(
+      this.version,
+      this.networkId,
+      this.rootChainRoundNumber,
+      this.epoch,
+      this.timestamp,
+      this.previousHash,
+      this.hash,
+      null,
     );
   }
 
@@ -94,20 +93,17 @@ export class UnicitySeal {
         CborSerializer.encodeUnsignedInteger(this.timestamp),
         CborSerializer.encodeOptional(this.previousHash, CborSerializer.encodeByteString),
         CborSerializer.encodeByteString(this.hash),
-        CborSerializer.encodeOptional(
-          this.signatures,
-          (signatures) => CborSerializer.encodeMap(
+        CborSerializer.encodeOptional(this.signatures, (signatures) =>
+          CborSerializer.encodeMap(
             new CborMap(
               Array.from(signatures.entries()).map(
-                ([key, value]) => new CborMapEntry(
-                  CborSerializer.encodeTextString(key),
-                  CborSerializer.encodeByteString(value)
-                )
-              )
-            )
-          )
-        )
-      )
+                ([key, value]) =>
+                  new CborMapEntry(CborSerializer.encodeTextString(key), CborSerializer.encodeByteString(value)),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

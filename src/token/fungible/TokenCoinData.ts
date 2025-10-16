@@ -1,4 +1,5 @@
 import { CoinId } from './CoinId.js';
+import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
 import { ISerializable } from '../../ISerializable.js';
 import { CborDeserializer } from '../../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../serializer/cbor/CborSerializer.js';
@@ -62,7 +63,7 @@ export class TokenCoinData implements ISerializable {
           Array.isArray(value) && value.length === 2 && typeof value[0] === 'string' && typeof value[1] === 'string',
       )
     ) {
-      throw new Error('Invalid coin data JSON format');
+      throw new InvalidJsonStructureError();
     }
 
     return new TokenCoinData(new Map(data.map(([key, value]) => [key, BigInt(value)])));

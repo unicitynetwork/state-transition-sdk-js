@@ -4,13 +4,13 @@ import { IAddress } from '../address/IAddress.js';
 import { DataHash } from '../hash/DataHash.js';
 import { DataHasher } from '../hash/DataHasher.js';
 import { HashAlgorithm } from '../hash/HashAlgorithm.js';
+import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
 import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
 import { ITokenJson, Token } from '../token/Token.js';
 import { ITokenStateJson, TokenState } from '../token/TokenState.js';
 import { HexConverter } from '../util/HexConverter.js';
 import { dedent } from '../util/StringUtils.js';
-import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
 
 /** JSON representation of a {@link TransferTransactionData}. */
 export interface ITransferTransactionDataJson {

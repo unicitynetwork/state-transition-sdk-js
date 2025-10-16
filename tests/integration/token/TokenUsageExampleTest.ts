@@ -1,9 +1,7 @@
 describe('TokenUsageExample Integration Test', () => {
-
   it('is a placeholder test', () => {
     expect(true).toBe(true);
   });
-
 });
 
 // import path from 'path';

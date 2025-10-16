@@ -2,11 +2,11 @@ import { Branch } from './Branch.js';
 import { LeafBranch } from './LeafBranch.js';
 import { LeafInBranchError } from './LeafInBranchError.js';
 import { LeafOutOfBoundsError } from './LeafOutOfBoundsError.js';
-import { SparseMerkleTreeRootNode } from './SparseMerkleTreeRootNode.js';
 import { PendingBranch } from './PendingBranch.js';
 import { PendingLeafBranch } from './PendingLeafBranch.js';
 import { PendingNodeBranch } from './PendingNodeBranch.js';
 import { calculateCommonPath } from './SparseMerkleTreePathUtils.js';
+import { SparseMerkleTreeRootNode } from './SparseMerkleTreeRootNode.js';
 import { IDataHasher } from '../../hash/IDataHasher.js';
 import { IDataHasherFactory } from '../../hash/IDataHasherFactory.js';
 

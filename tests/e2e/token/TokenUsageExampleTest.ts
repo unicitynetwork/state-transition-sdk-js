@@ -14,9 +14,9 @@ import {
 describe('Transition', function () {
   let trustBase: RootTrustBase;
 
-  beforeAll(async () => {
+  beforeAll(() => {
     const trustBaseJsonString = fs.readFileSync(path.join(__dirname, 'trust-base.json'), 'utf-8');
-    trustBase = RootTrustBase.fromJSON(JSON.parse(trustBaseJsonString))
+    trustBase = RootTrustBase.fromJSON(JSON.parse(trustBaseJsonString));
   });
 
   it('should verify block height', async () => {

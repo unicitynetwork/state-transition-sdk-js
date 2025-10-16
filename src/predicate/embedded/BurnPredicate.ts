@@ -23,9 +23,8 @@ export class BurnPredicate implements IPredicate {
   public constructor(
     public readonly tokenId: TokenId,
     public readonly tokenType: TokenType,
-    public readonly reason: DataHash
-  ) {
-  }
+    public readonly reason: DataHash,
+  ) {}
 
   public get engine(): PredicateEngineType {
     return PredicateEngineType.EMBEDDED;

@@ -57,7 +57,7 @@ export class UnicityCertificate {
       .digest();
 
     const shardId = shardTreeCertificate.shard;
-    const siblingHashes = shardTreeCertificate.getSiblingHashList();
+    const siblingHashes = shardTreeCertificate.siblingHashList;
     for (let i = 0; i < siblingHashes.length; i++) {
       const isRight = shardId[shardId.length - 1 - Math.floor(i / 8)] === 1;
       if (isRight) {

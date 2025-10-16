@@ -42,12 +42,12 @@ export class DirectAddress implements IAddress {
   /**
    * Build a direct address from a predicate reference.
    *
-   * @param predicateReference The predicate reference to encode
+   * @param reference The predicate reference hash to encode
    * @returns Newly created address instance
    */
-  public static async create(predicateReference: DataHash): Promise<DirectAddress> {
-    const checksum = await new DataHasher(HashAlgorithm.SHA256).update(predicateReference.toCBOR()).digest();
-    return new DirectAddress(predicateReference, checksum.data.slice(0, 4));
+  public static async create(reference: DataHash): Promise<DirectAddress> {
+    const checksum = await new DataHasher(HashAlgorithm.SHA256).update(reference.imprint).digest();
+    return new DirectAddress(reference, checksum.data.slice(0, 4));
   }
 
   /** Convert instance to readable string */

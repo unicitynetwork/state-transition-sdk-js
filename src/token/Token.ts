@@ -3,6 +3,7 @@ import { ITokenStateJson, TokenState } from './TokenState.js';
 import { TokenType } from './TokenType.js';
 import { ProxyAddress } from '../address/ProxyAddress.js';
 import { RootTrustBase } from '../bft/RootTrustBase.js';
+import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
 import { PredicateEngineService } from '../predicate/PredicateEngineService.js';
 import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
@@ -16,7 +17,6 @@ import { dedent } from '../util/StringUtils.js';
 import { VerificationError } from '../verification/VerificationError.js';
 import { VerificationResult } from '../verification/VerificationResult.js';
 import { VerificationResultCode } from '../verification/VerificationResultCode.js';
-import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
 
 /** Current serialization version for tokens. */
 export const TOKEN_VERSION = '2.0';
@@ -210,9 +210,12 @@ export class Token<R extends IMintTransactionReason> {
       );
     }
 
-    results.push(await this.verifyNametagTokens(trustBase));
-    results.push(await this.verifyRecipient());
-    results.push(await this.verifyRecipientData());
+    results.push(
+      VerificationResult.fromChildren(
+        'Current state verification',
+        await Promise.all([this.verifyNametagTokens(trustBase), this.verifyRecipient(), this.verifyRecipientData()]),
+      ),
+    );
 
     return VerificationResult.fromChildren('Token verification', results);
   }
@@ -240,7 +243,7 @@ export class Token<R extends IMintTransactionReason> {
       return new VerificationResult(VerificationResultCode.FAIL, 'Recipient address mismatch');
     }
 
-    return new VerificationResult(VerificationResultCode.OK);
+    return new VerificationResult(VerificationResultCode.OK, 'Recipient verification');
   }
 
   public async verifyRecipientData(): Promise<VerificationResult> {
@@ -255,7 +258,7 @@ export class Token<R extends IMintTransactionReason> {
       );
     }
 
-    return new VerificationResult(VerificationResultCode.OK);
+    return new VerificationResult(VerificationResultCode.OK, 'Recipient data verification');
   }
 
   /** Serialize this token to JSON. */

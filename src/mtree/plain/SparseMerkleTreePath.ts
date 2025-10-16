@@ -1,8 +1,9 @@
-import { ISparseMerkleTreePathStepJson, SparseMerkleTreePathStep } from './SparseMerkleTreePathStep.js';
 import { PathVerificationResult } from './PathVerificationResult.js';
+import { ISparseMerkleTreePathStepJson, SparseMerkleTreePathStep } from './SparseMerkleTreePathStep.js';
 import { DataHash } from '../../hash/DataHash.js';
 import { DataHasher } from '../../hash/DataHasher.js';
 import { HashAlgorithm } from '../../hash/HashAlgorithm.js';
+import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
 import { CborDeserializer } from '../../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../serializer/cbor/CborSerializer.js';
 import { BigintConverter } from '../../util/BigintConverter.js';
@@ -21,7 +22,7 @@ export class SparseMerkleTreePath {
 
   public static fromJSON(data: unknown): SparseMerkleTreePath {
     if (!SparseMerkleTreePath.isJSON(data)) {
-      throw new Error('Parsing merkle tree path json failed.');
+      throw new InvalidJsonStructureError();
     }
 
     return new SparseMerkleTreePath(

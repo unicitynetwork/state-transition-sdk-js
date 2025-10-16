@@ -1,11 +1,11 @@
 import { Authenticator } from './Authenticator.js';
 import { IAggregatorClient } from './IAggregatorClient.js';
+import { InclusionProofResponse } from './InclusionProofResponse.js';
 import { JsonRpcHttpTransport } from './json-rpc/JsonRpcHttpTransport.js';
 import { RequestId } from './RequestId.js';
 import { SubmitCommitmentRequest } from './SubmitCommitmentRequest.js';
 import { SubmitCommitmentResponse } from './SubmitCommitmentResponse.js';
 import { DataHash } from '../hash/DataHash.js';
-import { InclusionProofResponse } from './InclusionProofResponse.js';
 
 /**
  * Client implementation for communicating with an aggregator via JSON-RPC.

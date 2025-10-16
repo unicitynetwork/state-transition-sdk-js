@@ -47,7 +47,7 @@ export class ProxyAddress implements IAddress {
    */
   public static async fromTokenId(tokenId: TokenId): Promise<ProxyAddress> {
     const checksum = await new DataHasher(HashAlgorithm.SHA256).update(tokenId.bytes).digest();
-    return new ProxyAddress(tokenId, checksum.data.slice(-4));
+    return new ProxyAddress(tokenId, checksum.data.slice(0, 4));
   }
 
   /**

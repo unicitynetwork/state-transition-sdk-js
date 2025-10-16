@@ -7,11 +7,11 @@ import { IAddress } from '../address/IAddress.js';
 import { Authenticator, IAuthenticatorJson } from '../api/Authenticator.js';
 import { RequestId } from '../api/RequestId.js';
 import { DataHash } from '../hash/DataHash.js';
+import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
+import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
 import { SigningService } from '../sign/SigningService.js';
 import { Token } from '../token/Token.js';
-import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
-import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
 
 interface ITransferCommitmentJson {
   readonly requestId: string;

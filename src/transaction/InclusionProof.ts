@@ -6,6 +6,7 @@ import { UnicityCertificate } from '../bft/UnicityCertificate.js';
 import { UnicityCertificateVerificationContext } from '../bft/verification/UnicityCertificateVerificationContext.js';
 import { UnicityCertificateVerificationRule } from '../bft/verification/UnicityCertificateVerificationRule.js';
 import { DataHash } from '../hash/DataHash.js';
+import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
 import { ISparseMerkleTreePathJson, SparseMerkleTreePath } from '../mtree/plain/SparseMerkleTreePath.js';
 import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
@@ -75,7 +76,7 @@ export class InclusionProof {
    */
   public static fromJSON(data: unknown): InclusionProof {
     if (!InclusionProof.isJSON(data)) {
-      throw new Error('Parsing inclusion proof json failed.');
+      throw new InvalidJsonStructureError();
     }
 
     return new InclusionProof(

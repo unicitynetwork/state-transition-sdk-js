@@ -1,8 +1,8 @@
-import { UnicityCertificateVerificationContext } from './UnicityCertificateVerificationContext.js';
-import { CompositeVerificationRule } from '../../verification/CompositeVerificationRule.js';
 import { InputRecordCurrentHashVerificationRule } from './rule/InputRecordCurrentHashVerificationRule.js';
 import { UnicitySealHashMatchesWithRootHashRule } from './rule/UnicitySealHashMatchesWithRootHashRule.js';
 import { UnicitySealQuorumSignaturesVerificationRule } from './rule/UnicitySealQuorumSignaturesVerificationRule.js';
+import { UnicityCertificateVerificationContext } from './UnicityCertificateVerificationContext.js';
+import { CompositeVerificationRule } from '../../verification/CompositeVerificationRule.js';
 
 /**
  * Unicity certificate verification rule.

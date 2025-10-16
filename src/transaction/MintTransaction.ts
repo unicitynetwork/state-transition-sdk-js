@@ -6,12 +6,12 @@ import { MintTransactionState } from './MintTransactionState.js';
 import { Transaction } from './Transaction.js';
 import { RequestId } from '../api/RequestId.js';
 import { RootTrustBase } from '../bft/RootTrustBase.js';
+import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
 import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
+import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
 import { HexConverter } from '../util/HexConverter.js';
 import { VerificationResult } from '../verification/VerificationResult.js';
 import { VerificationResultCode } from '../verification/VerificationResultCode.js';
-import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
-import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
 
 export interface IMintTransactionJson {
   readonly data: IMintTransactionDataJson;
@@ -38,7 +38,7 @@ export class MintTransaction<R extends IMintTransactionReason> extends Transacti
     return typeof input === 'object' && input !== null && 'data' in input && 'inclusionProof' in input;
   }
 
-  public static async fromJSON(input: unknown): Promise<MintTransaction<IMintTransactionReason>> {
+  public static async /**/ fromJSON(input: unknown): Promise<MintTransaction<IMintTransactionReason>> {
     if (!MintTransaction.isJSON(input)) {
       throw new InvalidJsonStructureError();
     }

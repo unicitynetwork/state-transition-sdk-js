@@ -1,5 +1,6 @@
 import { RequestId } from './RequestId.js';
 import { DataHash } from '../hash/DataHash.js';
+import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
 import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
 import { Signature } from '../sign/Signature.js';
@@ -77,7 +78,7 @@ export class Authenticator {
    */
   public static fromJSON(data: unknown): Authenticator {
     if (!Authenticator.isJSON(data)) {
-      throw new Error('Parsing authenticator dto failed.');
+      throw new InvalidJsonStructureError();
     }
 
     return new Authenticator(

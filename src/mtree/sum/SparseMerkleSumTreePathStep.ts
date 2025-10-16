@@ -1,5 +1,6 @@
 import { Branch } from './Branch.js';
 import { LeafBranch } from './LeafBranch.js';
+import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
 import { CborDeserializer } from '../../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../serializer/cbor/CborSerializer.js';
 import { BigintConverter } from '../../util/BigintConverter.js';
@@ -26,12 +27,12 @@ class SparseMerkleSumTreePathStepBranch {
 
   public static fromJSON(data: unknown): SparseMerkleSumTreePathStepBranch {
     if (!Array.isArray(data)) {
-      throw new Error('Parsing merkle tree path step branch failed.');
+      throw new InvalidJsonStructureError();
     }
 
-    const sum = data.at(0);
-    const value = data.at(1);
-    return new SparseMerkleSumTreePathStepBranch(BigInt(sum ?? 0n), value ? HexConverter.decode(value) : null);
+    const value = data.at(0);
+    const counter = data.at(1);
+    return new SparseMerkleSumTreePathStepBranch(BigInt(counter ?? 0n), value ? HexConverter.decode(value) : null);
   }
 
   public static fromCBOR(bytes: Uint8Array): SparseMerkleSumTreePathStepBranch {
@@ -55,7 +56,7 @@ class SparseMerkleSumTreePathStepBranch {
   }
 
   public toString(): string {
-    return `MerkleSumTreePathStepBranch[${this._value ? HexConverter.encode(this._value) : 'null'}]`;
+    return `MerkleSumTreePathStepBranch[${this._value ? HexConverter.encode(this._value) : 'null'}, ${this.counter}]`;
   }
 }
 
@@ -117,7 +118,7 @@ export class SparseMerkleSumTreePathStep {
 
   public static fromJSON(data: unknown): SparseMerkleSumTreePathStep {
     if (!SparseMerkleSumTreePathStep.isJSON(data)) {
-      throw new Error('Parsing merkle tree path step failed.');
+      throw new InvalidJsonStructureError();
     }
 
     return new SparseMerkleSumTreePathStep(

@@ -1,9 +1,9 @@
 import { Branch } from './Branch.js';
 import { LeafBranch } from './LeafBranch.js';
-import { SparseMerkleSumTreeRootNode } from './SparseMerkleSumTreeRootNode.js';
 import { PendingBranch } from './PendingBranch.js';
 import { PendingLeafBranch } from './PendingLeafBranch.js';
 import { PendingNodeBranch } from './PendingNodeBranch.js';
+import { SparseMerkleSumTreeRootNode } from './SparseMerkleSumTreeRootNode.js';
 import { IDataHasher } from '../../hash/IDataHasher.js';
 import { IDataHasherFactory } from '../../hash/IDataHasherFactory.js';
 import { LeafInBranchError } from '../plain/LeafInBranchError.js';

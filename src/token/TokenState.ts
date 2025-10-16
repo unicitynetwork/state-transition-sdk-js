@@ -1,13 +1,13 @@
 import { DataHash } from '../hash/DataHash.js';
 import { DataHasher } from '../hash/DataHasher.js';
 import { HashAlgorithm } from '../hash/HashAlgorithm.js';
+import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
 import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
 import { ISerializablePredicate } from '../predicate/ISerializablePredicate.js';
 import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
 import { HexConverter } from '../util/HexConverter.js';
 import { dedent } from '../util/StringUtils.js';
-import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
 
 /** JSON representation of {@link TokenState}. */
 export interface ITokenStateJson {
@@ -95,7 +95,7 @@ export class TokenState {
         CborSerializer.encodeArray(
           CborSerializer.encodeUnsignedInteger(this.predicate.engine),
           CborSerializer.encodeByteString(this.predicate.encode()),
-          CborSerializer.encodeByteString(this.predicate.encodeParameters())
+          CborSerializer.encodeByteString(this.predicate.encodeParameters()),
         ),
       ),
     };

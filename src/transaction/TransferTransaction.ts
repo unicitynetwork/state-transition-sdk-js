@@ -3,13 +3,13 @@ import { IInclusionProofJson, InclusionProof } from './InclusionProof.js';
 import { Transaction } from './Transaction.js';
 import { ITransferTransactionDataJson, TransferTransactionData } from './TransferTransactionData.js';
 import { RootTrustBase } from '../bft/RootTrustBase.js';
+import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
 import { PredicateEngineService } from '../predicate/PredicateEngineService.js';
 import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
+import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
 import { Token } from '../token/Token.js';
 import { VerificationResult } from '../verification/VerificationResult.js';
 import { VerificationResultCode } from '../verification/VerificationResultCode.js';
-import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
-import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
 
 export interface ITransferTransactionJson {
   readonly data: ITransferTransactionDataJson;
@@ -47,10 +47,7 @@ export class TransferTransaction extends Transaction<TransferTransactionData> {
     );
   }
 
-  public async verify(
-    trustBase: RootTrustBase,
-    token: Token<IMintTransactionReason>,
-  ): Promise<VerificationResult> {
+  public async verify(trustBase: RootTrustBase, token: Token<IMintTransactionReason>): Promise<VerificationResult> {
     let result = await token.verifyNametagTokens(trustBase);
     if (!result.isSuccessful) {
       return new VerificationResult(VerificationResultCode.FAIL, 'Nametag tokens verification failed', [result]);

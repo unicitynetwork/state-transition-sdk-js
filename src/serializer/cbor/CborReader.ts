@@ -7,8 +7,7 @@ export class CborReader {
 
   private position: number = 0;
 
-  public constructor(private readonly data: Uint8Array) {
-  }
+  public constructor(private readonly data: Uint8Array) {}
 
   public readByte(): number {
     if (this.position >= this.data.length) {

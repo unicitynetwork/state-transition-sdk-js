@@ -1,9 +1,9 @@
 import { CoinId } from './CoinId.js';
+import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
 import { ISparseMerkleTreePathJson, SparseMerkleTreePath } from '../../mtree/plain/SparseMerkleTreePath.js';
 import { ISparseMerkleSumTreePathJson, SparseMerkleSumTreePath } from '../../mtree/sum/SparseMerkleSumTreePath.js';
 import { CborDeserializer } from '../../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../serializer/cbor/CborSerializer.js';
-import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
 
 export interface ISplitMintReasonProofJson {
   readonly coinId: string;

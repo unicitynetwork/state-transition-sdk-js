@@ -1,5 +1,5 @@
-import { IInclusionProofJson, InclusionProof } from '../transaction/InclusionProof.js';
 import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
+import { IInclusionProofJson, InclusionProof } from '../transaction/InclusionProof.js';
 
 /**
  * Inclusion proof response.

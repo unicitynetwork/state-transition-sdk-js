@@ -1,5 +1,6 @@
 import { Branch } from './Branch.js';
 import { LeafBranch } from './LeafBranch.js';
+import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
 import { CborDeserializer } from '../../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../serializer/cbor/CborSerializer.js';
 import { BigintConverter } from '../../util/BigintConverter.js';
@@ -23,7 +24,7 @@ class SparseMerkleTreePathStepBranch {
 
   public static fromJSON(data: unknown): SparseMerkleTreePathStepBranch {
     if (!Array.isArray(data)) {
-      throw new Error('Parsing merkle tree path step branch failed.');
+      throw new InvalidJsonStructureError();
     }
 
     const value = data.at(0);
@@ -63,7 +64,11 @@ export class SparseMerkleTreePathStep {
   ) {}
 
   public static createWithoutBranch(path: bigint, sibling: Branch | null): SparseMerkleTreePathStep {
-    return new SparseMerkleTreePathStep(path, sibling ? new SparseMerkleTreePathStepBranch(sibling.hash.data) : null, null);
+    return new SparseMerkleTreePathStep(
+      path,
+      sibling ? new SparseMerkleTreePathStepBranch(sibling.hash.data) : null,
+      null,
+    );
   }
 
   public static create(path: bigint, value: Branch | null, sibling: Branch | null): SparseMerkleTreePathStep {
@@ -103,7 +108,7 @@ export class SparseMerkleTreePathStep {
 
   public static fromJSON(data: unknown): SparseMerkleTreePathStep {
     if (!SparseMerkleTreePathStep.isJSON(data)) {
-      throw new Error('Parsing merkle tree path step failed.');
+      throw new InvalidJsonStructureError();
     }
 
     return new SparseMerkleTreePathStep(

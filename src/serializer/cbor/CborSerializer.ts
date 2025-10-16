@@ -1,7 +1,6 @@
 import { CborError } from './CborError.js';
 import { CborMap } from './CborMap.js';
 import { MajorType } from './MajorType.js';
-import { HexConverter } from '../../util/HexConverter.js';
 
 export class CborSerializer {
   public static encodeOptional<T>(data: T | null | undefined, encoder: (data: T) => Uint8Array): Uint8Array {

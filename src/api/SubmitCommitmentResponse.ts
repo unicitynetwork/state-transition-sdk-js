@@ -2,6 +2,7 @@ import { RequestId } from './RequestId.js';
 import { DataHash } from '../hash/DataHash.js';
 import { DataHasher } from '../hash/DataHasher.js';
 import { HashAlgorithm } from '../hash/HashAlgorithm.js';
+import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
 import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
 import { ISigningService } from '../sign/ISigningService.js';
 import { Signature } from '../sign/Signature.js';
@@ -145,7 +146,7 @@ export class SubmitCommitmentResponse {
    */
   public static async fromJSON(data: unknown): Promise<SubmitCommitmentResponse> {
     if (!SubmitCommitmentResponse.isJSON(data)) {
-      throw new Error('Parsing submit state transition response failed.');
+      throw new InvalidJsonStructureError();
     }
 
     let receipt: IReceipt | undefined;

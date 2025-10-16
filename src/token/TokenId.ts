@@ -61,7 +61,7 @@ export class TokenId {
    * Converts the TokenId to a bitstring representation.
    */
   public toBitString(): BitString {
-    return new BitString(this.toCBOR());
+    return new BitString(this._bytes);
   }
 
   public equals(o: unknown): boolean {

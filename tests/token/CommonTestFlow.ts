@@ -102,7 +102,7 @@ export async function testTransferFlow(trustBase: RootTrustBase, client: StateTr
     importedTransaction,
   );
 
-  await expect(bobToken.verify(trustBase)).resolves.toBeTruthy();
+  await expect(bobToken.verify(trustBase).then((result) => result.isSuccessful)).resolves.toBeTruthy();
   expect(bobToken.id).toEqual(aliceToken.id);
   expect(bobToken.type).toEqual(aliceToken.type);
   expect(bobToken.data).toEqual(aliceToken.data);
@@ -140,7 +140,7 @@ export async function testTransferFlow(trustBase: RootTrustBase, client: StateTr
 
   // Carol imports token
   const carolToken = await Token.fromJSON(bobToken.toJSON());
-  await expect(carolToken.verify(trustBase)).resolves.toBeTruthy();
+  await expect(carolToken.verify(trustBase).then((result) => result.isSuccessful)).resolves.toBeTruthy();
 
   // Carol gets transaction from Bob
   const carolTransaction = await TransferTransaction.fromJSON(txToCarol.toJSON());
@@ -226,7 +226,7 @@ export async function testOfflineTransferFlow(trustBase: RootTrustBase, client: 
     importedCommitment.toTransaction(await waitInclusionProof(trustBase, client, importedCommitment)),
   );
 
-  await expect(updateToken.verify(trustBase)).resolves.toBeTruthy();
+  await expect(updateToken.verify(trustBase).then((result) => result.isSuccessful)).resolves.toBeTruthy();
   expect(updateToken.id).toEqual(token.id);
   expect(updateToken.type).toEqual(token.type);
   expect(updateToken.data).toEqual(token.data);
@@ -362,7 +362,7 @@ export async function testSplitFlowAfterTransfer(
     importedTransaction,
   );
 
-  await expect(updateToken.verify(trustBase)).resolves.toBeTruthy();
+  await expect(updateToken.verify(trustBase).then((result) => result.isSuccessful)).resolves.toBeTruthy();
   expect(updateToken.id).toEqual(splitTokens[0].id);
   expect(updateToken.type).toEqual(splitTokens[0].type);
   expect(updateToken.data).toEqual(splitTokens[0].data);

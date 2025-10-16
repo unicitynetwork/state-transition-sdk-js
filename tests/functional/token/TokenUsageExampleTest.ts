@@ -1,14 +1,10 @@
 import { RootTrustBase } from '../../../src/bft/RootTrustBase.js';
-import { DataHasherFactory } from '../../../src/hash/DataHasherFactory.js';
-import { HashAlgorithm } from '../../../src/hash/HashAlgorithm.js';
-import { NodeDataHasher } from '../../../src/hash/NodeDataHasher.js';
-import { SparseMerkleTree } from '../../../src/mtree/plain/SparseMerkleTree.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
 import {
-  testTransferFlow,
+  testOfflineTransferFlow,
   testSplitFlow,
   testSplitFlowAfterTransfer,
-  testOfflineTransferFlow,
+  testTransferFlow,
 } from '../../token/CommonTestFlow.js';
 import { TestAggregatorClient } from '../../unit/TestAggregatorClient.js';
 

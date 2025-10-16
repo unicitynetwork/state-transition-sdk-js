@@ -1,6 +1,7 @@
 import { Authenticator, IAuthenticatorJson } from './Authenticator.js';
 import { RequestId } from './RequestId.js';
 import { DataHash } from '../hash/DataHash.js';
+import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
 
 /**
  * JSON representation of a submit commitment request.
@@ -42,7 +43,7 @@ export class SubmitCommitmentRequest {
    */
   public static fromJSON(data: unknown): SubmitCommitmentRequest {
     if (!SubmitCommitmentRequest.isJSON(data)) {
-      throw new Error('Parsing submit state transition request failed.');
+      throw new InvalidJsonStructureError();
     }
 
     return new SubmitCommitmentRequest(

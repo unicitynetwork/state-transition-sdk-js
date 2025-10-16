@@ -2,6 +2,7 @@ import { ISparseMerkleSumTreePathStepJson, SparseMerkleSumTreePathStep } from '.
 import { DataHash } from '../../hash/DataHash.js';
 import { DataHasher } from '../../hash/DataHasher.js';
 import { HashAlgorithm } from '../../hash/HashAlgorithm.js';
+import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
 import { CborDeserializer } from '../../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../serializer/cbor/CborSerializer.js';
 import { BigintConverter } from '../../util/BigintConverter.js';
@@ -16,9 +17,8 @@ interface IRootJson {
 export class SparseMerkleSumTreePathRoot {
   public constructor(
     public readonly hash: DataHash,
-    public readonly counter: bigint
-  ) {
-  }
+    public readonly counter: bigint,
+  ) {}
 
   public static isJSON(data: unknown): data is IRootJson {
     return (
@@ -33,13 +33,10 @@ export class SparseMerkleSumTreePathRoot {
 
   public static fromJSON(data: unknown): SparseMerkleSumTreePathRoot {
     if (!SparseMerkleSumTreePathRoot.isJSON(data)) {
-      throw new Error('Parsing merkle tree path root json failed.');
+      throw new InvalidJsonStructureError();
     }
 
-    return new SparseMerkleSumTreePathRoot(
-      DataHash.fromJSON(data.hash),
-      BigInt(data.counter)
-    );
+    return new SparseMerkleSumTreePathRoot(DataHash.fromJSON(data.hash), BigInt(data.counter));
   }
 
   public static fromCBOR(bytes: Uint8Array): SparseMerkleSumTreePathRoot {
@@ -53,15 +50,15 @@ export class SparseMerkleSumTreePathRoot {
 
   public toJSON(): IRootJson {
     return {
+      counter: this.counter.toString(),
       hash: this.hash.toJSON(),
-      counter: this.counter.toString()
     };
   }
 
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
       this.hash.toCBOR(),
-      CborSerializer.encodeByteString(BigintConverter.encode(this.counter))
+      CborSerializer.encodeByteString(BigintConverter.encode(this.counter)),
     );
   }
 }
@@ -74,29 +71,22 @@ export interface ISparseMerkleSumTreePathJson {
 export class SparseMerkleSumTreePath {
   public constructor(
     public readonly root: SparseMerkleSumTreePathRoot,
-    public readonly steps: ReadonlyArray<SparseMerkleSumTreePathStep>
-  ) {
-  }
+    public readonly steps: ReadonlyArray<SparseMerkleSumTreePathStep>,
+  ) {}
 
   public static fromJSON(data: unknown): SparseMerkleSumTreePath {
     if (!SparseMerkleSumTreePath.isJSON(data)) {
-      throw new Error('Parsing merkle tree path json failed.');
+      throw new InvalidJsonStructureError();
     }
 
     return new SparseMerkleSumTreePath(
       SparseMerkleSumTreePathRoot.fromJSON(data.root),
-      data.steps.map((step: unknown) => SparseMerkleSumTreePathStep.fromJSON(step))
+      data.steps.map((step: unknown) => SparseMerkleSumTreePathStep.fromJSON(step)),
     );
   }
 
   public static isJSON(data: unknown): data is ISparseMerkleSumTreePathJson {
-    return (
-      typeof data === 'object' &&
-      data !== null &&
-      'root' in data &&
-      'steps' in data &&
-      Array.isArray(data.steps)
-    );
+    return typeof data === 'object' && data !== null && 'root' in data && 'steps' in data && Array.isArray(data.steps);
   }
 
   public static fromCBOR(bytes: Uint8Array): SparseMerkleSumTreePath {
@@ -104,21 +94,21 @@ export class SparseMerkleSumTreePath {
 
     return new SparseMerkleSumTreePath(
       SparseMerkleSumTreePathRoot.fromCBOR(data[0]),
-      CborDeserializer.readArray(data[1]).map((step) => SparseMerkleSumTreePathStep.fromCBOR(step))
+      CborDeserializer.readArray(data[1]).map((step) => SparseMerkleSumTreePathStep.fromCBOR(step)),
     );
   }
 
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
       this.root.toCBOR(),
-      CborSerializer.encodeArray(...this.steps.map((step) => step.toCBOR()))
+      CborSerializer.encodeArray(...this.steps.map((step) => step.toCBOR())),
     );
   }
 
   public toJSON(): ISparseMerkleSumTreePathJson {
     return {
       root: this.root.toJSON(),
-      steps: this.steps.map((step) => step.toJSON())
+      steps: this.steps.map((step) => step.toJSON()),
     };
   }
 
@@ -130,7 +120,7 @@ export class SparseMerkleSumTreePath {
   public async verify(requestId: bigint): Promise<PathVerificationResult> {
     let currentPath = 1n;
     let currentHash: DataHash | null = null;
-    let currentSum = this.steps.at(0)?.branch?.counter ?? 0n;
+    let currentCounter = this.steps.at(0)?.branch?.counter ?? 0n;
 
     for (let i = 0; i < this.steps.length; i++) {
       const step = this.steps[i];
@@ -142,8 +132,8 @@ export class SparseMerkleSumTreePath {
             CborSerializer.encodeArray(
               CborSerializer.encodeByteString(BigintConverter.encode(step.path)),
               bytes ? CborSerializer.encodeByteString(bytes) : CborSerializer.encodeNull(),
-              CborSerializer.encodeByteString(BigintConverter.encode(currentSum))
-            )
+              CborSerializer.encodeByteString(BigintConverter.encode(currentCounter)),
+            ),
           )
           .digest();
 
@@ -154,7 +144,7 @@ export class SparseMerkleSumTreePath {
       const isRight = step.path & 1n;
       const right: [Uint8Array | null, bigint | null] | null = isRight
         ? hash
-          ? [hash.imprint, currentSum]
+          ? [hash.imprint, currentCounter]
           : null
         : step.sibling
           ? [step.sibling.value, step.sibling.counter]
@@ -164,7 +154,7 @@ export class SparseMerkleSumTreePath {
           ? [step.sibling.value, step.sibling.counter]
           : null
         : hash
-          ? [hash.imprint, currentSum]
+          ? [hash.imprint, currentCounter]
           : null;
 
       currentHash = await new DataHasher(HashAlgorithm.SHA256)
@@ -172,25 +162,29 @@ export class SparseMerkleSumTreePath {
           CborSerializer.encodeArray(
             left
               ? CborSerializer.encodeArray(
-                left[0] ? CborSerializer.encodeByteString(left[0]) : CborSerializer.encodeNull(),
-                left[1] ? CborSerializer.encodeByteString(BigintConverter.encode(left[1])) : CborSerializer.encodeNull()
-              )
+                  left[0] ? CborSerializer.encodeByteString(left[0]) : CborSerializer.encodeNull(),
+                  left[1]
+                    ? CborSerializer.encodeByteString(BigintConverter.encode(left[1]))
+                    : CborSerializer.encodeNull(),
+                )
               : CborSerializer.encodeNull(),
             right
               ? CborSerializer.encodeArray(
-                right[0] ? CborSerializer.encodeByteString(right[0]) : CborSerializer.encodeNull(),
-                right[1] ? CborSerializer.encodeByteString(BigintConverter.encode(right[1])) : CborSerializer.encodeNull()
-              )
-              : CborSerializer.encodeNull()
-          )
+                  right[0] ? CborSerializer.encodeByteString(right[0]) : CborSerializer.encodeNull(),
+                  right[1]
+                    ? CborSerializer.encodeByteString(BigintConverter.encode(right[1]))
+                    : CborSerializer.encodeNull(),
+                )
+              : CborSerializer.encodeNull(),
+          ),
         )
         .digest();
-      currentSum += step.sibling?.counter ?? 0n;
+      currentCounter += step.sibling?.counter ?? 0n;
     }
 
     return new PathVerificationResult(
-      !!currentHash && this.root.hash.equals(currentHash) && currentSum === this.root.counter,
-      requestId === currentPath
+      !!currentHash && this.root.hash.equals(currentHash) && currentCounter === this.root.counter,
+      requestId === currentPath,
     );
   }
 

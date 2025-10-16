@@ -5,12 +5,12 @@ import { CborSerializer } from '../../serializer/cbor/CborSerializer.js';
 import { areUint8ArraysEqual } from '../../util/TypedArrayUtils.js';
 import { ITokenJson, Token } from '../Token.js';
 import { ISplitMintReasonProofJson, SplitMintReasonProof } from './SplitMintReasonProof.js';
+import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
 import { IMintTransactionReason } from '../../transaction/IMintTransactionReason.js';
 import { MintReasonType } from '../../transaction/MintReasonType.js';
 import { MintTransaction } from '../../transaction/MintTransaction.js';
 import { VerificationResult } from '../../verification/VerificationResult.js';
 import { VerificationResultCode } from '../../verification/VerificationResultCode.js';
-import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
 
 export interface ISplitMintReasonJson {
   type: MintReasonType.TOKEN_SPLIT;
@@ -97,7 +97,9 @@ export class SplitMintReason implements IMintTransactionReason {
         );
       }
 
-      if (!areUint8ArraysEqual(proof.coinTreePath.root.hash.imprint, proof.aggregationPath.steps.at(0)?.branch?.value)) {
+      if (
+        !areUint8ArraysEqual(proof.coinTreePath.root.hash.imprint, proof.aggregationPath.steps.at(0)?.branch?.value)
+      ) {
         return Promise.resolve(
           new VerificationResult(VerificationResultCode.FAIL, 'Coin tree root does not match aggregation path leaf.'),
         );
