@@ -1,10 +1,11 @@
 import { JsonRpcNetworkError } from '../api/json-rpc/JsonRpcNetworkError.js';
-import { ISerializable } from '../ISerializable.js';
+import { RootTrustBase } from '../bft/RootTrustBase.js';
 import { StateTransitionClient } from '../StateTransitionClient.js';
 import { Commitment } from '../transaction/Commitment.js';
+import { IMintTransactionReason } from '../transaction/IMintTransactionReason.js';
 import { InclusionProof, InclusionProofVerificationStatus } from '../transaction/InclusionProof.js';
 import { MintTransactionData } from '../transaction/MintTransactionData.js';
-import { TransactionData } from '../transaction/TransactionData.js';
+import { TransferTransactionData } from '../transaction/TransferTransactionData.js';
 
 class SleepError extends Error {
   public constructor(message: string) {
@@ -28,15 +29,16 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
 }
 
 export async function waitInclusionProof(
+  trustBase: RootTrustBase,
   client: StateTransitionClient,
-  commitment: Commitment<TransactionData | MintTransactionData<ISerializable | null>>,
+  commitment: Commitment<TransferTransactionData | MintTransactionData<IMintTransactionReason>>,
   signal: AbortSignal = AbortSignal.timeout(10000),
   interval: number = 1000,
 ): Promise<InclusionProof> {
   while (true) {
     try {
-      const inclusionProof = await client.getInclusionProof(commitment);
-      if ((await inclusionProof.verify(commitment.requestId)) === InclusionProofVerificationStatus.OK) {
+      const inclusionProof = await client.getInclusionProof(commitment).then((response) => response.inclusionProof);
+      if ((await inclusionProof.verify(trustBase, commitment.requestId)) === InclusionProofVerificationStatus.OK) {
         return inclusionProof;
       }
     } catch (err) {

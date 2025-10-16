@@ -1,10 +1,10 @@
 import { TestTokenData } from './TestTokenData.js';
 import { DirectAddress } from '../src/address/DirectAddress.js';
 import { SubmitCommitmentStatus } from '../src/api/SubmitCommitmentResponse.js';
+import { RootTrustBase } from '../src/bft/RootTrustBase.js';
 import { DataHasher } from '../src/hash/DataHasher.js';
 import { HashAlgorithm } from '../src/hash/HashAlgorithm.js';
-import { ISerializable } from '../src/ISerializable.js';
-import { MaskedPredicate } from '../src/predicate/MaskedPredicate.js';
+import { MaskedPredicate } from '../src/predicate/embedded/MaskedPredicate.js';
 import { SigningService } from '../src/sign/SigningService.js';
 import { StateTransitionClient } from '../src/StateTransitionClient.js';
 import { TokenCoinData } from '../src/token/fungible/TokenCoinData.js';
@@ -12,10 +12,11 @@ import { Token } from '../src/token/Token.js';
 import { TokenId } from '../src/token/TokenId.js';
 import { TokenState } from '../src/token/TokenState.js';
 import { TokenType } from '../src/token/TokenType.js';
-import { Commitment } from '../src/transaction/Commitment.js';
+import { IMintTransactionReason } from '../src/transaction/IMintTransactionReason.js';
+import { MintCommitment } from '../src/transaction/MintCommitment.js';
 import { MintTransactionData } from '../src/transaction/MintTransactionData.js';
-import { Transaction } from '../src/transaction/Transaction.js';
-import { TransactionData } from '../src/transaction/TransactionData.js';
+import { TransferCommitment } from '../src/transaction/TransferCommitment.js';
+import { TransferTransaction } from '../src/transaction/TransferTransaction.js';
 import { waitInclusionProof } from '../src/util/InclusionProofUtils.js';
 
 export interface IMintData {
@@ -30,8 +31,8 @@ export interface IMintData {
 }
 
 export async function createMintData(secret: Uint8Array, coinData: TokenCoinData): Promise<IMintData> {
-  const tokenId = TokenId.create(crypto.getRandomValues(new Uint8Array(32)));
-  const tokenType = TokenType.create(crypto.getRandomValues(new Uint8Array(32)));
+  const tokenId = new TokenId(crypto.getRandomValues(new Uint8Array(32)));
+  const tokenType = new TokenType(crypto.getRandomValues(new Uint8Array(32)));
   const tokenData = new TestTokenData(crypto.getRandomValues(new Uint8Array(32)));
 
   const data = crypto.getRandomValues(new Uint8Array(32));
@@ -39,7 +40,7 @@ export async function createMintData(secret: Uint8Array, coinData: TokenCoinData
   const salt = crypto.getRandomValues(new Uint8Array(32));
   const nonce = crypto.getRandomValues(new Uint8Array(32));
 
-  const predicate = await MaskedPredicate.create(
+  const predicate = MaskedPredicate.create(
     tokenId,
     tokenType,
     await SigningService.createFromSecret(secret, nonce),
@@ -60,55 +61,61 @@ export async function createMintData(secret: Uint8Array, coinData: TokenCoinData
 }
 
 export async function mintToken(
+  trustBase: RootTrustBase,
   client: StateTransitionClient,
   data: IMintData,
-): Promise<Token<Transaction<MintTransactionData<null>>>> {
-  const mintCommitment = await client.submitMintTransaction(
+): Promise<Token<IMintTransactionReason>> {
+  const predicateReference = await data.predicate.getReference();
+  const commitment = await MintCommitment.create(
     await MintTransactionData.create(
       data.tokenId,
       data.tokenType,
       data.tokenData.toCBOR(),
       data.coinData,
-      (await DirectAddress.create(data.predicate.reference)).toString(),
+      await predicateReference.toAddress(),
       data.salt,
       await new DataHasher(HashAlgorithm.SHA256).update(data.data).digest(),
       null,
     ),
   );
 
-  const mintTransaction = await client.createTransaction(
-    mintCommitment,
-    await waitInclusionProof(client, mintCommitment),
-  );
+  const response = await client.submitMintCommitment(commitment);
+  if (response.status !== SubmitCommitmentStatus.SUCCESS) {
+    throw new Error(`Failed to submit mint commitment: ${response.status}`);
+  }
 
-  return new Token(await TokenState.create(data.predicate, data.data), mintTransaction, []);
+  return Token.mint(
+    trustBase,
+    new TokenState(data.predicate, data.data),
+    commitment.toTransaction(await waitInclusionProof(trustBase, client, commitment)),
+  );
 }
 
 export async function sendToken(
+  trustBase: RootTrustBase,
   client: StateTransitionClient,
-  token: Token<Transaction<MintTransactionData<ISerializable | null>>>,
+  token: Token<IMintTransactionReason>,
   signingService: SigningService,
   recipient: DirectAddress,
   tokenState: string | null = 'my custom data',
-): Promise<Transaction<TransactionData>> {
+): Promise<TransferTransaction> {
   const textEncoder = new TextEncoder();
   const stateHash = tokenState
     ? await new DataHasher(HashAlgorithm.SHA256).update(textEncoder.encode(tokenState)).digest()
     : null;
-  const transactionData = await TransactionData.create(
-    token.state,
-    recipient.toJSON(),
+  const commitment = await TransferCommitment.create(
+    token,
+    recipient,
     crypto.getRandomValues(new Uint8Array(32)),
     stateHash,
     textEncoder.encode('my message'),
-    token.nametagTokens,
+    signingService,
   );
 
-  const commitment = await Commitment.create(transactionData, signingService);
-  const response = await client.submitCommitment(commitment);
+  const response = await client.submitTransferCommitment(commitment);
   if (response.status !== SubmitCommitmentStatus.SUCCESS) {
     throw new Error(`Failed to submit transaction commitment: ${response.status}`);
   }
 
-  return client.createTransaction(commitment, await waitInclusionProof(client, commitment));
+  return commitment.toTransaction(await waitInclusionProof(trustBase, client, commitment));
 }

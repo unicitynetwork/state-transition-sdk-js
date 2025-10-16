@@ -1,6 +1,6 @@
 import { Branch } from './Branch.js';
 import { LeafBranch } from './LeafBranch.js';
-import { MerkleSumTreeRootNode } from './MerkleSumTreeRootNode.js';
+import { SparseMerkleSumTreeRootNode } from './SparseMerkleSumTreeRootNode.js';
 import { PendingBranch } from './PendingBranch.js';
 import { PendingLeafBranch } from './PendingLeafBranch.js';
 import { PendingNodeBranch } from './PendingNodeBranch.js';
@@ -27,11 +27,11 @@ export class SparseMerkleSumTree {
    * Adds a leaf to the tree at the specified path with the given value and sum.
    * @param path The path where the leaf should be added.
    * @param valueRef The value of the leaf as a Uint8Array.
-   * @param sum The sum associated with the leaf.
+   * @param counter The sum associated with the leaf.
    * @throws Error will throw an error if the path is less than 1 or if the sum is negative.
    */
-  public async addLeaf(path: bigint, valueRef: Uint8Array, sum: bigint): Promise<void> {
-    if (sum < 0n) {
+  public async addLeaf(path: bigint, valueRef: Uint8Array, counter: bigint): Promise<void> {
+    if (counter < 0n) {
       throw new Error('Sum must be an unsigned bigint.');
     }
 
@@ -43,7 +43,7 @@ export class SparseMerkleSumTree {
     const value = new Uint8Array(valueRef);
     const branchPromise = isRight ? this.right : this.left;
     const newBranchPromise = branchPromise.then((branch) =>
-      branch ? this.buildTree(branch, path, value, sum) : new PendingLeafBranch(path, value, sum),
+      branch ? this.buildTree(branch, path, value, counter) : new PendingLeafBranch(path, value, counter),
     );
 
     if (isRight) {
@@ -59,7 +59,7 @@ export class SparseMerkleSumTree {
    * Calculates the hashes for tree and returns root of the tree for given state.
    * @returns A promise that resolves to the MerkleSumTreeRootNode representing the root of the tree.
    */
-  public async calculateRoot(): Promise<MerkleSumTreeRootNode> {
+  public async calculateRoot(): Promise<SparseMerkleSumTreeRootNode> {
     this.left = this.left.then(
       (branch): Promise<Branch | null> => (branch ? branch.finalize(this.factory) : Promise.resolve(null)),
     );
@@ -71,7 +71,7 @@ export class SparseMerkleSumTree {
       this.right as Promise<Branch | null>,
     ]);
 
-    return MerkleSumTreeRootNode.create(left, right, this.factory);
+    return SparseMerkleSumTreeRootNode.create(left, right, this.factory);
   }
 
   private buildTree(branch: PendingBranch, remainingPath: bigint, value: Uint8Array, sum: bigint): PendingBranch {

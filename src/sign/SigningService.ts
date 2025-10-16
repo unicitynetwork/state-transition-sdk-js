@@ -5,7 +5,6 @@ import { Signature } from './Signature.js';
 import { DataHash } from '../hash/DataHash.js';
 import { DataHasher } from '../hash/DataHasher.js';
 import { HashAlgorithm } from '../hash/HashAlgorithm.js';
-import { HexConverter } from '../util/HexConverter.js';
 
 /**
  * Default signing service.
@@ -62,7 +61,7 @@ export class SigningService implements ISigningService<Signature> {
    * @param {Uint8Array} publicKey Public key.
    */
   public static verifyWithPublicKey(hash: DataHash, signature: Uint8Array, publicKey: Uint8Array): Promise<boolean> {
-    return Promise.resolve(secp256k1.verify(signature, hash.data, publicKey, { format: 'compact' }));
+    return Promise.resolve(secp256k1.verify(signature, hash.data, publicKey, { format: 'compact', prehash: false }));
   }
 
   /**
@@ -78,7 +77,7 @@ export class SigningService implements ISigningService<Signature> {
    * @see {ISigningService.sign} 32-byte hash.
    */
   public sign(hash: DataHash): Promise<Signature> {
-    const signature = secp256k1.sign(hash.data, this.privateKey, { format: 'recovered' });
+    const signature = secp256k1.sign(hash.data, this.privateKey, { format: 'recovered', prehash: false });
     return Promise.resolve(new Signature(signature.slice(1), signature[0]));
   }
 }

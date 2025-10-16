@@ -7,13 +7,13 @@ import { DataHash } from '../hash/DataHash.js';
  */
 export interface ISubmitCommitmentRequestJson {
   /** The request ID as a string. */
-  requestId: string;
+  readonly requestId: string;
   /** The transaction hash as a string. */
-  transactionHash: string;
+  readonly transactionHash: string;
   /** The authenticator as JSON. */
-  authenticator: IAuthenticatorJson;
+  readonly authenticator: IAuthenticatorJson;
   /** Optional flag to request a receipt. */
-  receipt?: boolean;
+  readonly receipt?: boolean;
 }
 
 /**

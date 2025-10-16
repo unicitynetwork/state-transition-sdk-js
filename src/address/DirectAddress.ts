@@ -3,7 +3,6 @@ import { IAddress } from './IAddress.js';
 import { DataHash } from '../hash/DataHash.js';
 import { DataHasher } from '../hash/DataHasher.js';
 import { HashAlgorithm } from '../hash/HashAlgorithm.js';
-import { CborEncoder } from '../serializer/cbor/CborEncoder.js';
 import { HexConverter } from '../util/HexConverter.js';
 
 /**
@@ -34,6 +33,13 @@ export class DirectAddress implements IAddress {
   }
 
   /**
+   * @inheritDoc
+   */
+  public get address(): string {
+    return this.toString();
+  }
+
+  /**
    * Build a direct address from a predicate reference.
    *
    * @param predicateReference The predicate reference to encode
@@ -44,43 +50,8 @@ export class DirectAddress implements IAddress {
     return new DirectAddress(predicateReference, checksum.data.slice(0, 4));
   }
 
-  /**
-   * Create new DirectAddress from string.
-   * @param data Address as string.
-   */
-  public static async fromJSON(data: string): Promise<DirectAddress> {
-    const [scheme, uri] = data.split('://');
-    if (scheme !== AddressScheme.DIRECT) {
-      throw new Error(`Invalid address scheme: expected ${AddressScheme.DIRECT}, got ${scheme}`);
-    }
-
-    const checksum = uri.slice(-8);
-    const address = await DirectAddress.create(DataHash.fromCBOR(HexConverter.decode(uri.slice(0, -8))));
-    if (HexConverter.encode(address.checksum) !== checksum) {
-      throw new Error(
-        `Invalid checksum for DirectAddress: expected ${checksum}, got ${HexConverter.encode(address.checksum)}`,
-      );
-    }
-
-    return address;
-  }
-
-  /**
-   * Convert the address into its canonical string form.
-   */
-  public toJSON(): string {
-    return this.toString();
-  }
-
-  /**
-   * Encode the address as a CBOR text string.
-   */
-  public toCBOR(): Uint8Array {
-    return CborEncoder.encodeTextString(this.toString());
-  }
-
   /** Convert instance to readable string */
   public toString(): string {
-    return `${this.scheme}://${HexConverter.encode(this.data.toCBOR())}${HexConverter.encode(this.checksum)}`;
+    return `${this.scheme}://${HexConverter.encode(this.data.imprint)}${HexConverter.encode(this.checksum)}`;
   }
 }

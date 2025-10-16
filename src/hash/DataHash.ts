@@ -1,7 +1,7 @@
 import { HashAlgorithm } from './HashAlgorithm.js';
 import { HashError } from './HashError.js';
-import { CborDecoder } from '../serializer/cbor/CborDecoder.js';
-import { CborEncoder } from '../serializer/cbor/CborEncoder.js';
+import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
+import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
 import { HexConverter } from '../util/HexConverter.js';
 
 export class DataHash {
@@ -44,7 +44,7 @@ export class DataHash {
   }
 
   public static fromCBOR(bytes: Uint8Array): DataHash {
-    return DataHash.fromImprint(CborDecoder.readByteString(bytes));
+    return DataHash.fromImprint(CborDeserializer.readByteString(bytes));
   }
 
   public toJSON(): string {
@@ -52,7 +52,7 @@ export class DataHash {
   }
 
   public toCBOR(): Uint8Array {
-    return CborEncoder.encodeByteString(this._imprint);
+    return CborSerializer.encodeByteString(this._imprint);
   }
 
   public equals(hash: DataHash): boolean {

@@ -6,12 +6,14 @@ import { BitString } from '../util/BitString.js';
 /**
  * Represents a unique request identifier derived from a public key and state hash.
  */
-export class RequestId {
+export class RequestId extends DataHash {
   /**
    * Constructs a RequestId instance.
    * @param hash The DataHash representing the request ID.
    */
-  private constructor(public readonly hash: DataHash) {}
+  private constructor(public readonly hash: DataHash) {
+    super(hash.algorithm, hash.data);
+  }
 
   /**
    * Creates a RequestId from a public key and state hash.
@@ -57,32 +59,7 @@ export class RequestId {
    * @return The BitString representation of the RequestId.
    */
   public toBitString(): BitString {
-    return BitString.fromDataHash(this.hash);
-  }
-
-  /**
-   * Converts the RequestId to a JSON string.
-   * @returns The JSON string representation.
-   */
-  public toJSON(): string {
-    return this.hash.toJSON();
-  }
-
-  /**
-   * Encodes the RequestId to CBOR format.
-   * @returns The CBOR-encoded bytes.
-   */
-  public toCBOR(): Uint8Array {
-    return this.hash.toCBOR();
-  }
-
-  /**
-   * Checks if this RequestId is equal to another.
-   * @param requestId The RequestId to compare.
-   * @returns True if equal, false otherwise.
-   */
-  public equals(requestId: RequestId): boolean {
-    return this.hash.equals(requestId.hash);
+    return BitString.fromDataHash(this);
   }
 
   /**

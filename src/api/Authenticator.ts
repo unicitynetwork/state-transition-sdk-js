@@ -1,7 +1,7 @@
 import { RequestId } from './RequestId.js';
 import { DataHash } from '../hash/DataHash.js';
-import { CborDecoder } from '../serializer/cbor/CborDecoder.js';
-import { CborEncoder } from '../serializer/cbor/CborEncoder.js';
+import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
+import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
 import { Signature } from '../sign/Signature.js';
 import { SigningService } from '../sign/SigningService.js';
 import { HexConverter } from '../util/HexConverter.js';
@@ -12,13 +12,13 @@ import { dedent } from '../util/StringUtils.js';
  */
 export interface IAuthenticatorJson {
   /** The public key as a hex string. */
-  publicKey: string;
+  readonly publicKey: string;
   /** The signature algorithm used. */
-  algorithm: string;
+  readonly algorithm: string;
   /** The signature as a hex string. */
-  signature: string;
+  readonly signature: string;
   /** The state hash as a hex string. */
-  stateHash: string;
+  readonly stateHash: string;
 }
 
 /**
@@ -114,12 +114,12 @@ export class Authenticator {
    * @returns An Authenticator instance.
    */
   public static fromCBOR(bytes: Uint8Array): Authenticator {
-    const data = CborDecoder.readArray(bytes);
+    const data = CborDeserializer.readArray(bytes);
     return new Authenticator(
-      CborDecoder.readTextString(data[0]),
-      CborDecoder.readByteString(data[1]),
-      Signature.decode(CborDecoder.readByteString(data[2])),
-      DataHash.fromImprint(CborDecoder.readByteString(data[3])),
+      CborDeserializer.readTextString(data[0]),
+      CborDeserializer.readByteString(data[1]),
+      Signature.decode(CborDeserializer.readByteString(data[2])),
+      DataHash.fromImprint(CborDeserializer.readByteString(data[3])),
     );
   }
 
@@ -128,12 +128,12 @@ export class Authenticator {
    * @returns The CBOR-encoded bytes.
    */
   public toCBOR(): Uint8Array {
-    return CborEncoder.encodeArray([
-      CborEncoder.encodeTextString(this.algorithm),
-      CborEncoder.encodeByteString(this.publicKey),
-      CborEncoder.encodeByteString(this.signature.encode()),
-      CborEncoder.encodeByteString(this.stateHash.imprint),
-    ]);
+    return CborSerializer.encodeArray(
+      CborSerializer.encodeTextString(this.algorithm),
+      CborSerializer.encodeByteString(this.publicKey),
+      CborSerializer.encodeByteString(this.signature.encode()),
+      CborSerializer.encodeByteString(this.stateHash.imprint),
+    );
   }
 
   /**

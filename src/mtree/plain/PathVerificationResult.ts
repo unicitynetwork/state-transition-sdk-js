@@ -1,10 +1,10 @@
 export class PathVerificationResult {
-  public readonly result: boolean;
+  public readonly isSuccessful: boolean;
 
   public constructor(
     public readonly isPathValid: boolean,
     public readonly isPathIncluded: boolean,
   ) {
-    this.result = isPathValid && isPathIncluded;
+    this.isSuccessful = isPathValid && isPathIncluded;
   }
 }

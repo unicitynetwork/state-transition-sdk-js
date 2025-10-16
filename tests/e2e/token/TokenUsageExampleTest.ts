@@ -1,4 +1,8 @@
+import * as fs from 'fs';
+import * as path from 'path';
+
 import { AggregatorClient } from '../../../src/api/AggregatorClient.js';
+import { RootTrustBase } from '../../../src/bft/RootTrustBase.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
 import {
   testTransferFlow,
@@ -8,6 +12,13 @@ import {
 } from '../../token/CommonTestFlow.js';
 
 describe('Transition', function () {
+  let trustBase: RootTrustBase;
+
+  beforeAll(async () => {
+    const trustBaseJsonString = fs.readFileSync(path.join(__dirname, 'trust-base.json'), 'utf-8');
+    trustBase = RootTrustBase.fromJSON(JSON.parse(trustBaseJsonString))
+  });
+
   it('should verify block height', async () => {
     const aggregatorUrl = process.env.AGGREGATOR_URL;
     if (!aggregatorUrl) {
@@ -26,7 +37,7 @@ describe('Transition', function () {
       return;
     }
     const client = new StateTransitionClient(new AggregatorClient(aggregatorUrl));
-    await testTransferFlow(client);
+    await testTransferFlow(trustBase, client);
   }, 15000);
 
   it('should verify the token offline transfer', async () => {
@@ -36,7 +47,7 @@ describe('Transition', function () {
       return;
     }
     const client = new StateTransitionClient(new AggregatorClient(aggregatorUrl));
-    await testOfflineTransferFlow(client);
+    await testOfflineTransferFlow(trustBase, client);
   }, 15000);
 
   it('should split tokens', async () => {
@@ -46,7 +57,7 @@ describe('Transition', function () {
       return;
     }
     const client = new StateTransitionClient(new AggregatorClient(aggregatorUrl));
-    await testSplitFlow(client);
+    await testSplitFlow(trustBase, client);
   }, 15000);
 
   it('should split tokens after transfer', async () => {
@@ -56,6 +67,6 @@ describe('Transition', function () {
       return;
     }
     const client = new StateTransitionClient(new AggregatorClient(aggregatorUrl));
-    await testSplitFlowAfterTransfer(client);
+    await testSplitFlowAfterTransfer(trustBase, client);
   }, 25000);
 });

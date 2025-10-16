@@ -2,7 +2,7 @@ import { NodeBranch } from './NodeBranch.js';
 import { PendingBranch } from './PendingBranch.js';
 import { IDataHasher } from '../../hash/IDataHasher.js';
 import { IDataHasherFactory } from '../../hash/IDataHasherFactory.js';
-import { CborEncoder } from '../../serializer/cbor/CborEncoder.js';
+import { CborSerializer } from '../../serializer/cbor/CborSerializer.js';
 import { BigintConverter } from '../../util/BigintConverter.js';
 
 export class PendingNodeBranch {
@@ -17,27 +17,27 @@ export class PendingNodeBranch {
     const childrenHash = await factory
       .create()
       .update(
-        CborEncoder.encodeArray([
-          CborEncoder.encodeArray([
-            CborEncoder.encodeByteString(left.hash.imprint),
-            CborEncoder.encodeByteString(BigintConverter.encode(left.sum)),
-          ]),
-          CborEncoder.encodeArray([
-            CborEncoder.encodeByteString(right.hash.imprint),
-            CborEncoder.encodeByteString(BigintConverter.encode(right.sum)),
-          ]),
-        ]),
+        CborSerializer.encodeArray(
+          CborSerializer.encodeArray(
+            CborSerializer.encodeByteString(left.hash.imprint),
+            CborSerializer.encodeByteString(BigintConverter.encode(left.sum)),
+          ),
+          CborSerializer.encodeArray(
+            CborSerializer.encodeByteString(right.hash.imprint),
+            CborSerializer.encodeByteString(BigintConverter.encode(right.sum)),
+          ),
+        ),
       )
       .digest();
 
     const hash = await factory
       .create()
       .update(
-        CborEncoder.encodeArray([
-          CborEncoder.encodeByteString(BigintConverter.encode(this.path)),
-          CborEncoder.encodeByteString(childrenHash.imprint),
-          CborEncoder.encodeByteString(BigintConverter.encode(left.sum + right.sum)),
-        ]),
+        CborSerializer.encodeArray(
+          CborSerializer.encodeByteString(BigintConverter.encode(this.path)),
+          CborSerializer.encodeByteString(childrenHash.imprint),
+          CborSerializer.encodeByteString(BigintConverter.encode(left.sum + right.sum)),
+        ),
       )
       .digest();
     return new NodeBranch(this.path, left, right, left.sum + right.sum, childrenHash, hash);

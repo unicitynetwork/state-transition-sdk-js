@@ -12,7 +12,7 @@
     "lint": "eslint \"src/**/*\" \"tests/**/*\"",
     "lint:fix": "eslint \"src/**/*\" \"tests/**/*\" --fix",
     "test": "jest --testPathPatterns=tests --testPathIgnorePatterns=tests/e2e",
-    "test:unit": "jest --testPathPatterns=tests/unit",
+    "test:unit": "jest --testPathPatterns=tests/unit --testPathPatterns=tests/functional",
     "test:integration": "jest --testPathPatterns=tests/integration",
     "test:e2e": "jest --testPathPatterns=tests/e2e",
     "test:ci": "DEBUG=testcontainers:containers jest --testPathPatterns=tests --testPathIgnorePatterns=tests/e2e --ci --reporters=default",

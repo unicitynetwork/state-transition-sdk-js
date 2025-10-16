@@ -2,7 +2,7 @@ import { Branch } from './Branch.js';
 import { LeafBranch } from './LeafBranch.js';
 import { LeafInBranchError } from './LeafInBranchError.js';
 import { LeafOutOfBoundsError } from './LeafOutOfBoundsError.js';
-import { MerkleTreeRootNode } from './MerkleTreeRootNode.js';
+import { SparseMerkleTreeRootNode } from './SparseMerkleTreeRootNode.js';
 import { PendingBranch } from './PendingBranch.js';
 import { PendingLeafBranch } from './PendingLeafBranch.js';
 import { PendingNodeBranch } from './PendingNodeBranch.js';
@@ -54,7 +54,7 @@ export class SparseMerkleTree {
    * Calculates the hashes for tree and returns root of the tree for given state.
    * @returns A promise that resolves to the MerkleTreeRootNode representing the root of the tree.
    */
-  public async calculateRoot(): Promise<MerkleTreeRootNode> {
+  public async calculateRoot(): Promise<SparseMerkleTreeRootNode> {
     this.left = this.left.then(
       (branch): Promise<Branch | null> => (branch ? branch.finalize(this.factory) : Promise.resolve(null)),
     );
@@ -66,7 +66,7 @@ export class SparseMerkleTree {
       this.right as Promise<Branch | null>,
     ]);
 
-    return MerkleTreeRootNode.create(left, right, this.factory);
+    return SparseMerkleTreeRootNode.create(left, right, this.factory);
   }
 
   private buildTree(branch: PendingBranch, remainingPath: bigint, value: Uint8Array): PendingBranch {

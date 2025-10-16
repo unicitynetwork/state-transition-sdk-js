@@ -2,7 +2,7 @@ import { RequestId } from './RequestId.js';
 import { DataHash } from '../hash/DataHash.js';
 import { DataHasher } from '../hash/DataHasher.js';
 import { HashAlgorithm } from '../hash/HashAlgorithm.js';
-import { CborEncoder } from '../serializer/cbor/CborEncoder.js';
+import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
 import { ISigningService } from '../sign/ISigningService.js';
 import { Signature } from '../sign/Signature.js';
 import { SigningService } from '../sign/SigningService.js';
@@ -57,26 +57,26 @@ class Request {
     stateHash: DataHash,
     transactionHash: DataHash,
   ): Promise<Request> {
-    const cborBytes = CborEncoder.encodeArray([
-      CborEncoder.encodeTextString(service),
-      CborEncoder.encodeTextString(method),
+    const cborBytes = CborSerializer.encodeArray(
+      CborSerializer.encodeTextString(service),
+      CborSerializer.encodeTextString(method),
       requestId.toCBOR(),
       stateHash.toCBOR(),
       transactionHash.toCBOR(),
-    ]);
+    );
 
     const hash = await new DataHasher(HashAlgorithm.SHA256).update(cborBytes).digest();
     return new Request(service, method, requestId, stateHash, transactionHash, hash);
   }
 
   public toCBOR(): Uint8Array {
-    return CborEncoder.encodeArray([
-      CborEncoder.encodeTextString(this.service),
-      CborEncoder.encodeTextString(this.method),
+    return CborSerializer.encodeArray(
+      CborSerializer.encodeTextString(this.service),
+      CborSerializer.encodeTextString(this.method),
       this.requestId.toCBOR(),
       this.stateHash.toCBOR(),
       this.transactionHash.toCBOR(),
-    ]);
+    );
   }
 
   public toJSON(): IRequestJson {
@@ -102,11 +102,11 @@ class Request {
 }
 
 export interface IRequestJson {
-  service: string;
-  method: string;
-  requestId: string;
-  stateHash: string;
-  transactionHash: string;
+  readonly service: string;
+  readonly method: string;
+  readonly requestId: string;
+  readonly stateHash: string;
+  readonly transactionHash: string;
 }
 
 export interface ISubmitCommitmentResponseJson {

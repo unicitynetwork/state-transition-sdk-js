@@ -1,6 +1,6 @@
 import { ISignature } from './ISignature.js';
-import { CborDecoder } from '../serializer/cbor/CborDecoder.js';
-import { CborEncoder } from '../serializer/cbor/CborEncoder.js';
+import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
+import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
 import { HexConverter } from '../util/HexConverter.js';
 
 export class Signature implements ISignature {
@@ -18,7 +18,7 @@ export class Signature implements ISignature {
   }
 
   public static fromCBOR(bytes: Uint8Array): Signature {
-    return Signature.decode(CborDecoder.readByteString(bytes));
+    return Signature.decode(CborDeserializer.readByteString(bytes));
   }
 
   public static decode(bytes: Uint8Array): Signature {
@@ -38,7 +38,7 @@ export class Signature implements ISignature {
   }
 
   public toCBOR(): Uint8Array {
-    return CborEncoder.encodeByteString(this.encode());
+    return CborSerializer.encodeByteString(this.encode());
   }
 
   public encode(): Uint8Array {

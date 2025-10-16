@@ -2,24 +2,23 @@ import { DirectAddress } from './address/DirectAddress.js';
 import { IAggregatorClient } from './api/IAggregatorClient.js';
 import { RequestId } from './api/RequestId.js';
 import { SubmitCommitmentResponse, SubmitCommitmentStatus } from './api/SubmitCommitmentResponse.js';
+import { RootTrustBase } from './bft/RootTrustBase.js';
 import { HashAlgorithm } from './hash/HashAlgorithm.js';
 import { ISerializable } from './ISerializable.js';
+import { PredicateEngineService } from './predicate/PredicateEngineService.js';
 import { SigningService } from './sign/SigningService.js';
-import { NameTagToken } from './token/NameTagToken.js';
 import { Token } from './token/Token.js';
 import { TokenState } from './token/TokenState.js';
 import { Commitment } from './transaction/Commitment.js';
+import { IMintTransactionReason } from './transaction/IMintTransactionReason.js';
 import { InclusionProof, InclusionProofVerificationStatus } from './transaction/InclusionProof.js';
+import { MintCommitment } from './transaction/MintCommitment.js';
 import { MintTransactionData } from './transaction/MintTransactionData.js';
 import { Transaction } from './transaction/Transaction.js';
-import { TransactionData } from './transaction/TransactionData.js';
+import { TransferTransaction } from './transaction/TransferTransaction.js';
+import { TransferTransactionData } from './transaction/TransferTransactionData.js';
 import { HexConverter } from './util/HexConverter.js';
-
-// I_AM_UNIVERSAL_MINTER_FOR_ string bytes
-/**
- * Secret prefix for the signing used internally when minting tokens.
- */
-export const MINTER_SECRET = HexConverter.decode('495f414d5f554e4956455253414c5f4d494e5445525f464f525f');
+import { InclusionProofResponse } from './api/InclusionProofResponse.js';
 
 /**
  * High level client implementing the token state transition workflow.
@@ -30,47 +29,90 @@ export class StateTransitionClient {
    */
   public constructor(public readonly client: IAggregatorClient) {}
 
-  /**
-   * Create and submit a mint transaction for a new token.
-   * @param transactionData Mint transaction data containing token information and address.
-   * @returns Commitment containing the transaction data and authenticator
-   * @throws Error when the aggregator rejects the transaction
-   *
-   * @example
-   * ```ts
-   * const commitment = await client.submitMintTransaction(
-   *   await MintTransactionData.create(
-   *     TokenId.create(crypto.getRandomValues(new Uint8Array(32))),
-   *     TokenType.create(crypto.getRandomValues(new Uint8Array(32))),
-   *     new Uint8Array(),
-   *     null,
-   *     await DirectAddress.create(mintTokenData.predicate.reference),
-   *     crypto.getRandomValues(new Uint8Array(32)),
-   *     null,
-   *     null
-   *   )
-   * );
-   * ```
-   */
-  public async submitMintTransaction<T extends MintTransactionData<ISerializable | null>>(
-    transactionData: T,
-  ): Promise<Commitment<T>> {
-    const commitment = await Commitment.create(
-      transactionData,
-      await SigningService.createFromSecret(MINTER_SECRET, transactionData.tokenId.bytes),
-    );
+  //
+  //   /**
+  //    * Finalizes a transaction by updating the token state based on the provided transaction data
+  //    * without nametags.
+  //    *
+  //    * @param trustBase   The root trust base for inclusion proof verification.
+  //    * @param token       The token to be updated.
+  //    * @param state       The current state of the token.
+  //    * @param transaction The transaction containing transfer data.
+  //    * @param <R>         The type of mint transaction data.
+  //    * @return The updated token after applying the transaction.
+  //    * @throws VerificationException if verification fails during the update process.
+  //    */
+  //   public <R extends MintTransactionReason> Token<R> finalizeTransaction(
+  //       RootTrustBase trustBase,
+  //       Token<R> token,
+  //       TokenState state,
+  //       TransferTransaction transaction
+  //   ) throws VerificationException {
+  //     return this.finalizeTransaction(trustBase, token, state, transaction, List.of());
+  //   }
+  //
+  //   /**
+  //    * Finalizes a transaction by updating the token state based on the provided transaction data and
+  //    * nametags.
+  //    *
+  //    * @param trustBase   The root trust base for inclusion proof verification.
+  //    * @param token       The token to be updated.
+  //    * @param state       The current state of the token.
+  //    * @param transaction The transaction containing transfer data.
+  //    * @param nametags    A list of tokens used as nametags in the transaction.
+  //    * @param <R>         The type of mint transaction data of token.
+  //    * @return The updated token after applying the transaction.
+  //    * @throws VerificationException if verification fails during the update process.
+  //    */
+  //   public <R extends MintTransactionReason> Token<R> finalizeTransaction(
+  //       RootTrustBase trustBase,
+  //       Token<R> token,
+  //       TokenState state,
+  //       TransferTransaction transaction,
+  //       List<Token<?>> nametags
+  //   ) throws VerificationException {
+  //     Objects.requireNonNull(token, "Token is null");
+  //
+  //     return token.update(trustBase, state, transaction, nametags);
+  //   }
+  //
+  //   /**
+  //    * Retrieves the inclusion proof for a token and verifies its status against the provided public
+  //    * key and trust base.
+  //    *
+  //    * @param token     The token for which to retrieve the inclusion proof.
+  //    * @param publicKey The public key associated with the token.
+  //    * @param trustBase The root trust base for verification.
+  //    * @return A CompletableFuture that resolves to the inclusion proof verification status.
+  //    */
+  //   public CompletableFuture<InclusionProofVerificationStatus> getTokenStatus(
+  //       Token<?> token,
+  //       byte[] publicKey,
+  //       RootTrustBase trustBase
+  //   ) {
+  //     RequestId requestId = RequestId.create(publicKey, token.getState().calculateHash());
+  //     return this.client.getInclusionProof(requestId)
+  //         .thenApply(response -> response.getInclusionProof().verify(requestId, trustBase));
+  //   }
+  //
+  //   /**
+  //    * Retrieves the inclusion proof for a given commitment.
+  //    *
+  //    * @param commitment The commitment for which to retrieve the inclusion proof.
+  //    * @return A CompletableFuture that resolves to the inclusion proof response from the aggregator.
+  //    */
+  //   public CompletableFuture<InclusionProofResponse> getInclusionProof(Commitment<?> commitment) {
+  //     return this.client.getInclusionProof(commitment.getRequestId());
+  //   }
 
-    const result = await this.client.submitTransaction(
+  public async submitMintCommitment<R extends IMintTransactionReason>(
+    commitment: MintCommitment<R>,
+  ): Promise<SubmitCommitmentResponse> {
+    return this.client.submitCommitment(
       commitment.requestId,
-      commitment.transactionData.hash,
+      await commitment.transactionData.calculateHash(),
       commitment.authenticator,
     );
-
-    if (result.status !== SubmitCommitmentStatus.SUCCESS) {
-      throw new Error(`Could not submit transaction: ${result.status}`);
-    }
-
-    return commitment;
   }
 
   /**
@@ -85,125 +127,71 @@ export class StateTransitionClient {
    * const commitment = await client.submitTransaction(data, signingService);
    * ```
    */
-  public submitCommitment(commitment: Commitment<TransactionData>): Promise<SubmitCommitmentResponse> {
-    if (!commitment.transactionData.sourceState.unlockPredicate.isOwner(commitment.authenticator.publicKey)) {
+  public async submitTransferCommitment(
+    commitment: Commitment<TransferTransactionData>,
+  ): Promise<SubmitCommitmentResponse> {
+    const predicate = await PredicateEngineService.createPredicate(commitment.transactionData.sourceState.predicate);
+    if (!(await predicate.isOwner(commitment.authenticator.publicKey))) {
       throw new Error('Ownership verification failed: Authenticator does not match source state predicate.');
     }
 
-    return this.client.submitTransaction(
+    return this.client.submitCommitment(
       commitment.requestId,
-      commitment.transactionData.hash,
+      await commitment.transactionData.calculateHash(),
       commitment.authenticator,
     );
   }
 
   /**
-   * Build a {@link Transaction} object once an inclusion proof is obtained.
+   * Finalizes a transaction by updating the token state based on the provided transaction data and
+   * nametags.
    *
-   * @param param0       Commitment returned from submit* methods
-   * @param inclusionProof Proof of inclusion from the aggregator
-   * @returns Constructed transaction object
-   * @throws Error if the inclusion proof is invalid
-   *
-   * @example
-   * ```ts
-   * const tx = await client.createTransaction(commitment, inclusionProof);
-   * ```
+   * @param trustBase   The root trust base for inclusion proof verification.
+   * @param token       The token to be updated.
+   * @param state       The current state of the token.
+   * @param transaction The transaction containing transfer data.
+   * @param nametags    A list of tokens used as nametags in the transaction.
+   * @return The updated token after applying the transaction.
    */
-  public async createTransaction<T extends TransactionData | MintTransactionData<ISerializable | null>>(
-    { requestId, transactionData }: Commitment<T>,
-    inclusionProof: InclusionProof,
-  ): Promise<Transaction<T>> {
-    const status = await inclusionProof.verify(requestId);
-    if (status != InclusionProofVerificationStatus.OK) {
-      throw new Error('Inclusion proof verification failed.');
-    }
-
-    if (!inclusionProof.authenticator || !HashAlgorithm[inclusionProof.authenticator.stateHash.algorithm]) {
-      throw new Error('Invalid inclusion proof hash algorithm.');
-    }
-
-    if (!inclusionProof.transactionHash?.equals(transactionData.hash)) {
-      throw new Error('Payload hash mismatch');
-    }
-
-    return new Transaction(transactionData, inclusionProof);
-  }
-
-  /**
-   * Finalise a transaction and produce the next token state.
-   *
-   * @param token           Token being transitioned
-   * @param state           New state after the transition
-   * @param transaction     Transaction proving the state change
-   * @param nametagTokens   Optional name tag tokens associated with the transfer
-   * @returns Updated token instance
-   * @throws Error if validation checks fail
-   *
-   * @example
-   * ```ts
-   * const updated = await client.finishTransaction(token, state, tx);
-   * ```
-   */
-  public async finishTransaction<T extends Transaction<MintTransactionData<ISerializable | null>>>(
-    token: Token<T>,
+  public finalizeTransaction<R extends IMintTransactionReason>(
+    trustBase: RootTrustBase,
+    token: Token<R>,
     state: TokenState,
-    transaction: Transaction<TransactionData>,
-    nametagTokens: NameTagToken[] = [],
-  ): Promise<Token<T>> {
-    if (!(await transaction.data.sourceState.unlockPredicate.verify(transaction))) {
-      throw new Error('Predicate verification failed');
-    }
-
-    // TODO: Move address processing to a separate method
-    // TODO: Resolve proxy address
-    const expectedAddress = await DirectAddress.create(state.unlockPredicate.reference);
-    if (expectedAddress.toJSON() !== transaction.data.recipient) {
-      throw new Error('Recipient address mismatch');
-    }
-
-    const transactions: Transaction<TransactionData>[] = [...token.transactions, transaction];
-
-    if (!(await transaction.containsData(state.data))) {
-      throw new Error('State data is not part of transaction.');
-    }
-
-    return new Token(state, token.genesis, transactions, nametagTokens);
+    transaction: TransferTransaction,
+    nametags: Token<IMintTransactionReason>[] = [],
+  ): Promise<Token<R>> {
+    return token.update(trustBase, state, transaction, nametags);
   }
 
   /**
-   * Query the ledger to see if the token's current state has been spent.
+   * Retrieves the inclusion proof for a token and verifies its status against the provided public
+   * key and trust base.
    *
-   * @param token     Token to check
-   * @param publicKey Public key of the owner
-   * @returns Verification status reported by the aggregator
-   *
-   * @example
-   * ```ts
-   * const status = await client.getTokenStatus(token, ownerPublicKey);
-   * ```
+   * @param token     The token for which to retrieve the inclusion proof.
+   * @param publicKey The public key associated with the token.
+   * @param trustBase The root trust base for verification.
+   * @return inclusion proof verification status.
    */
   public async getTokenStatus(
-    token: Token<Transaction<MintTransactionData<ISerializable | null>>>,
+    trustBase: RootTrustBase,
+    token: Token<IMintTransactionReason>,
     publicKey: Uint8Array,
   ): Promise<InclusionProofVerificationStatus> {
-    const requestId = await RequestId.create(publicKey, token.state.hash);
-    const inclusionProof = await this.client.getInclusionProof(requestId);
-    // TODO: Check ownership?
-    return inclusionProof.verify(requestId);
+    const requestId = await RequestId.create(publicKey, await token.state.calculateHash());
+    return this.client
+      .getInclusionProof(requestId)
+      .then((response) => response.inclusionProof.verify(trustBase, requestId));
   }
 
   /**
-   * Convenience helper to retrieve the inclusion proof for a commitment.
+   * Retrieves the inclusion proof for a given commitment.
    *
-   * @example
-   * ```ts
-   * const proof = await client.getInclusionProof(commitment);
-   * ```
+   * @param commitment The commitment for which to retrieve the inclusion proof.
+   * @return inclusion proof response from the aggregator.
    */
   public getInclusionProof(
-    commitment: Commitment<TransactionData | MintTransactionData<ISerializable | null>>,
-  ): Promise<InclusionProof> {
+    commitment: Commitment<TransferTransactionData | MintTransactionData<IMintTransactionReason>>,
+  ): Promise<InclusionProofResponse> {
     return this.client.getInclusionProof(commitment.requestId);
   }
 }

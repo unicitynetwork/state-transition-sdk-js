@@ -1,5 +1,7 @@
-import { CborEncoder } from '../serializer/cbor/CborEncoder.js';
+import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
+import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
 import { HexConverter } from '../util/HexConverter.js';
+import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 
 /** Unique identifier describing the type/category of a token. */
 export class TokenType {
@@ -14,9 +16,12 @@ export class TokenType {
     return new Uint8Array(this._bytes);
   }
 
-  /** Create an instance from raw bytes. */
-  public static create(id: Uint8Array): TokenType {
-    return new TokenType(id);
+  public static fromJSON(input: string): TokenType {
+    return new TokenType(HexConverter.decode(input));
+  }
+
+  public static fromCBOR(bytes: Uint8Array): TokenType {
+    return new TokenType(CborDeserializer.readByteString(bytes));
   }
 
   /** Hex representation for JSON serialization. */
@@ -26,11 +31,23 @@ export class TokenType {
 
   /** CBOR serialization. */
   public toCBOR(): Uint8Array {
-    return CborEncoder.encodeByteString(this._bytes);
+    return CborSerializer.encodeByteString(this._bytes);
   }
 
   /** Convert instance to readable string */
   public toString(): string {
     return `TokenType[${HexConverter.encode(this._bytes)}]`;
+  }
+
+  public equals(o: unknown): boolean {
+    if (this === o) {
+      return true;
+    }
+
+    if (!(o instanceof TokenType)) {
+      return false;
+    }
+
+    return areUint8ArraysEqual(this._bytes, o._bytes);
   }
 }

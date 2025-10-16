@@ -5,7 +5,7 @@ import { RequestId } from './RequestId.js';
 import { SubmitCommitmentRequest } from './SubmitCommitmentRequest.js';
 import { SubmitCommitmentResponse } from './SubmitCommitmentResponse.js';
 import { DataHash } from '../hash/DataHash.js';
-import { InclusionProof } from '../transaction/InclusionProof.js';
+import { InclusionProofResponse } from './InclusionProofResponse.js';
 
 /**
  * Client implementation for communicating with an aggregator via JSON-RPC.
@@ -25,7 +25,7 @@ export class AggregatorClient implements IAggregatorClient {
   /**
    * @inheritDoc
    */
-  public async submitTransaction(
+  public async submitCommitment(
     requestId: RequestId,
     transactionHash: DataHash,
     authenticator: Authenticator,
@@ -41,19 +41,9 @@ export class AggregatorClient implements IAggregatorClient {
   /**
    * @inheritDoc
    */
-  public async getInclusionProof(requestId: RequestId, blockNum?: bigint): Promise<InclusionProof> {
-    const data = { blockNum: blockNum?.toString(), requestId: requestId.toJSON() };
-    return InclusionProof.fromJSON(await this.transport.request('get_inclusion_proof', data));
-  }
-
-  /**
-   * Fetch a proof that the given request has not been deleted from the ledger.
-   *
-   * @param requestId Request identifier
-   */
-  public getNoDeletionProof(requestId: RequestId): Promise<unknown> {
+  public async getInclusionProof(requestId: RequestId): Promise<InclusionProofResponse> {
     const data = { requestId: requestId.toJSON() };
-    return this.transport.request('get_no_deletion_proof', data);
+    return InclusionProofResponse.fromJSON(await this.transport.request('get_inclusion_proof', data));
   }
 
   public async getBlockHeight(): Promise<bigint> {
