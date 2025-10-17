@@ -19,7 +19,7 @@ export class SparseMerkleSumTreeRootNode {
   private constructor(
     public readonly left: Branch | null,
     public readonly right: Branch | null,
-    public readonly sum: bigint,
+    public readonly counter: bigint,
     public readonly hash: DataHash,
   ) {}
 
@@ -99,7 +99,7 @@ export class SparseMerkleSumTreeRootNode {
    */
   public getPath(path: bigint): SparseMerkleSumTreePath {
     return new SparseMerkleSumTreePath(
-      new SparseMerkleSumTreePathRoot(this.hash, this.sum),
+      new SparseMerkleSumTreePathRoot(this.hash, this.counter),
       SparseMerkleSumTreeRootNode.generatePath(path, this.left, this.right),
     );
   }

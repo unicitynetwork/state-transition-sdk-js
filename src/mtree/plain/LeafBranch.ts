@@ -1,5 +1,6 @@
 import { DataHash } from '../../hash/DataHash.js';
 import { HexConverter } from '../../util/HexConverter.js';
+import { dedent } from '../../util/StringUtils.js';
 
 export class LeafBranch {
   public constructor(
@@ -17,9 +18,9 @@ export class LeafBranch {
   }
 
   public toString(): string {
-    return `
+    return dedent`
       Leaf[${this.path.toString(2)}]
         Value: ${HexConverter.encode(this._value)}
-    `;
+        Hash: ${this.hash.toString()}`;
   }
 }

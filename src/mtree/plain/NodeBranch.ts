@@ -7,7 +7,6 @@ export class NodeBranch {
     public readonly path: bigint,
     public readonly left: Branch,
     public readonly right: Branch,
-    public readonly childrenHash: DataHash,
     public readonly hash: DataHash,
   ) {}
 
@@ -18,7 +17,6 @@ export class NodeBranch {
   public toString(): string {
     return dedent`
       Node[${this.path.toString(2)}]
-        Children Hash: ${this.childrenHash.toString()}
         Hash: ${this.hash.toString()}
         Left: ${this.left.toString()}
         Right: ${this.right.toString()}`;

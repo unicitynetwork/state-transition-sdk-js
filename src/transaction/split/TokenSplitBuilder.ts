@@ -182,8 +182,8 @@ export class TokenSplitBuilder {
     for (const [coinId, tree] of trees.values()) {
       const coinsInToken = token.coins.get(coinId);
       const root = await tree.calculateRoot();
-      if (root.sum !== coinsInToken) {
-        throw new Error(`Token contained ${coinsInToken} ${coinId} coins, but tree has ${root.sum}`);
+      if (root.counter !== coinsInToken) {
+        throw new Error(`Token contained ${coinsInToken} ${coinId} coins, but tree has ${root.counter}`);
       }
 
       coinRoots.set(coinId.toJSON(), root);

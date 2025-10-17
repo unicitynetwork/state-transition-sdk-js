@@ -12,8 +12,8 @@ describe('Transition', function () {
   let client: StateTransitionClient;
   let trustBase: RootTrustBase;
 
-  beforeEach(async () => {
-    const aggregatorClient = await TestAggregatorClient.create();
+  beforeEach(() => {
+    const aggregatorClient = TestAggregatorClient.create();
     client = new StateTransitionClient(aggregatorClient);
     trustBase = aggregatorClient.rootTrustBase;
   });

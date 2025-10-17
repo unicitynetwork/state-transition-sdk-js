@@ -1,8 +1,9 @@
+import { bitLen } from '@noble/curves/utils.js';
+
 import { PathVerificationResult } from './PathVerificationResult.js';
 import { ISparseMerkleTreePathStepJson, SparseMerkleTreePathStep } from './SparseMerkleTreePathStep.js';
 import { DataHash } from '../../hash/DataHash.js';
 import { DataHasher } from '../../hash/DataHasher.js';
-import { HashAlgorithm } from '../../hash/HashAlgorithm.js';
 import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
 import { CborDeserializer } from '../../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../serializer/cbor/CborSerializer.js';
@@ -38,7 +39,8 @@ export class SparseMerkleTreePath {
       'root' in data &&
       typeof data.root === 'string' &&
       'steps' in data &&
-      Array.isArray(data.steps)
+      Array.isArray(data.steps) &&
+      data.steps.length > 0
     );
   }
 
@@ -72,35 +74,54 @@ export class SparseMerkleTreePath {
    * @returns A Promise resolving to a PathVerificationResult indicating success or failure.
    */
   public async verify(requestId: bigint): Promise<PathVerificationResult> {
+    let step = this.steps[0];
+
+    let currentData: Uint8Array | null;
     let currentPath = 1n;
-    let currentHash: DataHash | null = null;
-
-    for (let i = 0; i < this.steps.length; i++) {
-      const step = this.steps[i];
-      let hash: Uint8Array;
-      if (step.branch === null) {
-        hash = new Uint8Array(1);
-      } else {
-        const bytes = i === 0 ? step.branch.value : currentHash?.data;
-        const digest = await new DataHasher(HashAlgorithm.SHA256)
-          .update(BigintConverter.encode(step.path))
-          .update(bytes ?? new Uint8Array(1))
-          .digest();
-        hash = digest.data;
-
-        const length = BigInt(step.path.toString(2).length - 1);
-        currentPath = (currentPath << length) | (step.path & ((1n << length) - 1n));
-      }
-
-      const siblingHash = step.sibling?.value ?? new Uint8Array(1);
-      const isRight = step.path & 1n;
-      currentHash = await new DataHasher(HashAlgorithm.SHA256)
-        .update(isRight ? siblingHash : hash)
-        .update(isRight ? hash : siblingHash)
+    if (step.path > 0) {
+      const hash = await new DataHasher(this.root.algorithm)
+        .update(
+          CborSerializer.encodeArray(
+            CborSerializer.encodeByteString(BigintConverter.encode(step.path)),
+            CborSerializer.encodeOptional(step.data, CborSerializer.encodeByteString),
+          ),
+        )
         .digest();
+      currentData = hash.data;
+
+      const length = BigInt(bitLen(step.path) - 1);
+      currentPath = (currentPath << length) | (step.path & ((1n << length) - 1n));
+    } else {
+      currentData = step.data;
     }
 
-    return new PathVerificationResult(!!currentHash && this.root.equals(currentHash), requestId === currentPath);
+    for (let i = 1; i < this.steps.length; i++) {
+      step = this.steps[i];
+      const isRight = currentPath & 1n;
+
+      const left = isRight ? step.data : currentData;
+      const right = isRight ? currentData : step.data;
+
+      const hash = await new DataHasher(this.root.algorithm)
+        .update(
+          CborSerializer.encodeArray(
+            CborSerializer.encodeByteString(BigintConverter.encode(step.path)),
+            CborSerializer.encodeOptional(left, CborSerializer.encodeByteString),
+            CborSerializer.encodeOptional(right, CborSerializer.encodeByteString),
+          ),
+        )
+        .digest();
+
+      currentData = hash.data;
+
+      const length = BigInt(bitLen(step.path) - 1);
+      currentPath = (currentPath << length) | (step.path & ((1n << length) - 1n));
+    }
+
+    const pathValid = currentData != null && this.root.equals(new DataHash(this.root.algorithm, currentData));
+    const pathIncluded = requestId === currentPath;
+
+    return new PathVerificationResult(pathValid, pathIncluded);
   }
 
   public toString(): string {

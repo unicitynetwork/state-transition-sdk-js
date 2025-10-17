@@ -1,5 +1,5 @@
+import { InvalidJsonStructureError } from '../../../../src/InvalidJsonStructureError.js';
 import { TokenCoinData } from '../../../../src/token/fungible/TokenCoinData.js';
-import { InvalidJsonStructureError } from '../../../../src/InvalidJsonStructureError';
 
 describe('TokenCoinData', () => {
   it('should check if json input is correct', () => {

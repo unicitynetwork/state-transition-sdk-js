@@ -2,6 +2,7 @@ import { NodeBranch } from './NodeBranch.js';
 import { PendingBranch } from './PendingBranch.js';
 import { IDataHasher } from '../../hash/IDataHasher.js';
 import { IDataHasherFactory } from '../../hash/IDataHasherFactory.js';
+import { CborSerializer } from '../../serializer/cbor/CborSerializer.js';
 import { BigintConverter } from '../../util/BigintConverter.js';
 
 export class PendingNodeBranch {
@@ -13,8 +14,17 @@ export class PendingNodeBranch {
 
   public async finalize(factory: IDataHasherFactory<IDataHasher>): Promise<NodeBranch> {
     const [left, right] = await Promise.all([this.left.finalize(factory), this.right.finalize(factory)]);
-    const childrenHash = await factory.create().update(left.hash.data).update(right.hash.data).digest();
-    const hash = await factory.create().update(BigintConverter.encode(this.path)).update(childrenHash.data).digest();
-    return new NodeBranch(this.path, left, right, childrenHash, hash);
+    const hash = await factory
+      .create()
+      .update(
+        CborSerializer.encodeArray(
+          CborSerializer.encodeByteString(BigintConverter.encode(this.path)),
+          CborSerializer.encodeByteString(left.hash.data),
+          CborSerializer.encodeByteString(right.hash.data),
+        ),
+      )
+      .digest();
+
+    return new NodeBranch(this.path, left, right, hash);
   }
 }

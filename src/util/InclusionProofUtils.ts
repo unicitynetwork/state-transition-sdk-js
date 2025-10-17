@@ -38,8 +38,14 @@ export async function waitInclusionProof(
   while (true) {
     try {
       const inclusionProof = await client.getInclusionProof(commitment).then((response) => response.inclusionProof);
-      if ((await inclusionProof.verify(trustBase, commitment.requestId)) === InclusionProofVerificationStatus.OK) {
-        return inclusionProof;
+      const verificationStatus = await inclusionProof.verify(trustBase, commitment.requestId);
+      switch (verificationStatus) {
+        case InclusionProofVerificationStatus.OK:
+          return inclusionProof;
+        case InclusionProofVerificationStatus.PATH_NOT_INCLUDED:
+          break;
+        default:
+          throw new Error(`Invalid inclusion proof status: ${verificationStatus}`);
       }
     } catch (err) {
       if (!(err instanceof JsonRpcNetworkError && err.status === 404)) {

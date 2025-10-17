@@ -50,7 +50,12 @@ export class SigningService implements ISigningService<Signature> {
   }
 
   public static verifySignatureWithRecoveredPublicKey(hash: DataHash, signature: Signature): Promise<boolean> {
-    const publicKey = secp256k1.Signature.fromBytes(signature.bytes, 'recovered').recoverPublicKey(hash.data).toBytes();
+    const publicKey = secp256k1.Signature.fromBytes(
+      new Uint8Array([signature.recovery, ...signature.bytes]),
+      'recovered',
+    )
+      .recoverPublicKey(hash.data)
+      .toBytes();
     return SigningService.verifyWithPublicKey(hash, signature.bytes, publicKey);
   }
 

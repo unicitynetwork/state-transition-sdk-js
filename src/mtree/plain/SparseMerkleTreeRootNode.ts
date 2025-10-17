@@ -6,6 +6,8 @@ import { calculateCommonPath } from './SparseMerkleTreePathUtils.js';
 import { DataHash } from '../../hash/DataHash.js';
 import { IDataHasher } from '../../hash/IDataHasher.js';
 import { IDataHasherFactory } from '../../hash/IDataHasherFactory.js';
+import { CborSerializer } from '../../serializer/cbor/CborSerializer.js';
+import { BigintConverter } from '../../util/BigintConverter.js';
 import { dedent } from '../../util/StringUtils.js';
 
 /**
@@ -34,8 +36,13 @@ export class SparseMerkleTreeRootNode {
   ): Promise<SparseMerkleTreeRootNode> {
     const hash = await factory
       .create()
-      .update(left?.hash.data ?? new Uint8Array(1))
-      .update(right?.hash.data ?? new Uint8Array(1))
+      .update(
+        CborSerializer.encodeArray(
+          CborSerializer.encodeByteString(BigintConverter.encode(1n)),
+          CborSerializer.encodeOptional(left?.hash.data, CborSerializer.encodeByteString),
+          CborSerializer.encodeOptional(right?.hash.data, CborSerializer.encodeByteString),
+        ),
+      )
       .digest();
 
     return new SparseMerkleTreeRootNode(left ?? null, right ?? null, hash);
@@ -43,36 +50,37 @@ export class SparseMerkleTreeRootNode {
 
   private static generatePath(
     remainingPath: bigint,
-    left: Branch | null,
-    right: Branch | null,
+    parent: Branch | SparseMerkleTreeRootNode,
   ): ReadonlyArray<SparseMerkleTreePathStep> {
-    const isRight = remainingPath & 1n;
-    const branch = isRight ? right : left;
-    const siblingBranch = isRight ? left : right;
-
-    if (branch === null) {
-      return [SparseMerkleTreePathStep.createWithoutBranch(remainingPath, siblingBranch)];
+    if (parent instanceof LeafBranch) {
+      return [new SparseMerkleTreePathStep(parent.path, parent.value)];
     }
 
-    const commonPath = calculateCommonPath(remainingPath, branch.path);
+    const commonPath = calculateCommonPath(remainingPath, parent.path);
+    remainingPath = remainingPath >> commonPath.length;
 
-    if (branch.path === commonPath.path) {
-      if (branch instanceof LeafBranch) {
-        return [SparseMerkleTreePathStep.create(branch.path, branch, siblingBranch)];
-      }
-
-      // If path has ended, return the current non leaf branch data
-      if (remainingPath >> commonPath.length === 1n) {
-        return [SparseMerkleTreePathStep.create(branch.path, branch, siblingBranch)];
-      }
-
+    if (commonPath.path !== parent.path || remainingPath === 1n) {
       return [
-        ...this.generatePath(remainingPath >> commonPath.length, branch.left, branch.right),
-        SparseMerkleTreePathStep.create(branch.path, null, siblingBranch),
+        new SparseMerkleTreePathStep(0n, parent.right?.hash.data ?? null),
+        new SparseMerkleTreePathStep(parent.path, parent.left?.hash.data ?? null),
       ];
     }
 
-    return [SparseMerkleTreePathStep.create(branch.path, branch, siblingBranch)];
+    const isRight = remainingPath & 1n;
+    const branch = isRight ? parent.right : parent.left;
+    const siblingBranch = isRight ? parent.left : parent.right;
+
+    if (branch === null) {
+      return [
+        new SparseMerkleTreePathStep(0n, parent.right?.hash.data ?? null),
+        new SparseMerkleTreePathStep(1n, parent.left?.hash.data ?? null),
+      ];
+    }
+
+    return [
+      ...this.generatePath(remainingPath, branch),
+      new SparseMerkleTreePathStep(parent.path, siblingBranch?.hash.data ?? null),
+    ];
   }
 
   /**
@@ -81,7 +89,7 @@ export class SparseMerkleTreeRootNode {
    * @returns A MerkleTreePath instance representing the path in the tree.
    */
   public getPath(path: bigint): SparseMerkleTreePath {
-    return new SparseMerkleTreePath(this.hash, SparseMerkleTreeRootNode.generatePath(path, this.left, this.right));
+    return new SparseMerkleTreePath(this.hash, SparseMerkleTreeRootNode.generatePath(path, this));
   }
 
   /**
@@ -89,6 +97,8 @@ export class SparseMerkleTreeRootNode {
    */
   public toString(): string {
     return dedent`
+      Root: 
+        Hash: ${this.hash.toString()}
       Left: 
         ${this.left ? this.left.toString() : 'null'}
       Right: 

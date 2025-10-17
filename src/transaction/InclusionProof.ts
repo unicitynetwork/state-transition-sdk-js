@@ -158,7 +158,7 @@ export class InclusionProof {
       }
 
       const leafValue = await LeafValue.create(this.authenticator, this.transactionHash);
-      if (!leafValue.equals(this.merkleTreePath.steps.at(0)?.branch?.value)) {
+      if (!leafValue.equals(this.merkleTreePath.steps.at(0)?.data)) {
         return InclusionProofVerificationStatus.PATH_NOT_INCLUDED;
       }
     }
