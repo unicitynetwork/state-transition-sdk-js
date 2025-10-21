@@ -316,6 +316,8 @@ JSON.stringify(token);
 #### Receiver side
 
 1. Create nametag
+    
+Nametag target address can currently only be created from unmasked predicate reference.
 
 ```typescript
 const secret = crypto.getRandomValues(new Uint8Array(128)); // User secret key
