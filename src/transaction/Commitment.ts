@@ -1,10 +1,10 @@
-import { Authenticator } from '@unicitylabs/commons/lib/api/Authenticator.js';
-import { RequestId } from '@unicitylabs/commons/lib/api/RequestId.js';
-import { SigningService } from '@unicitylabs/commons/lib/signing/SigningService.js';
-
-import { ISerializable } from '../ISerializable.js';
+import { IMintTransactionReason } from './IMintTransactionReason.js';
+import { InclusionProof } from './InclusionProof.js';
 import { MintTransactionData } from './MintTransactionData.js';
-import { TransactionData } from './TransactionData.js';
+import { Transaction } from './Transaction.js';
+import { TransferTransactionData } from './TransferTransactionData.js';
+import { Authenticator } from '../api/Authenticator.js';
+import { RequestId } from '../api/RequestId.js';
 
 /**
  * Represents a commitment to a transaction, including its request ID, transaction data,
@@ -13,7 +13,7 @@ import { TransactionData } from './TransactionData.js';
  * @template T - The type of transaction data, which can be either `TransactionData`
  *               or `MintTransactionData` with an optional `ISerializable` payload.
  */
-export class Commitment<T extends TransactionData | MintTransactionData<ISerializable | null>> {
+export abstract class Commitment<T extends TransferTransactionData | MintTransactionData<IMintTransactionReason>> {
   /**
    * Creates a new `Commitment` instance.
    *
@@ -21,30 +21,17 @@ export class Commitment<T extends TransactionData | MintTransactionData<ISeriali
    * @param {T} transactionData - The data associated with the transaction.
    * @param {Authenticator} authenticator - The signature over the transaction payload.
    */
-  public constructor(
+  protected constructor(
     public readonly requestId: RequestId,
     public readonly transactionData: T,
     public readonly authenticator: Authenticator,
   ) {}
 
   /**
-   * Creates a new `Commitment` instance by generating a request ID and authenticator.
+   * Convert commitment to transaction.
    *
-   * @template T - The type of transaction data.
-   * @param {T} transactionData - The data associated with the transaction.
-   * @param {SigningService} signingService - The service used to sign the transaction.
-   * @returns {Promise<Commitment<T>>} A promise that resolves to a new `Commitment` instance.
+   * @param {InclusionProof} inclusionProof Commitment inclusion proof
+   * @return transaction
    */
-  public static async create<T extends TransactionData | MintTransactionData<ISerializable | null>>(
-    transactionData: T,
-    signingService: SigningService,
-  ): Promise<Commitment<T>> {
-    const requestId = await RequestId.create(signingService.publicKey, transactionData.sourceState.hash);
-    const authenticator = await Authenticator.create(
-      signingService,
-      transactionData.hash,
-      transactionData.sourceState.hash,
-    );
-    return new Commitment(requestId, transactionData, authenticator);
-  }
+  public abstract toTransaction(inclusionProof: InclusionProof): Transaction<T>;
 }

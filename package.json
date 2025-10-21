@@ -1,6 +1,6 @@
 {
   "name": "@unicitylabs/state-transition-sdk",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Generic State Transition Flow engine for value-carrier agents",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -12,7 +12,7 @@
     "lint": "eslint \"src/**/*\" \"tests/**/*\"",
     "lint:fix": "eslint \"src/**/*\" \"tests/**/*\" --fix",
     "test": "jest --testPathPatterns=tests --testPathIgnorePatterns=tests/e2e",
-    "test:unit": "jest --testPathPatterns=tests/unit",
+    "test:unit": "jest --testPathPatterns=tests/unit --testPathPatterns=tests/functional",
     "test:integration": "jest --testPathPatterns=tests/integration",
     "test:e2e": "jest --testPathPatterns=tests/e2e",
     "test:ci": "DEBUG=testcontainers:containers jest --testPathPatterns=tests --testPathIgnorePatterns=tests/e2e --ci --reporters=default",
@@ -32,22 +32,24 @@
   "license": "ISC",
   "homepage": "https://unicitynetwork.github.io/state-transition-sdk/",
   "dependencies": {
-    "@unicitylabs/commons": "2.4.0-rc.f631bc4"
+    "@noble/hashes": "2.0.1",
+    "@noble/curves": "2.0.1",
+    "uuid": "13.0.0"
   },
   "devDependencies": {
-    "@babel/preset-env": "7.27.2",
+    "@babel/preset-env": "7.28.3",
     "@babel/preset-typescript": "7.27.1",
-    "@eslint/js": "9.29.0",
+    "@eslint/js": "9.37.0",
     "@types/jest": "30.0.0",
-    "babel-jest": "30.0.0",
-    "eslint": "9.29.0",
-    "eslint-config-prettier": "10.1.5",
-    "eslint-plugin-import": "2.31.0",
-    "eslint-plugin-prettier": "5.4.1",
-    "globals": "16.2.0",
-    "jest": "30.0.0",
-    "testcontainers": "11.0.3",
-    "typescript": "5.8.3",
-    "typescript-eslint": "8.34.0"
+    "babel-jest": "30.2.0",
+    "eslint": "9.37.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-import": "2.32.0",
+    "eslint-plugin-prettier": "5.5.4",
+    "globals": "16.4.0",
+    "jest": "30.2.0",
+    "testcontainers": "11.7.1",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.46.1"
   }
 }

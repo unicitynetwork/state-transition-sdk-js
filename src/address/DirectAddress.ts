@@ -1,11 +1,9 @@
-import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
-import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
-import { DataHasher } from '@unicitylabs/commons/lib/hash/DataHasher.js';
-import { HashAlgorithm } from '@unicitylabs/commons/lib/hash/HashAlgorithm.js';
-import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
-
 import { AddressScheme } from './AddressScheme.js';
 import { IAddress } from './IAddress.js';
+import { DataHash } from '../hash/DataHash.js';
+import { DataHasher } from '../hash/DataHasher.js';
+import { HashAlgorithm } from '../hash/HashAlgorithm.js';
+import { HexConverter } from '../util/HexConverter.js';
 
 /**
  * Address that directly references a predicate.
@@ -35,53 +33,25 @@ export class DirectAddress implements IAddress {
   }
 
   /**
-   * Build a direct address from a predicate reference.
-   *
-   * @param predicateReference The predicate reference to encode
-   * @returns Newly created address instance
+   * @inheritDoc
    */
-  public static async create(predicateReference: DataHash): Promise<DirectAddress> {
-    const checksum = await new DataHasher(HashAlgorithm.SHA256).update(predicateReference.toCBOR()).digest();
-    return new DirectAddress(predicateReference, checksum.data.slice(0, 4));
-  }
-
-  /**
-   * Create new DirectAddress from string.
-   * @param data Address as string.
-   */
-  public static async fromJSON(data: string): Promise<DirectAddress> {
-    const [scheme, uri] = data.split('://');
-    if (scheme !== AddressScheme.DIRECT) {
-      throw new Error(`Invalid address scheme: expected ${AddressScheme.DIRECT}, got ${scheme}`);
-    }
-
-    const checksum = uri.slice(-8);
-    const address = await DirectAddress.create(DataHash.fromCBOR(HexConverter.decode(uri.slice(0, -8))));
-    if (HexConverter.encode(address.checksum) !== checksum) {
-      throw new Error(
-        `Invalid checksum for DirectAddress: expected ${checksum}, got ${HexConverter.encode(address.checksum)}`,
-      );
-    }
-
-    return address;
-  }
-
-  /**
-   * Convert the address into its canonical string form.
-   */
-  public toJSON(): string {
+  public get address(): string {
     return this.toString();
   }
 
   /**
-   * Encode the address as a CBOR text string.
+   * Build a direct address from a predicate reference.
+   *
+   * @param reference The predicate reference hash to encode
+   * @returns Newly created address instance
    */
-  public toCBOR(): Uint8Array {
-    return CborEncoder.encodeTextString(this.toString());
+  public static async create(reference: DataHash): Promise<DirectAddress> {
+    const checksum = await new DataHasher(HashAlgorithm.SHA256).update(reference.imprint).digest();
+    return new DirectAddress(reference, checksum.data.slice(0, 4));
   }
 
   /** Convert instance to readable string */
   public toString(): string {
-    return `${this.scheme}://${HexConverter.encode(this.data.toCBOR())}${HexConverter.encode(this.checksum)}`;
+    return `${this.scheme}://${HexConverter.encode(this.data.imprint)}${HexConverter.encode(this.checksum)}`;
   }
 }

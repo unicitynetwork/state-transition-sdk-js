@@ -10,5 +10,7 @@ export default {
   transform: {
     '^.+\\.[tj]sx?$': 'babel-jest',
   },
-  transformIgnorePatterns: ['/node_modules/(?!@unicitylabs)'],
+  transformIgnorePatterns: [
+    "/node_modules/(?!uuid)/"
+  ]
 };

@@ -1,7 +1,7 @@
-import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
-import { dedent } from '@unicitylabs/commons/lib/util/StringUtils.js';
-
+import { InvalidJsonStructureError } from '../src/InvalidJsonStructureError.js';
 import { ISerializable } from '../src/ISerializable.js';
+import { HexConverter } from '../src/util/HexConverter.js';
+import { dedent } from '../src/util/StringUtils.js';
 
 export class TestTokenData implements ISerializable {
   public constructor(private readonly _data: Uint8Array) {
@@ -14,7 +14,7 @@ export class TestTokenData implements ISerializable {
 
   public static fromJSON(data: unknown): Promise<TestTokenData> {
     if (typeof data !== 'string') {
-      throw new Error('Invalid test token data');
+      throw new InvalidJsonStructureError();
     }
 
     return Promise.resolve(new TestTokenData(HexConverter.decode(data)));

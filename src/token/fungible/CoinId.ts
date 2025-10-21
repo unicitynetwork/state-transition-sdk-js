@@ -1,7 +1,7 @@
-import { CborDecoder } from '@unicitylabs/commons/lib/cbor/CborDecoder.js';
-import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
-import { BitString } from '@unicitylabs/commons/lib/util/BitString.js';
-import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
+import { CborDeserializer } from '../../serializer/cbor/CborDeserializer.js';
+import { CborSerializer } from '../../serializer/cbor/CborSerializer.js';
+import { BitString } from '../../util/BitString.js';
+import { HexConverter } from '../../util/HexConverter.js';
 
 /** Identifier for a fungible coin type. */
 export class CoinId {
@@ -10,6 +10,10 @@ export class CoinId {
    */
   public constructor(private readonly data: Uint8Array) {
     this.data = new Uint8Array(data);
+  }
+
+  public get bytes(): Uint8Array {
+    return new Uint8Array(this.data);
   }
 
   /**
@@ -25,7 +29,7 @@ export class CoinId {
    * @param data
    */
   public static fromCBOR(data: Uint8Array): CoinId {
-    return new CoinId(CborDecoder.readByteString(data));
+    return new CoinId(CborDeserializer.readByteString(data));
   }
 
   /** Hex string representation. */
@@ -35,7 +39,7 @@ export class CoinId {
 
   /** CBOR serialization. */
   public toCBOR(): Uint8Array {
-    return CborEncoder.encodeByteString(this.data);
+    return CborSerializer.encodeByteString(this.data);
   }
 
   /**

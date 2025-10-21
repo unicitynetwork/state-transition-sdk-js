@@ -1,8 +1,8 @@
-import { Authenticator } from '@unicitylabs/commons/lib/api/Authenticator.js';
-import { InclusionProof } from '@unicitylabs/commons/lib/api/InclusionProof.js';
-import { RequestId } from '@unicitylabs/commons/lib/api/RequestId.js';
-import { SubmitCommitmentResponse } from '@unicitylabs/commons/lib/api/SubmitCommitmentResponse.js';
-import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
+import { Authenticator } from './Authenticator.js';
+import { InclusionProofResponse } from './InclusionProofResponse.js';
+import { RequestId } from './RequestId.js';
+import { SubmitCommitmentResponse } from './SubmitCommitmentResponse.js';
+import { DataHash } from '../hash/DataHash.js';
 
 /**
  * Client interface for interacting with an aggregator service.
@@ -17,7 +17,7 @@ export interface IAggregatorClient {
    * @param receipt         Require a signed receipt of the commitment
    * @returns Result status from the aggregator
    */
-  submitTransaction(
+  submitCommitment(
     requestId: RequestId,
     transactionHash: DataHash,
     authenticator: Authenticator,
@@ -30,5 +30,5 @@ export interface IAggregatorClient {
    * @param requestId Request identifier to query
    * @returns The inclusion proof returned by the aggregator
    */
-  getInclusionProof(requestId: RequestId): Promise<InclusionProof>;
+  getInclusionProof(requestId: RequestId): Promise<InclusionProofResponse>;
 }

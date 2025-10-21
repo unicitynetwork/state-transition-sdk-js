@@ -1,45 +1,34 @@
-import { InclusionProofVerificationStatus } from '@unicitylabs/commons/lib/api/InclusionProof.js';
-import { SubmitCommitmentStatus } from '@unicitylabs/commons/lib/api/SubmitCommitmentResponse.js';
-import { DataHasher } from '@unicitylabs/commons/lib/hash/DataHasher.js';
-import { DataHasherFactory } from '@unicitylabs/commons/lib/hash/DataHasherFactory.js';
-import { HashAlgorithm } from '@unicitylabs/commons/lib/hash/HashAlgorithm.js';
-import { NodeDataHasher } from '@unicitylabs/commons/lib/hash/NodeDataHasher.js';
-import { SigningService } from '@unicitylabs/commons/lib/signing/SigningService.js';
-
-import { DirectAddress } from '../../src/address/DirectAddress.js';
-import { ISerializable } from '../../src/ISerializable.js';
-import { BurnPredicate } from '../../src/predicate/BurnPredicate.js';
-import { MaskedPredicate } from '../../src/predicate/MaskedPredicate.js';
-import { PredicateJsonFactory } from '../../src/predicate/PredicateJsonFactory.js';
-import { TokenJsonSerializer } from '../../src/serializer/json/token/TokenJsonSerializer.js';
-import { CommitmentJsonSerializer } from '../../src/serializer/json/transaction/CommitmentJsonSerializer.js';
-import { TransactionJsonSerializer } from '../../src/serializer/json/transaction/TransactionJsonSerializer.js';
+import { SubmitCommitmentStatus } from '../../src/api/SubmitCommitmentResponse.js';
+import { RootTrustBase } from '../../src/bft/RootTrustBase.js';
+import { DataHasher } from '../../src/hash/DataHasher.js';
+import { HashAlgorithm } from '../../src/hash/HashAlgorithm.js';
+import { MaskedPredicate } from '../../src/predicate/embedded/MaskedPredicate.js';
+import { MaskedPredicateReference } from '../../src/predicate/embedded/MaskedPredicateReference.js';
+import { UnmaskedPredicate } from '../../src/predicate/embedded/UnmaskedPredicate.js';
+import { UnmaskedPredicateReference } from '../../src/predicate/embedded/UnmaskedPredicateReference.js';
+import { PredicateEngineService } from '../../src/predicate/PredicateEngineService.js';
+import { SigningService } from '../../src/sign/SigningService.js';
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
 import { CoinId } from '../../src/token/fungible/CoinId.js';
 import { TokenCoinData } from '../../src/token/fungible/TokenCoinData.js';
 import { Token } from '../../src/token/Token.js';
-import { TokenFactory } from '../../src/token/TokenFactory.js';
 import { TokenId } from '../../src/token/TokenId.js';
 import { TokenState } from '../../src/token/TokenState.js';
 import { TokenType } from '../../src/token/TokenType.js';
-import { Commitment } from '../../src/transaction/Commitment.js';
-import { MintTransactionData } from '../../src/transaction/MintTransactionData.js';
+import { IMintTransactionReason } from '../../src/transaction/IMintTransactionReason.js';
+import { InclusionProofVerificationStatus } from '../../src/transaction/InclusionProof.js';
 import { TokenSplitBuilder } from '../../src/transaction/split/TokenSplitBuilder.js';
-import { Transaction } from '../../src/transaction/Transaction.js';
-import { TransactionData } from '../../src/transaction/TransactionData.js';
-import { waitInclusionProof } from '../../src/utils/InclusionProofUtils.js';
+import { TransferCommitment } from '../../src/transaction/TransferCommitment.js';
+import { TransferTransaction } from '../../src/transaction/TransferTransaction.js';
+import { waitInclusionProof } from '../../src/util/InclusionProofUtils.js';
 import { createMintData, mintToken, sendToken } from '../MintTokenUtils.js';
-import { UnmaskedPredicate } from "../../src/predicate/UnmaskedPredicate.js";
 
 const textEncoder = new TextEncoder();
 const initialOwnerSecret = textEncoder.encode('Alice');
 const bobSecret = textEncoder.encode('Bob');
-const predicateFactory = new PredicateJsonFactory();
-const tokenFactory = new TokenFactory(new TokenJsonSerializer(predicateFactory));
-const transactionDeserializer = new TransactionJsonSerializer(predicateFactory);
 
 function performCheckForSplitTokens(
-  actualTokens: Token<Transaction<MintTransactionData<ISerializable | null>>>[],
+  actualTokens: Token<IMintTransactionReason>[],
   expectedCoinDataList: TokenCoinData[],
 ): void {
   expect(actualTokens.length).toEqual(expectedCoinDataList.length);
@@ -56,7 +45,7 @@ function performCheckForSplitTokens(
   });
 }
 
-export async function testTransferFlow(client: StateTransitionClient): Promise<void> {
+export async function testTransferFlow(trustBase: RootTrustBase, client: StateTransitionClient): Promise<void> {
   // Alice
   const mintData = await createMintData(
     initialOwnerSecret,
@@ -65,28 +54,34 @@ export async function testTransferFlow(client: StateTransitionClient): Promise<v
       [new CoinId(crypto.getRandomValues(new Uint8Array(32))), BigInt(Math.round(Math.random() * 90)) + 10n],
     ]),
   );
-  const aliceToken = await mintToken(client, mintData);
 
-  await expect(DirectAddress.create(mintData.predicate.reference)).resolves.toEqual(
-    await DirectAddress.fromJSON(aliceToken.genesis.data.recipient),
-  );
+  const aliceToken = await mintToken(trustBase, client, mintData);
+
+  await expect(
+    mintData.predicate
+      .getReference()
+      .then((reference) => reference.toAddress())
+      .then((address) => address.address),
+  ).resolves.toEqual(aliceToken.genesis.data.recipient.address);
 
   // Recipient (Bob) prepares the info for the transfer: new state and address
-  const bobTokenState = 'Bob\'s custom data'; // Bob gives this custom data to the Alice to use in the transfer
+  const bobTokenState = "Bob's custom data"; // Bob gives this custom data to the Alice to use in the transfer
   const bobNonce = crypto.getRandomValues(new Uint8Array(32));
   const bobSigningService = await SigningService.createFromSecret(bobSecret, bobNonce);
-  const bobPredicate = await MaskedPredicate.create(
+  const bobPredicate = MaskedPredicate.create(
     aliceToken.id,
     aliceToken.type,
     bobSigningService,
     HashAlgorithm.SHA256,
     bobNonce,
   );
-  const bobAddress = await DirectAddress.create(bobPredicate.reference);
+
+  const bobAddress = await bobPredicate.getReference().then((reference) => reference.toAddress());
 
   // IRL Bob should send Alice the state hash (sha256('bobTokenState')) to use in the transfer.
   // Alice creates transfer transaction using Bob's address and new token state and sends commitment to the aggregator.
   const transaction = await sendToken(
+    trustBase,
     client,
     aliceToken,
     await SigningService.createFromSecret(initialOwnerSecret, mintData.nonce),
@@ -95,29 +90,19 @@ export async function testTransferFlow(client: StateTransitionClient): Promise<v
   );
 
   // Bob imports token+transaction
-  const importedToken = await tokenFactory.create(aliceToken.toJSON());
+  const importedToken = await Token.fromJSON(aliceToken.toJSON());
   // Recipient gets transaction from sender
-  const importedTransaction = await transactionDeserializer.deserialize(
-    importedToken.id,
-    importedToken.type,
-    TransactionJsonSerializer.serialize(transaction),
-  );
+  const importedTransaction = await TransferTransaction.fromJSON(transaction.toJSON());
 
   // Finish the transaction with the Bob's predicate
-  const bobToken = await client.finishTransaction(
+  const bobToken = await client.finalizeTransaction(
+    trustBase,
     importedToken,
-    await TokenState.create(bobPredicate, textEncoder.encode(bobTokenState)),
+    new TokenState(bobPredicate, textEncoder.encode(bobTokenState)),
     importedTransaction,
   );
 
-  const minterSigningService = await SigningService.createFromSecret(
-    initialOwnerSecret,
-    aliceToken.state.unlockPredicate.nonce,
-  );
-  await expect(bobToken.state.unlockPredicate.isOwner(bobSigningService.publicKey)).resolves.toBeTruthy();
-  await expect(
-    bobToken.transactions.at(-1)?.data.sourceState.unlockPredicate.isOwner(minterSigningService.publicKey),
-  ).resolves.toBeTruthy();
+  await expect(bobToken.verify(trustBase).then((result) => result.isSuccessful)).resolves.toBeTruthy();
   expect(bobToken.id).toEqual(aliceToken.id);
   expect(bobToken.type).toEqual(aliceToken.type);
   expect(bobToken.data).toEqual(aliceToken.data);
@@ -125,78 +110,75 @@ export async function testTransferFlow(client: StateTransitionClient): Promise<v
 
   // Verify the original minted token has been spent
   const senderSigningService = await SigningService.createFromSecret(initialOwnerSecret, mintData.nonce);
-  const mintedTokenStatus = await client.getTokenStatus(aliceToken, senderSigningService.publicKey);
+  const mintedTokenStatus = await client.getTokenStatus(trustBase, aliceToken, senderSigningService.publicKey);
   expect(mintedTokenStatus).toEqual(InclusionProofVerificationStatus.OK);
 
   // Verify the updated token has not been spent
-  const transferredTokenStatus = await client.getTokenStatus(bobToken, bobSigningService.publicKey);
+  const transferredTokenStatus = await client.getTokenStatus(trustBase, bobToken, bobSigningService.publicKey);
   expect(transferredTokenStatus).toEqual(InclusionProofVerificationStatus.PATH_NOT_INCLUDED);
 
   // Transfer to the third owner (Carol) with UnmaskedPredicate
   const carolSecret = textEncoder.encode('Carol');
   const carolNonce = crypto.getRandomValues(new Uint8Array(32));
   const carolSigningService = await SigningService.createFromSecret(carolSecret, carolNonce);
-  const carolRef = await UnmaskedPredicate.calculateReference(aliceToken.type, carolSigningService.algorithm, carolSigningService.publicKey, HashAlgorithm.SHA256);
-  const carolAddress = await DirectAddress.create(carolRef);
+  const carolRef = await UnmaskedPredicateReference.createFromSigningService(
+    bobToken.type,
+    carolSigningService,
+    HashAlgorithm.SHA256,
+  );
+  const carolAddress = await carolRef.toAddress();
 
   // Create transfer transaction Bob -> Carol
   const txToCarol = await sendToken(
-      client,
-      bobToken,
-      bobSigningService,
-      carolAddress,
-      null, // NB! Carol has to provide Bob the token state hash. If she doesn't, Bob uses 'null'.
+    trustBase,
+    client,
+    bobToken,
+    bobSigningService,
+    carolAddress,
+    null, // NB! Carol has to provide Bob the token state hash. If she doesn't, Bob uses 'null'.
   );
 
   // Carol imports token
-  const carolToken = await tokenFactory.create(bobToken.toJSON());
+  const carolToken = await Token.fromJSON(bobToken.toJSON());
+  await expect(carolToken.verify(trustBase).then((result) => result.isSuccessful)).resolves.toBeTruthy();
+
   // Carol gets transaction from Bob
-  const carolTransaction = await transactionDeserializer.deserialize(
-      carolToken.id,
-      carolToken.type,
-      TransactionJsonSerializer.serialize(txToCarol),
-  );
+  const carolTransaction = await TransferTransaction.fromJSON(txToCarol.toJSON());
 
   // now Carol can create an UnmaskedPredicate knowing token information
   const carolPredicate = await UnmaskedPredicate.create(
-      carolToken.id,
-      carolToken.type,
-      carolSigningService,
-      HashAlgorithm.SHA256,
-      carolNonce,
+    carolToken.id,
+    carolToken.type,
+    carolSigningService,
+    HashAlgorithm.SHA256,
+    carolNonce,
   );
 
   // Finish the transaction with the Carol predicate
-  expect(carolTransaction.data.dataHash).toBeNull()
-  const finalizedCarolToken = await client.finishTransaction(
-      carolToken,
-      await TokenState.create(carolPredicate, null),
-      carolTransaction,
+  expect(carolTransaction.data.recipientDataHash).toBeNull();
+  const finalizedCarolToken = await client.finalizeTransaction(
+    trustBase,
+    carolToken,
+    new TokenState(carolPredicate, null),
+    carolTransaction,
   );
 
   expect(finalizedCarolToken.transactions).toHaveLength(2);
 }
 
-export async function testOfflineTransferFlow(client: StateTransitionClient): Promise<void> {
-  let token;
-  let mintDataNonce;
-  let firstOwnerSigningService: SigningService;
-  {
-    const data = await createMintData(
-      initialOwnerSecret,
-      TokenCoinData.create([
-        [new CoinId(crypto.getRandomValues(new Uint8Array(32))), BigInt(Math.round(Math.random() * 90)) + 10n],
-        [new CoinId(crypto.getRandomValues(new Uint8Array(32))), BigInt(Math.round(Math.random() * 90)) + 10n],
-      ]),
-    );
-    mintDataNonce = data.nonce;
-    firstOwnerSigningService = await SigningService.createFromSecret(initialOwnerSecret, mintDataNonce);
-    token = await mintToken(client, data);
+export async function testOfflineTransferFlow(trustBase: RootTrustBase, client: StateTransitionClient): Promise<void> {
+  const data = await createMintData(
+    initialOwnerSecret,
+    TokenCoinData.create([
+      [new CoinId(crypto.getRandomValues(new Uint8Array(32))), BigInt(Math.round(Math.random() * 90)) + 10n],
+      [new CoinId(crypto.getRandomValues(new Uint8Array(32))), BigInt(Math.round(Math.random() * 90)) + 10n],
+    ]),
+  );
 
-    await expect(DirectAddress.create(data.predicate.reference)).resolves.toEqual(
-      await DirectAddress.fromJSON(token.genesis.data.recipient),
-    );
-  }
+  const firstOwnerSigningService = await SigningService.createFromSecret(initialOwnerSecret, data.nonce);
+  const token = await mintToken(trustBase, client, data);
+  const predicateReference = await data.predicate.getReference();
+  await expect(predicateReference.toAddress()).resolves.toEqual(token.genesis.data.recipient);
 
   // Recipient prepares the info for the transfer
   const nonce = crypto.getRandomValues(new Uint8Array(32));
@@ -209,69 +191,57 @@ export async function testOfflineTransferFlow(client: StateTransitionClient): Pr
     nonce,
   );
 
-  const receivingAddress = await DirectAddress.create(recipientPredicate.reference);
+  const receivingAddress = await recipientPredicate.getReference().then((reference) => reference.toAddress());
 
-  const transactionData = await TransactionData.create(
-    token.state,
-    receivingAddress.toJSON(),
+  const commitment = await TransferCommitment.create(
+    token,
+    receivingAddress,
     crypto.getRandomValues(new Uint8Array(32)),
     await new DataHasher(HashAlgorithm.SHA256).update(textEncoder.encode('my custom data')).digest(),
     textEncoder.encode('my message'),
-    token.nametagTokens,
+    firstOwnerSigningService,
   );
-
-  const commitment = await Commitment.create(transactionData, firstOwnerSigningService);
 
   // Test the full JSON serialization cycle that would happen in real usage
   // 1. Get JSON representation of the offline transaction
-  const offlineTxJson = JSON.stringify({ commitment: CommitmentJsonSerializer.serialize(commitment), token });
+  const offlineTxJson = JSON.stringify({ commitment: commitment.toJSON(), token });
 
   // 2. Simulate transfer and parsing (what recipient would do)
   const parsedJson = JSON.parse(offlineTxJson);
 
   // 3. Deserialize back to object
   //...sender sends the "package" offline to the recipient
-  const importedToken = await tokenFactory.create(parsedJson.token);
-  const importedCommitment = await new CommitmentJsonSerializer(predicateFactory).deserialize(
-    importedToken.id,
-    importedToken.type,
-    parsedJson.commitment,
-  );
+  const importedToken = await Token.fromJSON(parsedJson.token);
+  const importedCommitment = await TransferCommitment.fromJSON(parsedJson.commitment);
 
   // Recipient imports token (offline json file transfer)
-  const response = await client.submitCommitment(importedCommitment);
+  const response = await client.submitTransferCommitment(importedCommitment);
   expect(response.status).toEqual(SubmitCommitmentStatus.SUCCESS);
 
-  const confirmedTx = await client.createTransaction(
-    importedCommitment,
-    await waitInclusionProof(client, importedCommitment),
-  );
-
   // Finish the transaction with the recipient predicate
-  const updateToken = await client.finishTransaction(
+  const updateToken = await client.finalizeTransaction(
+    trustBase,
     importedToken,
-    await TokenState.create(recipientPredicate, textEncoder.encode('my custom data')),
-    confirmedTx,
+    new TokenState(recipientPredicate, textEncoder.encode('my custom data')),
+    importedCommitment.toTransaction(await waitInclusionProof(trustBase, client, importedCommitment)),
   );
 
-  const signingService = await SigningService.createFromSecret(bobSecret, token.state.unlockPredicate.nonce);
-  expect(importedToken.state.unlockPredicate.isOwner(signingService.publicKey)).toBeTruthy();
+  await expect(updateToken.verify(trustBase).then((result) => result.isSuccessful)).resolves.toBeTruthy();
   expect(updateToken.id).toEqual(token.id);
   expect(updateToken.type).toEqual(token.type);
   expect(updateToken.data).toEqual(token.data);
   expect(updateToken.coins?.toJSON()).toEqual(token.coins?.toJSON());
 
   // Verify the original minted token has been spent
-  const senderSigningService = await SigningService.createFromSecret(initialOwnerSecret, mintDataNonce);
-  const mintedTokenStatus = await client.getTokenStatus(token, senderSigningService.publicKey);
+  const mintedTokenStatus = await client.getTokenStatus(trustBase, token, firstOwnerSigningService.publicKey);
   expect(mintedTokenStatus).toEqual(InclusionProofVerificationStatus.OK);
 
   // Verify the updated token has not been spent
-  const transferredTokenStatus = await client.getTokenStatus(updateToken, signingService.publicKey);
+  const transferredTokenStatus = await client.getTokenStatus(trustBase, updateToken, receiverSigningService.publicKey);
   expect(transferredTokenStatus).toEqual(InclusionProofVerificationStatus.PATH_NOT_INCLUDED);
 }
 
-export async function testSplitFlow(client: StateTransitionClient): Promise<void> {
+export async function testSplitFlow(trustBase: RootTrustBase, client: StateTransitionClient): Promise<void> {
   // First, let's mint a token in the usual way.
   const unicityToken = new CoinId(crypto.getRandomValues(new Uint8Array(32)));
   const alphaToken = new CoinId(crypto.getRandomValues(new Uint8Array(32)));
@@ -282,7 +252,7 @@ export async function testSplitFlow(client: StateTransitionClient): Promise<void
   ]);
 
   const mintTokenData = await createMintData(initialOwnerSecret, coinData);
-  const token = await mintToken(client, mintTokenData);
+  const token = await mintToken(trustBase, client, mintTokenData);
 
   const coinsPerNewTokens = [
     TokenCoinData.create([
@@ -293,28 +263,22 @@ export async function testSplitFlow(client: StateTransitionClient): Promise<void
   ];
 
   const splitTokens = await splitToken(
+    trustBase,
     token,
     coinsPerNewTokens,
     initialOwnerSecret,
     mintTokenData.nonce,
     'my custom data',
-    'my message',
     client,
   );
 
   performCheckForSplitTokens(splitTokens, coinsPerNewTokens);
-
-  // console.log('******************************************* Split token 1 *******************************************');
-  // console.log(JSON.stringify({ token: splitTokens[0], transactions: null }, null, 4));
-  //
-  // console.log('******************************************* Split token 2 *******************************************');
-  // console.log(JSON.stringify({ token: splitTokens[1], transactions: null }, null, 4));
-
-  const newTokenJson = JSON.stringify({ token: splitTokens[1], transactions: null });
-  await tokenFactory.create(JSON.parse(newTokenJson).token);
 }
 
-export async function testSplitFlowAfterTransfer(client: StateTransitionClient): Promise<void> {
+export async function testSplitFlowAfterTransfer(
+  trustBase: RootTrustBase,
+  client: StateTransitionClient,
+): Promise<void> {
   const unicityToken = new CoinId(crypto.getRandomValues(new Uint8Array(32)));
   const alphaToken = new CoinId(crypto.getRandomValues(new Uint8Array(32)));
 
@@ -324,9 +288,9 @@ export async function testSplitFlowAfterTransfer(client: StateTransitionClient):
   ]);
 
   const mintTokenData = await createMintData(initialOwnerSecret, coinData);
-  const token = await mintToken(client, mintTokenData);
+  const token = await mintToken(trustBase, client, mintTokenData);
 
-  // Perfrom 1st split
+  // Perform 1st split
   const coinsPerNewTokens = [
     TokenCoinData.create([
       [unicityToken, 50n],
@@ -339,12 +303,12 @@ export async function testSplitFlowAfterTransfer(client: StateTransitionClient):
   ];
 
   const splitTokens = await splitToken(
+    trustBase,
     token,
     coinsPerNewTokens,
     initialOwnerSecret,
     mintTokenData.nonce,
     'my custom data',
-    'my message',
     client,
   );
 
@@ -353,37 +317,34 @@ export async function testSplitFlowAfterTransfer(client: StateTransitionClient):
   const receiverNonce = crypto.getRandomValues(new Uint8Array(32));
   const recipientSigningService = await SigningService.createFromSecret(bobSecret, receiverNonce);
 
-  const reference = await MaskedPredicate.calculateReference(
+  const reference = await MaskedPredicateReference.createFromSigningService(
     splitTokens[0].type,
-    recipientSigningService.algorithm,
-    recipientSigningService.publicKey,
+    recipientSigningService,
     HashAlgorithm.SHA256,
     receiverNonce,
   );
-  const recipientAddress = await DirectAddress.create(reference);
+  const recipientAddress = await reference.toAddress();
+
+  const splitTokenPredicate = (await PredicateEngineService.createPredicate(
+    splitTokens[0].state.predicate,
+  )) as MaskedPredicate;
 
   // Create transfer transaction
   const sendTokenTx = await sendToken(
+    trustBase,
     client,
     splitTokens[0],
-    await SigningService.createFromSecret(initialOwnerSecret, splitTokens[0].state.unlockPredicate.nonce),
+    await SigningService.createFromSecret(initialOwnerSecret, splitTokenPredicate.nonce),
     recipientAddress,
   );
 
   //sender export token with transfer transaction
-  const tokenJson = JSON.stringify({
-    token: splitTokens[0],
-    transaction: TransactionJsonSerializer.serialize(sendTokenTx),
-  });
+  const tokenJson = JSON.stringify(splitTokens[0].toJSON());
 
   // Recipient imports token and transaction
-  const receiverImportedToken = await tokenFactory.create(JSON.parse(tokenJson).token);
+  const receiverImportedToken = await Token.fromJSON(JSON.parse(tokenJson));
 
-  const importedTransaction = await transactionDeserializer.deserialize(
-    receiverImportedToken.id,
-    receiverImportedToken.type,
-    JSON.parse(tokenJson).transaction,
-  );
+  const importedTransaction = await TransferTransaction.fromJSON(JSON.parse(JSON.stringify(sendTokenTx.toJSON())));
 
   const maskedPredicate = await MaskedPredicate.create(
     receiverImportedToken.id,
@@ -394,13 +355,14 @@ export async function testSplitFlowAfterTransfer(client: StateTransitionClient):
   );
 
   // Finish the transaction with the recipient predicate
-  const updateToken = await client.finishTransaction(
+  const updateToken = await client.finalizeTransaction(
+    trustBase,
     receiverImportedToken,
-    await TokenState.create(maskedPredicate, textEncoder.encode('my custom data')),
+    new TokenState(maskedPredicate, textEncoder.encode('my custom data')),
     importedTransaction,
   );
 
-  expect(receiverImportedToken.state.unlockPredicate.isOwner(recipientSigningService.publicKey)).toBeTruthy();
+  await expect(updateToken.verify(trustBase).then((result) => result.isSuccessful)).resolves.toBeTruthy();
   expect(updateToken.id).toEqual(splitTokens[0].id);
   expect(updateToken.type).toEqual(splitTokens[0].type);
   expect(updateToken.data).toEqual(splitTokens[0].data);
@@ -419,12 +381,12 @@ export async function testSplitFlowAfterTransfer(client: StateTransitionClient):
   ];
 
   const splitTokens2 = await splitToken(
+    trustBase,
     updateToken,
     coinsPerNewTokens2,
     bobSecret,
     receiverNonce,
     'my custom data',
-    'my custom message',
     client,
   );
 
@@ -432,80 +394,77 @@ export async function testSplitFlowAfterTransfer(client: StateTransitionClient):
 }
 
 async function splitToken(
-  token: Token<Transaction<MintTransactionData<ISerializable | null>>>,
+  trustBase: RootTrustBase,
+  token: Token<IMintTransactionReason>,
   coinsPerNewTokens: TokenCoinData[],
   ownerSecret: Uint8Array,
   nonce: Uint8Array,
   customDataString: string,
-  customMessage: string,
   client: StateTransitionClient,
-): Promise<Token<Transaction<MintTransactionData<ISerializable | null>>>[]> {
+): Promise<Token<IMintTransactionReason>[]> {
   const builder = new TokenSplitBuilder();
-  const predicates = new Map<bigint, MaskedPredicate>();
+  const nonces = new Map<string, Uint8Array>();
   for (const coins of coinsPerNewTokens) {
-    const tokenId = TokenId.create(crypto.getRandomValues(new Uint8Array(32)));
-    const tokenType = TokenType.create(crypto.getRandomValues(new Uint8Array(32)));
+    const tokenId = new TokenId(crypto.getRandomValues(new Uint8Array(32)));
+    const tokenType = new TokenType(crypto.getRandomValues(new Uint8Array(32)));
     const nonce = crypto.getRandomValues(new Uint8Array(32));
     const signingService = await SigningService.createFromSecret(ownerSecret, nonce);
 
-    const predicate = await MaskedPredicate.create(tokenId, tokenType, signingService, HashAlgorithm.SHA256, nonce);
-    predicates.set(tokenId.toBitString().toBigInt(), predicate);
+    const predicateReference = await MaskedPredicateReference.createFromSigningService(
+      tokenType,
+      signingService,
+      HashAlgorithm.SHA256,
+      nonce,
+    );
+    nonces.set(tokenId.toJSON(), nonce);
 
-    const address = await DirectAddress.create(predicate.reference);
-    const token = builder.createToken(
+    builder.createToken(
       tokenId,
       tokenType,
-      new Uint8Array(),
-      address.toString(),
-      await TokenState.create(predicate, textEncoder.encode(customDataString)),
-      new DataHasherFactory(HashAlgorithm.SHA256, DataHasher),
+      null,
+      coins,
+      await predicateReference.toAddress(),
       crypto.getRandomValues(new Uint8Array(32)),
+      await new DataHasher(HashAlgorithm.SHA256).update(textEncoder.encode(customDataString)).digest(),
     );
-
-    for (const [id, amount] of coins.coins) {
-      token.addCoin(id, amount);
-    }
   }
 
-  const splitResult = await builder.build(new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher));
-
-  const burnPredicate = await BurnPredicate.create(
-    token.id,
-    token.type,
+  const tokenSplitRequest = await builder.build(token);
+  const commitment = await tokenSplitRequest.createBurnCommitment(
     crypto.getRandomValues(new Uint8Array(32)),
-    splitResult.rootHash,
-  );
-
-  const commitment = await Commitment.create(
-    await TransactionData.create(
-      token.state,
-      (await DirectAddress.create(burnPredicate.reference)).toString(),
-      crypto.getRandomValues(new Uint8Array(32)),
-      await new NodeDataHasher(HashAlgorithm.SHA256).update(textEncoder.encode(customDataString)).digest(),
-      textEncoder.encode(customMessage),
-    ),
     await SigningService.createFromSecret(ownerSecret, nonce),
   );
-  const response = await client.submitCommitment(commitment);
-  expect(response.status).toEqual(SubmitCommitmentStatus.SUCCESS);
-  const transaction = await client.createTransaction(commitment, await waitInclusionProof(client, commitment));
 
-  const updatedToken = await client.finishTransaction(
-    token,
-    await TokenState.create(burnPredicate, textEncoder.encode(customDataString)),
-    transaction,
+  const response = await client.submitTransferCommitment(commitment);
+  expect(response.status).toEqual(SubmitCommitmentStatus.SUCCESS);
+
+  const splittedTokenMintCommitments = await tokenSplitRequest.createSplitMintCommitments(
+    trustBase,
+    commitment.toTransaction(await waitInclusionProof(trustBase, client, commitment)),
   );
 
-  const splitTokenDataList = await splitResult.getSplitTokenDataList(updatedToken);
   return Promise.all(
-    splitTokenDataList.map(async (data) => {
-      const commitment = await client.submitMintTransaction(data.transactionData);
+    splittedTokenMintCommitments.map(async (commitment) => {
+      const response = await client.submitMintCommitment(commitment);
+      if (response.status !== SubmitCommitmentStatus.SUCCESS) {
+        throw new Error(`Submitting mint commitment failed: ${response.status}`);
+      }
 
-      // Since submit takes time, inclusion proof might not be immediately available
-      const inclusionProof = await waitInclusionProof(client, commitment);
-      const transaction = await client.createTransaction(commitment, inclusionProof);
-
-      return new Token(data.state, transaction, []);
+      const nonce = nonces.get(commitment.transactionData.tokenId.toJSON())!;
+      return Token.mint(
+        trustBase,
+        new TokenState(
+          await MaskedPredicate.create(
+            commitment.transactionData.tokenId,
+            commitment.transactionData.tokenType,
+            await SigningService.createFromSecret(ownerSecret, nonce),
+            HashAlgorithm.SHA256,
+            nonce,
+          ),
+          textEncoder.encode(customDataString),
+        ),
+        commitment.toTransaction(await waitInclusionProof(trustBase, client, commitment)),
+      );
     }),
   );
 }

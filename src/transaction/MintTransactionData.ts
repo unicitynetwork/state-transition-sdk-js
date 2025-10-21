@@ -1,57 +1,63 @@
-import { RequestId } from '@unicitylabs/commons/lib/api/RequestId.js';
-import { CborEncoder } from '@unicitylabs/commons/lib/cbor/CborEncoder.js';
-import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
-import { DataHasher } from '@unicitylabs/commons/lib/hash/DataHasher.js';
-import { HashAlgorithm } from '@unicitylabs/commons/lib/hash/HashAlgorithm.js';
-import { HexConverter } from '@unicitylabs/commons/lib/util/HexConverter.js';
-import { dedent } from '@unicitylabs/commons/lib/util/StringUtils.js';
-
-import { ISerializable } from '../ISerializable.js';
-import { TokenCoinData } from '../token/fungible/TokenCoinData.js';
+import { IMintTransactionReason } from './IMintTransactionReason.js';
+import { MintTransactionState } from './MintTransactionState.js';
+import { AddressFactory } from '../address/AddressFactory.js';
+import { IAddress } from '../address/IAddress.js';
+import { DataHash } from '../hash/DataHash.js';
+import { DataHasher } from '../hash/DataHasher.js';
+import { HashAlgorithm } from '../hash/HashAlgorithm.js';
+import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
+import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
+import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
+import { SplitMintReason } from '../token/fungible/SplitMintReason.js';
+import { TokenCoinData, TokenCoinDataJson } from '../token/fungible/TokenCoinData.js';
 import { TokenId } from '../token/TokenId.js';
 import { TokenType } from '../token/TokenType.js';
+import { HexConverter } from '../util/HexConverter.js';
+import { dedent } from '../util/StringUtils.js';
 
-// TOKENID string SHA-256 hash
-/**
- * Constant suffix used when deriving the mint initial state.
- */
-const MINT_SUFFIX = HexConverter.decode('9e82002c144d7c5796c50f6db50a0c7bbd7f717ae3af6c6c71a3e9eba3022730');
+const textEncoder = new TextEncoder();
+
+export interface IMintTransactionDataJson {
+  readonly tokenId: string;
+  readonly tokenType: string;
+  readonly tokenData: string | null;
+  readonly coinData: TokenCoinDataJson | null;
+  readonly recipient: string;
+  readonly salt: string;
+  readonly recipientDataHash: string | null;
+  readonly reason: unknown | null;
+}
 
 /**
  * Data object describing a token mint operation.
  */
-export class MintTransactionData<R extends ISerializable | null> {
+export class MintTransactionData<R extends IMintTransactionReason> {
   /**
-   * @param hash        Hash of the encoded transaction
    * @param tokenId     Token identifier
    * @param tokenType   Token type identifier
+   * @param sourceState Mint transaction source state
    * @param _tokenData  Immutable token data used for the mint
    * @param coinData    Fungible coin data, or null if none
-   * @param sourceState Pseudo input state used for the mint
    * @param recipient   Address of the first owner
    * @param _salt       Random salt used to derive predicates
-   * @param dataHash    Optional metadata hash
+   * @param recipientDataHash    Optional metadata hash
    * @param reason      Optional reason object
    */
   private constructor(
-    public readonly hash: DataHash,
     public readonly tokenId: TokenId,
     public readonly tokenType: TokenType,
-    private readonly _tokenData: Uint8Array,
+    public readonly sourceState: MintTransactionState,
+    private readonly _tokenData: Uint8Array | null,
     public readonly coinData: TokenCoinData | null,
-    public readonly sourceState: RequestId,
-    public readonly recipient: string,
+    public readonly recipient: IAddress,
     private readonly _salt: Uint8Array,
-    public readonly dataHash: DataHash | null,
-    public readonly reason: R,
-  ) {
-    this._tokenData = new Uint8Array(_tokenData);
-    this._salt = new Uint8Array(_salt);
-  }
+    public readonly recipientDataHash: DataHash | null,
+    public readonly reason: R | null,
+  ) {}
 
   /** Immutable token data used for the mint. */
-  public get tokenData(): Uint8Array {
-    return new Uint8Array(this._tokenData);
+  public get tokenData(): Uint8Array | null {
+    return this._tokenData ? new Uint8Array(this._tokenData) : null;
   }
 
   /** Salt used during predicate creation. */
@@ -59,59 +65,138 @@ export class MintTransactionData<R extends ISerializable | null> {
     return new Uint8Array(this._salt);
   }
 
-  /** Hash algorithm of the transaction hash. */
-  public get hashAlgorithm(): HashAlgorithm {
-    return this.hash.algorithm;
+  public static async create<R extends IMintTransactionReason>(
+    tokenId: TokenId,
+    tokenType: TokenType,
+    tokenData: Uint8Array | null,
+    coinData: TokenCoinData | null,
+    recipient: IAddress,
+    salt: Uint8Array,
+    recipientDataHash: DataHash | null,
+    reason: R | null,
+  ): Promise<MintTransactionData<R>> {
+    const _tokenData = tokenData ? new Uint8Array(tokenData) : null;
+    const _salt = new Uint8Array(salt);
+
+    return new MintTransactionData(
+      tokenId,
+      tokenType,
+      await MintTransactionState.create(tokenId),
+      _tokenData,
+      coinData,
+      recipient,
+      _salt,
+      recipientDataHash,
+      reason,
+    );
+  }
+
+  public static async createFromNametag(
+    name: string,
+    tokenType: TokenType,
+    recipient: IAddress,
+    salt: Uint8Array,
+    targetAddress: IAddress,
+  ): Promise<MintTransactionData<IMintTransactionReason>> {
+    return MintTransactionData.create(
+      await TokenId.fromNameTag(name),
+      tokenType,
+      textEncoder.encode(targetAddress.address),
+      null,
+      recipient,
+      salt,
+      null,
+      null,
+    );
   }
 
   /**
-   * Create a new mint transaction data object.
-   * @param tokenId Token identifier
-   * @param tokenType Token type identifier
-   * @param tokenData Token data object
-   * @param coinData Fungible coin data, or null if none
-   * @param recipient Address of the first token owner
-   * @param salt User selected salt
-   * @param dataHash Hash pointing to next state data
-   * @param reason Reason object attached to the mint
+   * Create mint transaction data from CBOR bytes.
+   *
+   * @param bytes CBOR bytes
+   * @return mint transaction data
    */
-  public static async create<R extends ISerializable | null>(
-    tokenId: TokenId,
-    tokenType: TokenType,
-    tokenData: Uint8Array,
-    coinData: TokenCoinData | null,
-    recipient: string,
-    salt: Uint8Array,
-    dataHash: DataHash | null,
-    reason: R,
-  ): Promise<MintTransactionData<R>> {
-    const sourceState = await RequestId.createFromImprint(tokenId.bytes, MINT_SUFFIX);
-    const tokenDataHash = await new DataHasher(HashAlgorithm.SHA256).update(tokenData).digest();
-    return new MintTransactionData(
-      await new DataHasher(HashAlgorithm.SHA256)
-        .update(
-          CborEncoder.encodeArray([
-            tokenId.toCBOR(),
-            tokenType.toCBOR(),
-            tokenDataHash.toCBOR(),
-            dataHash?.toCBOR() ?? CborEncoder.encodeNull(),
-            coinData?.toCBOR() ?? CborEncoder.encodeNull(),
-            CborEncoder.encodeTextString(recipient),
-            CborEncoder.encodeByteString(salt),
-            reason?.toCBOR() ?? CborEncoder.encodeNull(),
-          ]),
-        )
-        .digest(),
-      tokenId,
-      tokenType,
-      tokenData,
-      coinData,
-      sourceState,
-      recipient,
-      salt,
-      dataHash,
-      reason,
+  public static async fromCBOR(bytes: Uint8Array): Promise<MintTransactionData<IMintTransactionReason>> {
+    const data = CborDeserializer.readArray(bytes);
+
+    return MintTransactionData.create(
+      TokenId.fromCBOR(data[0]),
+      TokenType.fromCBOR(data[1]),
+      CborDeserializer.readOptional(data[2], CborDeserializer.readByteString),
+      CborDeserializer.readOptional(data[3], TokenCoinData.fromCBOR),
+      await AddressFactory.createAddress(CborDeserializer.readTextString(data[4])),
+      CborDeserializer.readByteString(data[5]),
+      CborDeserializer.readOptional(data[6], DataHash.fromCBOR),
+      await CborDeserializer.readOptional(data[7], SplitMintReason.fromCBOR),
     );
+  }
+
+  public static isJSON(input: unknown): input is IMintTransactionDataJson {
+    return (
+      typeof input === 'object' &&
+      input !== null &&
+      'tokenId' in input &&
+      'tokenType' in input &&
+      'recipient' in input &&
+      'salt' in input
+    );
+  }
+
+  public static async fromJSON(input: unknown): Promise<MintTransactionData<IMintTransactionReason>> {
+    if (!MintTransactionData.isJSON(input)) {
+      throw new InvalidJsonStructureError();
+    }
+
+    return MintTransactionData.create(
+      TokenId.fromJSON(input.tokenId),
+      TokenType.fromJSON(input.tokenType),
+      input.tokenData ? HexConverter.decode(input.tokenData) : null,
+      input.coinData ? TokenCoinData.fromJSON(input.coinData) : null,
+      await AddressFactory.createAddress(input.recipient),
+      HexConverter.decode(input.salt),
+      input.recipientDataHash ? DataHash.fromJSON(input.recipientDataHash) : null,
+      input.reason ? await SplitMintReason.fromJSON(input.reason) : null,
+    );
+  }
+
+  /**
+   * Convert mint transaction data to CBOR bytes.
+   *
+   * @return CBOR bytes
+   */
+  public toCBOR(): Uint8Array {
+    return CborSerializer.encodeArray(
+      this.tokenId.toCBOR(),
+      this.tokenType.toCBOR(),
+      CborSerializer.encodeOptional(this.tokenData, CborSerializer.encodeByteString),
+      CborSerializer.encodeOptional(this.coinData, (coins) => coins.toCBOR()),
+      CborSerializer.encodeTextString(this.recipient.address),
+      CborSerializer.encodeByteString(this.salt),
+      CborSerializer.encodeOptional(this.recipientDataHash, (hash) => hash.toCBOR()),
+      CborSerializer.encodeOptional(this.reason, (reason) => reason!.toCBOR()),
+    );
+  }
+
+  public toJSON(): IMintTransactionDataJson {
+    return {
+      coinData: this.coinData?.toJSON() ?? null,
+      reason: this.reason?.toJSON() ?? null,
+      recipient: this.recipient.address,
+      recipientDataHash: this.recipientDataHash?.toJSON() ?? null,
+      salt: HexConverter.encode(this.salt),
+      tokenData: this.tokenData ? HexConverter.encode(this.tokenData) : null,
+      tokenId: this.tokenId.toJSON(),
+      tokenType: this.tokenType.toJSON(),
+    };
+  }
+
+  /**
+   * Calculate mint transaction hash.
+   *
+   * @return transaction hash.
+   */
+  public calculateHash(): Promise<DataHash> {
+    return new DataHasher(HashAlgorithm.SHA256).update(this.toCBOR()).digest();
   }
 
   /** Convert instance to readable string */
@@ -120,12 +205,11 @@ export class MintTransactionData<R extends ISerializable | null> {
       MintTransactionData:
         Token ID: ${this.tokenId.toString()}
         Token Type: ${this.tokenType.toString()}
-        Token Data: ${HexConverter.encode(this._tokenData)}
+        Token Data: ${this._tokenData ? HexConverter.encode(this._tokenData) : null}
         Coins: ${this.coinData?.toString() ?? null}
         Recipient: ${this.recipient}
         Salt: ${HexConverter.encode(this.salt)}
-        Data: ${this.dataHash?.toString() ?? null}
-        Reason: ${this.reason?.toString() ?? null}
-        Hash: ${this.hash.toString()}`;
+        Data: ${this.recipientDataHash?.toString() ?? null}
+        Reason: ${this.reason?.toString() ?? null}`;
   }
 }

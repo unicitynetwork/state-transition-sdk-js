@@ -1,46 +1,46 @@
-import { DataHash } from '@unicitylabs/commons/lib/hash/DataHash.js';
-
-import { ISerializable } from '../ISerializable.js';
-import { PredicateType } from './PredicateType.js';
-import { MintTransactionData } from '../transaction/MintTransactionData.js';
-import { Transaction } from '../transaction/Transaction.js';
-import { TransactionData } from '../transaction/TransactionData.js';
-
-/**
- * JSON representation of a predicate.
- */
-export interface IPredicateJson {
-  readonly type: string;
-}
+import { IPredicateReference } from './IPredicateReference.js';
+import { ISerializablePredicate } from './ISerializablePredicate.js';
+import { RootTrustBase } from '../bft/RootTrustBase.js';
+import { DataHash } from '../hash/DataHash.js';
+import { Token } from '../token/Token.js';
+import { IMintTransactionReason } from '../transaction/IMintTransactionReason.js';
+import { TransferTransaction } from '../transaction/TransferTransaction.js';
 
 /**
  * Interface for a predicate that controls token ownership.
  */
-export interface IPredicate {
-  readonly type: PredicateType;
-  /** Reference hash used in addresses. */
-  readonly reference: DataHash;
-  /** Unique hash identifying the predicate. */
-  readonly hash: DataHash;
-  /** Nonce used when creating the predicate. */
-  readonly nonce: Uint8Array;
+export interface IPredicate extends ISerializablePredicate {
+  /**
+   * Calculate predicate hash representation.
+   *
+   * @return predicate hash
+   */
+  calculateHash(): Promise<DataHash>;
+
+  /**
+   * Get predicate as reference.
+   *
+   * @return predicate reference
+   */
+  getReference(): Promise<IPredicateReference>;
 
   /**
    * Test if the given key is allowed to operate the token.
    * @param publicKey Public key to check ownership
    */
   isOwner(publicKey: Uint8Array): Promise<boolean>;
+
   /**
-   * Verify a transaction against the predicate.
-   * @param transaction Transaction to verify
+   * Verify if predicate is valid for given token state.
+   *
+   * @param trustBase   trust base to verify against.
+   * @param token       current token state
+   * @param transaction current transaction
+   * @return true if successful
    */
-  verify(transaction: Transaction<MintTransactionData<ISerializable | null> | TransactionData>): Promise<boolean>;
-  /**
-   * Convert the predicate to its JSON representation.
-   */
-  toJSON(): IPredicateJson;
-  /**
-   * Convert the predicate to its CBOR representation.
-   */
-  toCBOR(): Uint8Array;
+  verify(
+    trustBase: RootTrustBase,
+    token: Token<IMintTransactionReason>,
+    transaction: TransferTransaction,
+  ): Promise<boolean>;
 }
