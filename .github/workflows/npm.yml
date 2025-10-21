@@ -38,7 +38,6 @@ jobs:
         run: |
           NPM_PACKAGE_VERSION=$(node -e "const fs = require('fs'); console.log(JSON.parse(fs.readFileSync('package.json')).version);")
           SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-7)
-          npm run build
           npm --no-git-tag-version version $NPM_PACKAGE_VERSION-rc.$SHORT_SHA
           npm publish --access public --tag dev
         env:
@@ -49,7 +48,6 @@ jobs:
       - name: Publish on release
         if: github.event_name == 'release'
         run: |
-          npm run build
           npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPMJS_PUBLISH }}
