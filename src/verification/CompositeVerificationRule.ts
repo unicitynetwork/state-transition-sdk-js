@@ -40,7 +40,7 @@ export abstract class CompositeVerificationRule<C extends IVerificationContext> 
   }
 
   public async verify(context: C): Promise<VerificationResult> {
-    let rule: VerificationRule<IVerificationContext> | null = this.firstRule;
+    let rule: VerificationRule<C> | null = this.firstRule;
     const results: VerificationResult[] = [];
 
     while (rule != null) {

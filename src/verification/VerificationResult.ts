@@ -44,7 +44,7 @@ export class VerificationResult {
   public toString(): string {
     return dedent`
       VerificationResult:
-        isSuccessful: ${this.status}
+        status: ${this.status}
         message: ${this.message}
         results: ${this.results.map((result) => result.toString()).join('\n')}
     `;

@@ -290,7 +290,7 @@ export async function testSplitFlowAfterTransfer(
   const mintTokenData = await createMintData(initialOwnerSecret, coinData);
   const token = await mintToken(trustBase, client, mintTokenData);
 
-  // Perfrom 1st split
+  // Perform 1st split
   const coinsPerNewTokens = [
     TokenCoinData.create([
       [unicityToken, 50n],

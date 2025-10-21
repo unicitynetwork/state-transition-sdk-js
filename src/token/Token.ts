@@ -90,8 +90,9 @@ export class Token<R extends IMintTransactionReason> {
   public static async fromCBOR(bytes: Uint8Array): Promise<Token<IMintTransactionReason>> {
     const data = CborDeserializer.readArray(bytes);
 
-    if (CborDeserializer.readTextString(data[0]) !== TOKEN_VERSION) {
-      throw new Error(`Unsupported token version: ${CborDeserializer.readTextString(data[4])}`);
+    const version = CborDeserializer.readTextString(data[0]);
+    if (version !== TOKEN_VERSION) {
+      throw new Error(`Unsupported token version: ${version}`);
     }
 
     return new Token(

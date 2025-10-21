@@ -17,9 +17,7 @@ export interface ITransferTransactionJson {
 }
 
 /**
- * Mint transaction.
- *
- * @param <R> mint reason
+ * Represents a transfer transaction, including its data and inclusion proof.
  */
 export class TransferTransaction extends Transaction<TransferTransactionData> {
   public constructor(data: TransferTransactionData, inclusionProof: InclusionProof) {

@@ -117,9 +117,7 @@ export class UnmaskedPredicate extends DefaultPredicate {
   }
 
   /**
-   * Convert predicate to CBOR bytes.
-   *
-   * @return CBOR bytes
+   * @inheritDoc
    */
   public getReference(): Promise<UnmaskedPredicateReference> {
     return UnmaskedPredicateReference.create(this.tokenType, this.signingAlgorithm, this.publicKey, this.hashAlgorithm);

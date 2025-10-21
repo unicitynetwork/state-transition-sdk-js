@@ -65,6 +65,6 @@ export class SplitMintReasonProof {
   }
 
   public toCBOR(): Uint8Array {
-    return CborSerializer.encodeArray(this.aggregationPath.toCBOR(), this.coinTreePath.toCBOR());
+    return CborSerializer.encodeArray(this.coinId.toCBOR(), this.aggregationPath.toCBOR(), this.coinTreePath.toCBOR());
   }
 }
