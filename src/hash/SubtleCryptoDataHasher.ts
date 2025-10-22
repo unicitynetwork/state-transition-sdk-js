@@ -15,7 +15,7 @@ export const Algorithm = {
  * Does hashing with asynchronous way
  */
 export class SubtleCryptoDataHasher implements IDataHasher {
-  private _data: Uint8Array;
+  private _data: Uint8Array<ArrayBuffer>;
 
   /**
    * Create DataHasher instance the hash algorithm
