@@ -17,8 +17,12 @@ export class AggregatorClient implements IAggregatorClient {
    * Create a new client pointing to the given aggregator URL.
    *
    * @param url Base URL of the aggregator JSON-RPC endpoint
+   * @param key API key for authenticating
    */
-  public constructor(url: string) {
+  public constructor(
+    url: string,
+    private readonly key: string | null = null,
+  ) {
     this.transport = new JsonRpcHttpTransport(url);
   }
 
@@ -33,7 +37,11 @@ export class AggregatorClient implements IAggregatorClient {
   ): Promise<SubmitCommitmentResponse> {
     const request = new SubmitCommitmentRequest(requestId, transactionHash, authenticator, receipt);
 
-    const response = await this.transport.request('submit_commitment', request.toJSON());
+    const response = await this.transport.request(
+      'submit_commitment',
+      request.toJSON(),
+      this.key ? new Headers([['X-API-Key', this.key]]) : undefined,
+    );
 
     return SubmitCommitmentResponse.fromJSON(response);
   }
