@@ -20,7 +20,9 @@ export class JsonRpcHttpTransport {
   /**
    * Send a JSON-RPC request.
    */
-  public async request(method: string, params: unknown | null): Promise<unknown> {
+  public async request(method: string, params: unknown | null, headers = new Headers()): Promise<unknown> {
+    headers.set('Content-Type', 'application/json');
+
     const response = await fetch(this.url, {
       body: JSON.stringify({
         id: uuid(),
@@ -28,7 +30,7 @@ export class JsonRpcHttpTransport {
         method,
         params,
       }),
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       method: 'POST',
     });
 
