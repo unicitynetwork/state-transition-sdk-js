@@ -171,7 +171,7 @@ export class Token<R extends IMintTransactionReason> {
     transaction: TransferTransaction,
     nametags: Token<IMintTransactionReason>[] = [],
   ): Promise<Token<R>> {
-    const result = await transaction.verify(trustBase, this);
+    let result = await transaction.verify(trustBase, this);
 
     if (!result.isSuccessful) {
       throw new VerificationError('Transaction verification failed', result);
@@ -180,7 +180,24 @@ export class Token<R extends IMintTransactionReason> {
     const transactions = this._transactions.slice();
     transactions.push(transaction);
 
-    return new Token(state, this.genesis, transactions, nametags);
+    const token = new Token(state, this.genesis, transactions, nametags);
+
+    result = await token.verifyNametagTokens(trustBase);
+    if (!result.isSuccessful) {
+      throw new VerificationError('Nametag tokens verification failed', result);
+    }
+
+    result = await token.verifyRecipient();
+    if (!result.isSuccessful) {
+      throw new VerificationError('Recipient verification failed', result);
+    }
+
+    result = await token.verifyRecipientData();
+    if (!result.isSuccessful) {
+      throw new VerificationError('Recipient data verification failed', result);
+    }
+
+    return token;
   }
 
   /**
