@@ -29,13 +29,13 @@ export class SparseMerkleTree {
    * @param _data The value of the leaf as a Uint8Array.
    * @throws Error will throw an error if the path is less than 1.
    */
-  public async addLeaf(path: bigint, _data: Uint8Array): Promise<void> {
+  public async addLeaf(path: bigint, data: Uint8Array): Promise<void> {
     if (path < 1n) {
       throw new Error('Path must be greater than 0.');
     }
 
     const isRight = path & 1n;
-    const data = new Uint8Array(_data);
+    data = new Uint8Array(data);
     const branchPromise = isRight ? this.right : this.left;
     const newBranchPromise = branchPromise.then((branch) =>
       branch ? this.buildTree(branch, path, data) : new PendingLeafBranch(path, data),

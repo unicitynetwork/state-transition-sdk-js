@@ -26,11 +26,11 @@ export class SparseMerkleSumTree {
   /**
    * Adds a leaf to the tree at the specified path with the given value and sum.
    * @param path The path where the leaf should be added.
-   * @param _data The data of the leaf as a Uint8Array.
+   * @param data The data of the leaf as a Uint8Array.
    * @param value The sum associated with the leaf.
    * @throws Error will throw an error if the path is less than 1 or if the sum is negative.
    */
-  public async addLeaf(path: bigint, _data: Uint8Array, value: bigint): Promise<void> {
+  public async addLeaf(path: bigint, data: Uint8Array, value: bigint): Promise<void> {
     if (value < 0n) {
       throw new Error('Sum must be an unsigned bigint.');
     }
@@ -40,7 +40,7 @@ export class SparseMerkleSumTree {
     }
 
     const isRight = path & 1n;
-    const data = new Uint8Array(_data);
+    data = new Uint8Array(data);
     const branchPromise = isRight ? this.right : this.left;
     const newBranchPromise = branchPromise.then((branch) =>
       branch ? this.buildTree(branch, path, data, value) : new PendingLeafBranch(path, data, value),
