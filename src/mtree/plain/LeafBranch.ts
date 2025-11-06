@@ -5,12 +5,14 @@ import { dedent } from '../../util/StringUtils.js';
 export class LeafBranch {
   public constructor(
     public readonly path: bigint,
-    private readonly _value: Uint8Array,
+    private readonly _data: Uint8Array,
     public readonly hash: DataHash,
-  ) {}
+  ) {
+    this._data = new Uint8Array(_data);
+  }
 
-  public get value(): Uint8Array {
-    return new Uint8Array(this._value);
+  public get data(): Uint8Array {
+    return new Uint8Array(this._data);
   }
 
   public finalize(): Promise<LeafBranch> {
@@ -20,7 +22,7 @@ export class LeafBranch {
   public toString(): string {
     return dedent`
       Leaf[${this.path.toString(2)}]
-        Value: ${HexConverter.encode(this._value)}
+        Data: ${HexConverter.encode(this._data)}
         Hash: ${this.hash.toString()}`;
   }
 }

@@ -53,7 +53,7 @@ export class SparseMerkleTreeRootNode {
     parent: Branch | SparseMerkleTreeRootNode,
   ): ReadonlyArray<SparseMerkleTreePathStep> {
     if (parent instanceof LeafBranch) {
-      return [new SparseMerkleTreePathStep(parent.path, parent.value)];
+      return [new SparseMerkleTreePathStep(parent.path, parent.data)];
     }
 
     const commonPath = calculateCommonPath(remainingPath, parent.path);

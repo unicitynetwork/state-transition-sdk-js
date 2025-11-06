@@ -26,12 +26,12 @@ export class SparseMerkleSumTree {
   /**
    * Adds a leaf to the tree at the specified path with the given value and sum.
    * @param path The path where the leaf should be added.
-   * @param valueRef The value of the leaf as a Uint8Array.
-   * @param counter The sum associated with the leaf.
+   * @param _data The data of the leaf as a Uint8Array.
+   * @param value The sum associated with the leaf.
    * @throws Error will throw an error if the path is less than 1 or if the sum is negative.
    */
-  public async addLeaf(path: bigint, valueRef: Uint8Array, counter: bigint): Promise<void> {
-    if (counter < 0n) {
+  public async addLeaf(path: bigint, _data: Uint8Array, value: bigint): Promise<void> {
+    if (value < 0n) {
       throw new Error('Sum must be an unsigned bigint.');
     }
 
@@ -40,10 +40,10 @@ export class SparseMerkleSumTree {
     }
 
     const isRight = path & 1n;
-    const value = new Uint8Array(valueRef);
+    const data = new Uint8Array(_data);
     const branchPromise = isRight ? this.right : this.left;
     const newBranchPromise = branchPromise.then((branch) =>
-      branch ? this.buildTree(branch, path, value, counter) : new PendingLeafBranch(path, value, counter),
+      branch ? this.buildTree(branch, path, data, value) : new PendingLeafBranch(path, data, value),
     );
 
     if (isRight) {
@@ -74,7 +74,7 @@ export class SparseMerkleSumTree {
     return SparseMerkleSumTreeRootNode.create(left, right, this.factory);
   }
 
-  private buildTree(branch: PendingBranch, remainingPath: bigint, value: Uint8Array, sum: bigint): PendingBranch {
+  private buildTree(branch: PendingBranch, remainingPath: bigint, data: Uint8Array, value: bigint): PendingBranch {
     const commonPath = calculateCommonPath(remainingPath, branch.path);
     const isRight = (remainingPath >> commonPath.length) & 1n;
 
@@ -88,14 +88,14 @@ export class SparseMerkleSumTree {
         throw new LeafOutOfBoundsError();
       }
 
-      const oldBranch = new PendingLeafBranch(branch.path >> commonPath.length, branch.value, branch.sum);
-      const newBranch = new PendingLeafBranch(remainingPath >> commonPath.length, value, sum);
+      const oldBranch = new PendingLeafBranch(branch.path >> commonPath.length, branch.data, branch.value);
+      const newBranch = new PendingLeafBranch(remainingPath >> commonPath.length, data, value);
       return new PendingNodeBranch(commonPath.path, isRight ? oldBranch : newBranch, isRight ? newBranch : oldBranch);
     }
 
     // If node branch is split in the middle
     if (commonPath.path < branch.path) {
-      const newBranch = new PendingLeafBranch(remainingPath >> commonPath.length, value, sum);
+      const newBranch = new PendingLeafBranch(remainingPath >> commonPath.length, data, value);
       const oldBranch = new PendingNodeBranch(branch.path >> commonPath.length, branch.left, branch.right);
       return new PendingNodeBranch(commonPath.path, isRight ? oldBranch : newBranch, isRight ? newBranch : oldBranch);
     }
@@ -104,13 +104,13 @@ export class SparseMerkleSumTree {
       return new PendingNodeBranch(
         branch.path,
         branch.left,
-        this.buildTree(branch.right, remainingPath >> commonPath.length, value, sum),
+        this.buildTree(branch.right, remainingPath >> commonPath.length, data, value),
       );
     }
 
     return new PendingNodeBranch(
       branch.path,
-      this.buildTree(branch.left, remainingPath >> commonPath.length, value, sum),
+      this.buildTree(branch.left, remainingPath >> commonPath.length, data, value),
       branch.right,
     );
   }

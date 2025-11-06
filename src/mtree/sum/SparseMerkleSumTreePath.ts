@@ -1,7 +1,8 @@
+import { bitLen } from '@noble/curves/utils.js';
+
 import { ISparseMerkleSumTreePathStepJson, SparseMerkleSumTreePathStep } from './SparseMerkleSumTreePathStep.js';
 import { DataHash } from '../../hash/DataHash.js';
 import { DataHasher } from '../../hash/DataHasher.js';
-import { HashAlgorithm } from '../../hash/HashAlgorithm.js';
 import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
 import { CborDeserializer } from '../../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../serializer/cbor/CborSerializer.js';
@@ -9,68 +10,14 @@ import { BigintConverter } from '../../util/BigintConverter.js';
 import { dedent } from '../../util/StringUtils.js';
 import { PathVerificationResult } from '../plain/PathVerificationResult.js';
 
-interface IRootJson {
-  readonly hash: string;
-  readonly counter: string;
-}
-
-export class SparseMerkleSumTreePathRoot {
-  public constructor(
-    public readonly hash: DataHash,
-    public readonly counter: bigint,
-  ) {}
-
-  public static isJSON(data: unknown): data is IRootJson {
-    return (
-      typeof data === 'object' &&
-      data !== null &&
-      'hash' in data &&
-      typeof data.hash === 'string' &&
-      'counter' in data &&
-      typeof data.hash === 'string'
-    );
-  }
-
-  public static fromJSON(data: unknown): SparseMerkleSumTreePathRoot {
-    if (!SparseMerkleSumTreePathRoot.isJSON(data)) {
-      throw new InvalidJsonStructureError();
-    }
-
-    return new SparseMerkleSumTreePathRoot(DataHash.fromJSON(data.hash), BigInt(data.counter));
-  }
-
-  public static fromCBOR(bytes: Uint8Array): SparseMerkleSumTreePathRoot {
-    const data = CborDeserializer.readArray(bytes);
-
-    return new SparseMerkleSumTreePathRoot(
-      DataHash.fromCBOR(data[0]),
-      BigintConverter.decode(CborDeserializer.readByteString(data[1])),
-    );
-  }
-
-  public toJSON(): IRootJson {
-    return {
-      counter: this.counter.toString(),
-      hash: this.hash.toJSON(),
-    };
-  }
-
-  public toCBOR(): Uint8Array {
-    return CborSerializer.encodeArray(
-      this.hash.toCBOR(),
-      CborSerializer.encodeByteString(BigintConverter.encode(this.counter)),
-    );
-  }
-}
-
 export interface ISparseMerkleSumTreePathJson {
-  readonly root: IRootJson;
+  readonly root: string;
   readonly steps: ReadonlyArray<ISparseMerkleSumTreePathStepJson>;
 }
 
 export class SparseMerkleSumTreePath {
   public constructor(
-    public readonly root: SparseMerkleSumTreePathRoot,
+    public readonly root: DataHash,
     public readonly steps: ReadonlyArray<SparseMerkleSumTreePathStep>,
   ) {}
 
@@ -80,21 +27,30 @@ export class SparseMerkleSumTreePath {
     }
 
     return new SparseMerkleSumTreePath(
-      SparseMerkleSumTreePathRoot.fromJSON(data.root),
+      DataHash.fromJSON(data.root),
       data.steps.map((step: unknown) => SparseMerkleSumTreePathStep.fromJSON(step)),
     );
   }
 
   public static isJSON(data: unknown): data is ISparseMerkleSumTreePathJson {
-    return typeof data === 'object' && data !== null && 'root' in data && 'steps' in data && Array.isArray(data.steps);
+    return (
+      typeof data === 'object' &&
+      data !== null &&
+      'root' in data &&
+      typeof data.root === 'string' &&
+      'steps' in data &&
+      Array.isArray(data.steps) &&
+      data.steps.length > 0
+    );
   }
 
   public static fromCBOR(bytes: Uint8Array): SparseMerkleSumTreePath {
     const data = CborDeserializer.readArray(bytes);
+    const steps = CborDeserializer.readArray(data[1]);
 
     return new SparseMerkleSumTreePath(
-      SparseMerkleSumTreePathRoot.fromCBOR(data[0]),
-      CborDeserializer.readArray(data[1]).map((step) => SparseMerkleSumTreePathStep.fromCBOR(step)),
+      DataHash.fromCBOR(data[0]),
+      steps.map((step) => SparseMerkleSumTreePathStep.fromCBOR(step)),
     );
   }
 
@@ -118,74 +74,67 @@ export class SparseMerkleSumTreePath {
    * @returns A Promise resolving to a PathVerificationResult indicating success or failure.
    */
   public async verify(requestId: bigint): Promise<PathVerificationResult> {
+    let step = this.steps[0];
+
+    let currentData: Uint8Array | null;
     let currentPath = 1n;
-    let currentHash: DataHash | null = null;
-    let currentCounter = this.steps.at(0)?.branch?.counter ?? 0n;
+    let currentSum = step.value;
 
-    for (let i = 0; i < this.steps.length; i++) {
-      const step = this.steps[i];
-      let hash: DataHash | null = null;
-      if (step.branch !== null) {
-        const bytes: Uint8Array | null = i === 0 ? step.branch.value : currentHash ? currentHash.imprint : null;
-        hash = await new DataHasher(HashAlgorithm.SHA256)
-          .update(
-            CborSerializer.encodeArray(
-              CborSerializer.encodeByteString(BigintConverter.encode(step.path)),
-              bytes ? CborSerializer.encodeByteString(bytes) : CborSerializer.encodeNull(),
-              CborSerializer.encodeByteString(BigintConverter.encode(currentCounter)),
-            ),
-          )
-          .digest();
-
-        const length = BigInt(step.path.toString(2).length - 1);
-        currentPath = (currentPath << length) | (step.path & ((1n << length) - 1n));
-      }
-
-      const isRight = step.path & 1n;
-      const right: [Uint8Array | null, bigint | null] | null = isRight
-        ? hash
-          ? [hash.imprint, currentCounter]
-          : null
-        : step.sibling
-          ? [step.sibling.value, step.sibling.counter]
-          : null;
-      const left: [Uint8Array | null, bigint | null] | null = isRight
-        ? step.sibling
-          ? [step.sibling.value, step.sibling.counter]
-          : null
-        : hash
-          ? [hash.imprint, currentCounter]
-          : null;
-
-      currentHash = await new DataHasher(HashAlgorithm.SHA256)
+    if (step.path > 0) {
+      const hash = await new DataHasher(this.root.algorithm)
         .update(
           CborSerializer.encodeArray(
-            left
-              ? CborSerializer.encodeArray(
-                  left[0] ? CborSerializer.encodeByteString(left[0]) : CborSerializer.encodeNull(),
-                  left[1]
-                    ? CborSerializer.encodeByteString(BigintConverter.encode(left[1]))
-                    : CborSerializer.encodeNull(),
-                )
-              : CborSerializer.encodeNull(),
-            right
-              ? CborSerializer.encodeArray(
-                  right[0] ? CborSerializer.encodeByteString(right[0]) : CborSerializer.encodeNull(),
-                  right[1]
-                    ? CborSerializer.encodeByteString(BigintConverter.encode(right[1]))
-                    : CborSerializer.encodeNull(),
-                )
-              : CborSerializer.encodeNull(),
+            CborSerializer.encodeByteString(BigintConverter.encode(step.path)),
+            CborSerializer.encodeOptional(step.data, CborSerializer.encodeByteString),
+            CborSerializer.encodeByteString(BigintConverter.encode(step.value)),
           ),
         )
         .digest();
-      currentCounter += step.sibling?.counter ?? 0n;
+      currentData = hash.data;
+
+      const length = BigInt(bitLen(step.path) - 1);
+      currentPath = (currentPath << length) | (step.path & ((1n << length) - 1n));
+    } else {
+      currentData = step.data;
     }
 
-    return new PathVerificationResult(
-      !!currentHash && this.root.hash.equals(currentHash) && currentCounter === this.root.counter,
-      requestId === currentPath,
-    );
+    for (let i = 1; i < this.steps.length; i++) {
+      step = this.steps[i];
+      const isRight = currentPath & 1n;
+
+      const left = {
+        data: isRight ? step.data : currentData,
+        value: isRight ? step.value : currentSum,
+      };
+
+      const right = {
+        data: isRight ? currentData : step.data,
+        value: isRight ? currentSum : step.value,
+      };
+
+      const hash = await new DataHasher(this.root.algorithm)
+        .update(
+          CborSerializer.encodeArray(
+            CborSerializer.encodeByteString(BigintConverter.encode(step.path)),
+            CborSerializer.encodeOptional(left.data, CborSerializer.encodeByteString),
+            CborSerializer.encodeByteString(BigintConverter.encode(left.value)),
+            CborSerializer.encodeOptional(right.data, CborSerializer.encodeByteString),
+            CborSerializer.encodeByteString(BigintConverter.encode(right.value)),
+          ),
+        )
+        .digest();
+
+      currentData = hash.data;
+
+      const length = BigInt(bitLen(step.path) - 1);
+      currentPath = (currentPath << length) | (step.path & ((1n << length) - 1n));
+      currentSum += step.value;
+    }
+
+    const pathValid = currentData != null && this.root.equals(new DataHash(this.root.algorithm, currentData));
+    const pathIncluded = requestId === currentPath;
+
+    return new PathVerificationResult(pathValid, pathIncluded);
   }
 
   public toString(): string {

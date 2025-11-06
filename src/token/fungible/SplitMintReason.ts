@@ -97,7 +97,7 @@ export class SplitMintReason implements IMintTransactionReason {
         );
       }
 
-      if (!areUint8ArraysEqual(proof.coinTreePath.root.hash.imprint, proof.aggregationPath.steps.at(0)?.data)) {
+      if (!areUint8ArraysEqual(proof.coinTreePath.root.imprint, proof.aggregationPath.steps.at(0)?.data)) {
         return Promise.resolve(
           new VerificationResult(VerificationResultCode.FAIL, 'Coin tree root does not match aggregation path leaf.'),
         );
@@ -110,7 +110,7 @@ export class SplitMintReason implements IMintTransactionReason {
         );
       }
 
-      if (proof.coinTreePath.steps.at(0)?.branch?.counter !== amount) {
+      if (proof.coinTreePath.steps.at(0)?.value !== amount) {
         return Promise.resolve(
           new VerificationResult(
             VerificationResultCode.FAIL,

@@ -26,19 +26,19 @@ export class SparseMerkleTree {
   /**
    * Adds a leaf to the tree at the specified path with the given value.
    * @param path The path where the leaf should be added.
-   * @param valueRef The value of the leaf as a Uint8Array.
+   * @param _data The value of the leaf as a Uint8Array.
    * @throws Error will throw an error if the path is less than 1.
    */
-  public async addLeaf(path: bigint, valueRef: Uint8Array): Promise<void> {
+  public async addLeaf(path: bigint, _data: Uint8Array): Promise<void> {
     if (path < 1n) {
       throw new Error('Path must be greater than 0.');
     }
 
     const isRight = path & 1n;
-    const value = new Uint8Array(valueRef);
+    const data = new Uint8Array(_data);
     const branchPromise = isRight ? this.right : this.left;
     const newBranchPromise = branchPromise.then((branch) =>
-      branch ? this.buildTree(branch, path, value) : new PendingLeafBranch(path, value),
+      branch ? this.buildTree(branch, path, data) : new PendingLeafBranch(path, data),
     );
 
     if (isRight) {
@@ -83,7 +83,7 @@ export class SparseMerkleTree {
         throw new LeafOutOfBoundsError();
       }
 
-      const oldBranch = new PendingLeafBranch(branch.path >> commonPath.length, branch.value);
+      const oldBranch = new PendingLeafBranch(branch.path >> commonPath.length, branch.data);
       const newBranch = new PendingLeafBranch(remainingPath >> commonPath.length, value);
       return new PendingNodeBranch(commonPath.path, isRight ? oldBranch : newBranch, isRight ? newBranch : oldBranch);
     }

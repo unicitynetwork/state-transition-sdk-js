@@ -7,8 +7,14 @@ import { BigintConverter } from '../../util/BigintConverter.js';
 export class PendingLeafBranch {
   public constructor(
     public readonly path: bigint,
-    public readonly value: Uint8Array,
-  ) {}
+    public readonly _data: Uint8Array,
+  ) {
+    this._data = new Uint8Array(_data);
+  }
+
+  public get data(): Uint8Array {
+    return new Uint8Array(this._data);
+  }
 
   public async finalize(factory: IDataHasherFactory<IDataHasher>): Promise<LeafBranch> {
     const hash = await factory
@@ -16,10 +22,10 @@ export class PendingLeafBranch {
       .update(
         CborSerializer.encodeArray(
           CborSerializer.encodeByteString(BigintConverter.encode(this.path)),
-          CborSerializer.encodeByteString(this.value),
+          CborSerializer.encodeByteString(this._data),
         ),
       )
       .digest();
-    return new LeafBranch(this.path, this.value, hash);
+    return new LeafBranch(this.path, this._data, hash);
   }
 }

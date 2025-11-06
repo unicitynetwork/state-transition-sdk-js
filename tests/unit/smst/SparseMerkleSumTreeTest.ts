@@ -8,8 +8,8 @@ import { SparseMerkleSumTree } from '../../../src/mtree/sum/SparseMerkleSumTree.
 import { SparseMerkleSumTreeRootNode } from '../../../src/mtree/sum/SparseMerkleSumTreeRootNode.js';
 
 interface ISumLeaf {
-  readonly value: Uint8Array;
-  readonly sum: bigint;
+  readonly data: Uint8Array;
+  readonly value: bigint;
 }
 
 const textEncoder = new TextEncoder();
@@ -20,39 +20,39 @@ describe('Sum-Certifying Tree', function () {
       [
         0b1000n,
         {
-          sum: 10n,
-          value: textEncoder.encode('left-1'),
+          data: textEncoder.encode('left-1'),
+          value: 10n,
         },
       ],
       [
         0b1001n,
         {
-          sum: 20n,
-          value: textEncoder.encode('right-1'),
+          data: textEncoder.encode('right-1'),
+          value: 20n,
         },
       ],
       [
         0b1010n,
         {
-          sum: 30n,
-          value: textEncoder.encode('left-2'),
+          data: textEncoder.encode('left-2'),
+          value: 30n,
         },
       ],
       [
         0b1011n,
         {
-          sum: 40n,
-          value: textEncoder.encode('right-2'),
+          data: textEncoder.encode('right-2'),
+          value: 40n,
         },
       ],
     ]);
 
     const tree = new SparseMerkleSumTree(new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher));
     for (const [path, leaf] of leaves.entries()) {
-      tree.addLeaf(path, leaf.value, leaf.sum);
+      tree.addLeaf(path, leaf.data, leaf.value);
     }
     let root = await tree.calculateRoot();
-    expect(root.counter).toEqual(100n);
+    expect(root.value).toEqual(100n);
 
     for (const leaf of leaves.entries()) {
       const path = root.getPath(leaf[0]);
@@ -62,18 +62,14 @@ describe('Sum-Certifying Tree', function () {
         isSuccessful: true,
       });
 
-      expect(path.root.counter).toEqual(root.counter);
-      expect(path.root.toJSON()).toEqual({
-        counter: root.counter.toString(),
-        hash: root.hash.toJSON(),
-      });
-      expect(path.steps.at(0)?.branch?.value).toEqual(leaf[1].value);
-      expect(path.steps.at(0)?.branch?.counter).toEqual(leaf[1].sum);
+      expect(path.root).toEqual(root.hash);
+      expect(path.steps.at(0)?.data).toEqual(leaf[1].data);
+      expect(path.steps.at(0)?.value).toEqual(leaf[1].value);
     }
 
     tree.addLeaf(0b1110n, new Uint8Array(32), 100n);
     root = await tree.calculateRoot();
-    expect(root.counter).toEqual(200n);
+    expect(root.value).toEqual(200n);
   });
 
   it('should throw error on non positive path or sum', async () => {
