@@ -75,7 +75,7 @@ describe('Sum-Certifying Tree', function () {
   it('should throw error on non positive path or sum', async () => {
     const tree = new SparseMerkleSumTree(new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher));
     await expect(tree.addLeaf(-1n, new Uint8Array(32), 100n)).rejects.toThrow('Path must be greater than 0.');
-    await expect(tree.addLeaf(1n, new Uint8Array(32), -1n)).rejects.toThrow('Sum must be an unsigned bigint.');
+    await expect(tree.addLeaf(1n, new Uint8Array(32), -1n)).rejects.toThrow('Value must be an unsigned bigint.');
   });
 
   it('concurrency test', async () => {
