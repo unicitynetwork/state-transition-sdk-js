@@ -26,7 +26,7 @@ export class SparseMerkleTree {
   /**
    * Adds a leaf to the tree at the specified path with the given value.
    * @param path The path where the leaf should be added.
-   * @param _data The value of the leaf as a Uint8Array.
+   * @param data The data of the leaf as a Uint8Array.
    * @throws Error will throw an error if the path is less than 1.
    */
   public async addLeaf(path: bigint, data: Uint8Array): Promise<void> {

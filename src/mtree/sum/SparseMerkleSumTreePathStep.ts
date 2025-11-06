@@ -17,8 +17,8 @@ export class SparseMerkleSumTreePathStep {
     private readonly _data: Uint8Array | null,
     public readonly value: bigint,
   ) {
-    if (path < 1n) {
-      throw new Error('Path should be greater than 0.');
+    if (path < 0n) {
+      throw new Error('Path should be non negative.');
     }
 
     if (value < 0n) {

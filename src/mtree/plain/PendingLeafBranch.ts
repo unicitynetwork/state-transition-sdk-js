@@ -7,7 +7,7 @@ import { BigintConverter } from '../../util/BigintConverter.js';
 export class PendingLeafBranch {
   public constructor(
     public readonly path: bigint,
-    public readonly _data: Uint8Array,
+    private readonly _data: Uint8Array,
   ) {
     this._data = new Uint8Array(_data);
   }
