@@ -1,4 +1,4 @@
-import { NodeBranch } from './NodeBranch.js';
+import { FinalizedNodeBranch } from './FinalizedNodeBranch.js';
 import { PendingBranch } from './PendingBranch.js';
 import { IDataHasher } from '../../hash/IDataHasher.js';
 import { IDataHasherFactory } from '../../hash/IDataHasherFactory.js';
@@ -12,7 +12,7 @@ export class PendingNodeBranch {
     public readonly right: PendingBranch,
   ) {}
 
-  public async finalize(factory: IDataHasherFactory<IDataHasher>): Promise<NodeBranch> {
+  public async finalize(factory: IDataHasherFactory<IDataHasher>): Promise<FinalizedNodeBranch> {
     const [left, right] = await Promise.all([this.left.finalize(factory), this.right.finalize(factory)]);
 
     const hash = await factory
@@ -28,6 +28,6 @@ export class PendingNodeBranch {
       )
       .digest();
 
-    return new NodeBranch(this.path, left, right, left.value + right.value, hash);
+    return new FinalizedNodeBranch(this.path, left, right, left.value + right.value, hash);
   }
 }

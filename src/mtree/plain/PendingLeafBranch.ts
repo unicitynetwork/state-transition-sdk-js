@@ -1,4 +1,4 @@
-import { LeafBranch } from './LeafBranch.js';
+import { FinalizedLeafBranch } from './FinalizedLeafBranch.js';
 import { IDataHasher } from '../../hash/IDataHasher.js';
 import { IDataHasherFactory } from '../../hash/IDataHasherFactory.js';
 import { CborSerializer } from '../../serializer/cbor/CborSerializer.js';
@@ -16,7 +16,7 @@ export class PendingLeafBranch {
     return new Uint8Array(this._data);
   }
 
-  public async finalize(factory: IDataHasherFactory<IDataHasher>): Promise<LeafBranch> {
+  public async finalize(factory: IDataHasherFactory<IDataHasher>): Promise<FinalizedLeafBranch> {
     const hash = await factory
       .create()
       .update(
@@ -26,6 +26,6 @@ export class PendingLeafBranch {
         ),
       )
       .digest();
-    return new LeafBranch(this.path, this._data, hash);
+    return new FinalizedLeafBranch(this.path, this._data, hash);
   }
 }

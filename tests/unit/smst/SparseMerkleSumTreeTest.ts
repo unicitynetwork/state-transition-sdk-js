@@ -1,8 +1,8 @@
 import { DataHasherFactory } from '../../../src/hash/DataHasherFactory.js';
 import { HashAlgorithm } from '../../../src/hash/HashAlgorithm.js';
 import { NodeDataHasher } from '../../../src/hash/NodeDataHasher.js';
-import { LeafBranch } from '../../../src/mtree/sum/LeafBranch.js';
-import { NodeBranch } from '../../../src/mtree/sum/NodeBranch.js';
+import { FinalizedLeafBranch } from '../../../src/mtree/sum/FinalizedLeafBranch.js';
+import { FinalizedNodeBranch } from '../../../src/mtree/sum/FinalizedNodeBranch.js';
 import { PendingLeafBranch } from '../../../src/mtree/sum/PendingLeafBranch.js';
 import { SparseMerkleSumTree } from '../../../src/mtree/sum/SparseMerkleSumTree.js';
 import { SparseMerkleSumTreeRootNode } from '../../../src/mtree/sum/SparseMerkleSumTreeRootNode.js';
@@ -83,7 +83,7 @@ describe('Sum-Certifying Tree', function () {
     const smt = new SparseMerkleSumTree(hasherFactory);
     smt.addLeaf(0b1000n, new Uint8Array(), 10n);
     smt.calculateRoot().then((root) => {
-      expect(root.left).toBeInstanceOf(LeafBranch);
+      expect(root.left).toBeInstanceOf(FinalizedLeafBranch);
       expect(root.right).toStrictEqual(null);
     });
     smt.addLeaf(0b1001n, new Uint8Array(), 20n);
@@ -101,19 +101,19 @@ describe('Sum-Certifying Tree', function () {
     smt.addLeaf(0b1000n, new Uint8Array(), 1n);
     smt.addLeaf(0b1001n, new Uint8Array(), 1n);
     const root1 = smt.calculateRoot().then((root) => {
-      expect(root.left).toBeInstanceOf(LeafBranch);
-      expect(root.right).toBeInstanceOf(LeafBranch);
+      expect(root.left).toBeInstanceOf(FinalizedLeafBranch);
+      expect(root.right).toBeInstanceOf(FinalizedLeafBranch);
     });
     smt.addLeaf(0b1010n, new Uint8Array(), 1n);
     const root2 = smt.calculateRoot().then((root) => {
-      expect(root.left).toBeInstanceOf(NodeBranch);
-      expect(root.right).toBeInstanceOf(LeafBranch);
+      expect(root.left).toBeInstanceOf(FinalizedNodeBranch);
+      expect(root.right).toBeInstanceOf(FinalizedLeafBranch);
     });
 
     smt.addLeaf(0b1011n, new Uint8Array(), 1n);
     const root3 = smt.calculateRoot().then((root) => {
-      expect(root.left).toBeInstanceOf(NodeBranch);
-      expect(root.right).toBeInstanceOf(NodeBranch);
+      expect(root.left).toBeInstanceOf(FinalizedNodeBranch);
+      expect(root.right).toBeInstanceOf(FinalizedNodeBranch);
     });
     await Promise.all([root1, root2, root3]);
   });

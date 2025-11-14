@@ -2,8 +2,8 @@ import { DataHash } from '../../../src/hash/DataHash.js';
 import { DataHasherFactory } from '../../../src/hash/DataHasherFactory.js';
 import { HashAlgorithm } from '../../../src/hash/HashAlgorithm.js';
 import { NodeDataHasher } from '../../../src/hash/NodeDataHasher.js';
-import { LeafBranch } from '../../../src/mtree/plain/LeafBranch.js';
-import { NodeBranch } from '../../../src/mtree/plain/NodeBranch.js';
+import { FinalizedLeafBranch } from '../../../src/mtree/plain/FinalizedLeafBranch.js';
+import { FinalizedNodeBranch } from '../../../src/mtree/plain/FinalizedNodeBranch.js';
 import { PendingLeafBranch } from '../../../src/mtree/plain/PendingLeafBranch.js';
 import { SparseMerkleTree } from '../../../src/mtree/plain/SparseMerkleTree.js';
 import { SparseMerkleTreeRootNode } from '../../../src/mtree/plain/SparseMerkleTreeRootNode.js';
@@ -72,7 +72,6 @@ describe('Sparse Merkle Tree tests', function () {
       isPathValid: true,
       isSuccessful: true,
     });
-    path = root.getPath(0b110010000n);
     await expect(path.verify(0b11010n)).resolves.toEqual({
       isPathIncluded: false,
       isPathValid: true,
@@ -101,7 +100,7 @@ describe('Sparse Merkle Tree tests', function () {
     const smt = new SparseMerkleTree(hasherFactory);
     smt.addLeaf(0b1000n, new Uint8Array());
     smt.calculateRoot().then((root) => {
-      expect(root.left).toBeInstanceOf(LeafBranch);
+      expect(root.left).toBeInstanceOf(FinalizedLeafBranch);
       expect(root.right).toStrictEqual(null);
     });
     smt.addLeaf(0b1001n, new Uint8Array());
@@ -120,19 +119,19 @@ describe('Sparse Merkle Tree tests', function () {
     smt.addLeaf(0b1000n, textEncoder.encode('A'));
     smt.addLeaf(0b1001n, textEncoder.encode('B'));
     const root1 = smt.calculateRoot().then((root) => {
-      expect(root.left).toBeInstanceOf(LeafBranch);
-      expect(root.right).toBeInstanceOf(LeafBranch);
+      expect(root.left).toBeInstanceOf(FinalizedLeafBranch);
+      expect(root.right).toBeInstanceOf(FinalizedLeafBranch);
     });
     smt.addLeaf(0b1010n, textEncoder.encode('C'));
     const root2 = smt.calculateRoot().then((root) => {
-      expect(root.left).toBeInstanceOf(NodeBranch);
-      expect(root.right).toBeInstanceOf(LeafBranch);
+      expect(root.left).toBeInstanceOf(FinalizedNodeBranch);
+      expect(root.right).toBeInstanceOf(FinalizedLeafBranch);
     });
 
     smt.addLeaf(0b1011n, textEncoder.encode('D'));
     const root3 = smt.calculateRoot().then((root) => {
-      expect(root.left).toBeInstanceOf(NodeBranch);
-      expect(root.right).toBeInstanceOf(NodeBranch);
+      expect(root.left).toBeInstanceOf(FinalizedNodeBranch);
+      expect(root.right).toBeInstanceOf(FinalizedNodeBranch);
     });
     await Promise.all([root1, root2, root3]);
   });

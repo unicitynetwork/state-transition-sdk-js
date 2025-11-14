@@ -8,7 +8,7 @@ import { CborDeserializer } from '../../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../serializer/cbor/CborSerializer.js';
 import { BigintConverter } from '../../util/BigintConverter.js';
 import { dedent } from '../../util/StringUtils.js';
-import { PathVerificationResult } from '../plain/PathVerificationResult.js';
+import { PathVerificationResult } from '../PathVerificationResult.js';
 
 export interface ISparseMerkleSumTreePathJson {
   readonly root: string;
@@ -77,7 +77,7 @@ export class SparseMerkleSumTreePath {
     let step = this.steps[0];
 
     let currentData: Uint8Array | null;
-    let currentPath = 1n;
+    let currentPath = step.path;
     let currentSum = step.value;
 
     if (step.path > 0) {
@@ -91,16 +91,14 @@ export class SparseMerkleSumTreePath {
         )
         .digest();
       currentData = hash.data;
-
-      const length = BigInt(bitLen(step.path) - 1);
-      currentPath = (currentPath << length) | (step.path & ((1n << length) - 1n));
     } else {
+      currentPath = 1n;
       currentData = step.data;
     }
 
     for (let i = 1; i < this.steps.length; i++) {
       step = this.steps[i];
-      const isRight = currentPath & 1n;
+      const isRight = this.steps[i - 1].path & 1n;
 
       const left = {
         data: isRight ? step.data : currentData,
@@ -127,6 +125,9 @@ export class SparseMerkleSumTreePath {
       currentData = hash.data;
 
       const length = BigInt(bitLen(step.path) - 1);
+      if (length < 0n) {
+        return new PathVerificationResult(false, false);
+      }
       currentPath = (currentPath << length) | (step.path & ((1n << length) - 1n));
       currentSum += step.value;
     }

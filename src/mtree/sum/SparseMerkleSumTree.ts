@@ -1,13 +1,13 @@
 import { Branch } from './Branch.js';
-import { LeafBranch } from './LeafBranch.js';
+import { FinalizedLeafBranch } from './FinalizedLeafBranch.js';
 import { PendingBranch } from './PendingBranch.js';
 import { PendingLeafBranch } from './PendingLeafBranch.js';
 import { PendingNodeBranch } from './PendingNodeBranch.js';
 import { SparseMerkleSumTreeRootNode } from './SparseMerkleSumTreeRootNode.js';
 import { IDataHasher } from '../../hash/IDataHasher.js';
 import { IDataHasherFactory } from '../../hash/IDataHasherFactory.js';
-import { LeafInBranchError } from '../plain/LeafInBranchError.js';
-import { LeafOutOfBoundsError } from '../plain/LeafOutOfBoundsError.js';
+import { LeafInBranchError } from '../LeafInBranchError.js';
+import { LeafOutOfBoundsError } from '../LeafOutOfBoundsError.js';
 import { calculateCommonPath } from '../plain/SparseMerkleTreePathUtils.js';
 
 /**
@@ -83,7 +83,7 @@ export class SparseMerkleSumTree {
     }
 
     // If a leaf must be split from the middle
-    if (branch instanceof PendingLeafBranch || branch instanceof LeafBranch) {
+    if (branch instanceof PendingLeafBranch || branch instanceof FinalizedLeafBranch) {
       if (commonPath.path === branch.path) {
         throw new LeafOutOfBoundsError();
       }

@@ -1,6 +1,6 @@
 import { bitLen } from '@noble/curves/utils.js';
 
-import { PathVerificationResult } from './PathVerificationResult.js';
+import { PathVerificationResult } from '../PathVerificationResult.js';
 import { ISparseMerkleTreePathStepJson, SparseMerkleTreePathStep } from './SparseMerkleTreePathStep.js';
 import { DataHash } from '../../hash/DataHash.js';
 import { DataHasher } from '../../hash/DataHasher.js';
@@ -77,8 +77,8 @@ export class SparseMerkleTreePath {
     let step = this.steps[0];
 
     let currentData: Uint8Array | null;
-    let currentPath = 1n;
-    if (step.path > 0) {
+    let currentPath = step.path;
+    if (step.path > 1n) {
       const hash = await new DataHasher(this.root.algorithm)
         .update(
           CborSerializer.encodeArray(
@@ -88,16 +88,14 @@ export class SparseMerkleTreePath {
         )
         .digest();
       currentData = hash.data;
-
-      const length = BigInt(bitLen(step.path) - 1);
-      currentPath = (currentPath << length) | (step.path & ((1n << length) - 1n));
     } else {
+      currentPath = 1n;
       currentData = step.data;
     }
 
     for (let i = 1; i < this.steps.length; i++) {
       step = this.steps[i];
-      const isRight = currentPath & 1n;
+      const isRight = this.steps[i - 1].path & 1n;
 
       const left = isRight ? step.data : currentData;
       const right = isRight ? currentData : step.data;
@@ -115,6 +113,9 @@ export class SparseMerkleTreePath {
       currentData = hash.data;
 
       const length = BigInt(bitLen(step.path) - 1);
+      if (length < 0n) {
+        return new PathVerificationResult(false, false);
+      }
       currentPath = (currentPath << length) | (step.path & ((1n << length) - 1n));
     }
 
