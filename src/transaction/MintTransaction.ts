@@ -1,6 +1,5 @@
 import { IMintTransactionReason } from './IMintTransactionReason.js';
 import { IInclusionProofJson, InclusionProof, InclusionProofVerificationStatus } from './InclusionProof.js';
-import { MintCommitment } from './MintCommitment.js';
 import { IMintTransactionDataJson, MintTransactionData } from './MintTransactionData.js';
 import { MintTransactionState } from './MintTransactionState.js';
 import { Transaction } from './Transaction.js';
@@ -9,6 +8,7 @@ import { RootTrustBase } from '../bft/RootTrustBase.js';
 import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
 import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
+import { MintSigningService } from '../sign/MintSigningService.js';
 import { HexConverter } from '../util/HexConverter.js';
 import { VerificationResult } from '../verification/VerificationResult.js';
 import { VerificationResultCode } from '../verification/VerificationResultCode.js';
@@ -62,7 +62,7 @@ export class MintTransaction<R extends IMintTransactionReason> extends Transacti
       return new VerificationResult(VerificationResultCode.FAIL, 'Invalid source state');
     }
 
-    const signingService = await MintCommitment.createSigningService(this.data);
+    const signingService = await MintSigningService.create(this.data.tokenId);
     if (
       HexConverter.encode(this.inclusionProof.authenticator.publicKey) !== HexConverter.encode(signingService.publicKey)
     ) {

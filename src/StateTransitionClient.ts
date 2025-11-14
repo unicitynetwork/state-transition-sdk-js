@@ -4,13 +4,15 @@ import { RequestId } from './api/RequestId.js';
 import { SubmitCommitmentResponse } from './api/SubmitCommitmentResponse.js';
 import { RootTrustBase } from './bft/RootTrustBase.js';
 import { PredicateEngineService } from './predicate/PredicateEngineService.js';
+import { MintSigningService } from './sign/MintSigningService.js';
 import { Token } from './token/Token.js';
+import { TokenId } from './token/TokenId.js';
 import { TokenState } from './token/TokenState.js';
 import { Commitment } from './transaction/Commitment.js';
 import { IMintTransactionReason } from './transaction/IMintTransactionReason.js';
 import { InclusionProofVerificationStatus } from './transaction/InclusionProof.js';
 import { MintCommitment } from './transaction/MintCommitment.js';
-import { MintTransactionData } from './transaction/MintTransactionData.js';
+import { MintTransactionState } from './transaction/MintTransactionState.js';
 import { TransferTransaction } from './transaction/TransferTransaction.js';
 import { TransferTransactionData } from './transaction/TransferTransactionData.js';
 
@@ -71,11 +73,11 @@ export class StateTransitionClient {
    * Finalizes a transaction by updating the token state based on the provided transaction data and
    * nametags.
    *
-   * @param trustBase   The root trust base for inclusion proof verification.
-   * @param token       The token to be updated.
-   * @param state       The current state of the token.
-   * @param transaction The transaction containing transfer data.
-   * @param nametags    A list of tokens used as nametags in the transaction.
+   * @param {RootTrustBase} trustBase   The root trust base for inclusion proof verification.
+   * @param {Token} token       The token to be updated.
+   * @param {TokenState} state       The current state of the token.
+   * @param {TransferTransaction} transaction The transaction containing transfer data.
+   * @param {Token} nametags    A list of tokens used as nametags in the transaction.
    * @return The updated token after applying the transaction.
    */
   public finalizeTransaction<R extends IMintTransactionReason>(
@@ -89,34 +91,70 @@ export class StateTransitionClient {
   }
 
   /**
-   * Retrieves the inclusion proof for a token and verifies its status against the provided public
-   * key and trust base.
+   * Retrieves the inclusion proof for a given commitment.
    *
-   * @param token     The token for which to retrieve the inclusion proof.
-   * @param publicKey The public key associated with the token.
-   * @param trustBase The root trust base for verification.
-   * @return inclusion proof verification status.
+   * @param {RequestId} requestId The request ID of inclusion proof to retrieve.
+   * @return inclusion proof response from the aggregator.
    */
-  public async getTokenStatus(
-    trustBase: RootTrustBase,
-    token: Token<IMintTransactionReason>,
-    publicKey: Uint8Array,
-  ): Promise<InclusionProofVerificationStatus> {
-    const requestId = await RequestId.create(publicKey, await token.state.calculateHash());
-    return this.client
-      .getInclusionProof(requestId)
-      .then((response) => response.inclusionProof.verify(trustBase, requestId));
+  public getInclusionProof(requestId: RequestId): Promise<InclusionProofResponse> {
+    return this.client.getInclusionProof(requestId);
   }
 
   /**
-   * Retrieves the inclusion proof for a given commitment.
+   * Check if state is already spent for given request id.
    *
-   * @param commitment The commitment for which to retrieve the inclusion proof.
-   * @return inclusion proof response from the aggregator.
+   * @param {RootTrustBase} trustBase root trust base
+   * @param {RequestId} requestId request id
+   * @return true if state is spent, false otherwise.
    */
-  public getInclusionProof(
-    commitment: Commitment<TransferTransactionData | MintTransactionData<IMintTransactionReason>>,
-  ): Promise<InclusionProofResponse> {
-    return this.client.getInclusionProof(commitment.requestId);
+  public async isStateSpent(trustBase: RootTrustBase, requestId: RequestId): Promise<boolean> {
+    const response = await this.getInclusionProof(requestId);
+    const result = await response.inclusionProof.verify(trustBase, requestId);
+    switch (result) {
+      case InclusionProofVerificationStatus.OK:
+        return true;
+      case InclusionProofVerificationStatus.PATH_NOT_INCLUDED:
+        return false;
+      default:
+        throw new Error(`Inclusion proof verification failed with status ${result}`);
+    }
+  }
+
+  /**
+   * Check if token state is already spent.
+   * @param {RootTrustBase} trustBase trustBase
+   * @param {Token} token token
+   * @param {Uint8Array} publicKey public key
+   * @return true if token state is spent, false otherwise
+   */
+  public async isTokenStateSpent(
+    trustBase: RootTrustBase,
+    token: Token<IMintTransactionReason>,
+    publicKey: Uint8Array,
+  ): Promise<boolean> {
+    const pk = new Uint8Array(publicKey);
+    const predicate = await PredicateEngineService.createPredicate(token.state.predicate);
+    if (!(await predicate.isOwner(pk))) {
+      throw new Error('Given key is not owner of the token.');
+    }
+
+    return this.isStateSpent(trustBase, await RequestId.create(pk, await token.state.calculateHash()));
+  }
+
+  /**
+   * Check if token id is already minted.
+   *
+   * @param {RootTrustBase} trustBase root trust base
+   * @param {TokenId} tokenId   token id
+   * @return true if token id is spent, false otherwise.
+   */
+  public async isMinted(trustBase: RootTrustBase, tokenId: TokenId): Promise<boolean> {
+    return this.isStateSpent(
+      trustBase,
+      await RequestId.create(
+        await MintSigningService.create(tokenId).then((signingService) => signingService.publicKey),
+        await MintTransactionState.create(tokenId),
+      ),
+    );
   }
 }
