@@ -8,7 +8,6 @@ import { IDataHasherFactory } from '../../hash/IDataHasherFactory.js';
 import { CborSerializer } from '../../serializer/cbor/CborSerializer.js';
 import { BigintConverter } from '../../util/BigintConverter.js';
 import { dedent } from '../../util/StringUtils.js';
-import { SparseMerkleTreePathStep } from '../plain/SparseMerkleTreePathStep.js';
 import { calculateCommonPath } from '../plain/SparseMerkleTreePathUtils.js';
 
 /**
