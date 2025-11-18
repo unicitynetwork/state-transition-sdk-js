@@ -1,10 +1,10 @@
-import { TestTokenData } from './TestTokenData.js';
 import { DirectAddress } from '../src/address/DirectAddress.js';
 import { SubmitCommitmentStatus } from '../src/api/SubmitCommitmentResponse.js';
 import { RootTrustBase } from '../src/bft/RootTrustBase.js';
 import { DataHasher } from '../src/hash/DataHasher.js';
 import { HashAlgorithm } from '../src/hash/HashAlgorithm.js';
 import { MaskedPredicate } from '../src/predicate/embedded/MaskedPredicate.js';
+import { MaskedPredicateReference } from '../src/predicate/embedded/MaskedPredicateReference.js';
 import { SigningService } from '../src/sign/SigningService.js';
 import { StateTransitionClient } from '../src/StateTransitionClient.js';
 import { TokenCoinData } from '../src/token/fungible/TokenCoinData.js';
@@ -22,37 +22,28 @@ import { waitInclusionProof } from '../src/util/InclusionProofUtils.js';
 export interface IMintData {
   tokenId: TokenId;
   tokenType: TokenType;
-  tokenData: TestTokenData;
-  coinData: TokenCoinData;
-  data: Uint8Array;
+  tokenData: Uint8Array | null;
+  coinData: TokenCoinData | null;
+  data: Uint8Array | null;
   salt: Uint8Array;
   nonce: Uint8Array;
-  predicate: MaskedPredicate;
 }
 
-export async function createMintData(secret: Uint8Array, coinData: TokenCoinData): Promise<IMintData> {
+export function createMintData(
+  coinData: TokenCoinData | null = null,
+  tokenData: Uint8Array | null = crypto.getRandomValues(new Uint8Array(32)),
+  data: Uint8Array | null = crypto.getRandomValues(new Uint8Array(32)),
+): IMintData {
   const tokenId = new TokenId(crypto.getRandomValues(new Uint8Array(32)));
   const tokenType = new TokenType(crypto.getRandomValues(new Uint8Array(32)));
-  const tokenData = new TestTokenData(crypto.getRandomValues(new Uint8Array(32)));
-
-  const data = crypto.getRandomValues(new Uint8Array(32));
 
   const salt = crypto.getRandomValues(new Uint8Array(32));
   const nonce = crypto.getRandomValues(new Uint8Array(32));
-
-  const predicate = MaskedPredicate.create(
-    tokenId,
-    tokenType,
-    await SigningService.createFromSecret(secret, nonce),
-    HashAlgorithm.SHA256,
-    nonce,
-  );
 
   return {
     coinData,
     data,
     nonce,
-    predicate,
     salt,
     tokenData,
     tokenId,
@@ -61,20 +52,28 @@ export async function createMintData(secret: Uint8Array, coinData: TokenCoinData
 }
 
 export async function mintToken(
+  secret: Uint8Array,
   trustBase: RootTrustBase,
   client: StateTransitionClient,
   data: IMintData,
 ): Promise<Token<IMintTransactionReason>> {
-  const predicateReference = await data.predicate.getReference();
+  const signingService = await SigningService.createFromSecret(secret, data.nonce);
+  const predicateReference = await MaskedPredicateReference.createFromSigningService(
+    data.tokenType,
+    signingService,
+    HashAlgorithm.SHA256,
+    data.nonce,
+  );
+
   const commitment = await MintCommitment.create(
     await MintTransactionData.create(
       data.tokenId,
       data.tokenType,
-      data.tokenData.toCBOR(),
+      data.tokenData,
       data.coinData,
       await predicateReference.toAddress(),
       data.salt,
-      await new DataHasher(HashAlgorithm.SHA256).update(data.data).digest(),
+      data.data ? await new DataHasher(HashAlgorithm.SHA256).update(data.data).digest() : null,
       null,
     ),
   );
@@ -86,7 +85,10 @@ export async function mintToken(
 
   return Token.mint(
     trustBase,
-    new TokenState(data.predicate, data.data),
+    new TokenState(
+      MaskedPredicate.create(data.tokenId, data.tokenType, signingService, HashAlgorithm.SHA256, data.nonce),
+      data.data,
+    ),
     commitment.toTransaction(await waitInclusionProof(trustBase, client, commitment)),
   );
 }
