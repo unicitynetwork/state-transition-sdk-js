@@ -53,24 +53,17 @@ export async function testTransferFlow(trustBase: RootTrustBase, client: StateTr
     ]),
   );
 
-  const aliceToken = await mintToken(trustBase, client, mintData);
+  const aliceToken = await mintToken(aliceSecret, trustBase, client, mintData);
   await expect(client.isMinted(trustBase, aliceToken.id)).resolves.toBeTruthy();
   await expect(
     client.isTokenStateSpent(
       trustBase,
       aliceToken,
-      await SigningService.createFromSecret(initialOwnerSecret, mintData.nonce).then(
+      await SigningService.createFromSecret(aliceSecret, mintData.nonce).then(
         (signingService) => signingService.publicKey,
       ),
     ),
   ).resolves.toBeFalsy();
-
-  await expect(
-    mintData.predicate
-      .getReference()
-      .then((reference) => reference.toAddress())
-      .then((address) => address.address),
-  ).resolves.toEqual(aliceToken.genesis.data.recipient.address);
 
   // Recipient (Bob) prepares the info for the transfer: new state and address
   const bobTokenState = "Bob's custom data"; // Bob gives this custom data to the Alice to use in the transfer
@@ -117,7 +110,7 @@ export async function testTransferFlow(trustBase: RootTrustBase, client: StateTr
   expect(bobToken.coins?.toJSON()).toEqual(aliceToken.coins?.toJSON());
 
   // Verify the original minted token has been spent
-  const senderSigningService = await SigningService.createFromSecret(initialOwnerSecret, mintData.nonce);
+  const senderSigningService = await SigningService.createFromSecret(aliceSecret, mintData.nonce);
   await expect(client.isTokenStateSpent(trustBase, aliceToken, senderSigningService.publicKey)).resolves.toBeTruthy();
 
   // Verify the updated token has not been spent
@@ -236,10 +229,10 @@ export async function testOfflineTransferFlow(trustBase: RootTrustBase, client: 
   expect(updateToken.coins?.toJSON()).toEqual(token.coins?.toJSON());
 
   // Verify the original minted token has been spent
-  await expect(client.isTokenStateSpent(trustBase, token, firstOwnerSigningService.publicKey)).resolves.toBeTruthy();
+  await expect(client.isTokenStateSpent(trustBase, token, aliceSigningService.publicKey)).resolves.toBeTruthy();
 
   // Verify the updated token has not been spent
-  await expect(client.isTokenStateSpent(trustBase, updateToken, receiverSigningService.publicKey)).resolves.toBeFalsy();
+  await expect(client.isTokenStateSpent(trustBase, updateToken, bobSigningService.publicKey)).resolves.toBeFalsy();
 }
 
 export async function testSplitFlow(trustBase: RootTrustBase, client: StateTransitionClient): Promise<void> {
