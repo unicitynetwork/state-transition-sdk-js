@@ -1,6 +1,6 @@
 import { Branch } from './Branch.js';
-import { LeafBranch } from './LeafBranch.js';
-import { SparseMerkleSumTreePath, SparseMerkleSumTreePathRoot } from './SparseMerkleSumTreePath.js';
+import { FinalizedLeafBranch } from './FinalizedLeafBranch.js';
+import { SparseMerkleSumTreePath } from './SparseMerkleSumTreePath.js';
 import { SparseMerkleSumTreePathStep } from './SparseMerkleSumTreePathStep.js';
 import { DataHash } from '../../hash/DataHash.js';
 import { IDataHasher } from '../../hash/IDataHasher.js';
@@ -19,7 +19,7 @@ export class SparseMerkleSumTreeRootNode {
   private constructor(
     public readonly left: Branch | null,
     public readonly right: Branch | null,
-    public readonly counter: bigint,
+    public readonly value: bigint,
     public readonly hash: DataHash,
   ) {}
 
@@ -39,57 +39,55 @@ export class SparseMerkleSumTreeRootNode {
       .create()
       .update(
         CborSerializer.encodeArray(
-          left
-            ? CborSerializer.encodeArray(
-                CborSerializer.encodeByteString(left.hash.imprint),
-                CborSerializer.encodeByteString(BigintConverter.encode(left.sum)),
-              )
-            : CborSerializer.encodeNull(),
-          right
-            ? CborSerializer.encodeArray(
-                CborSerializer.encodeByteString(right.hash.imprint),
-                CborSerializer.encodeByteString(BigintConverter.encode(right.sum)),
-              )
-            : CborSerializer.encodeNull(),
+          CborSerializer.encodeByteString(BigintConverter.encode(1n)),
+          CborSerializer.encodeOptional(left?.hash.data, CborSerializer.encodeByteString),
+          CborSerializer.encodeByteString(BigintConverter.encode(left?.value ?? 0n)),
+          CborSerializer.encodeOptional(right?.hash.data, CborSerializer.encodeByteString),
+          CborSerializer.encodeByteString(BigintConverter.encode(right?.value ?? 0n)),
         ),
       )
       .digest();
 
-    return new SparseMerkleSumTreeRootNode(left ?? null, right ?? null, (left?.sum ?? 0n) + (right?.sum ?? 0n), hash);
+    return new SparseMerkleSumTreeRootNode(
+      left ?? null,
+      right ?? null,
+      (left?.value ?? 0n) + (right?.value ?? 0n),
+      hash,
+    );
   }
 
   private static generatePath(
     remainingPath: bigint,
-    left: Branch | null,
-    right: Branch | null,
+    parent: Branch | SparseMerkleSumTreeRootNode,
   ): ReadonlyArray<SparseMerkleSumTreePathStep> {
-    const isRight = remainingPath & 1n;
-    const branch = isRight ? right : left;
-    const siblingBranch = isRight ? left : right;
-
-    if (branch === null) {
-      return [SparseMerkleSumTreePathStep.createWithoutBranch(remainingPath, siblingBranch)];
+    if (parent instanceof FinalizedLeafBranch) {
+      return [new SparseMerkleSumTreePathStep(parent.path, parent.data, parent.value)];
     }
 
-    const commonPath = calculateCommonPath(remainingPath, branch.path);
+    const commonPath = calculateCommonPath(remainingPath, parent.path);
+    remainingPath = remainingPath >> commonPath.length;
 
-    if (branch.path === commonPath.path) {
-      if (branch instanceof LeafBranch) {
-        return [SparseMerkleSumTreePathStep.create(branch.path, branch, siblingBranch)];
-      }
-
-      // If path has ended, return the current non leaf branch data
-      if (remainingPath >> commonPath.length === 1n) {
-        return [SparseMerkleSumTreePathStep.create(branch.path, branch, siblingBranch)];
-      }
-
+    if (commonPath.path !== parent.path || remainingPath === 1n) {
       return [
-        ...this.generatePath(remainingPath >> commonPath.length, branch.left, branch.right),
-        SparseMerkleSumTreePathStep.create(branch.path, null, siblingBranch),
+        new SparseMerkleSumTreePathStep(0n, parent.left?.hash.data ?? null, parent.left?.value ?? 0n),
+        new SparseMerkleSumTreePathStep(parent.path, parent.right?.hash.data ?? null, parent.right?.value ?? 0n),
       ];
     }
 
-    return [SparseMerkleSumTreePathStep.create(branch.path, branch, siblingBranch)];
+    const isRight = remainingPath & 1n;
+    const branch = isRight ? parent.right : parent.left;
+    const siblingBranch = isRight ? parent.left : parent.right;
+
+    const step = new SparseMerkleSumTreePathStep(
+      parent.path,
+      siblingBranch?.hash.data ?? null,
+      siblingBranch?.value ?? 0n,
+    );
+    if (branch === null) {
+      return [new SparseMerkleSumTreePathStep(isRight, null, 0n), step];
+    }
+
+    return [...this.generatePath(remainingPath, branch), step];
   }
 
   /**
@@ -98,10 +96,7 @@ export class SparseMerkleSumTreeRootNode {
    * @returns A MerkleSumTreePath for the given path.
    */
   public getPath(path: bigint): SparseMerkleSumTreePath {
-    return new SparseMerkleSumTreePath(
-      new SparseMerkleSumTreePathRoot(this.hash, this.counter),
-      SparseMerkleSumTreeRootNode.generatePath(path, this.left, this.right),
-    );
+    return new SparseMerkleSumTreePath(this.hash, SparseMerkleSumTreeRootNode.generatePath(path, this));
   }
 
   /**

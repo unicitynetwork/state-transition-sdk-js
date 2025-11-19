@@ -1,4 +1,4 @@
-import { LeafBranch } from './LeafBranch.js';
-import { NodeBranch } from './NodeBranch.js';
+import { FinalizedLeafBranch } from './FinalizedLeafBranch.js';
+import { FinalizedNodeBranch } from './FinalizedNodeBranch.js';
 
-export type Branch = NodeBranch | LeafBranch;
+export type Branch = FinalizedNodeBranch | FinalizedLeafBranch;

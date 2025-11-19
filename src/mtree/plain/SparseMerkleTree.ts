@@ -1,7 +1,7 @@
 import { Branch } from './Branch.js';
-import { LeafBranch } from './LeafBranch.js';
-import { LeafInBranchError } from './LeafInBranchError.js';
-import { LeafOutOfBoundsError } from './LeafOutOfBoundsError.js';
+import { FinalizedLeafBranch } from './FinalizedLeafBranch.js';
+import { LeafInBranchError } from '../LeafInBranchError.js';
+import { LeafOutOfBoundsError } from '../LeafOutOfBoundsError.js';
 import { PendingBranch } from './PendingBranch.js';
 import { PendingLeafBranch } from './PendingLeafBranch.js';
 import { PendingNodeBranch } from './PendingNodeBranch.js';
@@ -26,19 +26,19 @@ export class SparseMerkleTree {
   /**
    * Adds a leaf to the tree at the specified path with the given value.
    * @param path The path where the leaf should be added.
-   * @param valueRef The value of the leaf as a Uint8Array.
+   * @param data The data of the leaf as a Uint8Array.
    * @throws Error will throw an error if the path is less than 1.
    */
-  public async addLeaf(path: bigint, valueRef: Uint8Array): Promise<void> {
+  public async addLeaf(path: bigint, data: Uint8Array): Promise<void> {
     if (path < 1n) {
       throw new Error('Path must be greater than 0.');
     }
 
     const isRight = path & 1n;
-    const value = new Uint8Array(valueRef);
+    data = new Uint8Array(data);
     const branchPromise = isRight ? this.right : this.left;
     const newBranchPromise = branchPromise.then((branch) =>
-      branch ? this.buildTree(branch, path, value) : new PendingLeafBranch(path, value),
+      branch ? this.buildTree(branch, path, data) : new PendingLeafBranch(path, data),
     );
 
     if (isRight) {
@@ -78,12 +78,12 @@ export class SparseMerkleTree {
     }
 
     // If a leaf must be split from the middle
-    if (branch instanceof PendingLeafBranch || branch instanceof LeafBranch) {
+    if (branch instanceof PendingLeafBranch || branch instanceof FinalizedLeafBranch) {
       if (commonPath.path === branch.path) {
         throw new LeafOutOfBoundsError();
       }
 
-      const oldBranch = new PendingLeafBranch(branch.path >> commonPath.length, branch.value);
+      const oldBranch = new PendingLeafBranch(branch.path >> commonPath.length, branch.data);
       const newBranch = new PendingLeafBranch(remainingPath >> commonPath.length, value);
       return new PendingNodeBranch(commonPath.path, isRight ? oldBranch : newBranch, isRight ? newBranch : oldBranch);
     }

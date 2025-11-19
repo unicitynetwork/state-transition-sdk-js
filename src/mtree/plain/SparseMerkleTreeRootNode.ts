@@ -1,5 +1,5 @@
 import { Branch } from './Branch.js';
-import { LeafBranch } from './LeafBranch.js';
+import { FinalizedLeafBranch } from './FinalizedLeafBranch.js';
 import { SparseMerkleTreePath } from './SparseMerkleTreePath.js';
 import { SparseMerkleTreePathStep } from './SparseMerkleTreePathStep.js';
 import { calculateCommonPath } from './SparseMerkleTreePathUtils.js';
@@ -52,8 +52,8 @@ export class SparseMerkleTreeRootNode {
     remainingPath: bigint,
     parent: Branch | SparseMerkleTreeRootNode,
   ): ReadonlyArray<SparseMerkleTreePathStep> {
-    if (parent instanceof LeafBranch) {
-      return [new SparseMerkleTreePathStep(parent.path, parent.value)];
+    if (parent instanceof FinalizedLeafBranch) {
+      return [new SparseMerkleTreePathStep(parent.path, parent.data)];
     }
 
     const commonPath = calculateCommonPath(remainingPath, parent.path);
@@ -61,8 +61,8 @@ export class SparseMerkleTreeRootNode {
 
     if (commonPath.path !== parent.path || remainingPath === 1n) {
       return [
-        new SparseMerkleTreePathStep(0n, parent.right?.hash.data ?? null),
-        new SparseMerkleTreePathStep(parent.path, parent.left?.hash.data ?? null),
+        new SparseMerkleTreePathStep(0n, parent.left?.hash.data ?? null),
+        new SparseMerkleTreePathStep(parent.path, parent.right?.hash.data ?? null),
       ];
     }
 
@@ -70,17 +70,13 @@ export class SparseMerkleTreeRootNode {
     const branch = isRight ? parent.right : parent.left;
     const siblingBranch = isRight ? parent.left : parent.right;
 
+    const step = new SparseMerkleTreePathStep(parent.path, siblingBranch?.hash.data ?? null);
+
     if (branch === null) {
-      return [
-        new SparseMerkleTreePathStep(0n, parent.right?.hash.data ?? null),
-        new SparseMerkleTreePathStep(1n, parent.left?.hash.data ?? null),
-      ];
+      return [new SparseMerkleTreePathStep(isRight, null), step];
     }
 
-    return [
-      ...this.generatePath(remainingPath, branch),
-      new SparseMerkleTreePathStep(parent.path, siblingBranch?.hash.data ?? null),
-    ];
+    return [...this.generatePath(remainingPath, branch), step];
   }
 
   /**

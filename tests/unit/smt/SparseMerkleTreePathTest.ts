@@ -46,4 +46,16 @@ describe('SparseMerkleTreePath', () => {
 
     expect(await path.verify(0b1000000n)).toEqual({ isPathIncluded: false, isPathValid: true, isSuccessful: false });
   });
+
+  it('should verify empty tree path', async () => {
+    const path = SparseMerkleTreePath.fromJSON({
+      root: '00001e54402898172f2948615fb17627733abbd120a85381c624ad060d28321be672',
+      steps: [
+        { data: null, path: '1' },
+        { data: null, path: '1' },
+      ],
+    });
+
+    expect(await path.verify(101n)).toEqual({ isPathIncluded: false, isPathValid: true, isSuccessful: false });
+  });
 });

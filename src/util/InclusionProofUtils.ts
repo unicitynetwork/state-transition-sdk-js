@@ -37,7 +37,9 @@ export async function waitInclusionProof(
 ): Promise<InclusionProof> {
   while (true) {
     try {
-      const inclusionProof = await client.getInclusionProof(commitment).then((response) => response.inclusionProof);
+      const inclusionProof = await client
+        .getInclusionProof(commitment.requestId)
+        .then((response) => response.inclusionProof);
       const verificationStatus = await inclusionProof.verify(trustBase, commitment.requestId);
       switch (verificationStatus) {
         case InclusionProofVerificationStatus.OK:

@@ -16,7 +16,6 @@ import { TokenId } from '../../src/token/TokenId.js';
 import { TokenState } from '../../src/token/TokenState.js';
 import { TokenType } from '../../src/token/TokenType.js';
 import { IMintTransactionReason } from '../../src/transaction/IMintTransactionReason.js';
-import { InclusionProofVerificationStatus } from '../../src/transaction/InclusionProof.js';
 import { TokenSplitBuilder } from '../../src/transaction/split/TokenSplitBuilder.js';
 import { TransferCommitment } from '../../src/transaction/TransferCommitment.js';
 import { TransferTransaction } from '../../src/transaction/TransferTransaction.js';
@@ -55,6 +54,16 @@ export async function testTransferFlow(trustBase: RootTrustBase, client: StateTr
   );
 
   const aliceToken = await mintToken(aliceSecret, trustBase, client, mintData);
+  await expect(client.isMinted(trustBase, aliceToken.id)).resolves.toBeTruthy();
+  await expect(
+    client.isTokenStateSpent(
+      trustBase,
+      aliceToken,
+      await SigningService.createFromSecret(aliceSecret, mintData.nonce).then(
+        (signingService) => signingService.publicKey,
+      ),
+    ),
+  ).resolves.toBeFalsy();
 
   // Recipient (Bob) prepares the info for the transfer: new state and address
   const bobTokenState = "Bob's custom data"; // Bob gives this custom data to the Alice to use in the transfer
@@ -102,12 +111,10 @@ export async function testTransferFlow(trustBase: RootTrustBase, client: StateTr
 
   // Verify the original minted token has been spent
   const senderSigningService = await SigningService.createFromSecret(aliceSecret, mintData.nonce);
-  const mintedTokenStatus = await client.getTokenStatus(trustBase, aliceToken, senderSigningService.publicKey);
-  expect(mintedTokenStatus).toEqual(InclusionProofVerificationStatus.OK);
+  await expect(client.isTokenStateSpent(trustBase, aliceToken, senderSigningService.publicKey)).resolves.toBeTruthy();
 
   // Verify the updated token has not been spent
-  const transferredTokenStatus = await client.getTokenStatus(trustBase, bobToken, bobSigningService.publicKey);
-  expect(transferredTokenStatus).toEqual(InclusionProofVerificationStatus.PATH_NOT_INCLUDED);
+  await expect(client.isTokenStateSpent(trustBase, bobToken, bobSigningService.publicKey)).resolves.toBeFalsy();
 
   // Transfer to the third owner (Carol) with UnmaskedPredicate
   const carolSecret = textEncoder.encode('Carol');
@@ -222,12 +229,10 @@ export async function testOfflineTransferFlow(trustBase: RootTrustBase, client: 
   expect(updateToken.coins?.toJSON()).toEqual(token.coins?.toJSON());
 
   // Verify the original minted token has been spent
-  const mintedTokenStatus = await client.getTokenStatus(trustBase, token, aliceSigningService.publicKey);
-  expect(mintedTokenStatus).toEqual(InclusionProofVerificationStatus.OK);
+  await expect(client.isTokenStateSpent(trustBase, token, aliceSigningService.publicKey)).resolves.toBeTruthy();
 
   // Verify the updated token has not been spent
-  const transferredTokenStatus = await client.getTokenStatus(trustBase, updateToken, bobSigningService.publicKey);
-  expect(transferredTokenStatus).toEqual(InclusionProofVerificationStatus.PATH_NOT_INCLUDED);
+  await expect(client.isTokenStateSpent(trustBase, updateToken, bobSigningService.publicKey)).resolves.toBeFalsy();
 }
 
 export async function testSplitFlow(trustBase: RootTrustBase, client: StateTransitionClient): Promise<void> {

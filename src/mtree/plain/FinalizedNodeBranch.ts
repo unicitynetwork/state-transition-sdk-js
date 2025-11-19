@@ -2,7 +2,7 @@ import { Branch } from './Branch.js';
 import { DataHash } from '../../hash/DataHash.js';
 import { dedent } from '../../util/StringUtils.js';
 
-export class NodeBranch {
+export class FinalizedNodeBranch {
   public constructor(
     public readonly path: bigint,
     public readonly left: Branch,
@@ -10,7 +10,7 @@ export class NodeBranch {
     public readonly hash: DataHash,
   ) {}
 
-  public finalize(): Promise<NodeBranch> {
+  public finalize(): Promise<FinalizedNodeBranch> {
     return Promise.resolve(this);
   }
 
