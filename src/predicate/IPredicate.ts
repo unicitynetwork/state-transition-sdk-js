@@ -38,9 +38,5 @@ export interface IPredicate extends ISerializablePredicate {
    * @param transaction current transaction
    * @return true if successful
    */
-  verify(
-    trustBase: RootTrustBase,
-    token: Token<IMintTransactionReason>,
-    transaction: TransferTransaction,
-  ): Promise<boolean>;
+  verify(trustBase: RootTrustBase, token: Token, transaction: TransferTransaction): Promise<boolean>;
 }

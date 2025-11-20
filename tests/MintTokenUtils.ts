@@ -15,6 +15,7 @@ import { TokenType } from '../src/token/TokenType.js';
 import { IMintTransactionReason } from '../src/transaction/IMintTransactionReason.js';
 import { MintCommitment } from '../src/transaction/MintCommitment.js';
 import { MintTransactionData } from '../src/transaction/MintTransactionData.js';
+import { MintTransactionReasonFactory } from '../src/transaction/MintTransactionReasonFactory.js';
 import { TransferCommitment } from '../src/transaction/TransferCommitment.js';
 import { TransferTransaction } from '../src/transaction/TransferTransaction.js';
 import { waitInclusionProof } from '../src/util/InclusionProofUtils.js';
@@ -54,9 +55,11 @@ export function createMintData(
 export async function mintToken(
   secret: Uint8Array,
   trustBase: RootTrustBase,
+  mintReasonFactory: MintTransactionReasonFactory,
   client: StateTransitionClient,
   data: IMintData,
-): Promise<Token<IMintTransactionReason>> {
+  reason: IMintTransactionReason | null = null,
+): Promise<Token> {
   const signingService = await SigningService.createFromSecret(secret, data.nonce);
   const predicateReference = await MaskedPredicateReference.createFromSigningService(
     data.tokenType,
@@ -66,7 +69,7 @@ export async function mintToken(
   );
 
   const commitment = await MintCommitment.create(
-    await MintTransactionData.create(
+    await MintTransactionData.createFromReason(
       data.tokenId,
       data.tokenType,
       data.tokenData,
@@ -74,7 +77,7 @@ export async function mintToken(
       await predicateReference.toAddress(),
       data.salt,
       data.data ? await new DataHasher(HashAlgorithm.SHA256).update(data.data).digest() : null,
-      null,
+      reason,
     ),
   );
 
@@ -85,6 +88,7 @@ export async function mintToken(
 
   return Token.mint(
     trustBase,
+    mintReasonFactory,
     new TokenState(
       MaskedPredicate.create(data.tokenId, data.tokenType, signingService, HashAlgorithm.SHA256, data.nonce),
       data.data,
@@ -96,7 +100,7 @@ export async function mintToken(
 export async function sendToken(
   trustBase: RootTrustBase,
   client: StateTransitionClient,
-  token: Token<IMintTransactionReason>,
+  token: Token,
   signingService: SigningService,
   recipient: DirectAddress,
   tokenState: string | null = 'my custom data',

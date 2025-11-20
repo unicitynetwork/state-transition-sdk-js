@@ -1,3 +1,4 @@
 export enum MintReasonType {
-  TOKEN_SPLIT = 'TOKEN_SPLIT',
+  USER_DEFINED = 0,
+  TOKEN_SPLIT = 1,
 }

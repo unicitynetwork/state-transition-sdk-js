@@ -15,6 +15,7 @@ import { MintCommitment } from './transaction/MintCommitment.js';
 import { MintTransactionState } from './transaction/MintTransactionState.js';
 import { TransferTransaction } from './transaction/TransferTransaction.js';
 import { TransferTransactionData } from './transaction/TransferTransactionData.js';
+import { MintTransactionReasonFactory } from './transaction/MintTransactionReasonFactory.js';
 
 /**
  * High level client implementing the token state transition workflow.
@@ -32,9 +33,7 @@ export class StateTransitionClient {
    * @returns Commitment ready for inclusion proof retrieval
    * @throws Error if aggregator rejects
    */
-  public async submitMintCommitment<R extends IMintTransactionReason>(
-    commitment: MintCommitment<R>,
-  ): Promise<SubmitCommitmentResponse> {
+  public async submitMintCommitment(commitment: MintCommitment): Promise<SubmitCommitmentResponse> {
     return this.client.submitCommitment(
       commitment.requestId,
       await commitment.transactionData.calculateHash(),
@@ -74,20 +73,22 @@ export class StateTransitionClient {
    * nametags.
    *
    * @param {RootTrustBase} trustBase   The root trust base for inclusion proof verification.
+   * @param {MintTransactionReasonFactory} mintReasonFactory Factory to create mint transaction reasons.
    * @param {Token} token       The token to be updated.
    * @param {TokenState} state       The current state of the token.
    * @param {TransferTransaction} transaction The transaction containing transfer data.
    * @param {Token} nametags    A list of tokens used as nametags in the transaction.
    * @return The updated token after applying the transaction.
    */
-  public finalizeTransaction<R extends IMintTransactionReason>(
+  public finalizeTransaction(
     trustBase: RootTrustBase,
-    token: Token<R>,
+    mintReasonFactory: MintTransactionReasonFactory,
+    token: Token,
     state: TokenState,
     transaction: TransferTransaction,
-    nametags: Token<IMintTransactionReason>[] = [],
-  ): Promise<Token<R>> {
-    return token.update(trustBase, state, transaction, nametags);
+    nametags: Token[] = [],
+  ): Promise<Token> {
+    return token.update(trustBase, mintReasonFactory, state, transaction, nametags);
   }
 
   /**
@@ -127,11 +128,7 @@ export class StateTransitionClient {
    * @param {Uint8Array} publicKey public key
    * @return true if token state is spent, false otherwise
    */
-  public async isTokenStateSpent(
-    trustBase: RootTrustBase,
-    token: Token<IMintTransactionReason>,
-    publicKey: Uint8Array,
-  ): Promise<boolean> {
+  public async isTokenStateSpent(trustBase: RootTrustBase, token: Token, publicKey: Uint8Array): Promise<boolean> {
     const pk = new Uint8Array(publicKey);
     const predicate = await PredicateEngineService.createPredicate(token.state.predicate);
     if (!(await predicate.isOwner(pk))) {

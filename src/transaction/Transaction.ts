@@ -1,4 +1,3 @@
-import { IMintTransactionReason } from './IMintTransactionReason.js';
 import { InclusionProof } from './InclusionProof.js';
 import { MintTransactionData } from './MintTransactionData.js';
 import { TransferTransactionData } from './TransferTransactionData.js';
@@ -8,7 +7,7 @@ import { dedent } from '../util/StringUtils.js';
 /**
  * A transaction along with its verified inclusion proof.
  */
-export abstract class Transaction<T extends TransferTransactionData | MintTransactionData<IMintTransactionReason>> {
+export abstract class Transaction<T extends TransferTransactionData | MintTransactionData> {
   /**
    * @param data           Transaction data payload
    * @param inclusionProof Proof of inclusion in the ledger

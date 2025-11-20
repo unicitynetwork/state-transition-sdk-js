@@ -19,11 +19,11 @@ import { Token } from '../../token/Token.js';
 import { TokenId } from '../../token/TokenId.js';
 import { TokenState } from '../../token/TokenState.js';
 import { TokenType } from '../../token/TokenType.js';
-import { IMintTransactionReason } from '../IMintTransactionReason.js';
 import { MintCommitment } from '../MintCommitment.js';
 import { MintTransactionData } from '../MintTransactionData.js';
 import { TransferCommitment } from '../TransferCommitment.js';
 import { TransferTransaction } from '../TransferTransaction.js';
+import { MintTransactionReasonFactory } from '../MintTransactionReasonFactory.js';
 
 /**
  * New token request for generating it out of burnt token.
@@ -49,7 +49,7 @@ class TokenRequest {
  */
 class TokenSplit {
   public constructor(
-    private readonly token: Token<IMintTransactionReason>,
+    private readonly token: Token,
     private readonly aggregationRoot: SparseMerkleTreeRootNode,
     private readonly coinRoots: Map<string, SparseMerkleSumTreeRootNode>,
     private readonly tokens: TokenRequest[],
@@ -79,23 +79,26 @@ class TokenSplit {
    * Create split mint commitments after burn transaction is received.
    *
    * @param trustBase       trust base for burn transaction verification
+   * @param mintReasonFactory factory to create mint transaction reasons
    * @param burnTransaction burn transaction
    * @return list of mint commitments for sending to unicity service
    * @throws VerificationException if token verification fails
    */
   public async createSplitMintCommitments(
     trustBase: RootTrustBase,
+    mintReasonFactory: MintTransactionReasonFactory,
     burnTransaction: TransferTransaction,
-  ): Promise<MintCommitment<IMintTransactionReason>[]> {
+  ): Promise<MintCommitment[]> {
     const burnedToken = await this.token.update(
       trustBase,
+      mintReasonFactory,
       new TokenState(new BurnPredicate(this.token.id, this.token.type, this.aggregationRoot.hash), null),
       burnTransaction,
     );
 
     return Promise.all(
       this.tokens.map((request) =>
-        MintTransactionData.create(
+        MintTransactionData.createFromReason(
           request.id,
           request.type,
           request.data,
@@ -158,7 +161,7 @@ export class TokenSplitBuilder {
    * @param token token to be used for split
    * @return token split object for submitting info
    */
-  public async build(token: Token<IMintTransactionReason>): Promise<TokenSplit> {
+  public async build(token: Token): Promise<TokenSplit> {
     const trees = new Map<string, [CoinId, SparseMerkleSumTree]>();
 
     for (const data of this.tokens.values()) {

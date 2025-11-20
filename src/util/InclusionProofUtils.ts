@@ -31,7 +31,7 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
 export async function waitInclusionProof(
   trustBase: RootTrustBase,
   client: StateTransitionClient,
-  commitment: Commitment<TransferTransactionData | MintTransactionData<IMintTransactionReason>>,
+  commitment: Commitment<TransferTransactionData | MintTransactionData>,
   signal: AbortSignal = AbortSignal.timeout(10000),
   interval: number = 1000,
 ): Promise<InclusionProof> {

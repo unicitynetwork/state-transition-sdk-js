@@ -11,7 +11,7 @@ export interface IMintTransactionReason {
    * @param genesis Genesis to verify against
    * @return verification result
    */
-  verify(genesis: MintTransaction<IMintTransactionReason>): Promise<VerificationResult>;
+  verify(genesis: MintTransaction): Promise<VerificationResult>;
 
   /**
    * Convert mint transaction reason to CBOR bytes.
@@ -19,11 +19,4 @@ export interface IMintTransactionReason {
    * @return CBOR representation of reason
    */
   toCBOR(): Uint8Array;
-
-  /**
-   * Convert mint transaction reason to JSON object.
-   *
-   * @return JSON representation of reason
-   */
-  toJSON(): unknown;
 }

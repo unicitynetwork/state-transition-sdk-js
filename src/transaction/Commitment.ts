@@ -13,7 +13,7 @@ import { RequestId } from '../api/RequestId.js';
  * @template T - The type of transaction data, which can be either `TransactionData`
  *               or `MintTransactionData` with an optional `ISerializable` payload.
  */
-export abstract class Commitment<T extends TransferTransactionData | MintTransactionData<IMintTransactionReason>> {
+export abstract class Commitment<T extends TransferTransactionData | MintTransactionData> {
   /**
    * Creates a new `Commitment` instance.
    *

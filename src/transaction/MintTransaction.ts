@@ -1,4 +1,3 @@
-import { IMintTransactionReason } from './IMintTransactionReason.js';
 import { IInclusionProofJson, InclusionProof, InclusionProofVerificationStatus } from './InclusionProof.js';
 import { IMintTransactionDataJson, MintTransactionData } from './MintTransactionData.js';
 import { MintTransactionState } from './MintTransactionState.js';
@@ -6,6 +5,7 @@ import { Transaction } from './Transaction.js';
 import { RequestId } from '../api/RequestId.js';
 import { RootTrustBase } from '../bft/RootTrustBase.js';
 import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
+import { MintTransactionReasonFactory } from './MintTransactionReasonFactory.js';
 import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
 import { MintSigningService } from '../sign/MintSigningService.js';
@@ -23,12 +23,12 @@ export interface IMintTransactionJson {
  *
  * @param <R> mint reason
  */
-export class MintTransaction<R extends IMintTransactionReason> extends Transaction<MintTransactionData<R>> {
-  public constructor(data: MintTransactionData<R>, inclusionProof: InclusionProof) {
+export class MintTransaction extends Transaction<MintTransactionData> {
+  public constructor(data: MintTransactionData, inclusionProof: InclusionProof) {
     super(data, inclusionProof);
   }
 
-  public static async fromCBOR(bytes: Uint8Array): Promise<MintTransaction<IMintTransactionReason>> {
+  public static async fromCBOR(bytes: Uint8Array): Promise<MintTransaction> {
     const data = CborDeserializer.readArray(bytes);
 
     return new MintTransaction(await MintTransactionData.fromCBOR(data[0]), InclusionProof.fromCBOR(data[1]));
@@ -38,7 +38,7 @@ export class MintTransaction<R extends IMintTransactionReason> extends Transacti
     return typeof input === 'object' && input !== null && 'data' in input && 'inclusionProof' in input;
   }
 
-  public static async /**/ fromJSON(input: unknown): Promise<MintTransaction<IMintTransactionReason>> {
+  public static async fromJSON(input: unknown): Promise<MintTransaction> {
     if (!MintTransaction.isJSON(input)) {
       throw new InvalidJsonStructureError();
     }
@@ -49,7 +49,10 @@ export class MintTransaction<R extends IMintTransactionReason> extends Transacti
     );
   }
 
-  public async verify(trustBase: RootTrustBase): Promise<VerificationResult> {
+  public async verify(
+    trustBase: RootTrustBase,
+    mintReasonFactory: MintTransactionReasonFactory,
+  ): Promise<VerificationResult> {
     if (!this.inclusionProof.authenticator) {
       return new VerificationResult(VerificationResultCode.FAIL, 'Missing authenticator.');
     }
@@ -73,8 +76,8 @@ export class MintTransaction<R extends IMintTransactionReason> extends Transacti
       return new VerificationResult(VerificationResultCode.FAIL, 'Authenticator verification failed.');
     }
 
-    const reasonVerificationResult =
-      (await this.data.reason?.verify(this)) ?? new VerificationResult(VerificationResultCode.OK);
+    const reason = this.data._reason ? await mintReasonFactory.create(this.data._reason) : null;
+    const reasonVerificationResult = (await reason?.verify(this)) ?? new VerificationResult(VerificationResultCode.OK);
     if (!reasonVerificationResult.isSuccessful) {
       return new VerificationResult(VerificationResultCode.FAIL, 'Mint reason verification', [
         reasonVerificationResult,

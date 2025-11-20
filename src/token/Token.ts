@@ -7,7 +7,7 @@ import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
 import { PredicateEngineService } from '../predicate/PredicateEngineService.js';
 import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
-import { IMintTransactionReason } from '../transaction/IMintTransactionReason.js';
+import { MintTransactionReasonFactory } from '../transaction/MintTransactionReasonFactory.js';
 import { Transaction } from '../transaction/Transaction.js';
 import { TokenCoinData } from './fungible/TokenCoinData.js';
 import { IMintTransactionJson, MintTransaction } from '../transaction/MintTransaction.js';
@@ -32,7 +32,7 @@ export interface ITokenJson {
 /**
  * In-memory representation of a token including its transaction history.
  */
-export class Token<R extends IMintTransactionReason> {
+export class Token {
   /**
    * Create a new token instance.
    * @param state Current state of the token including state data and unlock predicate
@@ -43,9 +43,9 @@ export class Token<R extends IMintTransactionReason> {
    */
   private constructor(
     public readonly state: TokenState,
-    public readonly genesis: MintTransaction<R>,
+    public readonly genesis: MintTransaction,
     private readonly _transactions: TransferTransaction[] = [],
-    private readonly _nametagTokens: Token<IMintTransactionReason>[] = [],
+    private readonly _nametagTokens: Token[] = [],
     public readonly version: string = TOKEN_VERSION,
   ) {
     this._nametagTokens = _nametagTokens.slice();
@@ -72,7 +72,7 @@ export class Token<R extends IMintTransactionReason> {
   }
 
   /** Nametag tokens associated with this token. */
-  public get nametagTokens(): Token<IMintTransactionReason>[] {
+  public get nametagTokens(): Token[] {
     return this._nametagTokens.slice();
   }
 
@@ -87,7 +87,7 @@ export class Token<R extends IMintTransactionReason> {
    * @param bytes CBOR bytes
    * @return token
    */
-  public static async fromCBOR(bytes: Uint8Array): Promise<Token<IMintTransactionReason>> {
+  public static async fromCBOR(bytes: Uint8Array): Promise<Token> {
     const data = CborDeserializer.readArray(bytes);
 
     const version = CborDeserializer.readTextString(data[0]);
@@ -118,7 +118,7 @@ export class Token<R extends IMintTransactionReason> {
     );
   }
 
-  public static async fromJSON(input: unknown): Promise<Token<IMintTransactionReason>> {
+  public static async fromJSON(input: unknown): Promise<Token> {
     if (!Token.isJSON(input)) {
       throw new InvalidJsonStructureError();
     }
@@ -136,19 +136,21 @@ export class Token<R extends IMintTransactionReason> {
    * correct.
    *
    * @param trustBase   trust base for mint transaction verification
+   * @param mintReasonFactory factory to create mint transaction reasons
    * @param state       initial state
    * @param transaction mint transaction
    * @param nametags    nametags associated with transaction
    * @return token
    */
-  public static async mint<R extends IMintTransactionReason>(
+  public static async mint(
     trustBase: RootTrustBase,
+    mintReasonFactory: MintTransactionReasonFactory,
     state: TokenState,
-    transaction: MintTransaction<R>,
-    nametags: Token<IMintTransactionReason>[] = [],
-  ): Promise<Token<R>> {
+    transaction: MintTransaction,
+    nametags: Token[] = [],
+  ): Promise<Token> {
     const token = new Token(state, transaction, [], nametags);
-    const result = await token.verify(trustBase);
+    const result = await token.verify(trustBase, mintReasonFactory);
     if (!result.isSuccessful) {
       throw new VerificationError('Token verification failed', result);
     }
@@ -163,15 +165,17 @@ export class Token<R extends IMintTransactionReason> {
    * @param state       current state
    * @param transaction latest transaction
    * @param nametags    nametags associated with transaction
+   * @param mintReasonFactory factory to create mint transaction reasons
    * @return tokest with latest state
    */
   public async update(
     trustBase: RootTrustBase,
+    mintReasonFactory: MintTransactionReasonFactory,
     state: TokenState,
     transaction: TransferTransaction,
-    nametags: Token<IMintTransactionReason>[] = [],
-  ): Promise<Token<R>> {
-    let result = await transaction.verify(trustBase, this);
+    nametags: Token[] = [],
+  ): Promise<Token> {
+    let result = await transaction.verify(trustBase, this, mintReasonFactory);
 
     if (!result.isSuccessful) {
       throw new VerificationError('Transaction verification failed', result);
@@ -182,7 +186,7 @@ export class Token<R extends IMintTransactionReason> {
 
     const token = new Token(state, this.genesis, transactions, nametags);
 
-    result = await token.verifyNametagTokens(trustBase);
+    result = await token.verifyNametagTokens(trustBase, mintReasonFactory);
     if (!result.isSuccessful) {
       throw new VerificationError('Nametag tokens verification failed', result);
     }
@@ -204,11 +208,19 @@ export class Token<R extends IMintTransactionReason> {
    * Verify current token state against trustbase.
    *
    * @param trustBase trust base to verify state against
+   * @param mintReasonFactory factory to create mint transaction reasons
    * @return verification result
    */
-  public async verify(trustBase: RootTrustBase): Promise<VerificationResult> {
+  public async verify(
+    trustBase: RootTrustBase,
+    mintReasonFactory: MintTransactionReasonFactory,
+  ): Promise<VerificationResult> {
     const results: VerificationResult[] = [];
-    results.push(VerificationResult.fromChildren('Genesis verification', [await this.genesis.verify(trustBase)]));
+    results.push(
+      VerificationResult.fromChildren('Genesis verification', [
+        await this.genesis.verify(trustBase, mintReasonFactory),
+      ]),
+    );
 
     for (let i = 0; i < this._transactions.length; i++) {
       const transaction = this._transactions[i];
@@ -223,6 +235,7 @@ export class Token<R extends IMintTransactionReason> {
               this._transactions.slice(0, i),
               transaction.data.nametagTokens,
             ),
+            mintReasonFactory,
           ),
         ]),
       );
@@ -231,17 +244,29 @@ export class Token<R extends IMintTransactionReason> {
     results.push(
       VerificationResult.fromChildren(
         'Current state verification',
-        await Promise.all([this.verifyNametagTokens(trustBase), this.verifyRecipient(), this.verifyRecipientData()]),
+        await Promise.all([
+          this.verifyNametagTokens(trustBase, mintReasonFactory),
+          this.verifyRecipient(),
+          this.verifyRecipientData(),
+        ]),
       ),
     );
 
     return VerificationResult.fromChildren('Token verification', results);
   }
 
-  public async verifyNametagTokens(trustBase: RootTrustBase): Promise<VerificationResult> {
+  /**
+   * Verify all nametag tokens associated with this token.
+   * @param trustBase trust base to verify nametag tokens against
+   * @param mintReasonFactory factory to create mint transaction reasons
+   */
+  public async verifyNametagTokens(
+    trustBase: RootTrustBase,
+    mintReasonFactory: MintTransactionReasonFactory,
+  ): Promise<VerificationResult> {
     const results: VerificationResult[] = [];
     for (const nametagToken of this._nametagTokens) {
-      results.push(await nametagToken.verify(trustBase));
+      results.push(await nametagToken.verify(trustBase, mintReasonFactory));
     }
 
     return VerificationResult.fromChildren('Nametag verification', results);

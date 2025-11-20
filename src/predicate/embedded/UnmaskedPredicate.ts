@@ -10,7 +10,6 @@ import { SigningService } from '../../sign/SigningService.js';
 import { Token } from '../../token/Token.js';
 import { TokenId } from '../../token/TokenId.js';
 import { TokenType } from '../../token/TokenType.js';
-import { IMintTransactionReason } from '../../transaction/IMintTransactionReason.js';
 import { TransferTransaction } from '../../transaction/TransferTransaction.js';
 
 /**
@@ -96,12 +95,8 @@ export class UnmaskedPredicate extends DefaultPredicate {
    * @param transaction current transaction
    * @return true if successful
    */
-  public async verify(
-    trustBase: RootTrustBase,
-    token: Token<IMintTransactionReason>,
-    transaction: TransferTransaction,
-  ): Promise<boolean> {
-    if (!super.verify(trustBase, token, transaction)) {
+  public async verify(trustBase: RootTrustBase, token: Token, transaction: TransferTransaction): Promise<boolean> {
+    if (!(await super.verify(trustBase, token, transaction))) {
       return false;
     }
 

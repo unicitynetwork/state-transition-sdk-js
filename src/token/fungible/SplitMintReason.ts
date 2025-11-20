@@ -5,7 +5,6 @@ import { CborSerializer } from '../../serializer/cbor/CborSerializer.js';
 import { areUint8ArraysEqual } from '../../util/TypedArrayUtils.js';
 import { ITokenJson, Token } from '../Token.js';
 import { ISplitMintReasonProofJson, SplitMintReasonProof } from './SplitMintReasonProof.js';
-import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
 import { IMintTransactionReason } from '../../transaction/IMintTransactionReason.js';
 import { MintReasonType } from '../../transaction/MintReasonType.js';
 import { MintTransaction } from '../../transaction/MintTransaction.js';
@@ -20,7 +19,7 @@ export interface ISplitMintReasonJson {
 
 export class SplitMintReason implements IMintTransactionReason {
   public constructor(
-    public readonly token: Token<IMintTransactionReason>,
+    public readonly token: Token,
     private readonly _proofs: SplitMintReasonProof[],
   ) {
     this._proofs = _proofs.slice();
@@ -39,28 +38,18 @@ export class SplitMintReason implements IMintTransactionReason {
   public static async fromCBOR(bytes: Uint8Array): Promise<SplitMintReason> {
     const data = CborDeserializer.readArray(bytes);
 
-    return new SplitMintReason(
-      await Token.fromCBOR(data[0]),
-      CborDeserializer.readArray(data[1]).map((proof) => SplitMintReasonProof.fromCBOR(proof)),
-    );
-  }
-
-  public static isJSON(input: unknown): input is ISplitMintReasonJson {
-    return typeof input === 'object' && input !== null && 'token' in input && 'proofs' in input;
-  }
-
-  public static async fromJSON(input: unknown): Promise<SplitMintReason> {
-    if (!SplitMintReason.isJSON(input)) {
-      throw new InvalidJsonStructureError();
+    const type = CborDeserializer.readUnsignedInteger(data[0]);
+    if (type !== BigInt(MintReasonType.TOKEN_SPLIT)) {
+      throw new Error('Invalid mint reason type for SplitMintReason.');
     }
 
     return new SplitMintReason(
-      await Token.fromJSON(input.token),
-      input.proofs.map((proof) => SplitMintReasonProof.fromJSON(proof)),
+      await Token.fromCBOR(data[1]),
+      CborDeserializer.readArray(data[2]).map((proof) => SplitMintReasonProof.fromCBOR(proof)),
     );
   }
 
-  public async verify(transaction: MintTransaction<IMintTransactionReason>): Promise<VerificationResult> {
+  public async verify(transaction: MintTransaction): Promise<VerificationResult> {
     if (transaction.data.coinData == null) {
       return Promise.resolve(new VerificationResult(VerificationResultCode.FAIL, 'Coin data is missing.'));
     }
@@ -131,16 +120,9 @@ export class SplitMintReason implements IMintTransactionReason {
 
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
+      CborSerializer.encodeUnsignedInteger(MintReasonType.TOKEN_SPLIT),
       this.token.toCBOR(),
       CborSerializer.encodeArray(...this._proofs.map((proof) => proof.toCBOR())),
     );
-  }
-
-  public toJSON(): ISplitMintReasonJson {
-    return {
-      proofs: this._proofs.map((proof) => proof.toJSON()),
-      token: this.token.toJSON(),
-      type: MintReasonType.TOKEN_SPLIT,
-    };
   }
 }

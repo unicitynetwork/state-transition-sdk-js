@@ -6,7 +6,6 @@ import { CborSerializer } from '../../serializer/cbor/CborSerializer.js';
 import { Token } from '../../token/Token.js';
 import { TokenId } from '../../token/TokenId.js';
 import { TokenType } from '../../token/TokenType.js';
-import { IMintTransactionReason } from '../../transaction/IMintTransactionReason.js';
 import { InclusionProofVerificationStatus } from '../../transaction/InclusionProof.js';
 import { TransferTransaction } from '../../transaction/TransferTransaction.js';
 import { HexConverter } from '../../util/HexConverter.js';
@@ -94,11 +93,7 @@ export abstract class DefaultPredicate implements IPredicate {
   /**
    * @inheritDoc
    */
-  public async verify(
-    trustBase: RootTrustBase,
-    token: Token<IMintTransactionReason>,
-    transaction: TransferTransaction,
-  ): Promise<boolean> {
+  public async verify(trustBase: RootTrustBase, token: Token, transaction: TransferTransaction): Promise<boolean> {
     if (!this.tokenId.equals(token.id) || !this.tokenType.equals(token.type)) {
       return false;
     }

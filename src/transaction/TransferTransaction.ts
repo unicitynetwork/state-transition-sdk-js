@@ -1,5 +1,6 @@
 import { IMintTransactionReason } from './IMintTransactionReason.js';
 import { IInclusionProofJson, InclusionProof } from './InclusionProof.js';
+import { MintTransactionReasonFactory } from './MintTransactionReasonFactory.js';
 import { Transaction } from './Transaction.js';
 import { ITransferTransactionDataJson, TransferTransactionData } from './TransferTransactionData.js';
 import { RootTrustBase } from '../bft/RootTrustBase.js';
@@ -45,8 +46,20 @@ export class TransferTransaction extends Transaction<TransferTransactionData> {
     );
   }
 
-  public async verify(trustBase: RootTrustBase, token: Token<IMintTransactionReason>): Promise<VerificationResult> {
-    let result = await token.verifyNametagTokens(trustBase);
+  /**
+   * Verify the transfer transaction.
+   * @param trustBase Root trust base for verification
+   * @param token Token where current transaction belongs to
+   * @param mintReasonFactory Factory to create mint transaction reasons
+   *
+   * @return {VerificationResult} Verification result
+   */
+  public async verify(
+    trustBase: RootTrustBase,
+    token: Token,
+    mintReasonFactory: MintTransactionReasonFactory,
+  ): Promise<VerificationResult> {
+    let result = await token.verifyNametagTokens(trustBase, mintReasonFactory);
     if (!result.isSuccessful) {
       return new VerificationResult(VerificationResultCode.FAIL, 'Nametag tokens verification failed', [result]);
     }

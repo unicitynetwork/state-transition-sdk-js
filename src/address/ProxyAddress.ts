@@ -53,16 +53,13 @@ export class ProxyAddress implements IAddress {
   /**
    * Resolve a proxy address to a direct address using a list of nametag tokens. Returns null if could not resolve.
    *
-   * @param inputAddress the input address to resolve
-   * @param nametagTokens     the list of nametag tokens
+   * @param {IAddress} inputAddress the input address to resolve
+   * @param {Token[]} nametagTokens     the list of nametag tokens
    * @return the resolved direct address, or null if resolution fails
    * @throws IllegalArgumentException if the nametagTokens list contains null elements or duplicate
    *                                  addresses
    */
-  public static async resolve(
-    inputAddress: IAddress,
-    nametagTokens: Token<IMintTransactionReason>[],
-  ): Promise<IAddress | null> {
+  public static async resolve(inputAddress: IAddress, nametagTokens: Token[]): Promise<IAddress | null> {
     const nametagMap = new Map<string, IAddress>();
     for (const token of nametagTokens) {
       if (token == null) {

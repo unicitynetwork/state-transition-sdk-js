@@ -1,4 +1,3 @@
-import { IMintTransactionReason } from './IMintTransactionReason.js';
 import { AddressFactory } from '../address/AddressFactory.js';
 import { IAddress } from '../address/IAddress.js';
 import { DataHash } from '../hash/DataHash.js';
@@ -40,7 +39,7 @@ export class TransferTransactionData {
     private readonly _salt: Uint8Array,
     public readonly recipientDataHash: DataHash | null,
     private readonly _message: Uint8Array | null,
-    private readonly _nametagTokens: Token<IMintTransactionReason>[] = [],
+    private readonly _nametagTokens: Token[] = [],
   ) {
     this._message = _message ? new Uint8Array(_message) : null;
     this._nametagTokens = Array.from(_nametagTokens);
@@ -57,7 +56,7 @@ export class TransferTransactionData {
   }
 
   /** Nametag tokens associated with this transaction. */
-  public get nametagTokens(): Token<IMintTransactionReason>[] {
+  public get nametagTokens(): Token[] {
     return this._nametagTokens.slice();
   }
 
@@ -67,7 +66,7 @@ export class TransferTransactionData {
     salt: Uint8Array,
     recipientDataHash: DataHash | null,
     message: Uint8Array | null,
-    nametagTokens: Token<IMintTransactionReason>[] = [],
+    nametagTokens: Token[] = [],
   ): TransferTransactionData {
     return new TransferTransactionData(sourceState, recipient, salt, recipientDataHash, message, nametagTokens);
   }

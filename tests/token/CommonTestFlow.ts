@@ -15,21 +15,21 @@ import { Token } from '../../src/token/Token.js';
 import { TokenId } from '../../src/token/TokenId.js';
 import { TokenState } from '../../src/token/TokenState.js';
 import { TokenType } from '../../src/token/TokenType.js';
-import { IMintTransactionReason } from '../../src/transaction/IMintTransactionReason.js';
+import { DefaultUserDefinedMintReasonFactory } from '../../src/transaction/DefaultUserDefinedMintReasonFactory.js';
+import { MintTransactionReasonFactory } from '../../src/transaction/MintTransactionReasonFactory.js';
 import { TokenSplitBuilder } from '../../src/transaction/split/TokenSplitBuilder.js';
 import { TransferCommitment } from '../../src/transaction/TransferCommitment.js';
 import { TransferTransaction } from '../../src/transaction/TransferTransaction.js';
+import { UserDefinedMintReason } from '../../src/transaction/UserDefinedMintReason.js';
 import { waitInclusionProof } from '../../src/util/InclusionProofUtils.js';
 import { createMintData, mintToken, sendToken } from '../MintTokenUtils.js';
+import { TestEmptyMintReason } from '../TestEmptyMintReason.js';
 
 const textEncoder = new TextEncoder();
 const aliceSecret = textEncoder.encode('Alice');
 const bobSecret = textEncoder.encode('Bob');
 
-function performCheckForSplitTokens(
-  actualTokens: Token<IMintTransactionReason>[],
-  expectedCoinDataList: TokenCoinData[],
-): void {
+function performCheckForSplitTokens(actualTokens: Token[], expectedCoinDataList: TokenCoinData[]): void {
   expect(actualTokens.length).toEqual(expectedCoinDataList.length);
 
   actualTokens.forEach((actualToken, index) => {
@@ -45,6 +45,10 @@ function performCheckForSplitTokens(
 }
 
 export async function testTransferFlow(trustBase: RootTrustBase, client: StateTransitionClient): Promise<void> {
+  const mintReasonFactory = new MintTransactionReasonFactory(
+    new DefaultUserDefinedMintReasonFactory(new Map([[TestEmptyMintReason.TYPE, TestEmptyMintReason]])),
+  );
+
   // Alice
   const mintData = createMintData(
     TokenCoinData.create([
@@ -53,7 +57,14 @@ export async function testTransferFlow(trustBase: RootTrustBase, client: StateTr
     ]),
   );
 
-  const aliceToken = await mintToken(aliceSecret, trustBase, client, mintData);
+  const aliceToken = await mintToken(
+    aliceSecret,
+    trustBase,
+    mintReasonFactory,
+    client,
+    mintData,
+    new UserDefinedMintReason(new TestEmptyMintReason()),
+  );
   await expect(client.isMinted(trustBase, aliceToken.id)).resolves.toBeTruthy();
   await expect(
     client.isTokenStateSpent(
@@ -98,12 +109,15 @@ export async function testTransferFlow(trustBase: RootTrustBase, client: StateTr
   // Finish the transaction with the Bob's predicate
   const bobToken = await client.finalizeTransaction(
     trustBase,
+    mintReasonFactory,
     importedToken,
     new TokenState(bobPredicate, textEncoder.encode(bobTokenState)),
     importedTransaction,
   );
 
-  await expect(bobToken.verify(trustBase).then((result) => result.isSuccessful)).resolves.toBeTruthy();
+  await expect(
+    bobToken.verify(trustBase, mintReasonFactory).then((result) => result.isSuccessful),
+  ).resolves.toBeTruthy();
   expect(bobToken.id).toEqual(aliceToken.id);
   expect(bobToken.type).toEqual(aliceToken.type);
   expect(bobToken.data).toEqual(aliceToken.data);
@@ -139,7 +153,9 @@ export async function testTransferFlow(trustBase: RootTrustBase, client: StateTr
 
   // Carol imports token
   const carolToken = await Token.fromJSON(bobToken.toJSON());
-  await expect(carolToken.verify(trustBase).then((result) => result.isSuccessful)).resolves.toBeTruthy();
+  await expect(
+    carolToken.verify(trustBase, mintReasonFactory).then((result) => result.isSuccessful),
+  ).resolves.toBeTruthy();
 
   // Carol gets transaction from Bob
   const carolTransaction = await TransferTransaction.fromJSON(txToCarol.toJSON());
@@ -157,6 +173,7 @@ export async function testTransferFlow(trustBase: RootTrustBase, client: StateTr
   expect(carolTransaction.data.recipientDataHash).toBeNull();
   const finalizedCarolToken = await client.finalizeTransaction(
     trustBase,
+    mintReasonFactory,
     carolToken,
     new TokenState(carolPredicate, null),
     carolTransaction,
@@ -166,6 +183,8 @@ export async function testTransferFlow(trustBase: RootTrustBase, client: StateTr
 }
 
 export async function testOfflineTransferFlow(trustBase: RootTrustBase, client: StateTransitionClient): Promise<void> {
+  const mintReasonFactory = MintTransactionReasonFactory.standard();
+
   const data = createMintData(
     TokenCoinData.create([
       [new CoinId(crypto.getRandomValues(new Uint8Array(32))), BigInt(Math.round(Math.random() * 90)) + 10n],
@@ -173,7 +192,7 @@ export async function testOfflineTransferFlow(trustBase: RootTrustBase, client: 
     ]),
   );
 
-  const token = await mintToken(aliceSecret, trustBase, client, data);
+  const token = await mintToken(aliceSecret, trustBase, mintReasonFactory, client, data);
 
   // Recipient prepares the info for the transfer
   const nonce = crypto.getRandomValues(new Uint8Array(32));
@@ -217,12 +236,15 @@ export async function testOfflineTransferFlow(trustBase: RootTrustBase, client: 
   // Finish the transaction with the recipient predicate
   const updateToken = await client.finalizeTransaction(
     trustBase,
+    mintReasonFactory,
     importedToken,
     new TokenState(recipientPredicate, textEncoder.encode('my custom data')),
     importedCommitment.toTransaction(await waitInclusionProof(trustBase, client, importedCommitment)),
   );
 
-  await expect(updateToken.verify(trustBase).then((result) => result.isSuccessful)).resolves.toBeTruthy();
+  await expect(
+    updateToken.verify(trustBase, mintReasonFactory).then((result) => result.isSuccessful),
+  ).resolves.toBeTruthy();
   expect(updateToken.id).toEqual(token.id);
   expect(updateToken.type).toEqual(token.type);
   expect(updateToken.data).toEqual(token.data);
@@ -236,6 +258,8 @@ export async function testOfflineTransferFlow(trustBase: RootTrustBase, client: 
 }
 
 export async function testSplitFlow(trustBase: RootTrustBase, client: StateTransitionClient): Promise<void> {
+  const mintReasonFactory = MintTransactionReasonFactory.standard();
+
   // First, let's mint a token in the usual way.
   const unicityToken = new CoinId(crypto.getRandomValues(new Uint8Array(32)));
   const alphaToken = new CoinId(crypto.getRandomValues(new Uint8Array(32)));
@@ -246,7 +270,7 @@ export async function testSplitFlow(trustBase: RootTrustBase, client: StateTrans
   ]);
 
   const mintTokenData = createMintData(coinData);
-  const token = await mintToken(aliceSecret, trustBase, client, mintTokenData);
+  const token = await mintToken(aliceSecret, trustBase, mintReasonFactory, client, mintTokenData);
 
   const coinsPerNewTokens = [
     TokenCoinData.create([
@@ -258,6 +282,7 @@ export async function testSplitFlow(trustBase: RootTrustBase, client: StateTrans
 
   const splitTokens = await splitToken(
     trustBase,
+    mintReasonFactory,
     token,
     coinsPerNewTokens,
     aliceSecret,
@@ -273,6 +298,8 @@ export async function testSplitFlowAfterTransfer(
   trustBase: RootTrustBase,
   client: StateTransitionClient,
 ): Promise<void> {
+  const mintReasonFactory = MintTransactionReasonFactory.standard();
+
   const unicityToken = new CoinId(crypto.getRandomValues(new Uint8Array(32)));
   const alphaToken = new CoinId(crypto.getRandomValues(new Uint8Array(32)));
 
@@ -282,7 +309,7 @@ export async function testSplitFlowAfterTransfer(
   ]);
 
   const mintTokenData = createMintData(coinData);
-  const token = await mintToken(aliceSecret, trustBase, client, mintTokenData);
+  const token = await mintToken(aliceSecret, trustBase, mintReasonFactory, client, mintTokenData);
 
   // Perform 1st split
   const coinsPerNewTokens = [
@@ -298,6 +325,7 @@ export async function testSplitFlowAfterTransfer(
 
   const splitTokens = await splitToken(
     trustBase,
+    mintReasonFactory,
     token,
     coinsPerNewTokens,
     aliceSecret,
@@ -351,12 +379,15 @@ export async function testSplitFlowAfterTransfer(
   // Finish the transaction with the recipient predicate
   const updateToken = await client.finalizeTransaction(
     trustBase,
+    mintReasonFactory,
     receiverImportedToken,
     new TokenState(maskedPredicate, textEncoder.encode('my custom data')),
     importedTransaction,
   );
 
-  await expect(updateToken.verify(trustBase).then((result) => result.isSuccessful)).resolves.toBeTruthy();
+  await expect(
+    updateToken.verify(trustBase, mintReasonFactory).then((result) => result.isSuccessful),
+  ).resolves.toBeTruthy();
   expect(updateToken.id).toEqual(splitTokens[0].id);
   expect(updateToken.type).toEqual(splitTokens[0].type);
   expect(updateToken.data).toEqual(splitTokens[0].data);
@@ -376,6 +407,7 @@ export async function testSplitFlowAfterTransfer(
 
   const splitTokens2 = await splitToken(
     trustBase,
+    mintReasonFactory,
     updateToken,
     coinsPerNewTokens2,
     bobSecret,
@@ -389,13 +421,14 @@ export async function testSplitFlowAfterTransfer(
 
 async function splitToken(
   trustBase: RootTrustBase,
-  token: Token<IMintTransactionReason>,
+  mintReasonFactory: MintTransactionReasonFactory,
+  token: Token,
   coinsPerNewTokens: TokenCoinData[],
   ownerSecret: Uint8Array,
   nonce: Uint8Array,
   customDataString: string,
   client: StateTransitionClient,
-): Promise<Token<IMintTransactionReason>[]> {
+): Promise<Token[]> {
   const builder = new TokenSplitBuilder();
   const nonces = new Map<string, Uint8Array>();
   for (const coins of coinsPerNewTokens) {
@@ -434,6 +467,7 @@ async function splitToken(
 
   const splittedTokenMintCommitments = await tokenSplitRequest.createSplitMintCommitments(
     trustBase,
+    mintReasonFactory,
     commitment.toTransaction(await waitInclusionProof(trustBase, client, commitment)),
   );
 
@@ -447,6 +481,7 @@ async function splitToken(
       const nonce = nonces.get(commitment.transactionData.tokenId.toJSON())!;
       return Token.mint(
         trustBase,
+        mintReasonFactory,
         new TokenState(
           MaskedPredicate.create(
             commitment.transactionData.tokenId,

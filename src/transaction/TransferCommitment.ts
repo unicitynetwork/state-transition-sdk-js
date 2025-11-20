@@ -39,7 +39,7 @@ export class TransferCommitment extends Commitment<TransferTransactionData> {
    * @return transfer commitment
    */
   public static async create(
-    token: Token<IMintTransactionReason>,
+    token: Token,
     recipient: IAddress,
     salt: Uint8Array,
     recipientDataHash: DataHash | null,
