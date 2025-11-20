@@ -1,5 +1,4 @@
 import { Commitment } from './Commitment.js';
-import { IMintTransactionReason } from './IMintTransactionReason.js';
 import { InclusionProof } from './InclusionProof.js';
 import { TransferTransaction } from './TransferTransaction.js';
 import { ITransferTransactionDataJson, TransferTransactionData } from './TransferTransactionData.js';

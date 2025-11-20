@@ -8,8 +8,6 @@ import { HexConverter } from '../util/HexConverter.js';
 export class MintSigningService {
   private static readonly MINTER_SECRET = HexConverter.decode('495f414d5f554e4956455253414c5f4d494e5445525f464f525f');
 
-  private constructor() {}
-
   /**
    * Create signing service for minting operations.
    *

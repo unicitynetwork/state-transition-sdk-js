@@ -162,10 +162,10 @@ export class Token {
    * Update token to next state with given transfer transaction.
    *
    * @param trustBase   trust base to verify latest state
+   * @param mintReasonFactory factory to create mint transaction reasons
    * @param state       current state
    * @param transaction latest transaction
    * @param nametags    nametags associated with transaction
-   * @param mintReasonFactory factory to create mint transaction reasons
    * @return tokest with latest state
    */
   public async update(

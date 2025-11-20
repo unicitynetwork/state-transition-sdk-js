@@ -5,7 +5,6 @@ import { DataHasher } from '../hash/DataHasher.js';
 import { HashAlgorithm } from '../hash/HashAlgorithm.js';
 import { Token } from '../token/Token.js';
 import { TokenId } from '../token/TokenId.js';
-import { IMintTransactionReason } from '../transaction/IMintTransactionReason.js';
 import { HexConverter } from '../util/HexConverter.js';
 
 const textDecoder = new TextDecoder();

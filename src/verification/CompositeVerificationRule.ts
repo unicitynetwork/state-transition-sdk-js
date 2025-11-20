@@ -28,7 +28,7 @@ export abstract class CompositeVerificationRule<C extends IVerificationContext> 
    * @param onSuccessRule
    * @param onFailureRule
    */
-  public constructor(
+  protected constructor(
     public readonly firstRule: VerificationRule<C>,
     message: string,
     onSuccessRule: VerificationRule<C> | null = null,

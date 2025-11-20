@@ -21,9 +21,9 @@ import { TokenState } from '../../token/TokenState.js';
 import { TokenType } from '../../token/TokenType.js';
 import { MintCommitment } from '../MintCommitment.js';
 import { MintTransactionData } from '../MintTransactionData.js';
+import { MintTransactionReasonFactory } from '../MintTransactionReasonFactory.js';
 import { TransferCommitment } from '../TransferCommitment.js';
 import { TransferTransaction } from '../TransferTransaction.js';
-import { MintTransactionReasonFactory } from '../MintTransactionReasonFactory.js';
 
 /**
  * New token request for generating it out of burnt token.

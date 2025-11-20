@@ -9,13 +9,12 @@ import { Token } from './token/Token.js';
 import { TokenId } from './token/TokenId.js';
 import { TokenState } from './token/TokenState.js';
 import { Commitment } from './transaction/Commitment.js';
-import { IMintTransactionReason } from './transaction/IMintTransactionReason.js';
 import { InclusionProofVerificationStatus } from './transaction/InclusionProof.js';
 import { MintCommitment } from './transaction/MintCommitment.js';
+import { MintTransactionReasonFactory } from './transaction/MintTransactionReasonFactory.js';
 import { MintTransactionState } from './transaction/MintTransactionState.js';
 import { TransferTransaction } from './transaction/TransferTransaction.js';
 import { TransferTransactionData } from './transaction/TransferTransactionData.js';
-import { MintTransactionReasonFactory } from './transaction/MintTransactionReasonFactory.js';
 
 /**
  * High level client implementing the token state transition workflow.

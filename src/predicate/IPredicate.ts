@@ -3,7 +3,6 @@ import { ISerializablePredicate } from './ISerializablePredicate.js';
 import { RootTrustBase } from '../bft/RootTrustBase.js';
 import { DataHash } from '../hash/DataHash.js';
 import { Token } from '../token/Token.js';
-import { IMintTransactionReason } from '../transaction/IMintTransactionReason.js';
 import { TransferTransaction } from '../transaction/TransferTransaction.js';
 
 /**

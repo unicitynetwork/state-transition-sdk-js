@@ -1,4 +1,3 @@
-import { IMintTransactionReason } from './IMintTransactionReason.js';
 import { InclusionProof } from './InclusionProof.js';
 import { MintTransactionData } from './MintTransactionData.js';
 import { Transaction } from './Transaction.js';

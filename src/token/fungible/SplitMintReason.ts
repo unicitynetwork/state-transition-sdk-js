@@ -11,12 +11,6 @@ import { MintTransaction } from '../../transaction/MintTransaction.js';
 import { VerificationResult } from '../../verification/VerificationResult.js';
 import { VerificationResultCode } from '../../verification/VerificationResultCode.js';
 
-export interface ISplitMintReasonJson {
-  type: MintReasonType.TOKEN_SPLIT;
-  token: ITokenJson;
-  proofs: ISplitMintReasonProofJson[];
-}
-
 export class SplitMintReason implements IMintTransactionReason {
   public constructor(
     public readonly token: Token,

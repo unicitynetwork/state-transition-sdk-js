@@ -2,7 +2,6 @@ import { JsonRpcNetworkError } from '../api/json-rpc/JsonRpcNetworkError.js';
 import { RootTrustBase } from '../bft/RootTrustBase.js';
 import { StateTransitionClient } from '../StateTransitionClient.js';
 import { Commitment } from '../transaction/Commitment.js';
-import { IMintTransactionReason } from '../transaction/IMintTransactionReason.js';
 import { InclusionProof, InclusionProofVerificationStatus } from '../transaction/InclusionProof.js';
 import { MintTransactionData } from '../transaction/MintTransactionData.js';
 import { TransferTransactionData } from '../transaction/TransferTransactionData.js';
