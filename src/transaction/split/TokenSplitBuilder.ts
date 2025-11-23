@@ -19,9 +19,9 @@ import { Token } from '../../token/Token.js';
 import { TokenId } from '../../token/TokenId.js';
 import { TokenState } from '../../token/TokenState.js';
 import { TokenType } from '../../token/TokenType.js';
+import { DefaultMintReasonFactory } from '../DefaultMintReasonFactory.js';
 import { MintCommitment } from '../MintCommitment.js';
 import { MintTransactionData } from '../MintTransactionData.js';
-import { MintTransactionReasonFactory } from '../MintTransactionReasonFactory.js';
 import { TransferCommitment } from '../TransferCommitment.js';
 import { TransferTransaction } from '../TransferTransaction.js';
 
@@ -86,7 +86,7 @@ class TokenSplit {
    */
   public async createSplitMintCommitments(
     trustBase: RootTrustBase,
-    mintReasonFactory: MintTransactionReasonFactory,
+    mintReasonFactory: DefaultMintReasonFactory,
     burnTransaction: TransferTransaction,
   ): Promise<MintCommitment[]> {
     const burnedToken = await this.token.update(

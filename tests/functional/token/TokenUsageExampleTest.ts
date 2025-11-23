@@ -5,7 +5,7 @@ import { SigningService } from '../../../src/sign/SigningService.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
 import { Token } from '../../../src/token/Token.js';
 import { TokenState } from '../../../src/token/TokenState.js';
-import { MintTransactionReasonFactory } from '../../../src/transaction/MintTransactionReasonFactory.js';
+import { DefaultMintReasonFactory } from '../../../src/transaction/DefaultMintReasonFactory.js';
 import { createMintData, mintToken, sendToken } from '../../MintTokenUtils.js';
 import {
   testOfflineTransferFlow,
@@ -42,7 +42,7 @@ describe('Transition', function () {
   }, 15000);
 
   it('should fail to update token', async () => {
-    const mintReasonFactory = MintTransactionReasonFactory.standard();
+    const mintReasonFactory = new DefaultMintReasonFactory();
 
     const data = createMintData();
     const token = await mintToken(new Uint8Array(32), trustBase, mintReasonFactory, client, data);

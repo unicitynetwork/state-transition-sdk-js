@@ -12,10 +12,10 @@ import { Token } from '../src/token/Token.js';
 import { TokenId } from '../src/token/TokenId.js';
 import { TokenState } from '../src/token/TokenState.js';
 import { TokenType } from '../src/token/TokenType.js';
+import { DefaultMintReasonFactory } from '../src/transaction/DefaultMintReasonFactory.js';
 import { IMintTransactionReason } from '../src/transaction/IMintTransactionReason.js';
 import { MintCommitment } from '../src/transaction/MintCommitment.js';
 import { MintTransactionData } from '../src/transaction/MintTransactionData.js';
-import { MintTransactionReasonFactory } from '../src/transaction/MintTransactionReasonFactory.js';
 import { TransferCommitment } from '../src/transaction/TransferCommitment.js';
 import { TransferTransaction } from '../src/transaction/TransferTransaction.js';
 import { waitInclusionProof } from '../src/util/InclusionProofUtils.js';
@@ -55,7 +55,7 @@ export function createMintData(
 export async function mintToken(
   secret: Uint8Array,
   trustBase: RootTrustBase,
-  mintReasonFactory: MintTransactionReasonFactory,
+  mintReasonFactory: DefaultMintReasonFactory,
   client: StateTransitionClient,
   data: IMintData,
   reason: IMintTransactionReason | null = null,

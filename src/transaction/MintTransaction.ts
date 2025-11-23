@@ -5,7 +5,7 @@ import { Transaction } from './Transaction.js';
 import { RequestId } from '../api/RequestId.js';
 import { RootTrustBase } from '../bft/RootTrustBase.js';
 import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
-import { MintTransactionReasonFactory } from './MintTransactionReasonFactory.js';
+import { IMintReasonFactory } from './IMintReasonFactory.js';
 import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
 import { MintSigningService } from '../sign/MintSigningService.js';
@@ -49,10 +49,14 @@ export class MintTransaction extends Transaction<MintTransactionData> {
     );
   }
 
-  public async verify(
-    trustBase: RootTrustBase,
-    mintReasonFactory: MintTransactionReasonFactory,
-  ): Promise<VerificationResult> {
+  /**
+   * Verify mint transaction.
+   * @param trustBase Root trust base for verification
+   * @param mintReasonFactory Factory to create mint transaction reasons
+   *
+   * @return {VerificationResult} Verification result
+   */
+  public async verify(trustBase: RootTrustBase, mintReasonFactory: IMintReasonFactory): Promise<VerificationResult> {
     if (!this.inclusionProof.authenticator) {
       return new VerificationResult(VerificationResultCode.FAIL, 'Missing authenticator.');
     }
@@ -95,6 +99,10 @@ export class MintTransaction extends Transaction<MintTransactionData> {
     return new VerificationResult(VerificationResultCode.OK);
   }
 
+  /**
+   * Convert mint transaction to JSON.
+   * @return JSON representation of mint transaction
+   */
   public toJSON(): IMintTransactionJson {
     return {
       data: this.data.toJSON(),
@@ -102,6 +110,10 @@ export class MintTransaction extends Transaction<MintTransactionData> {
     };
   }
 
+  /**
+   * Convert mint transaction to CBOR.
+   * @return CBOR representation of mint transaction
+   */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(this.data.toCBOR(), this.inclusionProof.toCBOR());
   }

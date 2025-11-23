@@ -1,5 +1,5 @@
+import { IMintReasonFactory } from './IMintReasonFactory.js';
 import { IInclusionProofJson, InclusionProof } from './InclusionProof.js';
-import { MintTransactionReasonFactory } from './MintTransactionReasonFactory.js';
 import { Transaction } from './Transaction.js';
 import { ITransferTransactionDataJson, TransferTransactionData } from './TransferTransactionData.js';
 import { RootTrustBase } from '../bft/RootTrustBase.js';
@@ -48,15 +48,15 @@ export class TransferTransaction extends Transaction<TransferTransactionData> {
   /**
    * Verify the transfer transaction.
    * @param trustBase Root trust base for verification
-   * @param token Token where current transaction belongs to
    * @param mintReasonFactory Factory to create mint transaction reasons
+   * @param token Token where current transaction belongs to
    *
    * @return {VerificationResult} Verification result
    */
   public async verify(
     trustBase: RootTrustBase,
+    mintReasonFactory: IMintReasonFactory,
     token: Token,
-    mintReasonFactory: MintTransactionReasonFactory,
   ): Promise<VerificationResult> {
     let result = await token.verifyNametagTokens(trustBase, mintReasonFactory);
     if (!result.isSuccessful) {

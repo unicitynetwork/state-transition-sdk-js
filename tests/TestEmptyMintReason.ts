@@ -1,15 +1,15 @@
 import { CborDeserializer } from '../src/serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../src/serializer/cbor/CborSerializer.js';
-import { IUserDefinedMintReasonData } from '../src/transaction/IUserDefinedMintReasonData.js';
+import { IMintTransactionReason } from '../src/transaction/IMintTransactionReason.js';
 import { VerificationResult } from '../src/verification/VerificationResult.js';
 import { VerificationResultCode } from '../src/verification/VerificationResultCode.js';
 
-export class TestEmptyMintReason implements IUserDefinedMintReasonData {
+export class TestEmptyMintReason implements IMintTransactionReason {
   public static readonly TYPE = BigInt(0);
 
   public constructor() {}
 
-  public static fromBytes(bytes: Uint8Array): TestEmptyMintReason {
+  public static fromCBOR(bytes: Uint8Array): Promise<TestEmptyMintReason> {
     const data = CborDeserializer.readArray(bytes);
 
     const type = CborDeserializer.readUnsignedInteger(data[0]);
@@ -17,10 +17,10 @@ export class TestEmptyMintReason implements IUserDefinedMintReasonData {
       throw new Error('Invalid test reason type.');
     }
 
-    return new TestEmptyMintReason();
+    return Promise.resolve(new TestEmptyMintReason());
   }
 
-  public toBytes(): Uint8Array {
+  public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(CborSerializer.encodeUnsignedInteger(TestEmptyMintReason.TYPE));
   }
 

@@ -7,9 +7,10 @@ import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
 import { PredicateEngineService } from '../predicate/PredicateEngineService.js';
 import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
-import { MintTransactionReasonFactory } from '../transaction/MintTransactionReasonFactory.js';
+import { DefaultMintReasonFactory } from '../transaction/DefaultMintReasonFactory.js';
 import { Transaction } from '../transaction/Transaction.js';
 import { TokenCoinData } from './fungible/TokenCoinData.js';
+import { IMintReasonFactory } from '../transaction/IMintReasonFactory.js';
 import { IMintTransactionJson, MintTransaction } from '../transaction/MintTransaction.js';
 import { ITransferTransactionJson, TransferTransaction } from '../transaction/TransferTransaction.js';
 import { TransferTransactionData } from '../transaction/TransferTransactionData.js';
@@ -144,7 +145,7 @@ export class Token {
    */
   public static async mint(
     trustBase: RootTrustBase,
-    mintReasonFactory: MintTransactionReasonFactory,
+    mintReasonFactory: DefaultMintReasonFactory,
     state: TokenState,
     transaction: MintTransaction,
     nametags: Token[] = [],
@@ -170,12 +171,12 @@ export class Token {
    */
   public async update(
     trustBase: RootTrustBase,
-    mintReasonFactory: MintTransactionReasonFactory,
+    mintReasonFactory: IMintReasonFactory,
     state: TokenState,
     transaction: TransferTransaction,
     nametags: Token[] = [],
   ): Promise<Token> {
-    let result = await transaction.verify(trustBase, this, mintReasonFactory);
+    let result = await transaction.verify(trustBase, mintReasonFactory, this);
 
     if (!result.isSuccessful) {
       throw new VerificationError('Transaction verification failed', result);
@@ -211,10 +212,7 @@ export class Token {
    * @param mintReasonFactory factory to create mint transaction reasons
    * @return verification result
    */
-  public async verify(
-    trustBase: RootTrustBase,
-    mintReasonFactory: MintTransactionReasonFactory,
-  ): Promise<VerificationResult> {
+  public async verify(trustBase: RootTrustBase, mintReasonFactory: IMintReasonFactory): Promise<VerificationResult> {
     const results: VerificationResult[] = [];
     results.push(
       VerificationResult.fromChildren('Genesis verification', [
@@ -229,13 +227,13 @@ export class Token {
         VerificationResult.fromChildren('Transaction verification', [
           await transaction.verify(
             trustBase,
+            mintReasonFactory,
             new Token(
               transaction.data.sourceState,
               this.genesis,
               this._transactions.slice(0, i),
               transaction.data.nametagTokens,
             ),
-            mintReasonFactory,
           ),
         ]),
       );
@@ -262,7 +260,7 @@ export class Token {
    */
   public async verifyNametagTokens(
     trustBase: RootTrustBase,
-    mintReasonFactory: MintTransactionReasonFactory,
+    mintReasonFactory: IMintReasonFactory,
   ): Promise<VerificationResult> {
     const results: VerificationResult[] = [];
     for (const nametagToken of this._nametagTokens) {

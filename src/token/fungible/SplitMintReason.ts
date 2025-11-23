@@ -3,15 +3,16 @@ import { PredicateEngineService } from '../../predicate/PredicateEngineService.j
 import { CborDeserializer } from '../../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../serializer/cbor/CborSerializer.js';
 import { areUint8ArraysEqual } from '../../util/TypedArrayUtils.js';
-import { ITokenJson, Token } from '../Token.js';
-import { ISplitMintReasonProofJson, SplitMintReasonProof } from './SplitMintReasonProof.js';
+import { Token } from '../Token.js';
+import { SplitMintReasonProof } from './SplitMintReasonProof.js';
 import { IMintTransactionReason } from '../../transaction/IMintTransactionReason.js';
-import { MintReasonType } from '../../transaction/MintReasonType.js';
 import { MintTransaction } from '../../transaction/MintTransaction.js';
 import { VerificationResult } from '../../verification/VerificationResult.js';
 import { VerificationResultCode } from '../../verification/VerificationResultCode.js';
 
 export class SplitMintReason implements IMintTransactionReason {
+  public static readonly TYPE = BigInt(1);
+
   public constructor(
     public readonly token: Token,
     private readonly _proofs: SplitMintReasonProof[],
@@ -33,7 +34,7 @@ export class SplitMintReason implements IMintTransactionReason {
     const data = CborDeserializer.readArray(bytes);
 
     const type = CborDeserializer.readUnsignedInteger(data[0]);
-    if (type !== BigInt(MintReasonType.TOKEN_SPLIT)) {
+    if (type !== BigInt(SplitMintReason.TYPE)) {
       throw new Error('Invalid mint reason type for SplitMintReason.');
     }
 
@@ -114,7 +115,7 @@ export class SplitMintReason implements IMintTransactionReason {
 
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
-      CborSerializer.encodeUnsignedInteger(MintReasonType.TOKEN_SPLIT),
+      CborSerializer.encodeUnsignedInteger(SplitMintReason.TYPE),
       this.token.toCBOR(),
       CborSerializer.encodeArray(...this._proofs.map((proof) => proof.toCBOR())),
     );

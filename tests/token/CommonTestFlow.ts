@@ -15,12 +15,10 @@ import { Token } from '../../src/token/Token.js';
 import { TokenId } from '../../src/token/TokenId.js';
 import { TokenState } from '../../src/token/TokenState.js';
 import { TokenType } from '../../src/token/TokenType.js';
-import { DefaultUserDefinedMintReasonFactory } from '../../src/transaction/DefaultUserDefinedMintReasonFactory.js';
-import { MintTransactionReasonFactory } from '../../src/transaction/MintTransactionReasonFactory.js';
+import { DefaultMintReasonFactory } from '../../src/transaction/DefaultMintReasonFactory.js';
 import { TokenSplitBuilder } from '../../src/transaction/split/TokenSplitBuilder.js';
 import { TransferCommitment } from '../../src/transaction/TransferCommitment.js';
 import { TransferTransaction } from '../../src/transaction/TransferTransaction.js';
-import { UserDefinedMintReason } from '../../src/transaction/UserDefinedMintReason.js';
 import { waitInclusionProof } from '../../src/util/InclusionProofUtils.js';
 import { createMintData, mintToken, sendToken } from '../MintTokenUtils.js';
 import { TestEmptyMintReason } from '../TestEmptyMintReason.js';
@@ -45,9 +43,7 @@ function performCheckForSplitTokens(actualTokens: Token[], expectedCoinDataList:
 }
 
 export async function testTransferFlow(trustBase: RootTrustBase, client: StateTransitionClient): Promise<void> {
-  const mintReasonFactory = new MintTransactionReasonFactory(
-    new DefaultUserDefinedMintReasonFactory(new Map([[TestEmptyMintReason.TYPE, TestEmptyMintReason]])),
-  );
+  const mintReasonFactory = new DefaultMintReasonFactory(new Map([[TestEmptyMintReason.TYPE, TestEmptyMintReason]]));
 
   // Alice
   const mintData = createMintData(
@@ -63,7 +59,7 @@ export async function testTransferFlow(trustBase: RootTrustBase, client: StateTr
     mintReasonFactory,
     client,
     mintData,
-    new UserDefinedMintReason(new TestEmptyMintReason()),
+    new TestEmptyMintReason(),
   );
   await expect(client.isMinted(trustBase, aliceToken.id)).resolves.toBeTruthy();
   await expect(
@@ -183,7 +179,7 @@ export async function testTransferFlow(trustBase: RootTrustBase, client: StateTr
 }
 
 export async function testOfflineTransferFlow(trustBase: RootTrustBase, client: StateTransitionClient): Promise<void> {
-  const mintReasonFactory = MintTransactionReasonFactory.standard();
+  const mintReasonFactory = new DefaultMintReasonFactory();
 
   const data = createMintData(
     TokenCoinData.create([
@@ -258,7 +254,7 @@ export async function testOfflineTransferFlow(trustBase: RootTrustBase, client: 
 }
 
 export async function testSplitFlow(trustBase: RootTrustBase, client: StateTransitionClient): Promise<void> {
-  const mintReasonFactory = MintTransactionReasonFactory.standard();
+  const mintReasonFactory = new DefaultMintReasonFactory();
 
   // First, let's mint a token in the usual way.
   const unicityToken = new CoinId(crypto.getRandomValues(new Uint8Array(32)));
@@ -298,7 +294,7 @@ export async function testSplitFlowAfterTransfer(
   trustBase: RootTrustBase,
   client: StateTransitionClient,
 ): Promise<void> {
-  const mintReasonFactory = MintTransactionReasonFactory.standard();
+  const mintReasonFactory = new DefaultMintReasonFactory();
 
   const unicityToken = new CoinId(crypto.getRandomValues(new Uint8Array(32)));
   const alphaToken = new CoinId(crypto.getRandomValues(new Uint8Array(32)));
@@ -421,7 +417,7 @@ export async function testSplitFlowAfterTransfer(
 
 async function splitToken(
   trustBase: RootTrustBase,
-  mintReasonFactory: MintTransactionReasonFactory,
+  mintReasonFactory: DefaultMintReasonFactory,
   token: Token,
   coinsPerNewTokens: TokenCoinData[],
   ownerSecret: Uint8Array,

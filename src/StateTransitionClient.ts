@@ -9,9 +9,9 @@ import { Token } from './token/Token.js';
 import { TokenId } from './token/TokenId.js';
 import { TokenState } from './token/TokenState.js';
 import { Commitment } from './transaction/Commitment.js';
+import { IMintReasonFactory } from './transaction/IMintReasonFactory.js';
 import { InclusionProofVerificationStatus } from './transaction/InclusionProof.js';
 import { MintCommitment } from './transaction/MintCommitment.js';
-import { MintTransactionReasonFactory } from './transaction/MintTransactionReasonFactory.js';
 import { MintTransactionState } from './transaction/MintTransactionState.js';
 import { TransferTransaction } from './transaction/TransferTransaction.js';
 import { TransferTransactionData } from './transaction/TransferTransactionData.js';
@@ -72,7 +72,7 @@ export class StateTransitionClient {
    * nametags.
    *
    * @param {RootTrustBase} trustBase   The root trust base for inclusion proof verification.
-   * @param {MintTransactionReasonFactory} mintReasonFactory Factory to create mint transaction reasons.
+   * @param {DefaultMintReasonFactory} mintReasonFactory Factory to create mint transaction reasons.
    * @param {Token} token       The token to be updated.
    * @param {TokenState} state       The current state of the token.
    * @param {TransferTransaction} transaction The transaction containing transfer data.
@@ -81,7 +81,7 @@ export class StateTransitionClient {
    */
   public finalizeTransaction(
     trustBase: RootTrustBase,
-    mintReasonFactory: MintTransactionReasonFactory,
+    mintReasonFactory: IMintReasonFactory,
     token: Token,
     state: TokenState,
     transaction: TransferTransaction,
