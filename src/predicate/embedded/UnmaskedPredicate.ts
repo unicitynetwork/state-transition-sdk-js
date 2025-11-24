@@ -10,6 +10,7 @@ import { SigningService } from '../../sign/SigningService.js';
 import { Token } from '../../token/Token.js';
 import { TokenId } from '../../token/TokenId.js';
 import { TokenType } from '../../token/TokenType.js';
+import { MintTransaction } from '../../transaction/MintTransaction.js';
 import { TransferTransaction } from '../../transaction/TransferTransaction.js';
 
 /**
@@ -24,7 +25,7 @@ export class UnmaskedPredicate extends DefaultPredicate {
    * @param hashAlgorithm Transaction hash algorithm
    * @param nonce         Nonce used in the predicate
    */
-  public constructor(
+  private constructor(
     tokenId: TokenId,
     tokenType: TokenType,
     publicKey: Uint8Array,
@@ -38,28 +39,37 @@ export class UnmaskedPredicate extends DefaultPredicate {
   /**
    * Create unmasked predicate.
    *
-   * @param tokenId        token id
-   * @param tokenType      token type
-   * @param signingService signing service
-   * @param hashAlgorithm  hash algorithm
-   * @param salt           received transaction salt
+   * @param {Token} token        token
+   * @param {SigningService} signingService signing service
+   * @param {HashAlgorithm} hashAlgorithm  hash algorithm
    */
-  public static async create(
-    tokenId: TokenId,
-    tokenType: TokenType,
+  public static createFromToken(
+    token: Token,
     signingService: SigningService,
     hashAlgorithm: HashAlgorithm,
-    salt: Uint8Array,
   ): Promise<UnmaskedPredicate> {
-    const nonce = await signingService.sign(await new DataHasher(HashAlgorithm.SHA256).update(salt).digest());
+    return UnmaskedPredicate.create(token.id, token.type, token.latestTransaction, signingService, hashAlgorithm);
+  }
 
-    return new UnmaskedPredicate(
-      tokenId,
-      tokenType,
-      signingService.publicKey,
-      signingService.algorithm,
+  /**
+   * Create unmasked predicate from mint transaction.
+   *
+   * @param {MintTransaction} transaction        mint transaction
+   * @param {SigningService} signingService signing service
+   * @param {HashAlgorithm} hashAlgorithm  hash algorithm
+   * @return predicate
+   */
+  public static createFromMintTransaction(
+    transaction: MintTransaction,
+    signingService: SigningService,
+    hashAlgorithm: HashAlgorithm,
+  ): Promise<UnmaskedPredicate> {
+    return UnmaskedPredicate.create(
+      transaction.data.tokenId,
+      transaction.data.tokenType,
+      transaction,
+      signingService,
       hashAlgorithm,
-      nonce.bytes,
     );
   }
 
@@ -88,6 +98,36 @@ export class UnmaskedPredicate extends DefaultPredicate {
   }
 
   /**
+   * Create unmasked predicate.
+   *
+   * @param {TokenId} tokenId        token id
+   * @param {TokenType} tokenType        token type
+   * @param {MintTransaction | TransferTransaction} transaction        transaction
+   * @param {SigningService} signingService signing service
+   * @param {HashAlgorithm} hashAlgorithm  hash algorithm
+   */
+  private static async create(
+    tokenId: TokenId,
+    tokenType: TokenType,
+    transaction: MintTransaction | TransferTransaction,
+    signingService: SigningService,
+    hashAlgorithm: HashAlgorithm,
+  ): Promise<UnmaskedPredicate> {
+    const nonce = await signingService.sign(
+      await new DataHasher(HashAlgorithm.SHA256).update(transaction.data.salt).digest(),
+    );
+
+    return new UnmaskedPredicate(
+      tokenId,
+      tokenType,
+      signingService.publicKey,
+      signingService.algorithm,
+      hashAlgorithm,
+      nonce.bytes,
+    );
+  }
+
+  /**
    * Verify token state for current transaction.
    *
    * @param trustBase   trust base to verify against.
@@ -101,11 +141,7 @@ export class UnmaskedPredicate extends DefaultPredicate {
     }
 
     return SigningService.verifyWithPublicKey(
-      await new DataHasher(HashAlgorithm.SHA256)
-        .update(
-          !token.transactions.length ? token.genesis.data.salt : (token.transactions.at(-1)?.data.salt as Uint8Array),
-        )
-        .digest(),
+      await new DataHasher(HashAlgorithm.SHA256).update(token.latestTransaction.data.salt).digest(),
       this.nonce,
       this.publicKey,
     );

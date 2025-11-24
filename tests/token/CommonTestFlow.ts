@@ -76,13 +76,7 @@ export async function testTransferFlow(trustBase: RootTrustBase, client: StateTr
   const bobTokenState = "Bob's custom data"; // Bob gives this custom data to the Alice to use in the transfer
   const bobNonce = crypto.getRandomValues(new Uint8Array(32));
   const bobSigningService = await SigningService.createFromSecret(bobSecret, bobNonce);
-  const bobPredicate = MaskedPredicate.create(
-    aliceToken.id,
-    aliceToken.type,
-    bobSigningService,
-    HashAlgorithm.SHA256,
-    bobNonce,
-  );
+  const bobPredicate = MaskedPredicate.createFromToken(aliceToken, bobSigningService, HashAlgorithm.SHA256, bobNonce);
 
   const bobAddress = await bobPredicate.getReference().then((reference) => reference.toAddress());
 
@@ -157,13 +151,7 @@ export async function testTransferFlow(trustBase: RootTrustBase, client: StateTr
   const carolTransaction = await TransferTransaction.fromJSON(txToCarol.toJSON());
 
   // now Carol can create an UnmaskedPredicate knowing token information
-  const carolPredicate = await UnmaskedPredicate.create(
-    carolToken.id,
-    carolToken.type,
-    carolSigningService,
-    HashAlgorithm.SHA256,
-    carolNonce,
-  );
+  const carolPredicate = await UnmaskedPredicate.createFromToken(carolToken, carolSigningService, HashAlgorithm.SHA256);
 
   // Finish the transaction with the Carol predicate
   expect(carolTransaction.data.recipientDataHash).toBeNull();
@@ -193,13 +181,7 @@ export async function testOfflineTransferFlow(trustBase: RootTrustBase, client: 
   // Recipient prepares the info for the transfer
   const nonce = crypto.getRandomValues(new Uint8Array(32));
   const bobSigningService = await SigningService.createFromSecret(bobSecret, nonce);
-  const recipientPredicate = MaskedPredicate.create(
-    token.id,
-    token.type,
-    bobSigningService,
-    HashAlgorithm.SHA256,
-    nonce,
-  );
+  const recipientPredicate = MaskedPredicate.createFromToken(token, bobSigningService, HashAlgorithm.SHA256, nonce);
 
   const receivingAddress = await recipientPredicate.getReference().then((reference) => reference.toAddress());
 
@@ -364,9 +346,8 @@ export async function testSplitFlowAfterTransfer(
 
   const importedTransaction = await TransferTransaction.fromJSON(JSON.parse(JSON.stringify(sendTokenTx.toJSON())));
 
-  const maskedPredicate = MaskedPredicate.create(
-    receiverImportedToken.id,
-    receiverImportedToken.type,
+  const maskedPredicate = MaskedPredicate.createFromToken(
+    receiverImportedToken,
     recipientSigningService,
     HashAlgorithm.SHA256,
     receiverNonce,
@@ -475,20 +456,20 @@ async function splitToken(
       }
 
       const nonce = nonces.get(commitment.transactionData.tokenId.toJSON())!;
+      const transaction = commitment.toTransaction(await waitInclusionProof(trustBase, client, commitment));
       return Token.mint(
         trustBase,
         mintReasonFactory,
         new TokenState(
-          MaskedPredicate.create(
-            commitment.transactionData.tokenId,
-            commitment.transactionData.tokenType,
+          MaskedPredicate.createFromMintTransaction(
+            transaction,
             await SigningService.createFromSecret(ownerSecret, nonce),
             HashAlgorithm.SHA256,
             nonce,
           ),
           textEncoder.encode(customDataString),
         ),
-        commitment.toTransaction(await waitInclusionProof(trustBase, client, commitment)),
+        transaction,
       );
     }),
   );

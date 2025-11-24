@@ -82,6 +82,10 @@ export class Token {
     return this._transactions.slice();
   }
 
+  public get latestTransaction(): MintTransaction | TransferTransaction {
+    return this._transactions.length ? this._transactions.at(-1)! : this.genesis;
+  }
+
   /**
    * Create token from CBOR bytes.
    *

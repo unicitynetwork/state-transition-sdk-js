@@ -5,8 +5,10 @@ import { HashAlgorithm } from '../../hash/HashAlgorithm.js';
 import { CborDeserializer } from '../../serializer/cbor/CborDeserializer.js';
 import { CborError } from '../../serializer/cbor/CborError.js';
 import { SigningService } from '../../sign/SigningService.js';
+import { Token } from '../../token/Token.js';
 import { TokenId } from '../../token/TokenId.js';
 import { TokenType } from '../../token/TokenType.js';
+import { MintTransaction } from '../../transaction/MintTransaction.js';
 
 /**
  * Predicate for masked address transaction.
@@ -20,7 +22,7 @@ export class MaskedPredicate extends DefaultPredicate {
    * @param hashAlgorithm Transaction hash algorithm
    * @param nonce         Nonce used in the predicate
    */
-  public constructor(
+  private constructor(
     tokenId: TokenId,
     tokenType: TokenType,
     publicKey: Uint8Array,
@@ -32,25 +34,41 @@ export class MaskedPredicate extends DefaultPredicate {
   }
 
   /**
-   * Create masked predicate from signing service.
+   * Create masked predicate from token and signing service.
    *
-   * @param tokenId        token id
-   * @param tokenType      token type
-   * @param signingService signing service
-   * @param hashAlgorithm  hash algorithm
-   * @param nonce          predicate nonce
+   * @param {Token} token        token
+   * @param {SigningService} signingService signing service
+   * @param {HashAlgorithm} hashAlgorithm  hash algorithm
+   * @param {Uint8Array} nonce          predicate nonce
    * @return predicate
    */
-  public static create(
-    tokenId: TokenId,
-    tokenType: TokenType,
+  public static createFromToken(
+    token: Token,
+    signingService: SigningService,
+    hashAlgorithm: HashAlgorithm,
+    nonce: Uint8Array,
+  ): MaskedPredicate {
+    return MaskedPredicate.createFromMintTransaction(token.genesis, signingService, hashAlgorithm, nonce);
+  }
+
+  /**
+   * Create masked predicate from mint transaction and signing service.
+   *
+   * @param {MintTransaction} transaction        mint transaction
+   * @param {SigningService} signingService signing service
+   * @param {HashAlgorithm} hashAlgorithm  hash algorithm
+   * @param {Uint8Array} nonce          predicate nonce
+   * @return predicate
+   */
+  public static createFromMintTransaction(
+    transaction: MintTransaction,
     signingService: SigningService,
     hashAlgorithm: HashAlgorithm,
     nonce: Uint8Array,
   ): MaskedPredicate {
     return new MaskedPredicate(
-      tokenId,
-      tokenType,
+      transaction.data.tokenId,
+      transaction.data.tokenType,
       signingService.publicKey,
       signingService.algorithm,
       hashAlgorithm,

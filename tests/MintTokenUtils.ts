@@ -86,14 +86,16 @@ export async function mintToken(
     throw new Error(`Failed to submit mint commitment: ${response.status}`);
   }
 
+  const transaction = commitment.toTransaction(await waitInclusionProof(trustBase, client, commitment));
+
   return Token.mint(
     trustBase,
     mintReasonFactory,
     new TokenState(
-      MaskedPredicate.create(data.tokenId, data.tokenType, signingService, HashAlgorithm.SHA256, data.nonce),
+      MaskedPredicate.createFromMintTransaction(transaction, signingService, HashAlgorithm.SHA256, data.nonce),
       data.data,
     ),
-    commitment.toTransaction(await waitInclusionProof(trustBase, client, commitment)),
+    transaction,
   );
 }
 
