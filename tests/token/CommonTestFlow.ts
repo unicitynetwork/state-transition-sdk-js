@@ -43,7 +43,7 @@ function performCheckForSplitTokens(actualTokens: Token[], expectedCoinDataList:
 }
 
 export async function testTransferFlow(trustBase: RootTrustBase, client: StateTransitionClient): Promise<void> {
-  const mintReasonFactory = new DefaultMintReasonFactory(new Map([[TestEmptyMintReason.TYPE, TestEmptyMintReason]]));
+  const mintReasonFactory = new DefaultMintReasonFactory([TestEmptyMintReason]);
 
   // Alice
   const mintData = createMintData(
