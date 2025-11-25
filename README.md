@@ -231,8 +231,9 @@ const secret = crypto.getRandomValues(new Uint8Array(128)); // User secret key
 const tokenId = new TokenId(crypto.getRandomValues(new Uint8Array(32))); // Chosen ID
 const tokenType = new TokenType(crypto.getRandomValues(new Uint8Array(32))); // Token type
 const tokenData = null; /* Your own token data object with ISerializable attributes */
-const coinData = TokenCoinData.create([/* [CoinId, value] elements to have coins in token */]);
+const coinData = TokenCoinData.create([]);
 const salt = crypto.getRandomValues(new Uint8Array(32)); /* Your random salt bytes */
+const mintReasonFactory = new DefaultMintReasonFactory([SplitMintReason]);
 
 // Create aggregator client
 const aggregatorClient = new AggregatorClient('https://gateway-test.unicity.network:443');
@@ -243,15 +244,13 @@ const trustBaseJsonString = fs.readFileSync(path.join(__dirname, 'trust-base.jso
 const trustBase = RootTrustBase.fromJSON(JSON.parse(trustBaseJsonString));
 
 const nonce = crypto.getRandomValues(new Uint8Array(32));
-const predicate = MaskedPredicate.create(
-  tokenId,
+const predicateReference = await MaskedPredicateReference.createFromSigningService(
   tokenType,
   await SigningService.createFromSecret(secret, nonce),
   HashAlgorithm.SHA256,
   nonce,
 );
 
-const predicateReference = await predicate.getReference();
 const commitment = await MintCommitment.create(
   await MintTransactionData.create(
     tokenId,
@@ -270,11 +269,15 @@ if (response.status !== SubmitCommitmentStatus.SUCCESS) {
   throw new Error(`Failed to submit mint commitment: ${response.status}`);
 }
 
-return Token.mint(
-  trustBase,
-  new TokenState(predicate, null),
-  commitment.toTransaction(await waitInclusionProof(trustBase, client, commitment)),
+const transaction = commitment.toTransaction(await waitInclusionProof(trustBase, client, commitment));
+const predicate = MaskedPredicate.createFromMintTransaction(
+  transaction,
+  await SigningService.createFromSecret(secret, nonce),
+  HashAlgorithm.SHA256,
+  nonce,
 );
+
+return Token.mint(trustBase, mintReasonFactory, new TokenState(predicate, null), transaction);
 ```
 
 ### Token Transfer
@@ -320,33 +323,35 @@ JSON.stringify(token);
 Nametag target address can currently only be created from unmasked predicate reference.
 
 ```typescript
+const mintReasonFactory = new DefaultMintReasonFactory([]);
+
 const secret = crypto.getRandomValues(new Uint8Array(128)); // User secret key
 const tokenType = new TokenType(crypto.getRandomValues(new Uint8Array(32))); // Token type
 const salt = crypto.getRandomValues(new Uint8Array(32)); /* Your random salt bytes */
 
 const targetAddressReference = await UnmaskedPredicateReference.createFromSigningService(
   tokenType,
-  SigningService.createFromSecret(secret, null),
+  SigningService.createFromSecret(secret),
   HashAlgorithm.SHA256,
 );
 
 const nonce = crypto.getRandomValues(new Uint8Array(32));
 const predicateReference = await MaskedPredicateReference.createFromSigningService(
   tokenType,
-  SigningService.createFromSecret(secret, null),
+  SigningService.createFromSecret(secret),
   HashAlgorithm.SHA256,
-  nonce
+  nonce,
 );
 
 const nametag = 'RECIPIENT';
-    
+
 const commitment = await MintCommitment.create(
   await MintTransactionData.createFromNametag(
     nametag,
     tokenType,
     await predicateReference.toAddress(),
     salt,
-    await targetAddressReference.toAddress()
+    await targetAddressReference.toAddress(),
   ),
 );
 
@@ -355,9 +360,9 @@ if (response.status !== SubmitCommitmentStatus.SUCCESS) {
   throw new Error(`Failed to submit mint commitment: ${response.status}`);
 }
 
-const predicate = await MaskedPredicate.create(
-  commitment.transactionData.tokenId,
-  commitment.transactionData.tokenType,
+const transaction = commitment.toTransaction(await waitInclusionProof(trustBase, client, commitment));
+const predicate = await MaskedPredicate.createFromMintTransaction(
+  transaction,
   await SigningService.createFromSecret(secret, nonce),
   HashAlgorithm.SHA256,
   nonce,
@@ -365,6 +370,7 @@ const predicate = await MaskedPredicate.create(
 
 const nametagToken = Token.mint(
   trustBase,
+  mintReasonFactory,
   new TokenState(predicate, null),
   commitment.toTransaction(await waitInclusionProof(trustBase, client, commitment)),
 );
@@ -373,25 +379,26 @@ const nametagToken = Token.mint(
 2. Receive the token
 
 ```typescript
-let secret; // Same secret as target address secret for nametag
+const mintReasonFactory = new DefaultMintReasonFactory([SplitMintReason]);
+
+const secret: Uint8Array; // Same secret as target address secret for nametag
 const token = await Token.fromJSON(JSON.parse(tokenJson));
 const transaction = await TransferTransaction.fromJSON(JSON.parse(transactionJson));
 
 const transactionData = null; // Transaction data which hash was set by recipient
 
-const predicate = await UnmaskedPredicate.create(
-  token.id,
-  token.type,
-  SigningService.createFromSecret(secret, null),
+const predicate = await UnmaskedPredicate.createFromToken(
+  token,
+  await SigningService.createFromSecret(secret),
   HashAlgorithm.SHA256,
-  transaction.data.salt
 );
 
 // Finish the transaction with the Bob's predicate
 const finalizedToken = await client.finalizeTransaction(
   trustBase,
+  mintReasonFactory,
   token,
-  new TokenState(predicate, null),
+  new TokenState(predicate, transactionData),
   transaction,
 );
 ```
@@ -400,42 +407,41 @@ const finalizedToken = await client.finalizeTransaction(
 
 ```typescript
 // You need the public key of the current owner to check token status
-const publicKey = signingService.getPublicKey();
-const status = await client.getTokenStatus(trustBase, token, publicKey);
-/* 
-  status InclusionProofVerificationStatus.OK is spent
-  status InclusionProofVerificationStatus.PATH_NOT_INCLUDED is unspent
- */
+const publicKey = signingService.publicKey;
+const isSpent = await client.isTokenStateSpent(trustBase, token, publicKey);
 ```
 
 ### The Token Split Operation
 
 ```typescript
-// Assume that token has already been minted or received
+const mintReasonFactory = new DefaultMintReasonFactory([SplitMintReason]);
+
+// Assume that token has already been minted or received and token has masked predicate
+const nonce: Uint8Array; // Token nonce used for masked predicate
 const token: Token;
 const signingService: SigningService; // Sender's signing service, same as mint example predicate signing service
 
 const builder = new TokenSplitBuilder();
 
 builder
-  .createToken(
-    new TokenId(crypto.getRandomValues(new Uint8Array(32))),
-    new TokenType(crypto.getRandomValues(new Uint8Array(32))),
-    null,
-    TokenCoinData.create([[new CoinId(textEncoder.encode('TEST1')), 10n]]),
-    ProxyAddress.fromNameTag('RECIPIENT'),
-    crypto.getRandomValues(new Uint8Array(32)),
-    null,
-  )
-  .createToken(
-    new TokenId(crypto.getRandomValues(new Uint8Array(32))),
-    new TokenType(crypto.getRandomValues(new Uint8Array(32))),
-    null,
-    TokenCoinData.create([[new CoinId(textEncoder.encode('TEST2')), 20n]]),
-    ProxyAddress.fromNameTag('RECIPIENT'),
-    crypto.getRandomValues(new Uint8Array(32)),
-    null,
-  );
+.createToken(
+  new TokenId(crypto.getRandomValues(new Uint8Array(32))),
+  new TokenType(crypto.getRandomValues(new Uint8Array(32))),
+  null,
+  TokenCoinData.create([[new CoinId(textEncoder.encode('TEST1')), 10n]]),
+  await ProxyAddress.fromNameTag('RECIPIENT'),
+  crypto.getRandomValues(new Uint8Array(32)),
+  null,
+)
+.createToken(
+  new TokenId(crypto.getRandomValues(new Uint8Array(32))),
+  new TokenType(crypto.getRandomValues(new Uint8Array(32))),
+  null,
+  TokenCoinData.create([[new CoinId(textEncoder.encode('TEST2')), 20n]]),
+  await ProxyAddress.fromNameTag('RECIPIENT'),
+  crypto.getRandomValues(new Uint8Array(32)),
+  null,
+);
 
 const split = await builder.build(token);
 const burnCommitment = await split.createBurnCommitment(
@@ -450,10 +456,9 @@ if (response.status !== SubmitCommitmentStatus.SUCCESS) {
 
 const splitMintCommitments = await split.createSplitMintCommitments(
   trustBase,
+  mintReasonFactory,
   burnCommitment.toTransaction(await waitInclusionProof(trustBase, client, burnCommitment)),
 );
-
-// Proceed with usual minting flow for each split commitment
 ```
 
 ## Unicity Signature Standard

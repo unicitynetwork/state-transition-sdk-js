@@ -4,12 +4,20 @@ import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
 import { SplitMintReason } from '../token/fungible/SplitMintReason.js';
 
 export class DefaultMintReasonFactory implements IMintReasonFactory {
+  private readonly reasons: Map<bigint, { fromCBOR: (bytes: Uint8Array) => Promise<IMintTransactionReason> }> =
+    new Map();
+
   public constructor(
-    private readonly reasons: Map<
-      bigint,
-      { fromCBOR: (bytes: Uint8Array) => Promise<IMintTransactionReason> }
-    > = new Map([[SplitMintReason.TYPE, SplitMintReason]]),
-  ) {}
+    factories: { TYPE: bigint; fromCBOR: (bytes: Uint8Array) => Promise<IMintTransactionReason> }[] = [SplitMintReason],
+  ) {
+    for (const factory of factories) {
+      if (this.reasons.has(factory.TYPE)) {
+        throw new Error('Duplicate mint reason factory type registration.');
+      }
+
+      this.reasons.set(factory.TYPE, factory);
+    }
+  }
 
   public create(bytes: Uint8Array): Promise<IMintTransactionReason> {
     const data = CborDeserializer.readArray(bytes);
