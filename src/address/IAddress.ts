@@ -11,4 +11,9 @@ export interface IAddress {
    * Serialize the address into a URI-like string representation.
    */
   readonly address: string;
+
+  /**
+   * String representation of the address.
+   */
+  toString(): string;
 }

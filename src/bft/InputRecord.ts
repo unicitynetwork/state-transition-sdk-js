@@ -1,5 +1,7 @@
 import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
+import { HexConverter } from '../util/HexConverter.js';
+import { dedent } from '../util/StringUtils.js';
 
 /**
  * Input record for UnicityCertificate.
@@ -89,5 +91,24 @@ export class InputRecord {
         CborSerializer.encodeOptional(this.executedTransactionsHash, CborSerializer.encodeByteString),
       ),
     );
+  }
+
+  /**
+   * Returns a string representation of the InputRecord.
+   * @returns The string representation.
+   */
+  public toString(): string {
+    return dedent`
+      Input Record
+        Version: ${this.version.toString()}
+        Round Number: ${this.roundNumber.toString()}
+        Epoch: ${this.epoch.toString()}
+        Previous Hash: ${this._previousHash ? HexConverter.encode(this._previousHash) : 'null'}
+        Hash: ${HexConverter.encode(this._hash)}
+        Summary Value: ${HexConverter.encode(this._summaryValue)}
+        Timestamp: ${this.timestamp.toString()}
+        Block Hash: ${this._blockHash ? HexConverter.encode(this._blockHash) : 'null'}
+        Sum of Earned Fees: ${this.sumOfEarnedFees.toString()}
+        Executed Transactions Hash: ${this._executedTransactionsHash ? HexConverter.encode(this._executedTransactionsHash) : 'null'}`;
   }
 }

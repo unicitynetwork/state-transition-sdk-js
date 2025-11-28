@@ -31,8 +31,9 @@ export class CborReader {
 
   public readLength(majorType: MajorType): bigint {
     const initialByte = this.readByte();
+    const parsedMajorType = (initialByte & CborReader.MAJOR_TYPE_MASK) as MajorType;
 
-    if ((initialByte & CborReader.MAJOR_TYPE_MASK) !== majorType) {
+    if (parsedMajorType !== majorType) {
       throw new CborError('Major type mismatch.');
     }
 
@@ -73,7 +74,7 @@ export class CborReader {
     const majorType = this.data[this.position] & CborReader.MAJOR_TYPE_MASK;
     const position = this.position;
     const length = this.readLength(majorType);
-    switch (majorType) {
+    switch (majorType as MajorType) {
       case MajorType.BYTE_STRING:
       case MajorType.TEXT_STRING:
         this.read(Number(length));

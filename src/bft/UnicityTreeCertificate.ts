@@ -1,5 +1,7 @@
 import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
+import { HexConverter } from '../util/HexConverter.js';
+import { dedent } from '../util/StringUtils.js';
 
 /**
  * Hash step in the certificate.
@@ -38,6 +40,17 @@ class HashStep {
       CborSerializer.encodeUnsignedInteger(this.key),
       CborSerializer.encodeByteString(this.hash),
     );
+  }
+
+  /**
+   * Returns a string representation of the UnicityTreeCertificate.
+   * @returns The string representation.
+   */
+  public toString(): string {
+    return dedent`
+      Hash Step
+        Key: ${this.key}
+        Hash: ${HexConverter.encode(this._hash)}`;
   }
 }
 
@@ -88,5 +101,19 @@ export class UnicityTreeCertificate {
         CborSerializer.encodeArray(...this.steps.map((step) => step.toCBOR())),
       ),
     );
+  }
+
+  /**
+   * Returns a string representation of the UnicityTreeCertificate.
+   * @returns The string representation.
+   */
+  public toString(): string {
+    return dedent`
+      Unicity Tree Certificate
+        Version: ${this.version}
+        Partition Identifier: ${this.partitionIdentifier}
+        Steps: [
+          ${this.steps.map((step) => step.toString()).join('\n')}
+        ]`;
   }
 }

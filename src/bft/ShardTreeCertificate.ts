@@ -1,5 +1,7 @@
 import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
+import { HexConverter } from '../util/HexConverter.js';
+import { dedent } from '../util/StringUtils.js';
 
 /**
  * Shard tree certificate.
@@ -46,5 +48,18 @@ export class ShardTreeCertificate {
       CborSerializer.encodeByteString(this.shard),
       CborSerializer.encodeArray(...this._siblingHashList.map((hash) => CborSerializer.encodeByteString(hash))),
     );
+  }
+
+  /**
+   * Returns a string representation of the ShardTreeCertificate.
+   * @returns The string representation.
+   */
+  public toString(): string {
+    return dedent`
+      Shard Tree Certificate
+        Shard: ${HexConverter.encode(this._shard)}
+        Sibling Hash List: [
+          ${this._siblingHashList.map((hash) => HexConverter.encode(hash)).join('\n')}
+        ]`;
   }
 }

@@ -66,7 +66,7 @@ export class TokenCoinData implements ISerializable {
       throw new InvalidJsonStructureError();
     }
 
-    return new TokenCoinData(new Map(data.map(([key, value]) => [key, BigInt(value)])));
+    return new TokenCoinData(new Map(data.map(([key, value]: [string, string]) => [key, BigInt(value)])));
   }
 
   public get(id: CoinId): bigint | null {

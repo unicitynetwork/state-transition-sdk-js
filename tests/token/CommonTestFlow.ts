@@ -197,15 +197,13 @@ export async function testOfflineTransferFlow(trustBase: RootTrustBase, client: 
 
   // Test the full JSON serialization cycle that would happen in real usage
   // 1. Get JSON representation of the offline transaction
-  const offlineTxJson = JSON.stringify({ commitment: commitment.toJSON(), token });
-
-  // 2. Simulate transfer and parsing (what recipient would do)
-  const parsedJson = JSON.parse(offlineTxJson);
+  const commitmentJson = JSON.stringify(commitment);
+  const tokenJson = JSON.stringify(token);
 
   // 3. Deserialize back to object
   //...sender sends the "package" offline to the recipient
-  const importedToken = await Token.fromJSON(parsedJson.token);
-  const importedCommitment = await TransferCommitment.fromJSON(parsedJson.commitment);
+  const importedToken = await Token.fromJSON(JSON.parse(tokenJson));
+  const importedCommitment = await TransferCommitment.fromJSON(JSON.parse(commitmentJson));
 
   // Recipient imports token (offline json file transfer)
   const response = await client.submitTransferCommitment(importedCommitment);

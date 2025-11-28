@@ -48,4 +48,8 @@ export class CoinId {
   public toBitString(): BitString {
     return new BitString(this.data);
   }
+
+  public toString(): string {
+    return `CoinId[${HexConverter.encode(this.data)}]`;
+  }
 }

@@ -1,14 +1,16 @@
 import eslint from '@eslint/js';
+import { defineConfig, globalIgnores } from 'eslint/config';
 import eslintImport from 'eslint-plugin-import';
 import eslintConfigPrettier from 'eslint-plugin-prettier/recommended';
 import globals from 'globals';
 import tsEslint from 'typescript-eslint';
 
-export default [
+export default defineConfig(
   eslint.configs.recommended,
-  ...tsEslint.configs.recommendedTypeChecked,
+  tsEslint.configs.recommendedTypeChecked,
   eslintConfigPrettier,
   eslintImport.flatConfigs.recommended,
+  globalIgnores(["tests/integration/docker/**"]),
   {
     languageOptions: {
       ecmaVersion: 2018,
@@ -17,7 +19,7 @@ export default [
         ...globals.node,
       },
       parserOptions: {
-        projectService: true,
+        project: ['./tsconfig.eslint.json'],
       },
       sourceType: 'module',
     },
@@ -46,6 +48,7 @@ export default [
           selector: ['variable'],
         },
       ],
+      "@typescript-eslint/unbound-method": ["error", { "ignoreStatic": true }],
       'import/extensions': ['error', 'ignorePackages'],
       'import/no-unresolved': 'off',
       'import/order': [
@@ -60,4 +63,5 @@ export default [
       'sort-keys': ['error', 'asc', { minKeys: 2, natural: true }],
     },
   },
-];
+
+);

@@ -9,6 +9,7 @@ import { ISigningService } from '../sign/ISigningService.js';
 import { Signature } from '../sign/Signature.js';
 import { SigningService } from '../sign/SigningService.js';
 import { HexConverter } from '../util/HexConverter.js';
+import { dedent } from '../util/StringUtils.js';
 
 /**
  * JSON representation of a certification data.
@@ -178,5 +179,18 @@ export class CertificationData {
       this.sourceStateHash.toCBOR(),
       this.transactionHash.toCBOR(),
     );
+  }
+
+  /**
+   * Returns a string representation of the CertificationData.
+   * @returns The string representation.
+   */
+  public toString(): string {
+    return dedent`
+      Certification Data
+        Public Key: ${HexConverter.encode(this._publicKey)}
+        Source State Hash: ${this.sourceStateHash.toString()}
+        Transaction Hash: ${this.transactionHash.toString()}
+        Signature: ${this.signature.toString()}`;
   }
 }

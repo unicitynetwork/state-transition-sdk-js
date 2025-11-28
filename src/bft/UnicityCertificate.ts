@@ -9,6 +9,7 @@ import { UnicityTreeCertificate } from './UnicityTreeCertificate.js';
 import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
 import { HexConverter } from '../util/HexConverter.js';
+import { dedent } from '../util/StringUtils.js';
 
 /**
  * Unicity certificate.
@@ -125,5 +126,21 @@ export class UnicityCertificate {
 
   public toJSON(): string {
     return HexConverter.encode(this.toCBOR());
+  }
+
+  /**
+   * Returns a string representation of the UnicityCertificate.
+   * @returns The string representation.
+   */
+  public toString(): string {
+    return dedent`
+      Unicity Certificate
+        Version: ${this.version.toString()}
+        ${this.inputRecord.toString()}
+        Technical Record Hash: ${this.technicalRecordHash ? HexConverter.encode(this.technicalRecordHash) : 'null'}
+        Shard Configuration Hash: ${HexConverter.encode(this.shardConfigurationHash)}
+        ${this.shardTreeCertificate.toString()}
+        ${this.unicityTreeCertificate.toString()}
+        ${this.unicitySeal.toString()}`;
   }
 }

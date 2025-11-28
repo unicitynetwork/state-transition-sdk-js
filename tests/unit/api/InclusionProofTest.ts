@@ -91,7 +91,7 @@ describe('InclusionProof', () => {
       CertificationData.fromJSON({
         publicKey: HexConverter.encode(certificateData.publicKey),
         signature: certificateData.signature.toJSON(),
-        stateHash: certificateData.sourceStateHash.toJSON(),
+        sourceStateHash: certificateData.sourceStateHash.toJSON(),
         transactionHash: DataHash.fromImprint(
           HexConverter.decode('00000000000000000000000000000000000000000000000000000000000000000001'),
         ).toJSON(),
@@ -112,7 +112,7 @@ describe('InclusionProof', () => {
       CertificationData.fromJSON({
         publicKey: HexConverter.encode(certificateData.publicKey),
         signature: certificateData.signature.toJSON(),
-        stateHash: certificateData.sourceStateHash.toJSON(),
+        sourceStateHash: certificateData.sourceStateHash.toJSON(),
         transactionHash: DataHash.fromImprint(
           HexConverter.decode('00000000000000000000000000000000000000000000000000000000000000000001'),
         ).toJSON(),

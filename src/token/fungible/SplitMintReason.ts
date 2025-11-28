@@ -66,7 +66,7 @@ export class SplitMintReason implements IMintTransactionReason {
         return Promise.resolve(
           new VerificationResult(
             VerificationResultCode.FAIL,
-            `Aggregation path verification failed for coin: ${proof.coinId}`,
+            `Aggregation path verification failed for coin: ${proof.coinId.toString()}`,
           ),
         );
       }
@@ -76,7 +76,7 @@ export class SplitMintReason implements IMintTransactionReason {
         return Promise.resolve(
           new VerificationResult(
             VerificationResultCode.FAIL,
-            `Coin tree path verification failed for token: ${transaction.data.tokenId}`,
+            `Coin tree path verification failed for token: ${transaction.data.tokenId.toString()}`,
           ),
         );
       }
@@ -90,7 +90,10 @@ export class SplitMintReason implements IMintTransactionReason {
       const amount = transaction.data.coinData.get(proof.coinId);
       if (amount === null) {
         return Promise.resolve(
-          new VerificationResult(VerificationResultCode.FAIL, `Coin id ${proof.coinId} not found in coin data.`),
+          new VerificationResult(
+            VerificationResultCode.FAIL,
+            `Coin id ${proof.coinId.toString()} not found in coin data.`,
+          ),
         );
       }
 
@@ -98,7 +101,7 @@ export class SplitMintReason implements IMintTransactionReason {
         return Promise.resolve(
           new VerificationResult(
             VerificationResultCode.FAIL,
-            `Coin amount for coin id ${proof.coinId} does not match coin tree leaf.`,
+            `Coin amount for coin id ${proof.coinId.toString()} does not match coin tree leaf.`,
           ),
         );
       }

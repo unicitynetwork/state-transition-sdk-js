@@ -2,6 +2,8 @@ import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
 import { CborMap } from '../serializer/cbor/CborMap.js';
 import { CborMapEntry } from '../serializer/cbor/CborMapEntry.js';
 import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
+import { HexConverter } from '../util/HexConverter.js';
+import { dedent } from '../util/StringUtils.js';
 
 /**
  * UnicitySeal represents a seal in the Unicity BFT system, containing metadata and signatures.
@@ -105,5 +107,26 @@ export class UnicitySeal {
         ),
       ),
     );
+  }
+
+  /**
+   * Returns a string representation of the UnicitySeal.
+   * @returns The string representation.
+   */
+  public toString(): string {
+    return dedent`
+      Unicity Seal
+        Version: ${this.version.toString()}
+        Network ID: ${this.networkId.toString()}
+        Root Chain Round Number: ${this.rootChainRoundNumber.toString()}
+        Epoch: ${this.epoch.toString()}
+        Timestamp: ${this.timestamp.toString()}
+        Previous Hash: ${this._previousHash ? HexConverter.encode(this._previousHash) : 'null'}
+        Hash: ${HexConverter.encode(this._hash)}
+        Signatures: [
+          ${Array.from(this._signatures?.entries() ?? [])
+            .map(([key, value]) => `${key}: ${HexConverter.encode(value)}`)
+            .join('\n')}
+        ]`;
   }
 }

@@ -20,7 +20,7 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
       'abort',
       () => {
         clearTimeout(timeout);
-        reject(signal.reason);
+        reject(signal.reason as Error);
       },
       { once: true },
     );
@@ -56,7 +56,7 @@ export async function waitInclusionProof(
     try {
       await sleep(interval, signal);
     } catch (err) {
-      throw new SleepError(String(err || 'Sleep was aborted'));
+      throw new SleepError(err?.toString() || 'Sleep was aborted');
     }
   }
 }

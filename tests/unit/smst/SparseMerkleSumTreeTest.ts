@@ -49,7 +49,7 @@ describe('Sum-Certifying Tree', function () {
 
     const tree = new SparseMerkleSumTree(new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher));
     for (const [path, leaf] of leaves.entries()) {
-      tree.addLeaf(path, leaf.data, leaf.value);
+      void tree.addLeaf(path, leaf.data, leaf.value);
     }
     let root = await tree.calculateRoot();
     expect(root.value).toEqual(100n);
@@ -67,7 +67,7 @@ describe('Sum-Certifying Tree', function () {
       expect(path.steps.at(0)?.value).toEqual(leaf[1].value);
     }
 
-    tree.addLeaf(0b1110n, new Uint8Array(32), 100n);
+    void tree.addLeaf(0b1110n, new Uint8Array(32), 100n);
     root = await tree.calculateRoot();
     expect(root.value).toEqual(200n);
   });
@@ -81,12 +81,12 @@ describe('Sum-Certifying Tree', function () {
   it('concurrency test', async () => {
     const hasherFactory = new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher);
     const smt = new SparseMerkleSumTree(hasherFactory);
-    smt.addLeaf(0b1000n, new Uint8Array(), 10n);
-    smt.calculateRoot().then((root) => {
+    void smt.addLeaf(0b1000n, new Uint8Array(), 10n);
+    void smt.calculateRoot().then((root) => {
       expect(root.left).toBeInstanceOf(FinalizedLeafBranch);
       expect(root.right).toStrictEqual(null);
     });
-    smt.addLeaf(0b1001n, new Uint8Array(), 20n);
+    void smt.addLeaf(0b1001n, new Uint8Array(), 20n);
     await new Promise((resolve) => setTimeout(resolve, 100));
     const left = await new PendingLeafBranch(0b1000n, new Uint8Array(), 10n).finalize(hasherFactory);
     const right = await new PendingLeafBranch(0b1001n, new Uint8Array(), 20n).finalize(hasherFactory);
@@ -98,19 +98,19 @@ describe('Sum-Certifying Tree', function () {
   it('should handle concurrent addLeaf calls', async () => {
     const smt = new SparseMerkleSumTree(new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher));
 
-    smt.addLeaf(0b1000n, new Uint8Array(), 1n);
-    smt.addLeaf(0b1001n, new Uint8Array(), 1n);
+    void smt.addLeaf(0b1000n, new Uint8Array(), 1n);
+    void smt.addLeaf(0b1001n, new Uint8Array(), 1n);
     const root1 = smt.calculateRoot().then((root) => {
       expect(root.left).toBeInstanceOf(FinalizedLeafBranch);
       expect(root.right).toBeInstanceOf(FinalizedLeafBranch);
     });
-    smt.addLeaf(0b1010n, new Uint8Array(), 1n);
+    void smt.addLeaf(0b1010n, new Uint8Array(), 1n);
     const root2 = smt.calculateRoot().then((root) => {
       expect(root.left).toBeInstanceOf(FinalizedNodeBranch);
       expect(root.right).toBeInstanceOf(FinalizedLeafBranch);
     });
 
-    smt.addLeaf(0b1011n, new Uint8Array(), 1n);
+    void smt.addLeaf(0b1011n, new Uint8Array(), 1n);
     const root3 = smt.calculateRoot().then((root) => {
       expect(root.left).toBeInstanceOf(FinalizedNodeBranch);
       expect(root.right).toBeInstanceOf(FinalizedNodeBranch);
