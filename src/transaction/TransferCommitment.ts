@@ -3,8 +3,7 @@ import { InclusionProof } from './InclusionProof.js';
 import { TransferTransaction } from './TransferTransaction.js';
 import { ITransferTransactionDataJson, TransferTransactionData } from './TransferTransactionData.js';
 import { IAddress } from '../address/IAddress.js';
-import { Authenticator, IAuthenticatorJson } from '../api/Authenticator.js';
-import { RequestId } from '../api/RequestId.js';
+import { CertificationData, ICertificationDataJson } from '../api/CertificationData.js';
 import { DataHash } from '../hash/DataHash.js';
 import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
 import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
@@ -13,17 +12,16 @@ import { SigningService } from '../sign/SigningService.js';
 import { Token } from '../token/Token.js';
 
 interface ITransferCommitmentJson {
-  readonly requestId: string;
   readonly transactionData: ITransferTransactionDataJson;
-  readonly authenticator: IAuthenticatorJson;
+  readonly certificationData: ICertificationDataJson;
 }
 
 /**
  * Commitment representing a transfer transaction.
  */
 export class TransferCommitment extends Commitment<TransferTransactionData> {
-  private constructor(requestId: RequestId, transactionData: TransferTransactionData, authenticator: Authenticator) {
-    super(requestId, transactionData, authenticator);
+  private constructor(transactionData: TransferTransactionData, certificationData: CertificationData) {
+    super(transactionData, certificationData);
   }
 
   /**
@@ -54,33 +52,23 @@ export class TransferCommitment extends Commitment<TransferTransactionData> {
       token.nametagTokens,
     );
 
-    const sourceStateHash = await transactionData.sourceState.calculateHash();
-    const transactionHash = await transactionData.calculateHash();
+    const certificationData = await CertificationData.create(
+      await transactionData.sourceState.calculateHash(),
+      await transactionData.calculateHash(),
+      signingService,
+    );
 
-    const requestId = await RequestId.create(signingService.publicKey, sourceStateHash);
-    const authenticator = await Authenticator.create(signingService, transactionHash, sourceStateHash);
-
-    return new TransferCommitment(requestId, transactionData, authenticator);
+    return new TransferCommitment(transactionData, certificationData);
   }
 
   public static async fromCBOR(bytes: Uint8Array): Promise<TransferCommitment> {
     const data = CborDeserializer.readArray(bytes);
 
-    return new TransferCommitment(
-      RequestId.fromCBOR(data[0]),
-      await TransferTransactionData.fromCBOR(data[1]),
-      Authenticator.fromCBOR(data[2]),
-    );
+    return new TransferCommitment(await TransferTransactionData.fromCBOR(data[0]), CertificationData.fromCBOR(data[1]));
   }
 
   public static isJSON(input: unknown): input is ITransferCommitmentJson {
-    return (
-      typeof input === 'object' &&
-      input !== null &&
-      'requestId' in input &&
-      'transactionData' in input &&
-      'authenticator' in input
-    );
+    return typeof input === 'object' && input !== null && 'transactionData' in input && 'certificationData' in input;
   }
 
   public static async fromJSON(input: unknown): Promise<TransferCommitment> {
@@ -89,24 +77,18 @@ export class TransferCommitment extends Commitment<TransferTransactionData> {
     }
 
     return new TransferCommitment(
-      RequestId.fromJSON(input.requestId),
       await TransferTransactionData.fromJSON(input.transactionData),
-      Authenticator.fromJSON(input.authenticator),
+      CertificationData.fromJSON(input.certificationData),
     );
   }
 
   public toCBOR(): Uint8Array {
-    return CborSerializer.encodeArray(
-      this.requestId.toCBOR(),
-      this.transactionData.toCBOR(),
-      this.authenticator.toCBOR(),
-    );
+    return CborSerializer.encodeArray(this.transactionData.toCBOR(), this.certificationData.toCBOR());
   }
 
   public toJSON(): ITransferCommitmentJson {
     return {
-      authenticator: this.authenticator.toJSON(),
-      requestId: this.requestId.toJSON(),
+      certificationData: this.certificationData.toJSON(),
       transactionData: this.transactionData.toJSON(),
     };
   }

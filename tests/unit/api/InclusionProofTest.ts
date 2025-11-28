@@ -1,6 +1,5 @@
-import { Authenticator } from '../../../src/api/Authenticator.js';
-import { LeafValue } from '../../../src/api/LeafValue.js';
-import { RequestId } from '../../../src/api/RequestId.js';
+import { CertificationData } from '../../../src/api/CertificationData.js';
+import { StateId } from '../../../src/api/StateId.js';
 import { RootTrustBase } from '../../../src/bft/RootTrustBase.js';
 import { UnicityCertificate } from '../../../src/bft/UnicityCertificate.js';
 import { DataHash } from '../../../src/hash/DataHash.js';
@@ -20,156 +19,120 @@ describe('InclusionProof', () => {
   const signingService = new SigningService(
     new Uint8Array(HexConverter.decode('0000000000000000000000000000000000000000000000000000000000000001')),
   );
-  const publicKey = signingService.publicKey;
-  const transactionHash = DataHash.fromImprint(new Uint8Array(34));
-  let authenticator: Authenticator;
+
+  let certificateData: CertificationData;
   let merkleTreePath: SparseMerkleTreePath;
   let unicityCertificate: UnicityCertificate;
   let trustBase: RootTrustBase;
 
   beforeAll(async () => {
-    authenticator = await Authenticator.create(
-      signingService,
-      transactionHash,
+    certificateData = await CertificationData.create(
       DataHash.fromImprint(new Uint8Array(34)),
+      DataHash.fromImprint(new Uint8Array(34)),
+      signingService,
     );
-    const lf = await LeafValue.create(authenticator, transactionHash);
+
     const smt = new SparseMerkleTree(new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher));
-    const reqID = (await RequestId.create(publicKey, authenticator.stateHash)).toBitString().toBigInt();
-    smt.addLeaf(reqID, lf.bytes);
+    const stateId = await certificateData.calculateStateId().then((stateId) => stateId.toBitString().toBigInt());
+    await smt.addLeaf(stateId, await certificateData.calculateLeafValue().then((value) => value.imprint));
 
     const root = await smt.calculateRoot();
 
-    merkleTreePath = root.getPath(reqID);
+    merkleTreePath = root.getPath(stateId);
 
     unicityCertificate = await createUnicityCertificate(root.hash, signingService);
-    trustBase = await createRootTrustBase(signingService.publicKey);
+    trustBase = createRootTrustBase(signingService.publicKey);
   });
 
   it('should encode and decode json', () => {
-    const inclusionProof = new InclusionProof(merkleTreePath, authenticator, transactionHash, unicityCertificate);
+    const inclusionProof = new InclusionProof(merkleTreePath, certificateData, unicityCertificate);
     expect(inclusionProof.toJSON()).toEqual({
-      authenticator: authenticator.toJSON(),
+      certificationData: certificateData.toJSON(),
       merkleTreePath: merkleTreePath.toJSON(),
-      transactionHash: transactionHash.toJSON(),
       unicityCertificate: unicityCertificate.toJSON(),
     });
 
     expect(InclusionProof.fromJSON(inclusionProof.toJSON())).toStrictEqual(inclusionProof);
     expect(
       InclusionProof.fromJSON({
-        authenticator: null,
+        certificationData: null,
         merkleTreePath: merkleTreePath.toJSON(),
-        transactionHash: null,
         unicityCertificate: unicityCertificate.toJSON(),
       }),
-    ).toStrictEqual(new InclusionProof(merkleTreePath, null, null, unicityCertificate));
-    expect(() =>
-      InclusionProof.fromJSON({
-        authenticator: authenticator.toJSON(),
-        merkleTreePath: merkleTreePath.toJSON(),
-        transactionHash: null,
-        unicityCertificate: unicityCertificate.toJSON(),
-      }),
-    ).toThrow('Authenticator and transaction hash must be both set or both null.');
-    expect(() =>
-      InclusionProof.fromJSON({
-        authenticator: null,
-        merkleTreePath: merkleTreePath.toJSON(),
-        transactionHash: transactionHash.toJSON(),
-        unicityCertificate: unicityCertificate.toJSON(),
-      }),
-    ).toThrow('Authenticator and transaction hash must be both set or both null.');
+    ).toStrictEqual(new InclusionProof(merkleTreePath, null, unicityCertificate));
   });
 
   it('should encode and decode cbor', () => {
-    const inclusionProof = new InclusionProof(merkleTreePath, authenticator, transactionHash, unicityCertificate);
+    const inclusionProof = new InclusionProof(merkleTreePath, certificateData, unicityCertificate);
 
     expect(inclusionProof.toCBOR()).toStrictEqual(
-      CborSerializer.encodeArray(
-        merkleTreePath.toCBOR(),
-        authenticator.toCBOR(),
-        transactionHash.toCBOR(),
-        unicityCertificate.toCBOR(),
-      ),
+      CborSerializer.encodeArray(merkleTreePath.toCBOR(), certificateData.toCBOR(), unicityCertificate.toCBOR()),
     );
     expect(InclusionProof.fromCBOR(inclusionProof.toCBOR())).toStrictEqual(inclusionProof);
 
     expect(
       InclusionProof.fromCBOR(
-        CborSerializer.encodeArray(
-          merkleTreePath.toCBOR(),
-          CborSerializer.encodeNull(),
-          CborSerializer.encodeNull(),
-          unicityCertificate.toCBOR(),
-        ),
+        CborSerializer.encodeArray(merkleTreePath.toCBOR(), CborSerializer.encodeNull(), unicityCertificate.toCBOR()),
       ),
-    ).toStrictEqual(new InclusionProof(merkleTreePath, null, null, unicityCertificate));
-    expect(() =>
-      InclusionProof.fromCBOR(
-        CborSerializer.encodeArray(
-          merkleTreePath.toCBOR(),
-          authenticator.toCBOR(),
-          CborSerializer.encodeNull(),
-          unicityCertificate.toCBOR(),
-        ),
-      ),
-    ).toThrow('Authenticator and transaction hash must be both set or both null.');
-    expect(() =>
-      InclusionProof.fromCBOR(
-        CborSerializer.encodeArray(
-          merkleTreePath.toCBOR(),
-          CborSerializer.encodeNull(),
-          transactionHash.toCBOR(),
-          unicityCertificate.toCBOR(),
-        ),
-      ),
-    ).toThrow('Authenticator and transaction hash must be both set or both null.');
-  });
-
-  it('structure verification', () => {
-    expect(() => new InclusionProof(merkleTreePath, authenticator, null, unicityCertificate)).toThrow(
-      'Authenticator and transaction hash must be both set or both null.',
-    );
-    expect(() => new InclusionProof(merkleTreePath, null, transactionHash, unicityCertificate)).toThrow(
-      'Authenticator and transaction hash must be both set or both null.',
-    );
-    expect(new InclusionProof(merkleTreePath, null, null, unicityCertificate)).toEqual({
-      authenticator: null,
-      merkleTreePath,
-      transactionHash: null,
-      unicityCertificate,
-    });
-
-    expect(new InclusionProof(merkleTreePath, authenticator, transactionHash, unicityCertificate)).toEqual({
-      authenticator,
-      merkleTreePath,
-      transactionHash,
-      unicityCertificate,
-    });
+    ).toStrictEqual(new InclusionProof(merkleTreePath, null, unicityCertificate));
   });
 
   it('verifies', async () => {
-    const requestId = await RequestId.create(publicKey, authenticator.stateHash);
-    const inclusionProof = new InclusionProof(merkleTreePath, authenticator, transactionHash, unicityCertificate);
+    const stateId = await StateId.create(signingService.publicKey, certificateData.sourceStateHash);
+    const inclusionProof = new InclusionProof(merkleTreePath, certificateData, unicityCertificate);
 
-    expect(await inclusionProof.verify(trustBase, requestId)).toEqual(InclusionProofVerificationStatus.OK);
+    expect(await inclusionProof.verify(trustBase, stateId)).toEqual(InclusionProofVerificationStatus.OK);
     expect(
-      await inclusionProof.verify(trustBase, await RequestId.createFromImprint(new Uint8Array(32), new Uint8Array(34))),
+      await inclusionProof.verify(trustBase, await StateId.createFromImprint(new Uint8Array(32), new Uint8Array(34))),
     ).toEqual(InclusionProofVerificationStatus.PATH_NOT_INCLUDED);
 
     const invalidTransactionHashInclusionProof = new InclusionProof(
       merkleTreePath,
-      authenticator,
-      new DataHash(
-        HashAlgorithm.SHA224,
-        HexConverter.decode('FF000000000000000000000000000000000000000000000000000000000000FF'),
-      ),
+      CertificationData.fromJSON({
+        publicKey: HexConverter.encode(certificateData.publicKey),
+        signature: certificateData.signature.toJSON(),
+        stateHash: certificateData.sourceStateHash.toJSON(),
+        transactionHash: DataHash.fromImprint(
+          HexConverter.decode('00000000000000000000000000000000000000000000000000000000000000000001'),
+        ).toJSON(),
+      }),
       unicityCertificate,
     );
 
-    expect(await invalidTransactionHashInclusionProof.verify(trustBase, requestId)).toEqual(
+    expect(await invalidTransactionHashInclusionProof.verify(trustBase, stateId)).toEqual(
       InclusionProofVerificationStatus.NOT_AUTHENTICATED,
     );
+  });
+
+  it('verification fails with invalid transaction hash', async () => {
+    const stateId = await StateId.create(signingService.publicKey, certificateData.sourceStateHash);
+
+    const inclusionProof = new InclusionProof(
+      merkleTreePath,
+      CertificationData.fromJSON({
+        publicKey: HexConverter.encode(certificateData.publicKey),
+        signature: certificateData.signature.toJSON(),
+        stateHash: certificateData.sourceStateHash.toJSON(),
+        transactionHash: DataHash.fromImprint(
+          HexConverter.decode('00000000000000000000000000000000000000000000000000000000000000000001'),
+        ).toJSON(),
+      }),
+      unicityCertificate,
+    );
+
+    expect(await inclusionProof.verify(trustBase, stateId)).toEqual(InclusionProofVerificationStatus.NOT_AUTHENTICATED);
+  });
+
+  it('verification fails with invalid trustbase', async () => {
+    const stateId = await StateId.create(signingService.publicKey, certificateData.sourceStateHash);
+
+    const inclusionProof = new InclusionProof(merkleTreePath, certificateData, unicityCertificate);
+
+    await expect(
+      inclusionProof.verify(
+        createRootTrustBase(HexConverter.decode('0000000000000000000000000000000000000000000000000000000000000001')),
+        stateId,
+      ),
+    ).resolves.toEqual(InclusionProofVerificationStatus.INVALID_TRUSTBASE);
   });
 });

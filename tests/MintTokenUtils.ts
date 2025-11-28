@@ -1,5 +1,5 @@
 import { DirectAddress } from '../src/address/DirectAddress.js';
-import { SubmitCommitmentStatus } from '../src/api/SubmitCommitmentResponse.js';
+import { CertificationStatus } from '../src/api/CertificationResponse.js';
 import { RootTrustBase } from '../src/bft/RootTrustBase.js';
 import { DataHasher } from '../src/hash/DataHasher.js';
 import { HashAlgorithm } from '../src/hash/HashAlgorithm.js';
@@ -82,7 +82,7 @@ export async function mintToken(
   );
 
   const response = await client.submitMintCommitment(commitment);
-  if (response.status !== SubmitCommitmentStatus.SUCCESS) {
+  if (response.status !== CertificationStatus.SUCCESS) {
     throw new Error(`Failed to submit mint commitment: ${response.status}`);
   }
 
@@ -121,7 +121,7 @@ export async function sendToken(
   );
 
   const response = await client.submitTransferCommitment(commitment);
-  if (response.status !== SubmitCommitmentStatus.SUCCESS) {
+  if (response.status !== CertificationStatus.SUCCESS) {
     throw new Error(`Failed to submit transaction commitment: ${response.status}`);
   }
 

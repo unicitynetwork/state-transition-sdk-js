@@ -1,4 +1,4 @@
-import { RequestId } from '../api/RequestId.js';
+import { StateId } from '../api/StateId.js';
 import { DataHash } from '../hash/DataHash.js';
 import { TokenId } from '../token/TokenId.js';
 import { HexConverter } from '../util/HexConverter.js';
@@ -26,6 +26,6 @@ export class MintTransactionState extends DataHash {
    * @return mint state
    */
   public static async create(tokenId: TokenId): Promise<MintTransactionState> {
-    return new MintTransactionState(await RequestId.createFromImprint(tokenId.bytes, MintTransactionState.MINT_SUFFIX));
+    return new MintTransactionState(await StateId.createFromImprint(tokenId.bytes, MintTransactionState.MINT_SUFFIX));
   }
 }

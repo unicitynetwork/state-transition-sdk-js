@@ -1,4 +1,4 @@
-import { SubmitCommitmentStatus } from '../../src/api/SubmitCommitmentResponse.js';
+import { CertificationStatus } from '../../src/api/CertificationResponse.js';
 import { RootTrustBase } from '../../src/bft/RootTrustBase.js';
 import { DataHasher } from '../../src/hash/DataHasher.js';
 import { HashAlgorithm } from '../../src/hash/HashAlgorithm.js';
@@ -209,7 +209,7 @@ export async function testOfflineTransferFlow(trustBase: RootTrustBase, client: 
 
   // Recipient imports token (offline json file transfer)
   const response = await client.submitTransferCommitment(importedCommitment);
-  expect(response.status).toEqual(SubmitCommitmentStatus.SUCCESS);
+  expect(response.status).toEqual(CertificationStatus.SUCCESS);
 
   // Finish the transaction with the recipient predicate
   const updateToken = await client.finalizeTransaction(
@@ -440,7 +440,7 @@ async function splitToken(
   );
 
   const response = await client.submitTransferCommitment(commitment);
-  expect(response.status).toEqual(SubmitCommitmentStatus.SUCCESS);
+  expect(response.status).toEqual(CertificationStatus.SUCCESS);
 
   const splittedTokenMintCommitments = await tokenSplitRequest.createSplitMintCommitments(
     trustBase,
@@ -451,7 +451,7 @@ async function splitToken(
   return Promise.all(
     splittedTokenMintCommitments.map(async (commitment) => {
       const response = await client.submitMintCommitment(commitment);
-      if (response.status !== SubmitCommitmentStatus.SUCCESS) {
+      if (response.status !== CertificationStatus.SUCCESS) {
         throw new Error(`Submitting mint commitment failed: ${response.status}`);
       }
 

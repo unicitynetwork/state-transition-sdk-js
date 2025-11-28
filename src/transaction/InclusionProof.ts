@@ -1,6 +1,5 @@
-import { Authenticator, IAuthenticatorJson } from '../api/Authenticator.js';
-import { LeafValue } from '../api/LeafValue.js';
-import { RequestId } from '../api/RequestId.js';
+import { CertificationData, ICertificationDataJson } from '../api/CertificationData.js';
+import { StateId } from '../api/StateId.js';
 import { RootTrustBase } from '../bft/RootTrustBase.js';
 import { UnicityCertificate } from '../bft/UnicityCertificate.js';
 import { UnicityCertificateVerificationContext } from '../bft/verification/UnicityCertificateVerificationContext.js';
@@ -19,9 +18,7 @@ export interface IInclusionProofJson {
   /** The sparse merkle tree path as JSON. */
   readonly merkleTreePath: ISparseMerkleTreePathJson;
   /** The authenticator as JSON or null. */
-  readonly authenticator: IAuthenticatorJson | null;
-  /** The transaction hash as a string or null. */
-  readonly transactionHash: string | null;
+  readonly certificationData: ICertificationDataJson | null;
   /** The unicity certificate as a hex string. */
   readonly unicityCertificate: string;
 }
@@ -30,6 +27,7 @@ export interface IInclusionProofJson {
  * Status codes for verifying an InclusionProof.
  */
 export enum InclusionProofVerificationStatus {
+  INVALID_TRUSTBASE = 'INVALID_TRUSTBASE',
   NOT_AUTHENTICATED = 'NOT_AUTHENTICATED',
   PATH_NOT_INCLUDED = 'PATH_NOT_INCLUDED',
   PATH_INVALID = 'PATH_INVALID',
@@ -43,21 +41,15 @@ export class InclusionProof {
   /**
    * Constructs an InclusionProof instance.
    * @param merkleTreePath Sparse merkle tree path.
-   * @param authenticator Authenticator.
-   * @param transactionHash Transaction hash.
+   * @param certificationData Certification data.
    * @param unicityCertificate Unicity certificate.
    * @throws Error if authenticator and transactionHash are not both set or both null.
    */
   public constructor(
     public readonly merkleTreePath: SparseMerkleTreePath,
-    public readonly authenticator: Authenticator | null,
-    public readonly transactionHash: DataHash | null,
+    public readonly certificationData: CertificationData | null,
     public readonly unicityCertificate: UnicityCertificate,
-  ) {
-    if (!this.authenticator != !this.transactionHash) {
-      throw new Error('Authenticator and transaction hash must be both set or both null.');
-    }
-  }
+  ) {}
 
   /**
    * Type guard to check if data is IInclusionProofJson.
@@ -81,8 +73,7 @@ export class InclusionProof {
 
     return new InclusionProof(
       SparseMerkleTreePath.fromJSON(data.merkleTreePath),
-      data.authenticator ? Authenticator.fromJSON(data.authenticator) : null,
-      data.transactionHash ? DataHash.fromJSON(data.transactionHash) : null,
+      data.certificationData ? CertificationData.fromJSON(data.certificationData) : null,
       UnicityCertificate.fromJSON(data.unicityCertificate),
     );
   }
@@ -94,15 +85,11 @@ export class InclusionProof {
    */
   public static fromCBOR(bytes: Uint8Array): InclusionProof {
     const data = CborDeserializer.readArray(bytes);
-    const authenticator = CborDeserializer.readOptional(data[1], Authenticator.fromCBOR);
-    const transactionHash = CborDeserializer.readOptional(data[2], DataHash.fromCBOR);
-    const unicityCertificate = UnicityCertificate.fromCBOR(data[3]);
 
     return new InclusionProof(
       SparseMerkleTreePath.fromCBOR(data[0]),
-      authenticator,
-      transactionHash,
-      unicityCertificate,
+      CborDeserializer.readOptional(data[1], CertificationData.fromCBOR),
+      UnicityCertificate.fromCBOR(data[2]),
     );
   }
 
@@ -112,9 +99,8 @@ export class InclusionProof {
    */
   public toJSON(): IInclusionProofJson {
     return {
-      authenticator: this.authenticator?.toJSON() ?? null,
+      certificationData: this.certificationData?.toJSON() ?? null,
       merkleTreePath: this.merkleTreePath.toJSON(),
-      transactionHash: this.transactionHash?.toJSON() ?? null,
       unicityCertificate: this.unicityCertificate.toJSON(),
     };
   }
@@ -126,39 +112,39 @@ export class InclusionProof {
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
       this.merkleTreePath.toCBOR(),
-      this.authenticator?.toCBOR() ?? CborSerializer.encodeNull(),
-      this.transactionHash?.toCBOR() ?? CborSerializer.encodeNull(),
+      this.certificationData?.toCBOR() ?? CborSerializer.encodeNull(),
       this.unicityCertificate.toCBOR(),
     );
   }
 
   /**
-   * Verifies the inclusion proof for a given request ID.
+   * Verifies the inclusion proof for a given state ID.
    * @param trustBase The root trust base.
-   * @param requestId The request ID.
+   * @param stateId The state ID.
    * @returns A Promise resolving to the verification status.
    */
-  public async verify(trustBase: RootTrustBase, requestId: RequestId): Promise<InclusionProofVerificationStatus> {
+  public async verify(trustBase: RootTrustBase, stateId: StateId): Promise<InclusionProofVerificationStatus> {
     const unicityCertificateVerificationResult = await new UnicityCertificateVerificationRule().verify(
       new UnicityCertificateVerificationContext(this.merkleTreePath.root, this.unicityCertificate, trustBase),
     );
 
     if (!unicityCertificateVerificationResult.isSuccessful) {
-      return InclusionProofVerificationStatus.NOT_AUTHENTICATED;
+      return InclusionProofVerificationStatus.INVALID_TRUSTBASE;
     }
 
-    const result = await this.merkleTreePath.verify(requestId.toBitString().toBigInt());
+    const result = await this.merkleTreePath.verify(stateId.toBitString().toBigInt());
     if (!result.isPathValid) {
       return InclusionProofVerificationStatus.PATH_INVALID;
     }
 
-    if (this.authenticator && this.transactionHash) {
-      if (!(await this.authenticator.verify(this.transactionHash))) {
+    if (this.certificationData) {
+      if (!(await this.certificationData.verify())) {
         return InclusionProofVerificationStatus.NOT_AUTHENTICATED;
       }
 
-      const leafValue = await LeafValue.create(this.authenticator, this.transactionHash);
-      if (!leafValue.equals(this.merkleTreePath.steps.at(0)?.data)) {
+      const leafValue = await this.certificationData.calculateLeafValue();
+      const pathValue = this.merkleTreePath.steps.at(0)?.data;
+      if (!pathValue || !leafValue.equals(DataHash.fromImprint(pathValue))) {
         return InclusionProofVerificationStatus.PATH_NOT_INCLUDED;
       }
     }
@@ -178,7 +164,7 @@ export class InclusionProof {
     return dedent`
       Inclusion Proof
         ${this.merkleTreePath.toString()}
-        ${this.authenticator?.toString()}
-        Transaction Hash: ${this.transactionHash?.toString() ?? null}`;
+        ${this.certificationData?.toString()}
+        ${this.unicityCertificate.toString()}`;
   }
 }

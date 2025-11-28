@@ -1,11 +1,10 @@
-import { Authenticator } from './Authenticator.js';
+import { CertificationData } from './CertificationData.js';
+import { CertificationRequest } from './CertificationRequest.js';
+import { CertificationResponse } from './CertificationResponse.js';
 import { IAggregatorClient } from './IAggregatorClient.js';
 import { InclusionProofResponse } from './InclusionProofResponse.js';
 import { JsonRpcHttpTransport } from './json-rpc/JsonRpcHttpTransport.js';
-import { RequestId } from './RequestId.js';
-import { SubmitCommitmentRequest } from './SubmitCommitmentRequest.js';
-import { SubmitCommitmentResponse } from './SubmitCommitmentResponse.js';
-import { DataHash } from '../hash/DataHash.js';
+import { StateId } from './StateId.js';
 
 /**
  * Client implementation for communicating with an aggregator via JSON-RPC.
@@ -29,28 +28,26 @@ export class AggregatorClient implements IAggregatorClient {
   /**
    * @inheritDoc
    */
-  public async submitCommitment(
-    requestId: RequestId,
-    transactionHash: DataHash,
-    authenticator: Authenticator,
+  public async submitCertificationRequest(
+    certificationData: CertificationData,
     receipt: boolean = false,
-  ): Promise<SubmitCommitmentResponse> {
-    const request = new SubmitCommitmentRequest(requestId, transactionHash, authenticator, receipt);
+  ): Promise<CertificationResponse> {
+    const request = await CertificationRequest.create(certificationData, receipt);
 
     const response = await this.transport.request(
-      'submit_commitment',
+      'certification_request',
       request.toJSON(),
       this.key ? new Headers([['X-API-Key', this.key]]) : undefined,
     );
 
-    return SubmitCommitmentResponse.fromJSON(response);
+    return CertificationResponse.fromJSON(response);
   }
 
   /**
    * @inheritDoc
    */
-  public async getInclusionProof(requestId: RequestId): Promise<InclusionProofResponse> {
-    const data = { requestId: requestId.toJSON() };
+  public async getInclusionProof(stateId: StateId): Promise<InclusionProofResponse> {
+    const data = { stateId: stateId.toJSON() };
     return InclusionProofResponse.fromJSON(await this.transport.request('get_inclusion_proof', data));
   }
 

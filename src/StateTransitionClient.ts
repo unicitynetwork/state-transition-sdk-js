@@ -1,7 +1,7 @@
+import { CertificationResponse } from './api/CertificationResponse.js';
 import { IAggregatorClient } from './api/IAggregatorClient.js';
 import { InclusionProofResponse } from './api/InclusionProofResponse.js';
-import { RequestId } from './api/RequestId.js';
-import { SubmitCommitmentResponse } from './api/SubmitCommitmentResponse.js';
+import { StateId } from './api/StateId.js';
 import { RootTrustBase } from './bft/RootTrustBase.js';
 import { PredicateEngineService } from './predicate/PredicateEngineService.js';
 import { MintSigningService } from './sign/MintSigningService.js';
@@ -32,12 +32,8 @@ export class StateTransitionClient {
    * @returns Commitment ready for inclusion proof retrieval
    * @throws Error if aggregator rejects
    */
-  public async submitMintCommitment(commitment: MintCommitment): Promise<SubmitCommitmentResponse> {
-    return this.client.submitCommitment(
-      commitment.requestId,
-      await commitment.transactionData.calculateHash(),
-      commitment.authenticator,
-    );
+  public submitMintCommitment(commitment: MintCommitment): Promise<CertificationResponse> {
+    return this.client.submitCertificationRequest(commitment.certificationData, false);
   }
 
   /**
@@ -54,17 +50,13 @@ export class StateTransitionClient {
    */
   public async submitTransferCommitment(
     commitment: Commitment<TransferTransactionData>,
-  ): Promise<SubmitCommitmentResponse> {
+  ): Promise<CertificationResponse> {
     const predicate = await PredicateEngineService.createPredicate(commitment.transactionData.sourceState.predicate);
-    if (!(await predicate.isOwner(commitment.authenticator.publicKey))) {
+    if (!(await predicate.isOwner(commitment.certificationData.publicKey))) {
       throw new Error('Ownership verification failed: Authenticator does not match source state predicate.');
     }
 
-    return this.client.submitCommitment(
-      commitment.requestId,
-      await commitment.transactionData.calculateHash(),
-      commitment.authenticator,
-    );
+    return this.client.submitCertificationRequest(commitment.certificationData, false);
   }
 
   /**
@@ -93,23 +85,23 @@ export class StateTransitionClient {
   /**
    * Retrieves the inclusion proof for a given commitment.
    *
-   * @param {RequestId} requestId The request ID of inclusion proof to retrieve.
+   * @param {StateId} stateId The state ID of inclusion proof to retrieve.
    * @return inclusion proof response from the aggregator.
    */
-  public getInclusionProof(requestId: RequestId): Promise<InclusionProofResponse> {
-    return this.client.getInclusionProof(requestId);
+  public getInclusionProof(stateId: StateId): Promise<InclusionProofResponse> {
+    return this.client.getInclusionProof(stateId);
   }
 
   /**
-   * Check if state is already spent for given request id.
+   * Check if state is already spent for given state id.
    *
    * @param {RootTrustBase} trustBase root trust base
-   * @param {RequestId} requestId request id
+   * @param {StateId} stateId state id
    * @return true if state is spent, false otherwise.
    */
-  public async isStateSpent(trustBase: RootTrustBase, requestId: RequestId): Promise<boolean> {
-    const response = await this.getInclusionProof(requestId);
-    const result = await response.inclusionProof.verify(trustBase, requestId);
+  public async isStateSpent(trustBase: RootTrustBase, stateId: StateId): Promise<boolean> {
+    const response = await this.getInclusionProof(stateId);
+    const result = await response.inclusionProof.verify(trustBase, stateId);
     switch (result) {
       case InclusionProofVerificationStatus.OK:
         return true;
@@ -134,7 +126,7 @@ export class StateTransitionClient {
       throw new Error('Given key is not owner of the token.');
     }
 
-    return this.isStateSpent(trustBase, await RequestId.create(pk, await token.state.calculateHash()));
+    return this.isStateSpent(trustBase, await StateId.create(pk, await token.state.calculateHash()));
   }
 
   /**
@@ -147,7 +139,7 @@ export class StateTransitionClient {
   public async isMinted(trustBase: RootTrustBase, tokenId: TokenId): Promise<boolean> {
     return this.isStateSpent(
       trustBase,
-      await RequestId.create(
+      await StateId.create(
         await MintSigningService.create(tokenId).then((signingService) => signingService.publicKey),
         await MintTransactionState.create(tokenId),
       ),

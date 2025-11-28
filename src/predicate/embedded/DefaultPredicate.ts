@@ -1,4 +1,4 @@
-import { RequestId } from '../../api/RequestId.js';
+import { StateId } from '../../api/StateId.js';
 import { RootTrustBase } from '../../bft/RootTrustBase.js';
 import { DataHash } from '../../hash/DataHash.js';
 import { HashAlgorithm } from '../../hash/HashAlgorithm.js';
@@ -98,23 +98,27 @@ export abstract class DefaultPredicate implements IPredicate {
       return false;
     }
 
-    const authenticator = transaction.inclusionProof.authenticator;
-    if (authenticator == null) {
+    const certificationData = transaction.inclusionProof.certificationData;
+    if (certificationData == null) {
       return false;
     }
 
-    if (!areUint8ArraysEqual(authenticator.publicKey, this.publicKey)) {
+    if (!areUint8ArraysEqual(certificationData.publicKey, this.publicKey)) {
       return false;
     }
 
     const transactionHash = await transaction.data.calculateHash();
-    if (!(await authenticator.verify(transactionHash))) {
+    if (!certificationData.transactionHash.equals(transactionHash)) {
       return false;
     }
 
-    const requestId = await RequestId.create(this.publicKey, await transaction.data.sourceState.calculateHash());
+    if (!(await certificationData.verify())) {
+      return false;
+    }
 
-    const status = await transaction.inclusionProof.verify(trustBase, requestId);
+    const stateId = await StateId.create(this.publicKey, await transaction.data.sourceState.calculateHash());
+
+    const status = await transaction.inclusionProof.verify(trustBase, stateId);
     return status == InclusionProofVerificationStatus.OK;
   }
 

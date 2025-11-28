@@ -25,16 +25,17 @@ export class UnicitySealQuorumSignaturesVerificationRule extends VerificationRul
     super('Verifying UnicitySeal hash matches with tree root hash.', onSuccessRule, onFailureRule);
   }
 
-  private static verifySignature(
+  private static async verifySignature(
     node: RootTrustBaseNodeInfo | null,
     signature: Uint8Array,
     hash: DataHash,
-  ): VerificationResult {
+  ): Promise<VerificationResult> {
     if (node == null) {
       return new VerificationResult(VerificationResultCode.FAIL, 'No root node defined');
     }
 
-    if (!SigningService.verifyWithPublicKey(hash, signature.slice(0, -1), node.signingKey)) {
+    const result = await SigningService.verifyWithPublicKey(hash, signature.slice(0, -1), node.signingKey);
+    if (!result) {
       return new VerificationResult(VerificationResultCode.FAIL, 'Signature verification failed.');
     }
 
@@ -45,23 +46,22 @@ export class UnicitySealQuorumSignaturesVerificationRule extends VerificationRul
     const unicitySeal = context.unicityCertificate.unicitySeal;
     const trustBase = context.trustBase;
 
-    const results: VerificationResult[] = [];
     const hash = await new DataHasher(HashAlgorithm.SHA256).update(unicitySeal.withoutSignatures().toCBOR()).digest();
-    let successful = 0;
-    for (const [nodeId, signature] of unicitySeal.signatures?.entries() ?? []) {
-      const result = UnicitySealQuorumSignaturesVerificationRule.verifySignature(
-        trustBase.rootNodes.find((node) => node.nodeId === nodeId) ?? null,
-        signature,
-        hash,
-      );
 
-      results.push(VerificationResult.fromChildren(`Verifying node '${nodeId}' signature.`, [result]));
+    const results = await Promise.all(
+      Array.from(unicitySeal.signatures?.entries() ?? []).map(([nodeId, signature]) =>
+        UnicitySealQuorumSignaturesVerificationRule.verifySignature(
+          trustBase.rootNodes.find((node) => node.nodeId === nodeId) ?? null,
+          signature,
+          hash,
+        ).then((result) => VerificationResult.fromChildren(`Verifying node '${nodeId}' signature.`, [result])),
+      ),
+    );
 
-      if (result.isSuccessful) {
-        successful++;
-      }
-    }
-
+    const successful = results.reduce(
+      (previousValue, currentValue) => (currentValue.isSuccessful ? previousValue + 1 : previousValue),
+      0,
+    );
     if (successful >= trustBase.quorumThreshold) {
       return new VerificationResult(VerificationResultCode.OK, '', results);
     }

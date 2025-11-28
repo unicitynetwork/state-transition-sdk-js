@@ -69,11 +69,11 @@ export class SparseMerkleTreePath {
   }
 
   /**
-   * Verifies the tree path against the root hash and request ID.
-   * @param requestId The request ID as bit string in bigint format to verify against the path.
+   * Verifies the tree path against the root hash and state ID.
+   * @param stateId The state ID as bit string in bigint format to verify against the path.
    * @returns A Promise resolving to a PathVerificationResult indicating success or failure.
    */
-  public async verify(requestId: bigint): Promise<PathVerificationResult> {
+  public async verify(stateId: bigint): Promise<PathVerificationResult> {
     let step = this.steps[0];
 
     let currentData: Uint8Array | null;
@@ -120,7 +120,7 @@ export class SparseMerkleTreePath {
     }
 
     const pathValid = currentData != null && this.root.equals(new DataHash(this.root.algorithm, currentData));
-    const pathIncluded = requestId === currentPath;
+    const pathIncluded = stateId === currentPath;
 
     return new PathVerificationResult(pathValid, pathIncluded);
   }

@@ -2,8 +2,7 @@ import { Commitment } from './Commitment.js';
 import { InclusionProof } from './InclusionProof.js';
 import { MintTransaction } from './MintTransaction.js';
 import { MintTransactionData } from './MintTransactionData.js';
-import { Authenticator } from '../api/Authenticator.js';
-import { RequestId } from '../api/RequestId.js';
+import { CertificationData } from '../api/CertificationData.js';
 import { MintSigningService } from '../sign/MintSigningService.js';
 
 /**
@@ -11,25 +10,27 @@ import { MintSigningService } from '../sign/MintSigningService.js';
  * @typeParam R The type of the mint transaction reason.
  */
 export class MintCommitment extends Commitment<MintTransactionData> {
-  private constructor(requestId: RequestId, transactionData: MintTransactionData, authenticator: Authenticator) {
-    super(requestId, transactionData, authenticator);
+  private constructor(data: MintTransactionData, certificationData: CertificationData) {
+    super(data, certificationData);
   }
 
   /**
    * Create mint commitment from transaction data.
    *
-   * @param {MintTransactionData} data mint transaction data
+   * @param {MintTransactionData} transactionData mint transaction data
    * @return mint commitment
    */
-  public static async create(data: MintTransactionData): Promise<MintCommitment> {
-    const signingService = await MintSigningService.create(data.tokenId);
+  public static async create(transactionData: MintTransactionData): Promise<MintCommitment> {
+    const signingService = await MintSigningService.create(transactionData.tokenId);
 
-    const transactionHash = await data.calculateHash();
+    const transactionHash = await transactionData.calculateHash();
+    const certificationData = await CertificationData.create(
+      transactionData.sourceState,
+      transactionHash,
+      signingService,
+    );
 
-    const requestId = await RequestId.create(signingService.publicKey, data.sourceState);
-    const authenticator = await Authenticator.create(signingService, transactionHash, data.sourceState);
-
-    return new MintCommitment(requestId, data, authenticator);
+    return new MintCommitment(transactionData, certificationData);
   }
 
   /**

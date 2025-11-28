@@ -50,7 +50,7 @@ export class ProxyAddress implements IAddress {
   }
 
   /**
-   * Resolve a proxy address to a direct address using a list of nametag tokens. Returns null if could not resolve.
+   * Resolve a proxy address to a direct address using a list of nametag tokens. Returns null if it could not resolve.
    *
    * @param {IAddress} inputAddress the input address to resolve
    * @param {Token[]} nametagTokens     the list of nametag tokens

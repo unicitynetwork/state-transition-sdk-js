@@ -34,12 +34,11 @@ export async function waitInclusionProof(
   signal: AbortSignal = AbortSignal.timeout(10000),
   interval: number = 1000,
 ): Promise<InclusionProof> {
+  const stateId = await commitment.certificationData.calculateStateId();
   while (true) {
     try {
-      const inclusionProof = await client
-        .getInclusionProof(commitment.requestId)
-        .then((response) => response.inclusionProof);
-      const verificationStatus = await inclusionProof.verify(trustBase, commitment.requestId);
+      const inclusionProof = await client.getInclusionProof(stateId).then((response) => response.inclusionProof);
+      const verificationStatus = await inclusionProof.verify(trustBase, stateId);
       switch (verificationStatus) {
         case InclusionProofVerificationStatus.OK:
           return inclusionProof;

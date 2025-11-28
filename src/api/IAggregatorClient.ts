@@ -1,8 +1,7 @@
-import { Authenticator } from './Authenticator.js';
+import { CertificationData } from './CertificationData.js';
+import { CertificationResponse } from './CertificationResponse.js';
 import { InclusionProofResponse } from './InclusionProofResponse.js';
-import { RequestId } from './RequestId.js';
-import { SubmitCommitmentResponse } from './SubmitCommitmentResponse.js';
-import { DataHash } from '../hash/DataHash.js';
+import { StateId } from './StateId.js';
 
 /**
  * Client interface for interacting with an aggregator service.
@@ -11,24 +10,17 @@ export interface IAggregatorClient {
   /**
    * Submit a transaction commitment for inclusion in the ledger.
    *
-   * @param requestId       Unique request identifier
-   * @param transactionHash Hash of the transaction payload
-   * @param authenticator   Authenticator proving request ownership
-   * @param receipt         Require a signed receipt of the commitment
+   * @param {CertificationData} certificationData  The certification data to submit
+   * @param {boolean} receipt   Require a signed receipt of the commitment, default is false
    * @returns Result status from the aggregator
    */
-  submitCommitment(
-    requestId: RequestId,
-    transactionHash: DataHash,
-    authenticator: Authenticator,
-    receipt?: boolean,
-  ): Promise<SubmitCommitmentResponse>;
+  submitCertificationRequest(certificationData: CertificationData, receipt: boolean): Promise<CertificationResponse>;
 
   /**
    * Retrieve an inclusion proof for the given request.
    *
-   * @param requestId Request identifier to query
+   * @param stateId State identifier to query
    * @returns The inclusion proof returned by the aggregator
    */
-  getInclusionProof(requestId: RequestId): Promise<InclusionProofResponse>;
+  getInclusionProof(stateId: StateId): Promise<InclusionProofResponse>;
 }

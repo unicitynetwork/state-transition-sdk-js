@@ -2,7 +2,7 @@ import { IInclusionProofJson, InclusionProof, InclusionProofVerificationStatus }
 import { IMintTransactionDataJson, MintTransactionData } from './MintTransactionData.js';
 import { MintTransactionState } from './MintTransactionState.js';
 import { Transaction } from './Transaction.js';
-import { RequestId } from '../api/RequestId.js';
+import { StateId } from '../api/StateId.js';
 import { RootTrustBase } from '../bft/RootTrustBase.js';
 import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
 import { IMintReasonFactory } from './IMintReasonFactory.js';
@@ -57,12 +57,8 @@ export class MintTransaction extends Transaction<MintTransactionData> {
    * @return {VerificationResult} Verification result
    */
   public async verify(trustBase: RootTrustBase, mintReasonFactory: IMintReasonFactory): Promise<VerificationResult> {
-    if (!this.inclusionProof.authenticator) {
-      return new VerificationResult(VerificationResultCode.FAIL, 'Missing authenticator.');
-    }
-
-    if (!this.inclusionProof.transactionHash) {
-      return new VerificationResult(VerificationResultCode.FAIL, 'Missing transaction hash.');
+    if (!this.inclusionProof.certificationData) {
+      return new VerificationResult(VerificationResultCode.FAIL, 'Missing certification data.');
     }
 
     if (!this.data.sourceState.equals(await MintTransactionState.create(this.data.tokenId))) {
@@ -70,14 +66,13 @@ export class MintTransaction extends Transaction<MintTransactionData> {
     }
 
     const signingService = await MintSigningService.create(this.data.tokenId);
-    if (
-      HexConverter.encode(this.inclusionProof.authenticator.publicKey) !== HexConverter.encode(signingService.publicKey)
-    ) {
-      return new VerificationResult(VerificationResultCode.FAIL, 'Authenticator public key mismatch.');
+    const certificationData = this.inclusionProof.certificationData;
+    if (HexConverter.encode(certificationData.publicKey) !== HexConverter.encode(signingService.publicKey)) {
+      return new VerificationResult(VerificationResultCode.FAIL, 'Certification data public key mismatch.');
     }
 
-    if (!(await this.inclusionProof.authenticator.verify(this.inclusionProof.transactionHash))) {
-      return new VerificationResult(VerificationResultCode.FAIL, 'Authenticator verification failed.');
+    if (!(await certificationData.verify())) {
+      return new VerificationResult(VerificationResultCode.FAIL, 'Certification data verification failed.');
     }
 
     const reason = this.data._reason ? await mintReasonFactory.create(this.data._reason) : null;
@@ -90,7 +85,7 @@ export class MintTransaction extends Transaction<MintTransactionData> {
 
     const inclusionProofVerificationResult = await this.inclusionProof.verify(
       trustBase,
-      await RequestId.create(signingService.publicKey, this.data.sourceState),
+      await StateId.create(signingService.publicKey, this.data.sourceState),
     );
     if (inclusionProofVerificationResult !== InclusionProofVerificationStatus.OK) {
       return new VerificationResult(VerificationResultCode.FAIL, 'Inclusion proof verification failed.');

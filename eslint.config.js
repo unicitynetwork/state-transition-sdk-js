@@ -6,7 +6,7 @@ import tsEslint from 'typescript-eslint';
 
 export default [
   eslint.configs.recommended,
-  ...tsEslint.configs.recommended,
+  ...tsEslint.configs.recommendedTypeChecked,
   eslintConfigPrettier,
   eslintImport.flatConfigs.recommended,
   {
@@ -15,6 +15,9 @@ export default [
       globals: {
         ...globals.browser,
         ...globals.node,
+      },
+      parserOptions: {
+        projectService: true,
       },
       sourceType: 'module',
     },
