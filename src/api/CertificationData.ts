@@ -114,12 +114,12 @@ export class CertificationData {
    */
   public static fromCBOR(bytes: Uint8Array): CertificationData {
     const data = CborDeserializer.readArray(bytes);
-    const publicKey = CborDeserializer.readByteString(data[0]);
-    const signature = Signature.fromCBOR(data[1]);
-    const sourceStateHash = DataHash.fromCBOR(data[2]);
-    const transactionHash = DataHash.fromCBOR(data[3]);
-
-    return new CertificationData(publicKey, sourceStateHash, transactionHash, signature);
+    return new CertificationData(
+      CborDeserializer.readByteString(data[0]),
+      DataHash.fromCBOR(data[1]),
+      DataHash.fromCBOR(data[2]),
+      Signature.fromCBOR(data[3]),
+    );
   }
 
   /**
@@ -175,9 +175,9 @@ export class CertificationData {
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
       CborSerializer.encodeByteString(this._publicKey),
-      this.signature.toCBOR(),
       this.sourceStateHash.toCBOR(),
       this.transactionHash.toCBOR(),
+      this.signature.toCBOR(),
     );
   }
 
