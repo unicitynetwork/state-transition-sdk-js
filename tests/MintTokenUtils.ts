@@ -92,7 +92,13 @@ export async function mintToken(
     trustBase,
     mintReasonFactory,
     new TokenState(
-      MaskedPredicate.createFromMintTransaction(transaction, signingService, HashAlgorithm.SHA256, data.nonce),
+      MaskedPredicate.create(
+        transaction.data.tokenId,
+        transaction.data.tokenType,
+        signingService,
+        HashAlgorithm.SHA256,
+        data.nonce,
+      ),
       data.data,
     ),
     transaction,

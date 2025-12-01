@@ -39,37 +39,30 @@ export class UnmaskedPredicate extends DefaultPredicate {
   /**
    * Create unmasked predicate.
    *
-   * @param {Token} token        token
+   * @param {TokenId} tokenId        token id
+   * @param {TokenType} tokenType        token type
+   * @param {MintTransaction | TransferTransaction} transaction        transaction
    * @param {SigningService} signingService signing service
    * @param {HashAlgorithm} hashAlgorithm  hash algorithm
    */
-  public static createFromToken(
-    token: Token,
+  public static async create(
+    tokenId: TokenId,
+    tokenType: TokenType,
+    transaction: MintTransaction | TransferTransaction,
     signingService: SigningService,
     hashAlgorithm: HashAlgorithm,
   ): Promise<UnmaskedPredicate> {
-    return UnmaskedPredicate.create(token.id, token.type, token.latestTransaction, signingService, hashAlgorithm);
-  }
+    const nonce = await signingService.sign(
+      await new DataHasher(HashAlgorithm.SHA256).update(transaction.data.salt).digest(),
+    );
 
-  /**
-   * Create unmasked predicate from mint transaction.
-   *
-   * @param {MintTransaction} transaction        mint transaction
-   * @param {SigningService} signingService signing service
-   * @param {HashAlgorithm} hashAlgorithm  hash algorithm
-   * @return predicate
-   */
-  public static createFromMintTransaction(
-    transaction: MintTransaction,
-    signingService: SigningService,
-    hashAlgorithm: HashAlgorithm,
-  ): Promise<UnmaskedPredicate> {
-    return UnmaskedPredicate.create(
-      transaction.data.tokenId,
-      transaction.data.tokenType,
-      transaction,
-      signingService,
+    return new UnmaskedPredicate(
+      tokenId,
+      tokenType,
+      signingService.publicKey,
+      signingService.algorithm,
       hashAlgorithm,
+      nonce.bytes,
     );
   }
 
@@ -94,36 +87,6 @@ export class UnmaskedPredicate extends DefaultPredicate {
       CborDeserializer.readTextString(data[3]),
       Number(hashAlgorithm),
       CborDeserializer.readByteString(data[5]),
-    );
-  }
-
-  /**
-   * Create unmasked predicate.
-   *
-   * @param {TokenId} tokenId        token id
-   * @param {TokenType} tokenType        token type
-   * @param {MintTransaction | TransferTransaction} transaction        transaction
-   * @param {SigningService} signingService signing service
-   * @param {HashAlgorithm} hashAlgorithm  hash algorithm
-   */
-  private static async create(
-    tokenId: TokenId,
-    tokenType: TokenType,
-    transaction: MintTransaction | TransferTransaction,
-    signingService: SigningService,
-    hashAlgorithm: HashAlgorithm,
-  ): Promise<UnmaskedPredicate> {
-    const nonce = await signingService.sign(
-      await new DataHasher(HashAlgorithm.SHA256).update(transaction.data.salt).digest(),
-    );
-
-    return new UnmaskedPredicate(
-      tokenId,
-      tokenType,
-      signingService.publicKey,
-      signingService.algorithm,
-      hashAlgorithm,
-      nonce.bytes,
     );
   }
 

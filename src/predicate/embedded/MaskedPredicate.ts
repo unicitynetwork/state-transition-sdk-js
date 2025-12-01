@@ -5,10 +5,8 @@ import { HashAlgorithm } from '../../hash/HashAlgorithm.js';
 import { CborDeserializer } from '../../serializer/cbor/CborDeserializer.js';
 import { CborError } from '../../serializer/cbor/CborError.js';
 import { SigningService } from '../../sign/SigningService.js';
-import { Token } from '../../token/Token.js';
 import { TokenId } from '../../token/TokenId.js';
 import { TokenType } from '../../token/TokenType.js';
-import { MintTransaction } from '../../transaction/MintTransaction.js';
 
 /**
  * Predicate for masked address transaction.
@@ -34,41 +32,24 @@ export class MaskedPredicate extends DefaultPredicate {
   }
 
   /**
-   * Create masked predicate from token and signing service.
+   * Create masked predicate.
    *
-   * @param {Token} token        token
+   * @param {TokenId} tokenId        token id
+   * @param {TokenType} tokenType        token type
    * @param {SigningService} signingService signing service
    * @param {HashAlgorithm} hashAlgorithm  hash algorithm
    * @param {Uint8Array} nonce          predicate nonce
-   * @return predicate
    */
-  public static createFromToken(
-    token: Token,
-    signingService: SigningService,
-    hashAlgorithm: HashAlgorithm,
-    nonce: Uint8Array,
-  ): MaskedPredicate {
-    return MaskedPredicate.createFromMintTransaction(token.genesis, signingService, hashAlgorithm, nonce);
-  }
-
-  /**
-   * Create masked predicate from mint transaction and signing service.
-   *
-   * @param {MintTransaction} transaction        mint transaction
-   * @param {SigningService} signingService signing service
-   * @param {HashAlgorithm} hashAlgorithm  hash algorithm
-   * @param {Uint8Array} nonce          predicate nonce
-   * @return predicate
-   */
-  public static createFromMintTransaction(
-    transaction: MintTransaction,
+  public static create(
+    tokenId: TokenId,
+    tokenType: TokenType,
     signingService: SigningService,
     hashAlgorithm: HashAlgorithm,
     nonce: Uint8Array,
   ): MaskedPredicate {
     return new MaskedPredicate(
-      transaction.data.tokenId,
-      transaction.data.tokenType,
+      tokenId,
+      tokenType,
       signingService.publicKey,
       signingService.algorithm,
       hashAlgorithm,

@@ -49,7 +49,7 @@ describe('Transition', function () {
     const signingService = await SigningService.createFromSecret(new Uint8Array(32), data.nonce);
 
     const nonce = crypto.getRandomValues(new Uint8Array(32));
-    const predicate = MaskedPredicate.createFromToken(token, signingService, HashAlgorithm.SHA256, nonce);
+    const predicate = MaskedPredicate.create(token.id, token.type, signingService, HashAlgorithm.SHA256, nonce);
     const reference = await predicate.getReference();
     const transaction = await sendToken(
       trustBase,
@@ -83,7 +83,7 @@ describe('Transition', function () {
         trustBase,
         mintReasonFactory,
         new TokenState(
-          MaskedPredicate.createFromToken(token, signingService, HashAlgorithm.SHA256, new Uint8Array(30)),
+          MaskedPredicate.create(token.id, token.type, signingService, HashAlgorithm.SHA256, new Uint8Array(30)),
           new TextEncoder().encode('test data'),
         ),
         transaction,

@@ -88,7 +88,10 @@ export class MintTransaction extends Transaction<MintTransactionData> {
       await StateId.create(signingService.publicKey, this.data.sourceState),
     );
     if (inclusionProofVerificationResult !== InclusionProofVerificationStatus.OK) {
-      return new VerificationResult(VerificationResultCode.FAIL, 'Inclusion proof verification failed.');
+      return new VerificationResult(
+        VerificationResultCode.FAIL,
+        `Inclusion proof verification failed with status ${inclusionProofVerificationResult}.`,
+      );
     }
 
     return new VerificationResult(VerificationResultCode.OK);
