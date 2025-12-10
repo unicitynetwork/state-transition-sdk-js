@@ -1,6 +1,6 @@
 {
   "name": "@unicitylabs/state-transition-sdk",
-  "version": "1.7.0",
+  "version": "2.0.0",
   "description": "Generic State Transition Flow engine for value-carrier agents",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -48,8 +48,7 @@
     "eslint-plugin-prettier": "5.5.4",
     "globals": "16.5.0",
     "jest": "30.2.0",
-    "testcontainers": "11.8.1",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.47.0"
+    "typescript-eslint": "8.49.0"
   }
 }

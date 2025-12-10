@@ -25,6 +25,29 @@ export class AggregatorClient implements IAggregatorClient {
     this.transport = new JsonRpcHttpTransport(url);
   }
 
+  public async getBlockHeight(): Promise<bigint> {
+    const response = await this.transport.request('get_block_height', {});
+    if (
+      response &&
+      typeof response === 'object' &&
+      'blockNumber' in response &&
+      (typeof response.blockNumber === 'string' ||
+        typeof response.blockNumber === 'number' ||
+        typeof response.blockNumber === 'bigint')
+    ) {
+      return BigInt(response.blockNumber);
+    }
+    throw new Error('Invalid response format for block height');
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public async getInclusionProof(stateId: StateId): Promise<InclusionProofResponse> {
+    const data = { stateId: stateId.toJSON() };
+    return InclusionProofResponse.fromJSON(await this.transport.request('get_inclusion_proof', data));
+  }
+
   /**
    * @inheritDoc
    */
@@ -41,28 +64,5 @@ export class AggregatorClient implements IAggregatorClient {
     );
 
     return CertificationResponse.fromJSON(response);
-  }
-
-  /**
-   * @inheritDoc
-   */
-  public async getInclusionProof(stateId: StateId): Promise<InclusionProofResponse> {
-    const data = { stateId: stateId.toJSON() };
-    return InclusionProofResponse.fromJSON(await this.transport.request('get_inclusion_proof', data));
-  }
-
-  public async getBlockHeight(): Promise<bigint> {
-    const response = await this.transport.request('get_block_height', {});
-    if (
-      response &&
-      typeof response === 'object' &&
-      'blockNumber' in response &&
-      (typeof response.blockNumber === 'string' ||
-        typeof response.blockNumber === 'number' ||
-        typeof response.blockNumber === 'bigint')
-    ) {
-      return BigInt(response.blockNumber);
-    }
-    throw new Error('Invalid response format for block height');
   }
 }

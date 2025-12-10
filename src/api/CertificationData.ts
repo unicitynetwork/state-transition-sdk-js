@@ -1,66 +1,72 @@
-import { DataHash } from '../hash/DataHash.js';
+import { DataHash } from '../crypto/hash/DataHash.js';
+import { DataHasher } from '../crypto/hash/DataHasher.js';
+import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
+import { MintSigningService } from '../crypto/MintSigningService.js';
 import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
-import { StateId } from './StateId.js';
-import { DataHasher } from '../hash/DataHasher.js';
-import { HashAlgorithm } from '../hash/HashAlgorithm.js';
-import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
-import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
-import { ISigningService } from '../sign/ISigningService.js';
-import { Signature } from '../sign/Signature.js';
-import { SigningService } from '../sign/SigningService.js';
-import { HexConverter } from '../util/HexConverter.js';
+import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
+import { IPredicate } from '../predicate/IPredicate.js';
+import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
+import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
+import { HexConverter } from '../serialization/HexConverter.js';
+import { MintTransaction } from '../transaction/MintTransaction.js';
+import { TransferTransaction } from '../transaction/TransferTransaction.js';
 import { dedent } from '../util/StringUtils.js';
+
+/**
+ * TODO: Temporarily names are left as they are used in aggregator
+ */
 
 /**
  * JSON representation of a certification data.
  */
 export interface ICertificationDataJson {
-  /** The public key as a hex string. */
+  /** The lock predicate as a hex string. */
   readonly publicKey: string;
+  /** The unlock predicate as a hex string. */
+  readonly signature: string;
   /** The source state hash imprint as a hex string. */
   readonly sourceStateHash: string;
   /** The transaction hash imprint as a hex string. */
   readonly transactionHash: string;
-  /** The signature as a hex string. */
-  readonly signature: string;
 }
 
 export class CertificationData {
   /**
    * Create a certification data object.
-   * @param {Uint8Array} _publicKey
+   * @param {IPredicate} lockScript
    * @param {DataHash} sourceStateHash
    * @param {DataHash} transactionHash
-   * @param {Signature} signature Signature bytes
+   * @param {Uint8Array} _unlockScript Unlock script bytes
    */
   private constructor(
-    private readonly _publicKey: Uint8Array,
+    public readonly lockScript: IPredicate,
     public readonly sourceStateHash: DataHash,
     public readonly transactionHash: DataHash,
-    public readonly signature: Signature,
-  ) {}
-
-  /**
-   * Get the public key.
-   */
-  public get publicKey(): Uint8Array {
-    return new Uint8Array(this._publicKey);
+    private readonly _unlockScript: Uint8Array,
+  ) {
+    this._unlockScript = new Uint8Array(_unlockScript);
   }
 
-  public static async create(
-    sourceStateHash: DataHash,
-    transactionHash: DataHash,
-    signingService: ISigningService<Signature>,
-  ): Promise<CertificationData> {
+  /**
+   * Get the unlock script.
+   */
+  public get unlockScript(): Uint8Array {
+    return new Uint8Array(this._unlockScript);
+  }
+
+  /**
+   * Create CertificationData from CBOR bytes.
+   * @param {Uint8Array} bytes CBOR bytes
+   *
+   * @returns {CertificationData} certification data
+   */
+  public static fromCBOR(bytes: Uint8Array): CertificationData {
+    const data = CborDeserializer.decodeArray(bytes);
     return new CertificationData(
-      signingService.publicKey,
-      sourceStateHash,
-      transactionHash,
-      await signingService.sign(
-        await new DataHasher(HashAlgorithm.SHA256)
-          .update(CborSerializer.encodeArray(sourceStateHash.toCBOR(), transactionHash.toCBOR()))
-          .digest(),
-      ),
+      EncodedPredicate.decode(CborDeserializer.decodeByteString(data[0])),
+      DataHash.fromCBOR(data[1]),
+      DataHash.fromCBOR(data[2]),
+      CborDeserializer.decodeByteString(data[3]),
     );
   }
 
@@ -77,11 +83,37 @@ export class CertificationData {
     }
 
     return new CertificationData(
-      HexConverter.decode(data.publicKey),
+      EncodedPredicate.decode(HexConverter.decode(data.publicKey)),
       DataHash.fromJSON(data.sourceStateHash),
       DataHash.fromJSON(data.transactionHash),
-      Signature.fromJSON(data.signature),
+      HexConverter.decode(data.signature),
     );
+  }
+
+  public static async fromMintTransaction(transaction: MintTransaction): Promise<CertificationData> {
+    const signingService = await MintSigningService.create(transaction.tokenId);
+
+    const sourceStateHash = await transaction.calculateSourceStateHash();
+    const transactionHash = await transaction.calculateTransactionHash();
+
+    const signatureDataHash = await new DataHasher(HashAlgorithm.SHA256)
+      .update(CborSerializer.encodeArray(sourceStateHash.toCBOR(), transactionHash.toCBOR()))
+      .digest();
+    const unlockScript = await signingService.sign(signatureDataHash);
+
+    return CertificationData.create(transaction.lockScript, sourceStateHash, transactionHash, unlockScript.encode());
+  }
+
+  public static async fromTransferTransaction(
+    transaction: TransferTransaction,
+    unlockScript: Uint8Array,
+  ): Promise<CertificationData> {
+    unlockScript = new Uint8Array(unlockScript);
+
+    const sourceStateHash = await transaction.calculateSourceStateHash();
+    const transactionHash = await transaction.calculateTransactionHash();
+
+    return CertificationData.create(transaction.lockScript, sourceStateHash, transactionHash, unlockScript);
   }
 
   /**
@@ -106,28 +138,13 @@ export class CertificationData {
     );
   }
 
-  /**
-   * Create CertificationData from CBOR bytes.
-   * @param {Uint8Array} bytes CBOR bytes
-   *
-   * @returns {CertificationData} certification data
-   */
-  public static fromCBOR(bytes: Uint8Array): CertificationData {
-    const data = CborDeserializer.readArray(bytes);
-    return new CertificationData(
-      CborDeserializer.readByteString(data[0]),
-      DataHash.fromCBOR(data[1]),
-      DataHash.fromCBOR(data[2]),
-      Signature.fromCBOR(data[3]),
-    );
-  }
-
-  /**
-   * Calculate the StateId corresponding to this certification data.
-   * @returns StateId
-   */
-  public calculateStateId(): Promise<StateId> {
-    return StateId.create(this._publicKey, this.sourceStateHash);
+  private static create(
+    lockScript: IPredicate,
+    sourceStateHash: DataHash,
+    transactionHash: DataHash,
+    unlockScript: Uint8Array,
+  ): CertificationData {
+    return new CertificationData(lockScript, sourceStateHash, transactionHash, unlockScript);
   }
 
   /**
@@ -140,17 +157,16 @@ export class CertificationData {
   }
 
   /**
-   * Verifies current certification data.
+   * Convert the certification data to CBOR bytes.
    *
-   * @returns A Promise resolving to true if valid, false otherwise.
+   * @returns {Uint8Array} CBOR bytes
    */
-  public async verify(): Promise<boolean> {
-    return SigningService.verifyWithPublicKey(
-      await new DataHasher(HashAlgorithm.SHA256)
-        .update(CborSerializer.encodeArray(this.sourceStateHash.toCBOR(), this.transactionHash.toCBOR()))
-        .digest(),
-      this.signature.bytes,
-      this._publicKey,
+  public toCBOR(): Uint8Array {
+    return CborSerializer.encodeArray(
+      CborSerializer.encodeByteString(this.lockScript.encode()),
+      this.sourceStateHash.toCBOR(),
+      this.transactionHash.toCBOR(),
+      CborSerializer.encodeByteString(this._unlockScript),
     );
   }
 
@@ -160,25 +176,11 @@ export class CertificationData {
    */
   public toJSON(): ICertificationDataJson {
     return {
-      publicKey: HexConverter.encode(this._publicKey),
-      signature: this.signature.toJSON(),
+      publicKey: HexConverter.encode(this.lockScript.encode()),
+      signature: HexConverter.encode(this._unlockScript),
       sourceStateHash: this.sourceStateHash.toJSON(),
       transactionHash: this.transactionHash.toJSON(),
     };
-  }
-
-  /**
-   * Convert the certification data to CBOR bytes.
-   *
-   * @returns {Uint8Array} CBOR bytes
-   */
-  public toCBOR(): Uint8Array {
-    return CborSerializer.encodeArray(
-      CborSerializer.encodeByteString(this._publicKey),
-      this.sourceStateHash.toCBOR(),
-      this.transactionHash.toCBOR(),
-      this.signature.toCBOR(),
-    );
   }
 
   /**
@@ -188,9 +190,10 @@ export class CertificationData {
   public toString(): string {
     return dedent`
       Certification Data
-        Public Key: ${HexConverter.encode(this._publicKey)}
+        Lock Script: 
+          ${this.lockScript.toString()}
         Source State Hash: ${this.sourceStateHash.toString()}
         Transaction Hash: ${this.transactionHash.toString()}
-        Signature: ${this.signature.toString()}`;
+        Unlock script: ${HexConverter.encode(this._unlockScript)}`;
   }
 }

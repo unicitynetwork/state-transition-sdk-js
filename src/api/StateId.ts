@@ -1,48 +1,20 @@
-import { DataHash } from '../hash/DataHash.js';
-import { DataHasher } from '../hash/DataHasher.js';
-import { HashAlgorithm } from '../hash/HashAlgorithm.js';
-import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
+import { CertificationData } from './CertificationData.js';
+import { DataHash } from '../crypto/hash/DataHash.js';
+import { DataHasher } from '../crypto/hash/DataHasher.js';
+import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
+import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
+import { ITransaction } from '../transaction/ITransaction.js';
 import { BitString } from '../util/BitString.js';
 
 /**
  * Represents a unique state identifier derived from a public key and state hash.
  */
-export class StateId extends DataHash {
+export class StateId {
   /**
    * Constructs a StateId instance.
    * @param hash The DataHash representing the state ID.
    */
-  private constructor(public readonly hash: DataHash) {
-    super(hash.algorithm, hash.data);
-  }
-
-  /**
-   * Creates a StateId from a public key and state hash.
-   * @param publicKey The public key as a Uint8Array.
-   * @param stateHash The state hash.
-   * @returns A Promise resolving to a StateId instance.
-   */
-  public static create(publicKey: Uint8Array, stateHash: DataHash): Promise<StateId> {
-    return StateId.createFromImprint(publicKey, stateHash.imprint);
-  }
-
-  /**
-   * Creates a StateId from a public key and hash imprint.
-   * @param publicKey The public key as a Uint8Array.
-   * @param hashImprint The hash imprint as a Uint8Array.
-   * @returns A Promise resolving to a StateId instance.
-   */
-  public static async createFromImprint(publicKey: Uint8Array, hashImprint: Uint8Array): Promise<StateId> {
-    const hash = await new DataHasher(HashAlgorithm.SHA256)
-      .update(
-        CborSerializer.encodeArray(
-          CborSerializer.encodeByteString(hashImprint),
-          CborSerializer.encodeByteString(publicKey),
-        ),
-      )
-      .digest();
-    return new StateId(hash);
-  }
+  private constructor(private readonly hash: DataHash) {}
 
   /**
    * Decodes a StateId from CBOR bytes.
@@ -51,6 +23,10 @@ export class StateId extends DataHash {
    */
   public static fromCBOR(data: Uint8Array): StateId {
     return new StateId(DataHash.fromCBOR(data));
+  }
+
+  public static fromCertificationData(certificationData: CertificationData): Promise<StateId> {
+    return StateId.create(certificationData.lockScript.encode(), certificationData.sourceStateHash);
   }
 
   /**
@@ -62,12 +38,43 @@ export class StateId extends DataHash {
     return new StateId(DataHash.fromJSON(data));
   }
 
+  public static async fromTransaction(transaction: ITransaction): Promise<StateId> {
+    return StateId.create(transaction.lockScript.encode(), await transaction.calculateSourceStateHash());
+  }
+
+  /**
+   * Creates a StateId from a public key and state hash.
+   * @param predicateBytes predicate as a Uint8Array.
+   * @param stateHash state hash.
+   * @returns A Promise resolving to a StateId instance.
+   */
+  private static async create(predicateBytes: Uint8Array, stateHash: DataHash): Promise<StateId> {
+    const hash = await new DataHasher(HashAlgorithm.SHA256)
+      .update(
+        CborSerializer.encodeArray(
+          CborSerializer.encodeByteString(predicateBytes),
+          CborSerializer.encodeByteString(stateHash.imprint),
+        ),
+      )
+      .digest();
+
+    return new StateId(hash);
+  }
+
   /**
    * Converts the StateId to a BitString.
    * @return The BitString representation of the StateId.
    */
   public toBitString(): BitString {
-    return BitString.fromDataHash(this);
+    return BitString.fromStateId(this.hash);
+  }
+
+  public toCBOR(): Uint8Array {
+    return this.hash.toCBOR();
+  }
+
+  public toJSON(): string {
+    return this.hash.toJSON();
   }
 
   /**

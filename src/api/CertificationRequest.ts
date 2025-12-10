@@ -5,12 +5,12 @@ import { StateId } from './StateId.js';
  * JSON representation of a certification request.
  */
 export interface ICertificationRequestJson {
-  /** The state ID as a string. */
-  readonly stateId: string;
   /** The certification data json. */
   readonly certificationData: ICertificationDataJson;
   /** Optional flag to request a receipt. */
   readonly receipt?: boolean;
+  /** The state ID as a string. */
+  readonly stateId: string;
 }
 
 /**
@@ -37,7 +37,7 @@ export class CertificationRequest {
    * @returns {Promise<CertificationRequest>} A promise that resolves to a CertificationRequest instance.
    */
   public static async create(certificationData: CertificationData, receipt?: boolean): Promise<CertificationRequest> {
-    return new CertificationRequest(await certificationData.calculateStateId(), certificationData, receipt);
+    return new CertificationRequest(await StateId.fromCertificationData(certificationData), certificationData, receipt);
   }
 
   /**

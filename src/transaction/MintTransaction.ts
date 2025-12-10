@@ -1,118 +1,98 @@
-import { IInclusionProofJson, InclusionProof, InclusionProofVerificationStatus } from './InclusionProof.js';
-import { IMintTransactionDataJson, MintTransactionData } from './MintTransactionData.js';
+import { CertifiedMintTransaction } from './CertifiedMintTransaction.js';
+import { ITransaction } from './ITransaction.js';
 import { MintTransactionState } from './MintTransactionState.js';
-import { Transaction } from './Transaction.js';
+import { PayToScriptHash } from './Recipient.js';
+import { TokenId } from './TokenId.js';
+import { TokenType } from './TokenType.js';
+import { InclusionProof } from '../api/InclusionProof.js';
+import { DataHasher } from '../crypto/hash/DataHasher.js';
+import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
+import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
+import {
+  InclusionProofVerificationRule,
+  InclusionProofVerificationStatus,
+} from './verification/rule/InclusionProofVerificationRule.js';
+import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { StateId } from '../api/StateId.js';
-import { RootTrustBase } from '../bft/RootTrustBase.js';
-import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
-import { IMintReasonFactory } from './IMintReasonFactory.js';
-import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
-import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
-import { MintSigningService } from '../sign/MintSigningService.js';
-import { HexConverter } from '../util/HexConverter.js';
-import { VerificationResult } from '../verification/VerificationResult.js';
-import { VerificationResultCode } from '../verification/VerificationResultCode.js';
+import { DataHash } from '../crypto/hash/DataHash.js';
+import { MintSigningService } from '../crypto/MintSigningService.js';
+import { IPredicate } from '../predicate/IPredicate.js';
+import { PayToPublicKeyPredicate } from '../predicate/PayToPublicKeyPredicate.js';
+import { PredicateVerifierFactory } from '../predicate/verification/PredicateVerifierFactory.js';
+import { HexConverter } from '../serialization/HexConverter.js';
+import { dedent } from '../util/StringUtils.js';
 
-export interface IMintTransactionJson {
-  readonly data: IMintTransactionDataJson;
-  readonly inclusionProof: IInclusionProofJson;
-}
+export class MintTransaction implements ITransaction {
+  private constructor(
+    public readonly lockScript: IPredicate,
+    public readonly recipient: PayToScriptHash,
+    public readonly tokenId: TokenId,
+    public readonly tokenType: TokenType,
+    private readonly _data: Uint8Array,
+  ) {}
 
-/**
- * Mint transaction.
- *
- * @param <R> mint reason
- */
-export class MintTransaction extends Transaction<MintTransactionData> {
-  public constructor(data: MintTransactionData, inclusionProof: InclusionProof) {
-    super(data, inclusionProof);
+  public get data(): Uint8Array {
+    return new Uint8Array(this._data);
   }
 
-  public static async fromCBOR(bytes: Uint8Array): Promise<MintTransaction> {
-    const data = CborDeserializer.readArray(bytes);
-
-    return new MintTransaction(await MintTransactionData.fromCBOR(data[0]), InclusionProof.fromCBOR(data[1]));
+  public get x(): Uint8Array {
+    return new Uint8Array(this.tokenId.bytes);
   }
 
-  public static isJSON(input: unknown): input is IMintTransactionJson {
-    return typeof input === 'object' && input !== null && 'data' in input && 'inclusionProof' in input;
+  public static async create(
+    recipient: PayToScriptHash,
+    tokenId: TokenId,
+    tokenType: TokenType,
+    data: Uint8Array,
+  ): Promise<MintTransaction> {
+    data = new Uint8Array(data);
+
+    const signingService = await MintSigningService.create(tokenId);
+    return new MintTransaction(PayToPublicKeyPredicate.create(signingService), recipient, tokenId, tokenType, data);
   }
 
-  public static async fromJSON(input: unknown): Promise<MintTransaction> {
-    if (!MintTransaction.isJSON(input)) {
-      throw new InvalidJsonStructureError();
-    }
-
-    return new MintTransaction(
-      await MintTransactionData.fromJSON(input.data),
-      InclusionProof.fromJSON(input.inclusionProof),
-    );
+  public calculateSourceStateHash(): Promise<DataHash> {
+    return MintTransactionState.create(this.tokenId);
   }
 
-  /**
-   * Verify mint transaction.
-   * @param trustBase Root trust base for verification
-   * @param mintReasonFactory Factory to create mint transaction reasons
-   *
-   * @return {VerificationResult} Verification result
-   */
-  public async verify(trustBase: RootTrustBase, mintReasonFactory: IMintReasonFactory): Promise<VerificationResult> {
-    if (!this.inclusionProof.certificationData) {
-      return new VerificationResult(VerificationResultCode.FAIL, 'Missing certification data.');
-    }
+  public calculateTransactionHash(): Promise<DataHash> {
+    return new DataHasher(HashAlgorithm.SHA256)
+      .update(
+        CborSerializer.encodeArray(
+          this.recipient.toCBOR(),
+          this.tokenId.toCBOR(),
+          CborSerializer.encodeArray(this.tokenType.toCBOR(), CborSerializer.encodeByteString(this._data)),
+        ),
+      )
+      .digest();
+  }
 
-    if (!this.data.sourceState.equals(await MintTransactionState.create(this.data.tokenId))) {
-      return new VerificationResult(VerificationResultCode.FAIL, 'Invalid source state');
-    }
-
-    const signingService = await MintSigningService.create(this.data.tokenId);
-    const certificationData = this.inclusionProof.certificationData;
-    if (HexConverter.encode(certificationData.publicKey) !== HexConverter.encode(signingService.publicKey)) {
-      return new VerificationResult(VerificationResultCode.FAIL, 'Certification data public key mismatch.');
-    }
-
-    if (!(await certificationData.verify())) {
-      return new VerificationResult(VerificationResultCode.FAIL, 'Certification data verification failed.');
-    }
-
-    const reason = this.data._reason ? await mintReasonFactory.create(this.data._reason) : null;
-    const reasonVerificationResult = (await reason?.verify(this)) ?? new VerificationResult(VerificationResultCode.OK);
-    if (!reasonVerificationResult.isSuccessful) {
-      return new VerificationResult(VerificationResultCode.FAIL, 'Mint reason verification', [
-        reasonVerificationResult,
-      ]);
-    }
-
-    const inclusionProofVerificationResult = await this.inclusionProof.verify(
+  public async toCertifiedTransaction(
+    trustBase: RootTrustBase,
+    predicateVerifier: PredicateVerifierFactory,
+    inclusionProof: InclusionProof,
+  ): Promise<CertifiedMintTransaction> {
+    const result = await InclusionProofVerificationRule.verify(
       trustBase,
-      await StateId.create(signingService.publicKey, this.data.sourceState),
+      predicateVerifier,
+      inclusionProof,
+      await StateId.fromTransaction(this),
     );
-    if (inclusionProofVerificationResult !== InclusionProofVerificationStatus.OK) {
-      return new VerificationResult(
-        VerificationResultCode.FAIL,
-        `Inclusion proof verification failed with status ${inclusionProofVerificationResult}.`,
-      );
+    if (result.status !== InclusionProofVerificationStatus.OK) {
+      throw new Error(`Inclusion proof verification failed: ${result.status.toString()}`);
     }
 
-    return new VerificationResult(VerificationResultCode.OK);
+    return new CertifiedMintTransaction(this, inclusionProof);
   }
 
-  /**
-   * Convert mint transaction to JSON.
-   * @return JSON representation of mint transaction
-   */
-  public toJSON(): IMintTransactionJson {
-    return {
-      data: this.data.toJSON(),
-      inclusionProof: this.inclusionProof.toJSON(),
-    };
-  }
-
-  /**
-   * Convert mint transaction to CBOR.
-   * @return CBOR representation of mint transaction
-   */
-  public toCBOR(): Uint8Array {
-    return CborSerializer.encodeArray(this.data.toCBOR(), this.inclusionProof.toCBOR());
+  public toString(): string {
+    return dedent`
+      MintTransaction
+        Lock Script: 
+          ${this.lockScript.toString()}
+        Recipient: ${this.recipient.toString()}
+        Token ID: ${this.tokenId.toString()}
+        Token Type: ${this.tokenType.toString()}
+        Data: ${HexConverter.encode(this._data)}`;
   }
 }

@@ -1,21 +1,17 @@
 import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
-import { IInclusionProofJson, InclusionProof } from '../transaction/InclusionProof.js';
+import { IInclusionProofJson, InclusionProof } from './InclusionProof.js';
 
 /**
  * Inclusion proof response.
  */
 export class InclusionProofResponse {
   /**
-   * Create inclison proof response.
+   * Create inclusion proof response.
    *
    * @param inclusionProof inclusion proof
    */
   public constructor(public readonly inclusionProof: InclusionProof) {
     this.inclusionProof = inclusionProof;
-  }
-
-  public static isJSON(input: unknown): input is { inclusionProof: IInclusionProofJson } {
-    return typeof input === 'object' && input !== null && 'inclusionProof' in input;
   }
 
   /**
@@ -30,5 +26,9 @@ export class InclusionProofResponse {
     }
 
     return new InclusionProofResponse(InclusionProof.fromJSON(input.inclusionProof));
+  }
+
+  public static isJSON(input: unknown): input is { inclusionProof: IInclusionProofJson } {
+    return typeof input === 'object' && input !== null && 'inclusionProof' in input;
   }
 }

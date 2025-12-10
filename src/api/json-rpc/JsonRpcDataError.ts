@@ -2,9 +2,9 @@
  * JSON-RPC error object.
  */
 export class JsonRpcDataError extends Error {
-  public readonly name: string = 'JsonRpcError';
-
   public readonly code: number;
+
+  public readonly name: string = 'JsonRpcError';
 
   /**
    * JSON-RPC error object constructor.

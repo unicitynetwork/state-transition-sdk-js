@@ -1,6 +1,6 @@
-import { BigintConverter } from './BigintConverter.js';
-import { HexConverter } from './HexConverter.js';
-import { DataHash } from '../hash/DataHash.js';
+import { DataHash } from '../crypto/hash/DataHash.js';
+import { BigintConverter } from '../serialization/BigintConverter.js';
+import { HexConverter } from '../serialization/HexConverter.js';
 
 export class BitString {
   /**
@@ -21,7 +21,7 @@ export class BitString {
    * @param data DataHash
    * @return {BitString} A BitString instance
    */
-  public static fromDataHash(data: DataHash): BitString {
+  public static fromStateId(data: DataHash): BitString {
     return new BitString(data.imprint);
   }
 

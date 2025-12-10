@@ -1,13 +1,13 @@
 import { CertificationData } from './CertificationData.js';
-import { DataHasher } from '../hash/DataHasher.js';
-import { HashAlgorithm } from '../hash/HashAlgorithm.js';
+import { DataHasher } from '../crypto/hash/DataHasher.js';
+import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
+import { ISigningService } from '../crypto/ISigningService.js';
+import { Signature } from '../crypto/secp256k1/Signature.js';
+import { SigningService } from '../crypto/secp256k1/SigningService.js';
 import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
-import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
-import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
-import { ISigningService } from '../sign/ISigningService.js';
-import { Signature } from '../sign/Signature.js';
-import { SigningService } from '../sign/SigningService.js';
-import { HexConverter } from '../util/HexConverter.js';
+import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
+import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
+import { HexConverter } from '../serialization/HexConverter.js';
 
 /**
  * Possible results from the aggregator when submitting a certification request.
@@ -36,8 +36,8 @@ export enum CertificationStatus {
 }
 
 export interface ICertificationResponseJson {
-  readonly status: CertificationStatus;
   readonly receipt?: IReceiptJson;
+  readonly status: CertificationStatus;
 }
 
 /**
@@ -59,6 +59,16 @@ class Receipt {
 
   public get publicKey(): Uint8Array {
     return new Uint8Array(this._publicKey);
+  }
+
+  /**
+   * Parse a receipt object from CBOR bytes.
+   * @param {Uint8Array} bytes CBOR-encoded receipt
+   * @returns {Receipt} Parsed receipt
+   */
+  public static fromCBOR(bytes: Uint8Array): Receipt {
+    const data = CborDeserializer.decodeArray(bytes);
+    return new Receipt(CborDeserializer.decodeByteString(data[0]), Signature.fromCBOR(data[1]));
   }
 
   /**
@@ -92,16 +102,6 @@ class Receipt {
   }
 
   /**
-   * Parse a receipt object from CBOR bytes.
-   * @param {Uint8Array} bytes CBOR-encoded receipt
-   * @returns {Receipt} Parsed receipt
-   */
-  public static fromCBOR(bytes: Uint8Array): Receipt {
-    const data = CborDeserializer.readArray(bytes);
-    return new Receipt(CborDeserializer.readByteString(data[0]), Signature.fromCBOR(data[1]));
-  }
-
-  /**
    * Convert the receipt to CBOR bytes.
    * @returns {Uint8Array} CBOR-encoded receipt
    */
@@ -132,6 +132,16 @@ export class CertificationResponse {
 
   /**
    * Create a new certification response.
+   * @param {CertificationStatus} status Certification response status
+   *
+   * @returns {CertificationResponse} Created certification response
+   */
+  public static create(status: CertificationStatus): CertificationResponse {
+    return new CertificationResponse(status, null);
+  }
+
+  /**
+   * Create a new certification response.
    * @param {ISigningService} signingService Aggregator signing service
    * @param {CertificationResponse} certificationData Certification data
    * @param {CertificationStatus} status Certification response status
@@ -148,16 +158,6 @@ export class CertificationResponse {
     );
 
     return new CertificationResponse(status, new Receipt(signingService.publicKey, signature));
-  }
-
-  /**
-   * Create a new certification response.
-   * @param {CertificationStatus} status Certification response status
-   *
-   * @returns {CertificationResponse} Created certification response
-   */
-  public static create(status: CertificationStatus): CertificationResponse {
-    return new CertificationResponse(status, null);
   }
 
   /**

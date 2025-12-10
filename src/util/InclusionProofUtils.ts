@@ -1,10 +1,14 @@
+import { RootTrustBase } from '../api/bft/RootTrustBase.js';
+import { InclusionProof } from '../api/InclusionProof.js';
 import { JsonRpcNetworkError } from '../api/json-rpc/JsonRpcNetworkError.js';
-import { RootTrustBase } from '../bft/RootTrustBase.js';
+import { StateId } from '../api/StateId.js';
+import { PredicateVerifierFactory } from '../predicate/verification/PredicateVerifierFactory.js';
 import { StateTransitionClient } from '../StateTransitionClient.js';
-import { Commitment } from '../transaction/Commitment.js';
-import { InclusionProof, InclusionProofVerificationStatus } from '../transaction/InclusionProof.js';
-import { MintTransactionData } from '../transaction/MintTransactionData.js';
-import { TransferTransactionData } from '../transaction/TransferTransactionData.js';
+import { ITransaction } from '../transaction/ITransaction.js';
+import {
+  InclusionProofVerificationRule,
+  InclusionProofVerificationStatus,
+} from '../transaction/verification/rule/InclusionProofVerificationRule.js';
 
 class SleepError extends Error {
   public constructor(message: string) {
@@ -29,23 +33,29 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
 
 export async function waitInclusionProof(
   trustBase: RootTrustBase,
+  predicateVerifier: PredicateVerifierFactory,
   client: StateTransitionClient,
-  commitment: Commitment<TransferTransactionData | MintTransactionData>,
+  transaction: ITransaction,
   signal: AbortSignal = AbortSignal.timeout(10000),
   interval: number = 1000,
 ): Promise<InclusionProof> {
-  const stateId = await commitment.certificationData.calculateStateId();
+  const stateId = await StateId.fromTransaction(transaction);
   while (true) {
     try {
       const inclusionProof = await client.getInclusionProof(stateId).then((response) => response.inclusionProof);
-      const verificationStatus = await inclusionProof.verify(trustBase, stateId);
-      switch (verificationStatus) {
+      const verificationStatus = await InclusionProofVerificationRule.verify(
+        trustBase,
+        predicateVerifier,
+        inclusionProof,
+        stateId,
+      );
+      switch (verificationStatus.status) {
         case InclusionProofVerificationStatus.OK:
           return inclusionProof;
         case InclusionProofVerificationStatus.PATH_NOT_INCLUDED:
           break;
         default:
-          throw new Error(`Invalid inclusion proof status: ${verificationStatus}`);
+          throw new Error(`Invalid inclusion proof status: ${verificationStatus.status}`);
       }
     } catch (err) {
       if (!(err instanceof JsonRpcNetworkError && err.status === 404)) {

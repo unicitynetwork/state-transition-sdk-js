@@ -1,9 +1,8 @@
 import { CertificationData } from '../../../src/api/CertificationData.js';
 import { CertificationResponse, CertificationStatus } from '../../../src/api/CertificationResponse.js';
-import { DataHash } from '../../../src/hash/DataHash.js';
+import { SigningService } from '../../../src/crypto/secp256k1/SigningService.js';
 import { InvalidJsonStructureError } from '../../../src/InvalidJsonStructureError.js';
-import { SigningService } from '../../../src/sign/SigningService.js';
-import { HexConverter } from '../../../src/util/HexConverter.js';
+import { HexConverter } from '../../../src/serialization/HexConverter.js';
 
 describe('CertificationResponse', () => {
   it('should encode and decode JSON to exactly same object', async () => {
@@ -28,11 +27,13 @@ describe('CertificationResponse', () => {
 
     response = await CertificationResponse.createWithReceipt(
       signingService,
-      await CertificationData.create(
-        DataHash.fromImprint(new Uint8Array(34)),
-        DataHash.fromImprint(new Uint8Array(34)),
-        signingService,
-      ),
+      CertificationData.fromJSON({
+        publicKey: '0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
+        signature:
+          '8c3f91708445bf0ddec220f0821461bcf84860a8769275f9930e798d1f645d157bb6a2998c61941108b0993c5aed6a7b92ccf31d11b50fe80d9ff93da392336a01',
+        sourceStateHash: '00000000000000000000000000000000000000000000000000000000000000000000',
+        transactionHash: '00000000000000000000000000000000000000000000000000000000000000000000',
+      }),
       CertificationStatus.SUCCESS,
     );
 
@@ -71,11 +72,13 @@ describe('CertificationResponse', () => {
       new Uint8Array(HexConverter.decode('0000000000000000000000000000000000000000000000000000000000000001')),
     );
 
-    const certificationData = await CertificationData.create(
-      DataHash.fromImprint(new Uint8Array(34)),
-      DataHash.fromImprint(new Uint8Array(34)),
-      signingService,
-    );
+    const certificationData = CertificationData.fromJSON({
+      publicKey: '0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
+      signature:
+        '8c3f91708445bf0ddec220f0821461bcf84860a8769275f9930e798d1f645d157bb6a2998c61941108b0993c5aed6a7b92ccf31d11b50fe80d9ff93da392336a01',
+      sourceStateHash: '00000000000000000000000000000000000000000000000000000000000000000000',
+      transactionHash: '00000000000000000000000000000000000000000000000000000000000000000000',
+    });
     let response = await CertificationResponse.createWithReceipt(
       signingService,
       certificationData,
@@ -89,13 +92,13 @@ describe('CertificationResponse', () => {
     await expect(response.verifyReceipt(certificationData)).resolves.toBe(true);
 
     // Test with wrong signature should fail verification
-    const invalidCertificationData = await CertificationData.create(
-      DataHash.fromImprint(new Uint8Array(34)),
-      DataHash.fromImprint(new Uint8Array(34)),
-      new SigningService(
-        new Uint8Array(HexConverter.decode('0000000000000000000000000000000000000000000000000000000000000002')),
-      ),
-    );
+    const invalidCertificationData = CertificationData.fromJSON({
+      publicKey: '0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
+      signature:
+        '8c3f91708445bf0ddec220f0821461bcf84860a8769275f9930e798d1f645d157bb6a2998c61941108b0993c5aed6a7b92ccf31d11b50fe80d9ff93da392336a00',
+      sourceStateHash: '00000000000000000000000000000000000000000000000000000000000000000000',
+      transactionHash: '00000000000000000000000000000000000000000000000000000000000000000000',
+    });
 
     await expect(response.verifyReceipt(invalidCertificationData)).resolves.toBe(false);
 

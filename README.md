@@ -33,75 +33,13 @@ Note: for examples, see further down in the [Examples section](#examples) or bro
 
 The main SDK interface for token operations:
 
-- `submitMintCommitment()` - Submit mint commitment to aggregator
-- `submitTransferCommitment()` - Submit transaction commitment to aggregator
-- `finalizeTransaction()` - Complete token transfers
-- `getTokenStatus()` - Check token status via inclusion proofs
+- `submitCertificationRequest()` - Submit transaction to aggregator
 - `getInclusionProof()` - Retrieve inclusion proof for a commitment
-
-### Address System
-
-**DirectAddress**: Cryptographic addresses with checksums for immediate ownership
-**ProxyAddress**: Addresses which uses nametags
-
-To use address sent by someone:
-```typescript
-const address = await AddressFactory.createAddress('DIRECT://582200004d8489e2b1244335ad8784a23826228e653658a2ecdb0abc17baa143f4fe560d9c81365b');
-```
-
-To obtain an address for minting, or for sending the address to someone, the address is calculated from a predicate reference. Such addresses add privacy and unlinkability in the case of the masked predicate:
-```typescript
-const reference = await MaskedPredicateReference.create(
-  tokenType,
-  signingAlgorithm,
-  publicKey,
-  hashAlgorithm,
-  nonce,
-);
-
-const address = await reference.toAddress();
-console.log(address.toJSON()) // --> DIRECT://582200004d8489e2b1244335ad8784a23826228e653658a2ecdb0abc17baa143f4fe560d9c81365b
-```
-
-### Predicate System
-
-Predicates define unlock conditions for tokens:
-
-- **UnmaskedPredicate**: Direct public key ownership
-- **MaskedPredicate**: Privacy-preserving ownership (hides public keys)
-- **BurnPredicate**: One-way predicate for token destruction
-
-```typescript
-// Create an unmasked predicate for direct ownership
-const unmaskedPredicate = UnmaskedPredicate.create(token.id, token.type, signingService, HashAlgorithm.SHA256, salt);
-
-// Create a masked predicate for privacy
-const maskedPredicate = await MaskedPredicate.create(
-  token.id,
-  token.type,
-  signingService,
-  HashAlgorithm.SHA256,
-  nonce
-);
-```
-
-### Token Types
-
-**Fungible Tokens**: Standard value-bearing tokens
-
-```typescript
-const textEncoder = new TextEncoder();
-
-const tokenData = TokenCoinData.create([
-  [new CoinId(textEncoder.encode('ALPHA_COIN')), BigInt(1000)]
-]);
-```
 
 ### Transaction Flow
 
 1. **Minting**: Create new tokens
 2. **Transfer**: Submit state transitions between owners
-3. **Completion**: Finalize transfers with new token state
 
 #### Transfer flow
 
@@ -111,50 +49,18 @@ Recipient knows some info about token, like token type for generating address.
 ```text
 A[Start] 
 A --> B[Recipient Generates Address]
-B --> C[Recipient Shares Address And New Data Hash with Sender]
-C --> D[Sender Creates Transaction Commitment]
-D --> E[Sender Submits Transaction Commitment]
+B --> C[Recipient Shares Address with Sender]
+C --> D[Sender Creates Transaction]
+D --> E[Sender Submits Transaction]
 E --> F[Sender Retrieves Inclusion Proof]
-F --> G[Sender Creates Transaction]
+F --> G[Sender Creates Certified Transaction]
 G --> H[Sender Sends Transaction and Token to Recipient]
-H --> I[Recipient Imports Token and Transaction]
-I --> J[Recipient Verifies Transaction]
-J --> K[Recipient Finishes Transaction]
-K --> L[End]
-```
-
-#### Offline Transfer flow
-
-For situations where immediate network connectivity isn't available:
-
-```text
-A[Start] 
-A --> B[Recipient Generates Address]
-B --> C[Recipient Shares Address And New Data Hash with Sender]
-C --> D[Sender Creates Transaction Commitment]
-D --> E[Recipient Submits Transaction Commitment]
-E --> F[Recipient Retrieves Inclusion Proof]
-F --> G[Recipient Creates Transaction]
-G --> H[Recipient Sends Transaction and Token to Recipient]
-H --> I[Recipient Imports Token and Transaction]
-I --> J[Recipient Verifies Transaction]
-J --> K[Recipient Finishes Transaction]
 K --> L[End]
 ```
 
 ## Architecture
 
 ### Token Structure
-
-Tokens contain:
-- **id**: Unique 256-bit identifier
-- **type**: Token class identifier
-- **version**: Token format version
-- **predicate**: Current ownership condition
-- **coins**: Coins of various types and amounts owned by this token (the coins can also represent tokens from other blockchains)
-- **nametagTokens**: Name tags for addressing
-- **data**: Token-specific data
-- **transactions**: The history of transactions performed with this token
 
 ### Privacy Model
 - **Commitment-based**: Only cryptographic commitments published on-chain
