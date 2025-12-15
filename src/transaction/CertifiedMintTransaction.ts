@@ -6,6 +6,8 @@ import { TokenType } from './TokenType.js';
 import { InclusionProof } from '../api/InclusionProof.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { IPredicate } from '../predicate/IPredicate.js';
+import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
+import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { dedent } from '../util/StringUtils.js';
 
 export class CertifiedMintTransaction implements ITransaction {
@@ -18,7 +20,6 @@ export class CertifiedMintTransaction implements ITransaction {
     return this.transaction.data;
   }
 
-  // TODO: Maybe get this from inclusion proof since it should be the same as in mint transaction.
   public get lockScript(): IPredicate {
     return this.transaction.lockScript;
   }
@@ -39,12 +40,21 @@ export class CertifiedMintTransaction implements ITransaction {
     return this.transaction.x;
   }
 
+  public static async fromCBOR(bytes: Uint8Array): Promise<CertifiedMintTransaction> {
+    const data = CborDeserializer.decodeArray(bytes);
+    return new CertifiedMintTransaction(await MintTransaction.fromCBOR(data[0]), InclusionProof.fromCBOR(data[1]));
+  }
+
   public calculateSourceStateHash(): Promise<DataHash> {
     return this.transaction.calculateSourceStateHash();
   }
 
   public calculateTransactionHash(): Promise<DataHash> {
     return this.transaction.calculateTransactionHash();
+  }
+
+  public toCBOR(): Uint8Array {
+    return CborSerializer.encodeArray(this.transaction.toCBOR(), this.inclusionProof.toCBOR());
   }
 
   public toString(): string {

@@ -45,29 +45,33 @@ export class InclusionProofVerificationRule {
     }
 
     const certificationData = inclusionProof.certificationData;
-    if (certificationData) {
-      // TODO: Verify ownership
-      const predicateVerificationResult = await predicateVerifierFactory.verify(
-        certificationData.lockScript,
-        inclusionProof,
+    if (!certificationData) {
+      return new VerificationResult(
+        'InclusionProofVerificationRule',
+        InclusionProofVerificationStatus.PATH_NOT_INCLUDED,
       );
-      if (predicateVerificationResult.status !== VerificationStatus.OK) {
-        return new VerificationResult(
-          'InclusionProofVerificationRule',
-          InclusionProofVerificationStatus.NOT_AUTHENTICATED,
-          '',
-          [predicateVerificationResult],
-        );
-      }
+    }
 
-      const leafValue = await certificationData.calculateLeafValue();
-      const pathValue = inclusionProof.merkleTreePath.steps.at(0)?.data;
-      if (!pathValue || !leafValue.equals(DataHash.fromImprint(pathValue))) {
-        return new VerificationResult(
-          'InclusionProofVerificationRule',
-          InclusionProofVerificationStatus.PATH_NOT_INCLUDED,
-        );
-      }
+    const predicateVerificationResult = await predicateVerifierFactory.verify(
+      certificationData.lockScript,
+      inclusionProof,
+    );
+    if (predicateVerificationResult.status !== VerificationStatus.OK) {
+      return new VerificationResult(
+        'InclusionProofVerificationRule',
+        InclusionProofVerificationStatus.NOT_AUTHENTICATED,
+        '',
+        [predicateVerificationResult],
+      );
+    }
+
+    const leafValue = await certificationData.calculateLeafValue();
+    const pathValue = inclusionProof.merkleTreePath.steps.at(0)?.data;
+    if (!pathValue || !leafValue.equals(DataHash.fromImprint(pathValue))) {
+      return new VerificationResult(
+        'InclusionProofVerificationRule',
+        InclusionProofVerificationStatus.PATH_NOT_INCLUDED,
+      );
     }
 
     if (!result.isPathIncluded) {

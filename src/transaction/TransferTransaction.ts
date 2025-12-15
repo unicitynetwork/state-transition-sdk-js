@@ -11,8 +11,10 @@ import {
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
+import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
 import { IPredicate } from '../predicate/IPredicate.js';
 import { PredicateVerifierFactory } from '../predicate/verification/PredicateVerifierFactory.js';
+import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../serialization/HexConverter.js';
 import { dedent } from '../util/StringUtils.js';
@@ -45,6 +47,17 @@ export class TransferTransaction implements ITransaction {
     return new TransferTransaction(owner, recipient, x, data);
   }
 
+  public static fromCBOR(bytes: Uint8Array): TransferTransaction {
+    const data = CborDeserializer.decodeArray(bytes);
+
+    return TransferTransaction.create(
+      EncodedPredicate.decode(CborDeserializer.decodeByteString(data[0])),
+      PayToScriptHash.fromCBOR(data[1]),
+      CborDeserializer.decodeByteString(data[2]),
+      CborDeserializer.decodeByteString(data[3]),
+    );
+  }
+
   public calculateSourceStateHash(): Promise<DataHash> {
     return new DataHasher(HashAlgorithm.SHA256)
       .update(
@@ -66,6 +79,15 @@ export class TransferTransaction implements ITransaction {
         ),
       )
       .digest();
+  }
+
+  public toCBOR(): Uint8Array {
+    return CborSerializer.encodeArray(
+      CborSerializer.encodeByteString(this.lockScript.encode()),
+      this.recipient.toCBOR(),
+      CborSerializer.encodeByteString(this._x),
+      CborSerializer.encodeByteString(this._data),
+    );
   }
 
   public async toCertifiedTransaction(

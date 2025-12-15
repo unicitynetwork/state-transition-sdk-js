@@ -18,14 +18,6 @@ export class CertifiedMintTransactionVerificationRule {
     predicateVerifier: PredicateVerifierFactory,
     genesis: CertifiedMintTransaction,
   ): Promise<VerificationResult<VerificationStatus>> {
-    if (!genesis.inclusionProof.certificationData) {
-      return new VerificationResult(
-        'CertifiedMintTransactionVerificationRule',
-        VerificationStatus.FAIL,
-        'Invalid inclusion proof: missing certification data.',
-      );
-    }
-
     const signingService = await MintSigningService.create(genesis.tokenId);
     if (
       !areUint8ArraysEqual(
@@ -55,11 +47,6 @@ export class CertifiedMintTransactionVerificationRule {
       );
     }
 
-    return new VerificationResult(
-      'CertifiedMintTransactionVerificationRule',
-      result.status === InclusionProofVerificationStatus.OK ? VerificationStatus.OK : VerificationStatus.FAIL,
-      '',
-      [result],
-    );
+    return new VerificationResult('CertifiedMintTransactionVerificationRule', VerificationStatus.OK, '', [result]);
   }
 }

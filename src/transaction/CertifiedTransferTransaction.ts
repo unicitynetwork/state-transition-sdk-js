@@ -1,9 +1,12 @@
 import { ITransaction } from './ITransaction.js';
+import { MintTransaction } from './MintTransaction.js';
 import { PayToScriptHash } from './Recipient.js';
 import { TransferTransaction } from './TransferTransaction.js';
 import { InclusionProof } from '../api/InclusionProof.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { IPredicate } from '../predicate/IPredicate.js';
+import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
+import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { dedent } from '../util/StringUtils.js';
 
 export class CertifiedTransferTransaction implements ITransaction {
@@ -28,12 +31,21 @@ export class CertifiedTransferTransaction implements ITransaction {
     return this.transaction.x;
   }
 
+  public static fromCBOR(bytes: Uint8Array): CertifiedTransferTransaction {
+    const data = CborDeserializer.decodeArray(bytes);
+    return new CertifiedTransferTransaction(TransferTransaction.fromCBOR(data[0]), InclusionProof.fromCBOR(data[1]));
+  }
+
   public calculateSourceStateHash(): Promise<DataHash> {
     return this.transaction.calculateSourceStateHash();
   }
 
   public calculateTransactionHash(): Promise<DataHash> {
     return this.transaction.calculateTransactionHash();
+  }
+
+  public toCBOR(): Uint8Array {
+    return CborSerializer.encodeArray(this.transaction.toCBOR(), this.inclusionProof.toCBOR());
   }
 
   public toString(): string {

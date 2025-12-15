@@ -1,4 +1,5 @@
 import { IPredicate } from './IPredicate.js';
+import { HexConverter } from '../serialization/HexConverter.js';
 
 export class EncodedPredicate implements IPredicate {
   protected constructor(
@@ -36,5 +37,9 @@ export class EncodedPredicate implements IPredicate {
 
   public encode(): Uint8Array {
     return new Uint8Array(this._bytes);
+  }
+
+  public toString(): string {
+    return `EncodedPredicate[${this.type}]: ${HexConverter.encode(this._bytes)}`;
   }
 }

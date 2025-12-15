@@ -7,6 +7,7 @@ import { TokenType } from './TokenType.js';
 import { InclusionProof } from '../api/InclusionProof.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
+import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import {
   InclusionProofVerificationRule,
@@ -51,6 +52,18 @@ export class MintTransaction implements ITransaction {
     return new MintTransaction(PayToPublicKeyPredicate.create(signingService), recipient, tokenId, tokenType, data);
   }
 
+  public static fromCBOR(bytes: Uint8Array): Promise<MintTransaction> {
+    const data = CborDeserializer.decodeArray(bytes);
+    const aux = CborDeserializer.decodeArray(data[2]);
+
+    return MintTransaction.create(
+      PayToScriptHash.fromCBOR(data[0]),
+      TokenId.fromCBOR(data[1]),
+      TokenType.fromCBOR(aux[0]),
+      CborDeserializer.decodeByteString(aux[1]),
+    );
+  }
+
   public calculateSourceStateHash(): Promise<DataHash> {
     return MintTransactionState.create(this.tokenId);
   }
@@ -65,6 +78,14 @@ export class MintTransaction implements ITransaction {
         ),
       )
       .digest();
+  }
+
+  public toCBOR(): Uint8Array {
+    return CborSerializer.encodeArray(
+      this.recipient.toCBOR(),
+      this.tokenId.toCBOR(),
+      CborSerializer.encodeArray(this.tokenType.toCBOR(), CborSerializer.encodeByteString(this._data)),
+    );
   }
 
   public async toCertifiedTransaction(

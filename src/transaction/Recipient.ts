@@ -20,6 +20,10 @@ export class PayToScriptHash extends DataHash {
     const hash = await new DataHasher(HashAlgorithm.SHA256).update(predicate.encode()).digest();
     return new PayToScriptHash(hash);
   }
+
+  public static fromCBOR(bytes: Uint8Array): PayToScriptHash {
+    return new PayToScriptHash(DataHash.fromCBOR(bytes));
+  }
 }
 
 export class Recipient {

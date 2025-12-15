@@ -1,11 +1,29 @@
 import { CertifiedMintTransaction } from './CertifiedMintTransaction.js';
 import { CertifiedTransferTransaction } from './CertifiedTransferTransaction.js';
-import { TokenVerification } from './verification/TokenVerification.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { PredicateVerifierFactory } from '../predicate/verification/PredicateVerifierFactory.js';
+import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { dedent } from '../util/StringUtils.js';
 import { VerificationError } from '../verification/VerificationError.js';
+import { VerificationResult } from '../verification/VerificationResult.js';
 import { VerificationStatus } from '../verification/VerificationStatus.js';
+import { CertifiedMintTransactionVerificationRule } from './verification/rule/CertifiedMintTransactionVerificationRule.js';
+import { CertifiedTransferTransactionVerificationRule } from './verification/rule/CertifiedTransferTransactionVerificationRule.js';
+import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
+
+class TokenVerificationResult extends VerificationResult<VerificationStatus> {
+  private constructor(status: VerificationStatus, results: VerificationResult<unknown>[]) {
+    super('TokenVerification', status, '', results);
+  }
+
+  public static fail(results: VerificationResult<unknown>[]): TokenVerificationResult {
+    return new TokenVerificationResult(VerificationStatus.FAIL, results);
+  }
+
+  public static ok(results: VerificationResult<unknown>[]): TokenVerificationResult {
+    return new TokenVerificationResult(VerificationStatus.OK, results);
+  }
+}
 
 export class Token {
   private constructor(
@@ -17,18 +35,35 @@ export class Token {
     return this._transactions.slice();
   }
 
+  public static async fromCBOR(bytes: Uint8Array): Promise<Token> {
+    const data = CborDeserializer.decodeArray(bytes);
+    const transactions = CborDeserializer.decodeArray(data[1]);
+
+    return new Token(
+      await CertifiedMintTransaction.fromCBOR(data[0]),
+      transactions.map((transaction) => CertifiedTransferTransaction.fromCBOR(transaction)),
+    );
+  }
+
   public static async mint(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierFactory,
     genesis: CertifiedMintTransaction,
   ): Promise<Token> {
     const token = new Token(genesis);
-    const result = await TokenVerification.verify(trustBase, predicateVerifier, token);
+    const result = await token.verify(trustBase, predicateVerifier);
     if (result.status !== VerificationStatus.OK) {
       throw new VerificationError('Invalid token genesis', result);
     }
 
     return token;
+  }
+
+  public toCBOR(): Uint8Array {
+    return CborSerializer.encodeArray(
+      this.genesis.toCBOR(),
+      CborSerializer.encodeArray(...this._transactions.map((transaction) => transaction.toCBOR())),
+    );
   }
 
   public toString(): string {
@@ -40,16 +75,55 @@ export class Token {
         ]`;
   }
 
-  // TODO: Add verification of the transfer transaction
-  public transfer(
+  public async transfer(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierFactory,
     transaction: CertifiedTransferTransaction,
-  ): Token {
+  ): Promise<Token> {
+    const result = await CertifiedTransferTransactionVerificationRule.verify(
+      trustBase,
+      predicateVerifier,
+      this,
+      transaction,
+    );
+    if (result.status !== VerificationStatus.OK) {
+      throw new VerificationError('Invalid transfer transaction', result);
+    }
+
     const transactions = this.transactions.slice();
-    // transaction.inclusionProof.verify();
     transactions.push(transaction);
 
     return new Token(this.genesis, transactions);
+  }
+
+  public async verify(
+    trustBase: RootTrustBase,
+    predicateVerifier: PredicateVerifierFactory,
+  ): Promise<TokenVerificationResult> {
+    const results: VerificationResult<unknown>[] = [];
+    const result = await CertifiedMintTransactionVerificationRule.verify(trustBase, predicateVerifier, this.genesis);
+    results.push(result);
+    if (result.status !== VerificationStatus.OK) {
+      return TokenVerificationResult.fail(results);
+    }
+
+    const transferResults: VerificationResult<VerificationStatus>[] = [];
+    for (let i = 0; i < this._transactions.length; i++) {
+      const transaction = this._transactions[i];
+      const token = new Token(this.genesis, this._transactions.slice(0, i - 1));
+      const result = await CertifiedTransferTransactionVerificationRule.verify(
+        trustBase,
+        predicateVerifier,
+        token,
+        transaction,
+      );
+      transferResults.push(result);
+
+      if (result.status !== VerificationStatus.OK) {
+        return TokenVerificationResult.fail(results);
+      }
+    }
+
+    return TokenVerificationResult.ok(results);
   }
 }

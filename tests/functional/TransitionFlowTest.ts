@@ -1,8 +1,6 @@
 import { TestAggregatorClient } from './TestAggregatorClient.js';
 import { CertificationData } from '../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../src/api/CertificationResponse.js';
-import { DataHasher } from '../../src/crypto/hash/DataHasher.js';
-import { HashAlgorithm } from '../../src/crypto/hash/HashAlgorithm.js';
 import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
 import { PayToPublicKeyPredicate } from '../../src/predicate/PayToPublicKeyPredicate.js';
 import { PayToPublicKeyPredicateVerifier } from '../../src/predicate/verification/PayToPublicKeyPredicateVerifier.js';
@@ -16,6 +14,7 @@ import { TokenId } from '../../src/transaction/TokenId.js';
 import { TokenType } from '../../src/transaction/TokenType.js';
 import { TransferTransaction } from '../../src/transaction/TransferTransaction.js';
 import { waitInclusionProof } from '../../src/util/InclusionProofUtils.js';
+import { VerificationStatus } from '../../src/verification/VerificationStatus.js';
 
 describe('Transition', () => {
   it('default successful flow', async () => {
@@ -55,25 +54,15 @@ describe('Transition', () => {
       CborSerializer.encodeArray(),
     );
 
-    // TODO: Improve unlock script generation
-    const unlockScriptDataHash = await new DataHasher(HashAlgorithm.SHA256)
-      .update(
-        CborSerializer.encodeArray(
-          await transferTransaction.calculateSourceStateHash().then((hash) => hash.toCBOR()),
-          await transferTransaction.calculateTransactionHash().then((hash) => hash.toCBOR()),
-        ),
-      )
-      .digest();
-
     certificationData = await CertificationData.fromTransferTransaction(
       transferTransaction,
-      await signingService.sign(unlockScriptDataHash).then((signature) => signature.encode()),
+      await PayToPublicKeyPredicate.generateUnlockScript(transferTransaction, signingService),
     );
 
     response = await client.submitCertificationRequest(certificationData);
     expect(response.status).toEqual(CertificationStatus.SUCCESS);
 
-    token = token.transfer(
+    token = await token.transfer(
       trustBase,
       predicateVerifier,
       await transferTransaction.toCertifiedTransaction(
@@ -83,6 +72,11 @@ describe('Transition', () => {
       ),
     );
 
-    console.log(token.toString());
+    const importedToken = await Token.fromCBOR(token.toCBOR());
+    await expect(importedToken.verify(trustBase, predicateVerifier).then((result) => result.status)).resolves.toEqual(
+      VerificationStatus.OK,
+    );
+
+    console.log(importedToken.toString());
   });
 });
