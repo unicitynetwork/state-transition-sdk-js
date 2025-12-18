@@ -1,5 +1,4 @@
 import { ITransaction } from './ITransaction.js';
-import { MintTransaction } from './MintTransaction.js';
 import { PayToScriptHash } from './Recipient.js';
 import { TransferTransaction } from './TransferTransaction.js';
 import { InclusionProof } from '../api/InclusionProof.js';
@@ -27,6 +26,10 @@ export class CertifiedTransferTransaction implements ITransaction {
     return this.transaction.recipient;
   }
 
+  public get sourceStateHash(): DataHash {
+    return this.transaction.sourceStateHash;
+  }
+
   public get x(): Uint8Array {
     return this.transaction.x;
   }
@@ -36,8 +39,8 @@ export class CertifiedTransferTransaction implements ITransaction {
     return new CertifiedTransferTransaction(TransferTransaction.fromCBOR(data[0]), InclusionProof.fromCBOR(data[1]));
   }
 
-  public calculateSourceStateHash(): Promise<DataHash> {
-    return this.transaction.calculateSourceStateHash();
+  public calculateStateHash(): Promise<DataHash> {
+    return this.transaction.calculateStateHash();
   }
 
   public calculateTransactionHash(): Promise<DataHash> {

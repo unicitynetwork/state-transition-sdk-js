@@ -48,7 +48,23 @@ export class CertifiedTransferTransactionVerificationRule {
       return new VerificationResult(
         'CertifiedTransferTransactionVerificationRule',
         VerificationStatus.FAIL,
-        'The transaction recipient does not match the latest transaction source.',
+        'The transaction owner does not match the previous transaction recipient.',
+        results,
+      );
+    }
+
+    result = new VerificationResult(
+      'SourceStateHashVerificationRule',
+      await latestTransaction
+        .calculateStateHash()
+        .then((hash) => (hash.equals(transaction.sourceStateHash) ? VerificationStatus.OK : VerificationStatus.FAIL)),
+    );
+    results.push(result);
+    if (result.status !== VerificationStatus.OK) {
+      return new VerificationResult(
+        'CertifiedTransferTransactionVerificationRule',
+        VerificationStatus.FAIL,
+        'The transaction source state hash does not match the previous transaction state.',
         results,
       );
     }

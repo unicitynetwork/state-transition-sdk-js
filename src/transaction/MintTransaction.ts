@@ -64,7 +64,7 @@ export class MintTransaction implements ITransaction {
     );
   }
 
-  public calculateSourceStateHash(): Promise<DataHash> {
+  public calculateStateHash(): Promise<DataHash> {
     return MintTransactionState.create(this.tokenId);
   }
 

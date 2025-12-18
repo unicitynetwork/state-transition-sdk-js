@@ -1,6 +1,7 @@
 import { CertifiedTransferTransaction } from './CertifiedTransferTransaction.js';
 import { ITransaction } from './ITransaction.js';
 import { PayToScriptHash } from './Recipient.js';
+import { Token } from './Token.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { InclusionProof } from '../api/InclusionProof.js';
 import { StateId } from '../api/StateId.js';
@@ -21,6 +22,7 @@ import { dedent } from '../util/StringUtils.js';
 
 export class TransferTransaction implements ITransaction {
   private constructor(
+    public readonly sourceStateHash: DataHash,
     public readonly lockScript: IPredicate,
     public readonly recipient: PayToScriptHash,
     private readonly _x: Uint8Array,
@@ -38,34 +40,33 @@ export class TransferTransaction implements ITransaction {
     return new Uint8Array(this._x);
   }
 
-  public static create(
+  public static async create(
+    token: Token,
     owner: IPredicate,
     recipient: PayToScriptHash,
     x: Uint8Array,
     data: Uint8Array,
-  ): TransferTransaction {
-    return new TransferTransaction(owner, recipient, x, data);
+  ): Promise<TransferTransaction> {
+    const transaction = token.transactions.at(-1) ?? token.genesis;
+    const sourceStateHash = await transaction.calculateStateHash();
+    return new TransferTransaction(sourceStateHash, owner, recipient, x, data);
   }
 
   public static fromCBOR(bytes: Uint8Array): TransferTransaction {
     const data = CborDeserializer.decodeArray(bytes);
 
-    return TransferTransaction.create(
-      EncodedPredicate.decode(CborDeserializer.decodeByteString(data[0])),
-      PayToScriptHash.fromCBOR(data[1]),
-      CborDeserializer.decodeByteString(data[2]),
+    return new TransferTransaction(
+      DataHash.fromCBOR(data[0]),
+      EncodedPredicate.decode(CborDeserializer.decodeByteString(data[1])),
+      PayToScriptHash.fromCBOR(data[2]),
       CborDeserializer.decodeByteString(data[3]),
+      CborDeserializer.decodeByteString(data[4]),
     );
   }
 
-  public calculateSourceStateHash(): Promise<DataHash> {
+  public calculateStateHash(): Promise<DataHash> {
     return new DataHasher(HashAlgorithm.SHA256)
-      .update(
-        CborSerializer.encodeArray(
-          CborSerializer.encodeByteString(this.lockScript.encode()),
-          CborSerializer.encodeByteString(this._x),
-        ),
-      )
+      .update(CborSerializer.encodeArray(this.sourceStateHash.toCBOR(), CborSerializer.encodeByteString(this._x)))
       .digest();
   }
 
@@ -83,6 +84,7 @@ export class TransferTransaction implements ITransaction {
 
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
+      this.sourceStateHash.toCBOR(),
       CborSerializer.encodeByteString(this.lockScript.encode()),
       this.recipient.toCBOR(),
       CborSerializer.encodeByteString(this._x),
@@ -111,6 +113,7 @@ export class TransferTransaction implements ITransaction {
   public toString(): string {
     return dedent`
       TransferTransaction
+        Source State Hash: ${this.sourceStateHash.toString()}
         Lock Script: 
           ${this.lockScript.toString()}
         Recipient: ${this.recipient.toString()}

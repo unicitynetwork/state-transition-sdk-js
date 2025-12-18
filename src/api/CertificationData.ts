@@ -93,7 +93,7 @@ export class CertificationData {
   public static async fromMintTransaction(transaction: MintTransaction): Promise<CertificationData> {
     const signingService = await MintSigningService.create(transaction.tokenId);
 
-    const sourceStateHash = await transaction.calculateSourceStateHash();
+    const sourceStateHash = await transaction.calculateStateHash();
     const transactionHash = await transaction.calculateTransactionHash();
 
     const signatureDataHash = await new DataHasher(HashAlgorithm.SHA256)
@@ -110,7 +110,7 @@ export class CertificationData {
   ): Promise<CertificationData> {
     unlockScript = new Uint8Array(unlockScript);
 
-    const sourceStateHash = await transaction.calculateSourceStateHash();
+    const sourceStateHash = await transaction.calculateStateHash();
     const transactionHash = await transaction.calculateTransactionHash();
 
     return CertificationData.create(transaction.lockScript, sourceStateHash, transactionHash, unlockScript);

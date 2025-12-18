@@ -47,7 +47,8 @@ describe('Transition', () => {
       ),
     );
 
-    const transferTransaction = TransferTransaction.create(
+    const transferTransaction = await TransferTransaction.create(
+      token,
       predicate,
       await PayToScriptHash.create(predicate),
       crypto.getRandomValues(new Uint8Array(32)),

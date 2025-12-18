@@ -45,8 +45,8 @@ export class CertifiedMintTransaction implements ITransaction {
     return new CertifiedMintTransaction(await MintTransaction.fromCBOR(data[0]), InclusionProof.fromCBOR(data[1]));
   }
 
-  public calculateSourceStateHash(): Promise<DataHash> {
-    return this.transaction.calculateSourceStateHash();
+  public calculateStateHash(): Promise<DataHash> {
+    return this.transaction.calculateStateHash();
   }
 
   public calculateTransactionHash(): Promise<DataHash> {

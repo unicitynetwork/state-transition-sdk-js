@@ -22,7 +22,7 @@ export class CertifiedMintTransactionVerificationRule {
     if (
       !areUint8ArraysEqual(
         PayToPublicKeyPredicate.create(signingService).encode(),
-        genesis.inclusionProof.certificationData.lockScript.encode(),
+        genesis.inclusionProof.certificationData?.lockScript.encode(),
       )
     ) {
       return new VerificationResult(

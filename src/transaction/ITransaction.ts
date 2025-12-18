@@ -11,6 +11,6 @@ export interface ITransaction {
 
   readonly x: Uint8Array;
 
-  calculateSourceStateHash(): Promise<DataHash>;
+  calculateStateHash(): Promise<DataHash>;
   calculateTransactionHash(): Promise<DataHash>;
 }

@@ -39,7 +39,7 @@ export class StateId {
   }
 
   public static async fromTransaction(transaction: ITransaction): Promise<StateId> {
-    return StateId.create(transaction.lockScript.encode(), await transaction.calculateSourceStateHash());
+    return StateId.create(transaction.lockScript.encode(), await transaction.calculateStateHash());
   }
 
   /**
