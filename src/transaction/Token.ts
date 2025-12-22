@@ -120,9 +120,19 @@ export class Token {
       transferResults.push(result);
 
       if (result.status !== VerificationStatus.OK) {
+        results.push(
+          new VerificationResult(
+            'TokenTransferVerification',
+            VerificationStatus.FAIL,
+            `Transaction[${i}] verification failed.`,
+            transferResults,
+          ),
+        );
         return TokenVerificationResult.fail(results);
       }
     }
+
+    results.push(new VerificationResult('TokenTransferVerification', VerificationStatus.OK, ``, transferResults));
 
     return TokenVerificationResult.ok(results);
   }
