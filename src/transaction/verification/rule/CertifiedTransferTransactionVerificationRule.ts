@@ -69,6 +69,6 @@ export class CertifiedTransferTransactionVerificationRule {
       );
     }
 
-    return new VerificationResult('CertifiedTransferTransactionVerificationRule', VerificationStatus.OK, '', [result]);
+    return new VerificationResult('CertifiedTransferTransactionVerificationRule', VerificationStatus.OK, '', results);
   }
 }

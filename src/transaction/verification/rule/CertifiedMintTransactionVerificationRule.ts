@@ -18,35 +18,41 @@ export class CertifiedMintTransactionVerificationRule {
     predicateVerifier: PredicateVerifierFactory,
     genesis: CertifiedMintTransaction,
   ): Promise<VerificationResult<VerificationStatus>> {
+    const results: VerificationResult<unknown>[] = [];
+
     const signingService = await MintSigningService.create(genesis.tokenId);
-    if (
-      !areUint8ArraysEqual(
-        PayToPublicKeyPredicate.create(signingService).encode(),
-        genesis.inclusionProof.certificationData?.lockScript.encode(),
-      )
-    ) {
+    let result: VerificationResult<unknown> = areUint8ArraysEqual(
+      PayToPublicKeyPredicate.create(signingService).encode(),
+      genesis.inclusionProof.certificationData?.lockScript.encode(),
+    )
+      ? new VerificationResult('IsLockScriptValidVerificationRule', VerificationStatus.OK)
+      : new VerificationResult('IsLockScriptValidVerificationRule', VerificationStatus.FAIL);
+    results.push(result);
+    if (result.status !== VerificationStatus.OK) {
       return new VerificationResult(
         'CertifiedMintTransactionVerificationRule',
         VerificationStatus.FAIL,
-        'Invalid lock script in genesis transaction.',
+        'Invalid lock script',
+        results,
       );
     }
 
-    const result = await InclusionProofVerificationRule.verify(
+    result = await InclusionProofVerificationRule.verify(
       trustBase,
       predicateVerifier,
       genesis.inclusionProof,
       await StateId.fromTransaction(genesis),
     );
+    results.push(result);
     if (result.status !== InclusionProofVerificationStatus.OK) {
       return new VerificationResult(
         'CertifiedMintTransactionVerificationRule',
         VerificationStatus.FAIL,
-        `Inclusion proof verification failed: ${result.status.toString()}`,
-        [result],
+        `Inclusion proof verification failed: ${result.status?.toString()}`,
+        results,
       );
     }
 
-    return new VerificationResult('CertifiedMintTransactionVerificationRule', VerificationStatus.OK, '', [result]);
+    return new VerificationResult('CertifiedMintTransactionVerificationRule', VerificationStatus.OK, '', results);
   }
 }

@@ -20,7 +20,6 @@ export class VerificationResult<S> {
         Message: ${this.message}
         Results: [
           ${this.results.map((result) => result.toString()).join('\n')}
-        ]
-    `;
+        ]`;
   }
 }
