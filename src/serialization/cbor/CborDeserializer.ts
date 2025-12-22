@@ -8,7 +8,7 @@ export class CborDeserializer {
   public static decodeArray(data: Uint8Array): Uint8Array[] {
     const reader = new CborReader(data);
     const length = reader.readLength(MajorType.ARRAY);
-    if (length > BigInt(Number.MAX_SAFE_INTEGER)) {
+    if (length > 0xffffffff) {
       throw new CborError('Array too long.');
     }
 
@@ -35,7 +35,7 @@ export class CborDeserializer {
   public static decodeByteString(data: Uint8Array): Uint8Array {
     const reader = new CborReader(data);
     const length = reader.readLength(MajorType.BYTE_STRING);
-    if (length > BigInt(Number.MAX_SAFE_INTEGER)) {
+    if (length > 0xffffffff) {
       throw new CborError('Byte string too long.');
     }
     return reader.read(Number(length));
@@ -44,7 +44,7 @@ export class CborDeserializer {
   public static decodeMap(data: Uint8Array): CborMapEntry[] {
     const reader = new CborReader(data);
     const length = reader.readLength(MajorType.MAP);
-    if (length > BigInt(Number.MAX_SAFE_INTEGER)) {
+    if (length > 0xffffffff) {
       throw new CborError('Map too long.');
     }
 
