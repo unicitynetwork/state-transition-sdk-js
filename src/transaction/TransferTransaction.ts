@@ -1,6 +1,6 @@
 import { CertifiedTransferTransaction } from './CertifiedTransferTransaction.js';
 import { ITransaction } from './ITransaction.js';
-import { PayToScriptHash } from './Recipient.js';
+import { PayToScriptHash } from './PayToScriptHash.js';
 import { Token } from './Token.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { InclusionProof } from '../api/InclusionProof.js';
@@ -14,7 +14,7 @@ import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
 import { IPredicate } from '../predicate/IPredicate.js';
-import { PredicateVerifierFactory } from '../predicate/verification/PredicateVerifierFactory.js';
+import { PredicateVerifier } from '../predicate/verification/PredicateVerifier.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../serialization/HexConverter.js';
@@ -52,13 +52,13 @@ export class TransferTransaction implements ITransaction {
     return new TransferTransaction(sourceStateHash, owner, recipient, x, data);
   }
 
-  public static fromCBOR(bytes: Uint8Array): TransferTransaction {
+  public static async fromCBOR(bytes: Uint8Array): Promise<TransferTransaction> {
     const data = CborDeserializer.decodeArray(bytes);
 
     return new TransferTransaction(
       DataHash.fromCBOR(data[0]),
       EncodedPredicate.decode(CborDeserializer.decodeByteString(data[1])),
-      PayToScriptHash.fromCBOR(data[2]),
+      await PayToScriptHash.fromCBOR(data[2]),
       CborDeserializer.decodeByteString(data[3]),
       CborDeserializer.decodeByteString(data[4]),
     );
@@ -94,7 +94,7 @@ export class TransferTransaction implements ITransaction {
 
   public async toCertifiedTransaction(
     trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifierFactory,
+    predicateVerifier: PredicateVerifier,
     inclusionProof: InclusionProof,
   ): Promise<CertifiedTransferTransaction> {
     const result = await InclusionProofVerificationRule.verify(

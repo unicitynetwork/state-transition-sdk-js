@@ -1,5 +1,7 @@
+import { PredicateEngine } from './PredicateEngine.js';
+
 export interface IPredicate {
-  get type(): bigint;
+  get engine(): PredicateEngine;
 
   encode(): Uint8Array;
 

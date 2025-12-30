@@ -1,5 +1,5 @@
 import { ITransaction } from './ITransaction.js';
-import { PayToScriptHash } from './Recipient.js';
+import { PayToScriptHash } from './PayToScriptHash.js';
 import { TransferTransaction } from './TransferTransaction.js';
 import { InclusionProof } from '../api/InclusionProof.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
@@ -34,9 +34,12 @@ export class CertifiedTransferTransaction implements ITransaction {
     return this.transaction.x;
   }
 
-  public static fromCBOR(bytes: Uint8Array): CertifiedTransferTransaction {
+  public static async fromCBOR(bytes: Uint8Array): Promise<CertifiedTransferTransaction> {
     const data = CborDeserializer.decodeArray(bytes);
-    return new CertifiedTransferTransaction(TransferTransaction.fromCBOR(data[0]), InclusionProof.fromCBOR(data[1]));
+    return new CertifiedTransferTransaction(
+      await TransferTransaction.fromCBOR(data[0]),
+      InclusionProof.fromCBOR(data[1]),
+    );
   }
 
   public calculateStateHash(): Promise<DataHash> {

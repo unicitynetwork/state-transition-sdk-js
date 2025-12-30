@@ -1,6 +1,6 @@
 import { ITransaction } from './ITransaction.js';
 import { MintTransaction } from './MintTransaction.js';
-import { PayToScriptHash } from './Recipient.js';
+import { PayToScriptHash } from './PayToScriptHash.js';
 import { TokenId } from './TokenId.js';
 import { TokenType } from './TokenType.js';
 import { InclusionProof } from '../api/InclusionProof.js';

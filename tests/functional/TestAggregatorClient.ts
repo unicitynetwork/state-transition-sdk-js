@@ -8,15 +8,26 @@ import { StateId } from '../../src/api/StateId.js';
 import { DataHasher } from '../../src/crypto/hash/DataHasher.js';
 import { DataHasherFactory } from '../../src/crypto/hash/DataHasherFactory.js';
 import { HashAlgorithm } from '../../src/crypto/hash/HashAlgorithm.js';
-import { Signature } from '../../src/crypto/secp256k1/Signature.js';
 import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
-import { CborSerializer } from '../../src/serialization/cbor/CborSerializer.js';
+import { BuiltInPredicateVerifierFactory } from '../../src/predicate/builtin/BuiltInPredicateVerifierFactory.js';
+import { PayToPublicKeyPredicateVerifier } from '../../src/predicate/builtin/verification/PayToPublicKeyPredicateVerifier.js';
+import { EncodedPredicate } from '../../src/predicate/EncodedPredicate.js';
+import { PredicateEngine } from '../../src/predicate/PredicateEngine.js';
+import { PredicateVerifier } from '../../src/predicate/verification/PredicateVerifier.js';
 import { SparseMerkleTree } from '../../src/smt/plain/SparseMerkleTree.js';
 import { createRootTrustBase } from '../utils/RootTrustBaseFixture.js';
 import { createUnicityCertificate } from '../utils/UnicityCertificateFixture.js';
 
 export class TestAggregatorClient implements IAggregatorClient {
   public readonly rootTrustBase: RootTrustBase;
+  private readonly predicateVerifier = new PredicateVerifier(
+    new Map([
+      [
+        PredicateEngine.BUILT_IN,
+        new BuiltInPredicateVerifierFactory(new Map([[1n, new PayToPublicKeyPredicateVerifier()]])),
+      ],
+    ]),
+  );
   private readonly requests: Map<bigint, CertificationData> = new Map();
   private readonly signingService = new SigningService(SigningService.generatePrivateKey());
 
@@ -44,18 +55,10 @@ export class TestAggregatorClient implements IAggregatorClient {
 
   public async submitCertificationRequest(certificationData: CertificationData): Promise<CertificationResponse> {
     const stateId = await StateId.fromCertificationData(certificationData);
-    // TODO: Currently it is working with old version of aggregator, so lockScript is just public key
-    const result = await SigningService.verifyWithPublicKey(
-      await new DataHasher(HashAlgorithm.SHA256)
-        .update(
-          CborSerializer.encodeArray(
-            certificationData.sourceStateHash.toCBOR(),
-            certificationData.transactionHash.toCBOR(),
-          ),
-        )
-        .digest(),
-      Signature.decode(certificationData.unlockScript).bytes,
-      certificationData.lockScript.encode(),
+
+    const result = await this.predicateVerifier.verify(
+      EncodedPredicate.decode(certificationData.lockScript.encode()),
+      certificationData,
     );
 
     if (!result) {

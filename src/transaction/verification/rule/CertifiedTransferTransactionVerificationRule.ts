@@ -1,12 +1,12 @@
 import { InclusionProofVerificationRule, InclusionProofVerificationStatus } from './InclusionProofVerificationRule.js';
 import { RootTrustBase } from '../../../api/bft/RootTrustBase.js';
 import { StateId } from '../../../api/StateId.js';
-import { PredicateVerifierFactory } from '../../../predicate/verification/PredicateVerifierFactory.js';
+import { PredicateVerifier } from '../../../predicate/verification/PredicateVerifier.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
 import { CertifiedTransferTransaction } from '../../CertifiedTransferTransaction.js';
 import { ITransaction } from '../../ITransaction.js';
-import { PayToScriptHash } from '../../Recipient.js';
+import { PayToScriptHash } from '../../PayToScriptHash.js';
 import { Token } from '../../Token.js';
 
 /**
@@ -15,7 +15,7 @@ import { Token } from '../../Token.js';
 export class CertifiedTransferTransactionVerificationRule {
   public static async verify(
     trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifierFactory,
+    predicateVerifier: PredicateVerifier,
     token: Token,
     transaction: CertifiedTransferTransaction,
   ): Promise<VerificationResult<VerificationStatus>> {

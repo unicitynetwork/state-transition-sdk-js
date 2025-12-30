@@ -2,12 +2,13 @@ import { InclusionProofVerificationRule, InclusionProofVerificationStatus } from
 import { RootTrustBase } from '../../../api/bft/RootTrustBase.js';
 import { StateId } from '../../../api/StateId.js';
 import { MintSigningService } from '../../../crypto/MintSigningService.js';
-import { PayToPublicKeyPredicate } from '../../../predicate/PayToPublicKeyPredicate.js';
-import { PredicateVerifierFactory } from '../../../predicate/verification/PredicateVerifierFactory.js';
+import { PayToPublicKeyPredicate } from '../../../predicate/builtin/PayToPublicKeyPredicate.js';
+import { PredicateVerifier } from '../../../predicate/verification/PredicateVerifier.js';
 import { areUint8ArraysEqual } from '../../../util/TypedArrayUtils.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
 import { CertifiedMintTransaction } from '../../CertifiedMintTransaction.js';
+import { HexConverter } from '../../../serialization/HexConverter.js';
 
 /**
  * Genesis verification rule.
@@ -15,7 +16,7 @@ import { CertifiedMintTransaction } from '../../CertifiedMintTransaction.js';
 export class CertifiedMintTransactionVerificationRule {
   public static async verify(
     trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifierFactory,
+    predicateVerifier: PredicateVerifier,
     genesis: CertifiedMintTransaction,
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];

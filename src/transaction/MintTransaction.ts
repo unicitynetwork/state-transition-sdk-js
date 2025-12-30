@@ -1,12 +1,14 @@
 import { CertifiedMintTransaction } from './CertifiedMintTransaction.js';
 import { ITransaction } from './ITransaction.js';
 import { MintTransactionState } from './MintTransactionState.js';
-import { PayToScriptHash } from './Recipient.js';
+import { PayToScriptHash } from './PayToScriptHash.js';
 import { TokenId } from './TokenId.js';
 import { TokenType } from './TokenType.js';
 import { InclusionProof } from '../api/InclusionProof.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
+import { PayToPublicKeyPredicate } from '../predicate/builtin/PayToPublicKeyPredicate.js';
+import { PredicateVerifier } from '../predicate/verification/PredicateVerifier.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import {
@@ -18,8 +20,6 @@ import { StateId } from '../api/StateId.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { MintSigningService } from '../crypto/MintSigningService.js';
 import { IPredicate } from '../predicate/IPredicate.js';
-import { PayToPublicKeyPredicate } from '../predicate/PayToPublicKeyPredicate.js';
-import { PredicateVerifierFactory } from '../predicate/verification/PredicateVerifierFactory.js';
 import { HexConverter } from '../serialization/HexConverter.js';
 import { dedent } from '../util/StringUtils.js';
 
@@ -52,12 +52,12 @@ export class MintTransaction implements ITransaction {
     return new MintTransaction(PayToPublicKeyPredicate.create(signingService), recipient, tokenId, tokenType, data);
   }
 
-  public static fromCBOR(bytes: Uint8Array): Promise<MintTransaction> {
+  public static async fromCBOR(bytes: Uint8Array): Promise<MintTransaction> {
     const data = CborDeserializer.decodeArray(bytes);
     const aux = CborDeserializer.decodeArray(data[2]);
 
     return MintTransaction.create(
-      PayToScriptHash.fromCBOR(data[0]),
+      await PayToScriptHash.fromCBOR(data[0]),
       TokenId.fromCBOR(data[1]),
       TokenType.fromCBOR(aux[0]),
       CborDeserializer.decodeByteString(aux[1]),
@@ -90,7 +90,7 @@ export class MintTransaction implements ITransaction {
 
   public async toCertifiedTransaction(
     trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifierFactory,
+    predicateVerifier: PredicateVerifier,
     inclusionProof: InclusionProof,
   ): Promise<CertifiedMintTransaction> {
     const result = await InclusionProofVerificationRule.verify(

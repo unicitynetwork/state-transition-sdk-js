@@ -8,8 +8,10 @@ import { DataHasherFactory } from '../../../src/crypto/hash/DataHasherFactory.js
 import { HashAlgorithm } from '../../../src/crypto/hash/HashAlgorithm.js';
 import { NodeDataHasher } from '../../../src/crypto/hash/NodeDataHasher.js';
 import { SigningService } from '../../../src/crypto/secp256k1/SigningService.js';
-import { PayToPublicKeyPredicateVerifier } from '../../../src/predicate/verification/PayToPublicKeyPredicateVerifier.js';
-import { PredicateVerifierFactory } from '../../../src/predicate/verification/PredicateVerifierFactory.js';
+import { BuiltInPredicateVerifierFactory } from '../../../src/predicate/builtin/BuiltInPredicateVerifierFactory.js';
+import { PayToPublicKeyPredicateVerifier } from '../../../src/predicate/builtin/verification/PayToPublicKeyPredicateVerifier.js';
+import { PredicateEngine } from '../../../src/predicate/PredicateEngine.js';
+import { PredicateVerifier } from '../../../src/predicate/verification/PredicateVerifier.js';
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../../src/serialization/HexConverter.js';
 import { SparseMerkleTree } from '../../../src/smt/plain/SparseMerkleTree.js';
@@ -26,7 +28,14 @@ describe('InclusionProof', () => {
     new Uint8Array(HexConverter.decode('0000000000000000000000000000000000000000000000000000000000000001')),
   );
 
-  const predicateVerifierFactory = new PredicateVerifierFactory(new Map([[1n, new PayToPublicKeyPredicateVerifier()]]));
+  const predicateVerifierFactory = new PredicateVerifier(
+    new Map([
+      [
+        PredicateEngine.BUILT_IN,
+        new BuiltInPredicateVerifierFactory(new Map([[1n, new PayToPublicKeyPredicateVerifier()]])),
+      ],
+    ]),
+  );
 
   let certificationData: CertificationData;
   let merkleTreePath: SparseMerkleTreePath;
@@ -157,11 +166,19 @@ describe('InclusionProof', () => {
     const stateId = await StateId.fromCertificationData(certificationData);
 
     const inclusionProof = new InclusionProof(merkleTreePath, certificationData, unicityCertificate);
+    const predicateVerifier = new PredicateVerifier(
+      new Map([
+        [
+          PredicateEngine.BUILT_IN,
+          new BuiltInPredicateVerifierFactory(new Map([[1n, new PayToPublicKeyPredicateVerifier()]])),
+        ],
+      ]),
+    );
 
     await expect(
       InclusionProofVerificationRule.verify(
         createRootTrustBase(HexConverter.decode('0000000000000000000000000000000000000000000000000000000000000001')),
-        new PredicateVerifierFactory(new Map([[1n, new PayToPublicKeyPredicateVerifier()]])),
+        predicateVerifier,
         inclusionProof,
         stateId,
       ).then((result) => result.status),
