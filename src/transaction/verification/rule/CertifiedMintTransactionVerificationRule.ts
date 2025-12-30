@@ -8,7 +8,6 @@ import { areUint8ArraysEqual } from '../../../util/TypedArrayUtils.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
 import { CertifiedMintTransaction } from '../../CertifiedMintTransaction.js';
-import { HexConverter } from '../../../serialization/HexConverter.js';
 
 /**
  * Genesis verification rule.

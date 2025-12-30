@@ -1,4 +1,3 @@
-import { PayToPublicKeyPredicate } from './builtin/PayToPublicKeyPredicate.js';
 import { IPredicate } from './IPredicate.js';
 import { PredicateEngine } from './PredicateEngine.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';

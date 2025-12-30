@@ -28,11 +28,11 @@ describe('CertificationResponse', () => {
     response = await CertificationResponse.createWithReceipt(
       signingService,
       CertificationData.fromJSON({
-        publicKey: '0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
-        signature:
-          '8c3f91708445bf0ddec220f0821461bcf84860a8769275f9930e798d1f645d157bb6a2998c61941108b0993c5aed6a7b92ccf31d11b50fe80d9ff93da392336a01',
+        ownerPredicate: '8301410158210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
         sourceStateHash: '00000000000000000000000000000000000000000000000000000000000000000000',
         transactionHash: '00000000000000000000000000000000000000000000000000000000000000000000',
+        witness:
+          '8c3f91708445bf0ddec220f0821461bcf84860a8769275f9930e798d1f645d157bb6a2998c61941108b0993c5aed6a7b92ccf31d11b50fe80d9ff93da392336a01',
       }),
       CertificationStatus.SUCCESS,
     );
@@ -73,11 +73,11 @@ describe('CertificationResponse', () => {
     );
 
     const certificationData = CertificationData.fromJSON({
-      publicKey: '0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
-      signature:
-        '8c3f91708445bf0ddec220f0821461bcf84860a8769275f9930e798d1f645d157bb6a2998c61941108b0993c5aed6a7b92ccf31d11b50fe80d9ff93da392336a01',
+      ownerPredicate: '8301410158210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
       sourceStateHash: '00000000000000000000000000000000000000000000000000000000000000000000',
       transactionHash: '00000000000000000000000000000000000000000000000000000000000000000000',
+      witness:
+        '8c3f91708445bf0ddec220f0821461bcf84860a8769275f9930e798d1f645d157bb6a2998c61941108b0993c5aed6a7b92ccf31d11b50fe80d9ff93da392336a01',
     });
     let response = await CertificationResponse.createWithReceipt(
       signingService,
@@ -93,11 +93,11 @@ describe('CertificationResponse', () => {
 
     // Test with wrong signature should fail verification
     const invalidCertificationData = CertificationData.fromJSON({
-      publicKey: '0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
-      signature:
-        '8c3f91708445bf0ddec220f0821461bcf84860a8769275f9930e798d1f645d157bb6a2998c61941108b0993c5aed6a7b92ccf31d11b50fe80d9ff93da392336a00',
+      ownerPredicate: '8301410158210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
       sourceStateHash: '00000000000000000000000000000000000000000000000000000000000000000000',
       transactionHash: '00000000000000000000000000000000000000000000000000000000000000000000',
+      witness:
+        '8c3f91708445bf0ddec220f0821461bcf84860a8769275f9930e798d1f645d157bb6a2998c61941108b0993c5aed6a7b92ccf31d11b50fe80d9ff93da392336a00',
     });
 
     await expect(response.verifyReceipt(invalidCertificationData)).resolves.toBe(false);

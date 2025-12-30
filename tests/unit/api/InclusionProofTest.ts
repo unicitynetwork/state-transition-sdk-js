@@ -44,11 +44,11 @@ describe('InclusionProof', () => {
 
   beforeAll(async () => {
     certificationData = CertificationData.fromJSON({
-      publicKey: '0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
-      signature:
-        '8c3f91708445bf0ddec220f0821461bcf84860a8769275f9930e798d1f645d157bb6a2998c61941108b0993c5aed6a7b92ccf31d11b50fe80d9ff93da392336a01',
+      ownerPredicate: '8301410158210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
       sourceStateHash: '00000000000000000000000000000000000000000000000000000000000000000000',
       transactionHash: '00000000000000000000000000000000000000000000000000000000000000000000',
+      witness:
+        '8c3f91708445bf0ddec220f0821461bcf84860a8769275f9930e798d1f645d157bb6a2998c61941108b0993c5aed6a7b92ccf31d11b50fe80d9ff93da392336a01',
     });
 
     const smt = new SparseMerkleTree(new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher));
@@ -119,12 +119,12 @@ describe('InclusionProof', () => {
     const invalidTransactionHashInclusionProof = new InclusionProof(
       merkleTreePath,
       CertificationData.fromJSON({
-        publicKey: HexConverter.encode(certificationData.lockScript.encode()),
-        signature: HexConverter.encode(certificationData.unlockScript),
+        ownerPredicate: HexConverter.encode(certificationData.lockScript.encode()),
         sourceStateHash: certificationData.sourceStateHash.toJSON(),
         transactionHash: DataHash.fromImprint(
           HexConverter.decode('00000000000000000000000000000000000000000000000000000000000000000001'),
         ).toJSON(),
+        witness: HexConverter.encode(certificationData.unlockScript),
       }),
       unicityCertificate,
     );
@@ -145,12 +145,12 @@ describe('InclusionProof', () => {
     const inclusionProof = new InclusionProof(
       merkleTreePath,
       CertificationData.fromJSON({
-        publicKey: HexConverter.encode(certificationData.lockScript.encode()),
-        signature: HexConverter.encode(certificationData.unlockScript),
+        ownerPredicate: HexConverter.encode(certificationData.lockScript.encode()),
         sourceStateHash: certificationData.sourceStateHash.toJSON(),
         transactionHash: DataHash.fromImprint(
           HexConverter.decode('00000000000000000000000000000000000000000000000000000000000000000001'),
         ).toJSON(),
+        witness: HexConverter.encode(certificationData.unlockScript),
       }),
       unicityCertificate,
     );

@@ -21,13 +21,13 @@ import { dedent } from '../util/StringUtils.js';
  */
 export interface ICertificationDataJson {
   /** The lock predicate as a hex string. */
-  readonly publicKey: string;
-  /** The unlock predicate as a hex string. */
-  readonly signature: string;
+  readonly ownerPredicate: string;
   /** The source state hash imprint as a hex string. */
   readonly sourceStateHash: string;
   /** The transaction hash imprint as a hex string. */
   readonly transactionHash: string;
+  /** The witness as a hex string. */
+  readonly witness: string;
 }
 
 export class CertificationData {
@@ -83,10 +83,10 @@ export class CertificationData {
     }
 
     return new CertificationData(
-      EncodedPredicate.decode(HexConverter.decode(data.publicKey)),
+      EncodedPredicate.decode(HexConverter.decode(data.ownerPredicate)),
       DataHash.fromJSON(data.sourceStateHash),
       DataHash.fromJSON(data.transactionHash),
-      HexConverter.decode(data.signature),
+      HexConverter.decode(data.witness),
     );
   }
 
@@ -127,14 +127,14 @@ export class CertificationData {
     return (
       typeof data === 'object' &&
       data !== null &&
-      'publicKey' in data &&
-      typeof data.publicKey === 'string' &&
+      'ownerPredicate' in data &&
+      typeof data.ownerPredicate === 'string' &&
       'sourceStateHash' in data &&
       typeof data.sourceStateHash === 'string' &&
       'transactionHash' in data &&
       typeof data.transactionHash === 'string' &&
-      'signature' in data &&
-      typeof data.signature === 'string'
+      'witness' in data &&
+      typeof data.witness === 'string'
     );
   }
 
@@ -176,10 +176,10 @@ export class CertificationData {
    */
   public toJSON(): ICertificationDataJson {
     return {
-      publicKey: HexConverter.encode(this.lockScript.encode()),
-      signature: HexConverter.encode(this._unlockScript),
+      ownerPredicate: HexConverter.encode(this.lockScript.encode()),
       sourceStateHash: this.sourceStateHash.toJSON(),
       transactionHash: this.transactionHash.toJSON(),
+      witness: HexConverter.encode(this._unlockScript),
     };
   }
 
@@ -190,10 +190,10 @@ export class CertificationData {
   public toString(): string {
     return dedent`
       Certification Data
-        Lock Script: 
+        Owner Predicate: 
           ${this.lockScript.toString()}
         Source State Hash: ${this.sourceStateHash.toString()}
         Transaction Hash: ${this.transactionHash.toString()}
-        Unlock script: ${HexConverter.encode(this._unlockScript)}`;
+        Witness: ${HexConverter.encode(this._unlockScript)}`;
   }
 }
