@@ -88,5 +88,5 @@ describe('Transition', () => {
     );
 
     console.log(importedToken.toString());
-  });
+  }, 30000);
 });

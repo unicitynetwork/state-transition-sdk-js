@@ -61,6 +61,6 @@ export class CertifiedMintTransaction implements ITransaction {
     return dedent`
       CertifiedMintTransaction
         ${this.transaction.toString()}
-        Inclusion Proof: ${this.inclusionProof.toString()}`;
+        ${this.inclusionProof.toString()}`;
   }
 }

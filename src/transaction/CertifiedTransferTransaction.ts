@@ -58,6 +58,6 @@ export class CertifiedTransferTransaction implements ITransaction {
     return dedent`
       CertifiedTransferTransaction
         ${this.transaction.toString()}
-        Inclusion Proof: ${this.inclusionProof.toString()}`;
+        ${this.inclusionProof.toString()}`;
   }
 }
