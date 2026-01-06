@@ -13,7 +13,7 @@ export class BuiltInPredicateVerifierFactory implements IPredicateVerifierFactor
     predicate: IPredicate,
     certificationData: CertificationData,
   ): Promise<VerificationResult<VerificationStatus>> {
-    const data = CborDeserializer.decodeArray(predicate.encode());
+    const data = CborDeserializer.decodeArray(predicate.toCBOR());
     const type = CborDeserializer.decodeUnsignedInteger(CborDeserializer.decodeByteString(data[1]));
 
     const factory = this.factories.get(type);

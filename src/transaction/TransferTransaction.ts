@@ -57,7 +57,7 @@ export class TransferTransaction implements ITransaction {
 
     return new TransferTransaction(
       DataHash.fromCBOR(data[0]),
-      EncodedPredicate.decode(CborDeserializer.decodeByteString(data[1])),
+      EncodedPredicate.fromCBOR(CborDeserializer.decodeByteString(data[1])),
       await PayToScriptHash.fromCBOR(data[2]),
       CborDeserializer.decodeByteString(data[3]),
       CborDeserializer.decodeByteString(data[4]),
@@ -85,7 +85,7 @@ export class TransferTransaction implements ITransaction {
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
       this.sourceStateHash.toCBOR(),
-      CborSerializer.encodeByteString(this.lockScript.encode()),
+      CborSerializer.encodeByteString(this.lockScript.toCBOR()),
       this.recipient.toCBOR(),
       CborSerializer.encodeByteString(this._x),
       CborSerializer.encodeByteString(this._data),

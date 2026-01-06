@@ -5,6 +5,7 @@ import { IAggregatorClient } from './IAggregatorClient.js';
 import { InclusionProofResponse } from './InclusionProofResponse.js';
 import { JsonRpcHttpTransport } from './json-rpc/JsonRpcHttpTransport.js';
 import { StateId } from './StateId.js';
+import { HexConverter } from '../serialization/HexConverter.js';
 
 /**
  * Client implementation for communicating with an aggregator via JSON-RPC.
@@ -59,7 +60,7 @@ export class AggregatorClient implements IAggregatorClient {
 
     const response = await this.transport.request(
       'certification_request',
-      request.toJSON(),
+      HexConverter.encode(request.toCBOR()),
       this.key ? new Headers([['X-API-Key', this.key]]) : undefined,
     );
 

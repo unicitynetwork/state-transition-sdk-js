@@ -119,7 +119,7 @@ describe('InclusionProof', () => {
     const invalidTransactionHashInclusionProof = new InclusionProof(
       merkleTreePath,
       CertificationData.fromJSON({
-        ownerPredicate: HexConverter.encode(certificationData.lockScript.encode()),
+        ownerPredicate: HexConverter.encode(certificationData.lockScript.toCBOR()),
         sourceStateHash: certificationData.sourceStateHash.toJSON(),
         transactionHash: DataHash.fromImprint(
           HexConverter.decode('00000000000000000000000000000000000000000000000000000000000000000001'),
@@ -145,7 +145,7 @@ describe('InclusionProof', () => {
     const inclusionProof = new InclusionProof(
       merkleTreePath,
       CertificationData.fromJSON({
-        ownerPredicate: HexConverter.encode(certificationData.lockScript.encode()),
+        ownerPredicate: HexConverter.encode(certificationData.lockScript.toCBOR()),
         sourceStateHash: certificationData.sourceStateHash.toJSON(),
         transactionHash: DataHash.fromImprint(
           HexConverter.decode('00000000000000000000000000000000000000000000000000000000000000000001'),

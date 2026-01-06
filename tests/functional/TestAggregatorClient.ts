@@ -57,7 +57,7 @@ export class TestAggregatorClient implements IAggregatorClient {
     const stateId = await StateId.fromCertificationData(certificationData);
 
     const result = await this.predicateVerifier.verify(
-      EncodedPredicate.decode(certificationData.lockScript.encode()),
+      EncodedPredicate.fromCBOR(certificationData.lockScript.toCBOR()),
       certificationData,
     );
 

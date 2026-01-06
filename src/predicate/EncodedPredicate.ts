@@ -15,7 +15,7 @@ export class EncodedPredicate implements IPredicate {
     this._params = new Uint8Array(_params);
   }
 
-  public static decode(bytes: Uint8Array): EncodedPredicate {
+  public static fromCBOR(bytes: Uint8Array): EncodedPredicate {
     const data = CborDeserializer.decodeArray(bytes);
     const engine = CborDeserializer.decodeUnsignedInteger(data[0]);
     if (engine > Number.MAX_SAFE_INTEGER || !PredicateEngine[Number(engine)]) {
@@ -29,7 +29,7 @@ export class EncodedPredicate implements IPredicate {
     );
   }
 
-  public encode(): Uint8Array {
+  public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
       CborSerializer.encodeUnsignedInteger(this.engine),
       CborSerializer.encodeByteString(this._code),

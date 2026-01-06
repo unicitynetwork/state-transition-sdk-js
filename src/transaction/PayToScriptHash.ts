@@ -16,7 +16,7 @@ export class PayToScriptHash {
   }
 
   public static async create(predicate: IPredicate): Promise<PayToScriptHash> {
-    const hash = await new DataHasher(HashAlgorithm.SHA256).update(predicate.encode()).digest();
+    const hash = await new DataHasher(HashAlgorithm.SHA256).update(predicate.toCBOR()).digest();
     return PayToScriptHash.createFromHash(hash);
   }
 
