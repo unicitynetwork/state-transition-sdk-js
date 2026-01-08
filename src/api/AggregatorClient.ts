@@ -46,7 +46,9 @@ export class AggregatorClient implements IAggregatorClient {
    */
   public async getInclusionProof(stateId: StateId): Promise<InclusionProofResponse> {
     const data = { stateId: stateId.toJSON() };
-    return InclusionProofResponse.fromJSON(await this.transport.request('get_inclusion_proof.v2', data));
+    return InclusionProofResponse.fromCBOR(
+      HexConverter.decode((await this.transport.request('get_inclusion_proof.v2', data)) as string),
+    );
   }
 
   /**

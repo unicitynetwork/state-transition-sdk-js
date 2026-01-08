@@ -1,6 +1,7 @@
 import { IPredicate } from './IPredicate.js';
 import { PredicateEngine } from './PredicateEngine.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
+import { CborError } from '../serialization/cbor/CborError.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../serialization/HexConverter.js';
 import { dedent } from '../util/StringUtils.js';
@@ -19,7 +20,7 @@ export class EncodedPredicate implements IPredicate {
     const data = CborDeserializer.decodeArray(bytes);
     const engine = CborDeserializer.decodeUnsignedInteger(data[0]);
     if (engine > Number.MAX_SAFE_INTEGER || !PredicateEngine[Number(engine)]) {
-      throw new Error('Invalid predicate engine.');
+      throw new CborError('Invalid predicate engine.');
     }
 
     return new EncodedPredicate(

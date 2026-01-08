@@ -44,6 +44,7 @@ export class TestAggregatorClient implements IAggregatorClient {
     const root = await this.smt.calculateRoot();
     return Promise.resolve(
       new InclusionProofResponse(
+        1n,
         new InclusionProof(
           root.getPath(stateId.toBitString().toBigInt()),
           certificationData ?? null,

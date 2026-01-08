@@ -1,8 +1,5 @@
 import { CertificationData } from '../../../src/api/CertificationData.js';
 import { CertificationRequest } from '../../../src/api/CertificationRequest.js';
-import { DataHash } from '../../../src/crypto/hash/DataHash.js';
-import { HashAlgorithm } from '../../../src/crypto/hash/HashAlgorithm.js';
-import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../../src/serialization/HexConverter.js';
 
 describe('CertificationRequest', () => {
