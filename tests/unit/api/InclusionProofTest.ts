@@ -87,13 +87,13 @@ describe('InclusionProof', () => {
     const inclusionProof = new InclusionProof(merkleTreePath, certificationData, unicityCertificate);
 
     expect(inclusionProof.toCBOR()).toStrictEqual(
-      CborSerializer.encodeArray(merkleTreePath.toCBOR(), certificationData.toCBOR(), unicityCertificate.toCBOR()),
+      CborSerializer.encodeArray(certificationData.toCBOR(), merkleTreePath.toCBOR(), unicityCertificate.toCBOR()),
     );
     expect(InclusionProof.fromCBOR(inclusionProof.toCBOR())).toStrictEqual(inclusionProof);
 
     expect(
       InclusionProof.fromCBOR(
-        CborSerializer.encodeArray(merkleTreePath.toCBOR(), CborSerializer.encodeNull(), unicityCertificate.toCBOR()),
+        CborSerializer.encodeArray(CborSerializer.encodeNull(), merkleTreePath.toCBOR(), unicityCertificate.toCBOR()),
       ),
     ).toStrictEqual(new InclusionProof(merkleTreePath, null, unicityCertificate));
   });
