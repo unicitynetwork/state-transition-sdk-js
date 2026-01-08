@@ -75,7 +75,6 @@ export class CertificationData {
    */
   public static fromJSON(data: unknown): CertificationData {
     if (!CertificationData.isJSON(data)) {
-      console.log(data);
       throw new InvalidJsonStructureError();
     }
 
