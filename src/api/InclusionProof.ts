@@ -10,7 +10,7 @@ import { dedent } from '../util/StringUtils.js';
  * Interface representing the JSON structure of an InclusionProof.
  */
 export interface IInclusionProofJson {
-  /** The authenticator as JSON or null. */
+  /** The certification data as JSON or null. */
   readonly certificationData: ICertificationDataJson | null;
   /** The sparse merkle tree path as JSON. */
   readonly merkleTreePath: ISparseMerkleTreePathJson;
@@ -27,7 +27,6 @@ export class InclusionProof {
    * @param merkleTreePath Sparse merkle tree path.
    * @param certificationData Certification data.
    * @param unicityCertificate Unicity certificate.
-   * @throws Error if authenticator and transactionHash are not both set or both null.
    */
   public constructor(
     public readonly merkleTreePath: SparseMerkleTreePath,
@@ -44,8 +43,8 @@ export class InclusionProof {
     const data = CborDeserializer.decodeArray(bytes);
 
     return new InclusionProof(
-      SparseMerkleTreePath.fromCBOR(data[0]),
-      CborDeserializer.decodeNullable(data[1], CertificationData.fromCBOR),
+      SparseMerkleTreePath.fromCBOR(data[1]),
+      CborDeserializer.decodeNullable(data[0], CertificationData.fromCBOR),
       UnicityCertificate.fromCBOR(data[2]),
     );
   }
@@ -83,8 +82,8 @@ export class InclusionProof {
    */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
-      this.merkleTreePath.toCBOR(),
       this.certificationData?.toCBOR() ?? CborSerializer.encodeNull(),
+      this.merkleTreePath.toCBOR(),
       this.unicityCertificate.toCBOR(),
     );
   }

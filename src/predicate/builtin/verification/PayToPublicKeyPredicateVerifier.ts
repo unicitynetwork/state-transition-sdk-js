@@ -15,7 +15,7 @@ export class PayToPublicKeyPredicateVerifier implements IPredicateVerifier {
     encodedPredicate: IPredicate,
     certificationData: CertificationData,
   ): Promise<VerificationResult<VerificationStatus>> {
-    const predicate = PayToPublicKeyPredicate.decode(encodedPredicate.encode());
+    const predicate = PayToPublicKeyPredicate.decode(encodedPredicate.toCBOR());
 
     if (certificationData === null) {
       return new VerificationResult(

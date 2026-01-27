@@ -44,6 +44,7 @@ export class TestAggregatorClient implements IAggregatorClient {
     const root = await this.smt.calculateRoot();
     return Promise.resolve(
       new InclusionProofResponse(
+        1n,
         new InclusionProof(
           root.getPath(stateId.toBitString().toBigInt()),
           certificationData ?? null,
@@ -57,7 +58,7 @@ export class TestAggregatorClient implements IAggregatorClient {
     const stateId = await StateId.fromCertificationData(certificationData);
 
     const result = await this.predicateVerifier.verify(
-      EncodedPredicate.decode(certificationData.lockScript.encode()),
+      EncodedPredicate.fromCBOR(certificationData.lockScript.toCBOR()),
       certificationData,
     );
 

@@ -1,6 +1,7 @@
 import { IPredicate } from './IPredicate.js';
 import { PredicateEngine } from './PredicateEngine.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
+import { CborError } from '../serialization/cbor/CborError.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../serialization/HexConverter.js';
 import { dedent } from '../util/StringUtils.js';
@@ -15,11 +16,11 @@ export class EncodedPredicate implements IPredicate {
     this._params = new Uint8Array(_params);
   }
 
-  public static decode(bytes: Uint8Array): EncodedPredicate {
+  public static fromCBOR(bytes: Uint8Array): EncodedPredicate {
     const data = CborDeserializer.decodeArray(bytes);
     const engine = CborDeserializer.decodeUnsignedInteger(data[0]);
     if (engine > Number.MAX_SAFE_INTEGER || !PredicateEngine[Number(engine)]) {
-      throw new Error('Invalid predicate engine.');
+      throw new CborError('Invalid predicate engine.');
     }
 
     return new EncodedPredicate(
@@ -29,7 +30,7 @@ export class EncodedPredicate implements IPredicate {
     );
   }
 
-  public encode(): Uint8Array {
+  public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
       CborSerializer.encodeUnsignedInteger(this.engine),
       CborSerializer.encodeByteString(this._code),

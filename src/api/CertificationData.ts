@@ -13,10 +13,6 @@ import { TransferTransaction } from '../transaction/TransferTransaction.js';
 import { dedent } from '../util/StringUtils.js';
 
 /**
- * TODO: Temporarily names are left as they are used in aggregator
- */
-
-/**
  * JSON representation of a certification data.
  */
 export interface ICertificationDataJson {
@@ -63,7 +59,7 @@ export class CertificationData {
   public static fromCBOR(bytes: Uint8Array): CertificationData {
     const data = CborDeserializer.decodeArray(bytes);
     return new CertificationData(
-      EncodedPredicate.decode(CborDeserializer.decodeByteString(data[0])),
+      EncodedPredicate.fromCBOR(data[0]),
       DataHash.fromCBOR(data[1]),
       DataHash.fromCBOR(data[2]),
       CborDeserializer.decodeByteString(data[3]),
@@ -83,7 +79,7 @@ export class CertificationData {
     }
 
     return new CertificationData(
-      EncodedPredicate.decode(HexConverter.decode(data.ownerPredicate)),
+      EncodedPredicate.fromCBOR(HexConverter.decode(data.ownerPredicate)),
       DataHash.fromJSON(data.sourceStateHash),
       DataHash.fromJSON(data.transactionHash),
       HexConverter.decode(data.witness),
@@ -163,7 +159,7 @@ export class CertificationData {
    */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
-      CborSerializer.encodeByteString(this.lockScript.encode()),
+      this.lockScript.toCBOR(),
       this.sourceStateHash.toCBOR(),
       this.transactionHash.toCBOR(),
       CborSerializer.encodeByteString(this._unlockScript),
@@ -176,7 +172,7 @@ export class CertificationData {
    */
   public toJSON(): ICertificationDataJson {
     return {
-      ownerPredicate: HexConverter.encode(this.lockScript.encode()),
+      ownerPredicate: HexConverter.encode(this.lockScript.toCBOR()),
       sourceStateHash: this.sourceStateHash.toJSON(),
       transactionHash: this.transactionHash.toJSON(),
       witness: HexConverter.encode(this._unlockScript),

@@ -87,13 +87,13 @@ describe('InclusionProof', () => {
     const inclusionProof = new InclusionProof(merkleTreePath, certificationData, unicityCertificate);
 
     expect(inclusionProof.toCBOR()).toStrictEqual(
-      CborSerializer.encodeArray(merkleTreePath.toCBOR(), certificationData.toCBOR(), unicityCertificate.toCBOR()),
+      CborSerializer.encodeArray(certificationData.toCBOR(), merkleTreePath.toCBOR(), unicityCertificate.toCBOR()),
     );
     expect(InclusionProof.fromCBOR(inclusionProof.toCBOR())).toStrictEqual(inclusionProof);
 
     expect(
       InclusionProof.fromCBOR(
-        CborSerializer.encodeArray(merkleTreePath.toCBOR(), CborSerializer.encodeNull(), unicityCertificate.toCBOR()),
+        CborSerializer.encodeArray(CborSerializer.encodeNull(), merkleTreePath.toCBOR(), unicityCertificate.toCBOR()),
       ),
     ).toStrictEqual(new InclusionProof(merkleTreePath, null, unicityCertificate));
   });
@@ -119,7 +119,7 @@ describe('InclusionProof', () => {
     const invalidTransactionHashInclusionProof = new InclusionProof(
       merkleTreePath,
       CertificationData.fromJSON({
-        ownerPredicate: HexConverter.encode(certificationData.lockScript.encode()),
+        ownerPredicate: HexConverter.encode(certificationData.lockScript.toCBOR()),
         sourceStateHash: certificationData.sourceStateHash.toJSON(),
         transactionHash: DataHash.fromImprint(
           HexConverter.decode('00000000000000000000000000000000000000000000000000000000000000000001'),
@@ -145,7 +145,7 @@ describe('InclusionProof', () => {
     const inclusionProof = new InclusionProof(
       merkleTreePath,
       CertificationData.fromJSON({
-        ownerPredicate: HexConverter.encode(certificationData.lockScript.encode()),
+        ownerPredicate: HexConverter.encode(certificationData.lockScript.toCBOR()),
         sourceStateHash: certificationData.sourceStateHash.toJSON(),
         transactionHash: DataHash.fromImprint(
           HexConverter.decode('00000000000000000000000000000000000000000000000000000000000000000001'),

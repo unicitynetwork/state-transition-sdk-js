@@ -63,7 +63,7 @@ export class PayToPublicKeyPredicate implements IPredicate {
     return signingService.sign(hash).then((signature) => signature.encode());
   }
 
-  public encode(): Uint8Array {
+  public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
       CborSerializer.encodeUnsignedInteger(BigInt(this.engine)),
       CborSerializer.encodeByteString(CborSerializer.encodeUnsignedInteger(this.type)),

@@ -2,6 +2,7 @@ import { CertificationData } from './CertificationData.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
+import { IPredicate } from '../predicate/IPredicate.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { ITransaction } from '../transaction/ITransaction.js';
 import { BitString } from '../util/BitString.js';
@@ -25,8 +26,12 @@ export class StateId {
     return new StateId(DataHash.fromCBOR(data));
   }
 
+  /**
+   * Creates a StateId from CertificationData.
+   * @param certificationData certification data.
+   */
   public static fromCertificationData(certificationData: CertificationData): Promise<StateId> {
-    return StateId.create(certificationData.lockScript.encode(), certificationData.sourceStateHash);
+    return StateId.create(certificationData.lockScript, certificationData.sourceStateHash);
   }
 
   /**
@@ -39,23 +44,18 @@ export class StateId {
   }
 
   public static async fromTransaction(transaction: ITransaction): Promise<StateId> {
-    return StateId.create(transaction.lockScript.encode(), await transaction.calculateStateHash());
+    return StateId.create(transaction.lockScript, await transaction.calculateStateHash());
   }
 
   /**
    * Creates a StateId from a public key and state hash.
-   * @param predicateBytes predicate as a Uint8Array.
+   * @param predicate predicate as a Uint8Array.
    * @param stateHash state hash.
    * @returns A Promise resolving to a StateId instance.
    */
-  private static async create(predicateBytes: Uint8Array, stateHash: DataHash): Promise<StateId> {
+  private static async create(predicate: IPredicate, stateHash: DataHash): Promise<StateId> {
     const hash = await new DataHasher(HashAlgorithm.SHA256)
-      .update(
-        CborSerializer.encodeArray(
-          CborSerializer.encodeByteString(predicateBytes),
-          CborSerializer.encodeByteString(stateHash.imprint),
-        ),
-      )
+      .update(CborSerializer.encodeArray(predicate.toCBOR(), CborSerializer.encodeByteString(stateHash.imprint)))
       .digest();
 
     return new StateId(hash);

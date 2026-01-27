@@ -1,5 +1,6 @@
 import { CertificationData, ICertificationDataJson } from './CertificationData.js';
 import { StateId } from './StateId.js';
+import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 
 /**
  * JSON representation of a certification request.
@@ -26,7 +27,7 @@ export class CertificationRequest {
   private constructor(
     public readonly stateId: StateId,
     public readonly certificationData: CertificationData,
-    public readonly receipt?: boolean,
+    public readonly receipt: boolean = false,
   ) {}
 
   /**
@@ -38,6 +39,20 @@ export class CertificationRequest {
    */
   public static async create(certificationData: CertificationData, receipt?: boolean): Promise<CertificationRequest> {
     return new CertificationRequest(await StateId.fromCertificationData(certificationData), certificationData, receipt);
+  }
+
+  /**
+   * Convert the request to a CBOR bytes.
+   *
+   * @returns CBOR bytes
+   */
+  public toCBOR(): Uint8Array {
+    return CborSerializer.encodeArray(
+      this.stateId.toCBOR(),
+      this.certificationData.toCBOR(),
+      CborSerializer.encodeBoolean(this.receipt),
+      CborSerializer.encodeUnsignedInteger(0),
+    );
   }
 
   /**
