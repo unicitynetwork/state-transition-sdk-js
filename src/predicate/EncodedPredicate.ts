@@ -1,45 +1,49 @@
 import { IPredicate } from './IPredicate.js';
+import { PredicateEngine } from './PredicateEngine.js';
+import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
+import { CborError } from '../serialization/cbor/CborError.js';
+import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../serialization/HexConverter.js';
+import { dedent } from '../util/StringUtils.js';
 
 export class EncodedPredicate implements IPredicate {
-  protected constructor(
-    public readonly type: bigint,
-    private readonly _bytes: Uint8Array,
+  private constructor(
+    public readonly engine: PredicateEngine,
+    private readonly _code: Uint8Array,
+    private readonly _params: Uint8Array,
   ) {
-    this._bytes = new Uint8Array(_bytes);
+    this._code = new Uint8Array(_code);
+    this._params = new Uint8Array(_params);
   }
 
-  public static create(predicate: IPredicate): EncodedPredicate {
-    return new EncodedPredicate(predicate.type, predicate.encode());
+  public static fromCBOR(bytes: Uint8Array): EncodedPredicate {
+    const data = CborDeserializer.decodeArray(bytes);
+    const engine = CborDeserializer.decodeUnsignedInteger(data[0]);
+    if (engine > Number.MAX_SAFE_INTEGER || !PredicateEngine[Number(engine)]) {
+      throw new CborError('Invalid predicate engine.');
+    }
+
+    return new EncodedPredicate(
+      Number(engine),
+      CborDeserializer.decodeByteString(data[1]),
+      CborDeserializer.decodeByteString(data[2]),
+    );
   }
 
-  // TODO: Make encode to handle raw bytes currently to work with existing aggregator
-
-  // public static decode(bytes: Uint8Array): EncodedPredicate {
-  //   const data = CborDeserializer.decodeArray(bytes);
-  //
-  //   return new EncodedPredicate(
-  //     CborDeserializer.decodeUnsignedInteger(data[0]),
-  //     CborDeserializer.decodeByteString(data[1]),
-  //   );
-  // }
-  //
-  // public encode(): Uint8Array {
-  //   return CborSerializer.encodeArray(
-  //     CborSerializer.encodeUnsignedInteger(this.type),
-  //     CborSerializer.encodeByteString(this._bytes),
-  //   );
-  // }
-
-  public static decode(bytes: Uint8Array): EncodedPredicate {
-    return new EncodedPredicate(1n, bytes);
-  }
-
-  public encode(): Uint8Array {
-    return new Uint8Array(this._bytes);
+  public toCBOR(): Uint8Array {
+    return CborSerializer.encodeArray(
+      CborSerializer.encodeUnsignedInteger(this.engine),
+      CborSerializer.encodeByteString(this._code),
+      CborSerializer.encodeByteString(this._params),
+    );
   }
 
   public toString(): string {
-    return `EncodedPredicate[${this.type}]: ${HexConverter.encode(this._bytes)}`;
+    return dedent`
+      EncodedPredicate:
+        Engine: ${PredicateEngine[this.engine]}
+        Code: ${HexConverter.encode(this._code)}
+        Params: ${HexConverter.encode(this._params)}
+      ]`;
   }
 }

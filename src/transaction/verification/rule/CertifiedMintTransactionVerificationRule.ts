@@ -2,8 +2,8 @@ import { InclusionProofVerificationRule, InclusionProofVerificationStatus } from
 import { RootTrustBase } from '../../../api/bft/RootTrustBase.js';
 import { StateId } from '../../../api/StateId.js';
 import { MintSigningService } from '../../../crypto/MintSigningService.js';
-import { PayToPublicKeyPredicate } from '../../../predicate/PayToPublicKeyPredicate.js';
-import { PredicateVerifierFactory } from '../../../predicate/verification/PredicateVerifierFactory.js';
+import { PayToPublicKeyPredicate } from '../../../predicate/builtin/PayToPublicKeyPredicate.js';
+import { PredicateVerifier } from '../../../predicate/verification/PredicateVerifier.js';
 import { areUint8ArraysEqual } from '../../../util/TypedArrayUtils.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
@@ -15,15 +15,15 @@ import { CertifiedMintTransaction } from '../../CertifiedMintTransaction.js';
 export class CertifiedMintTransactionVerificationRule {
   public static async verify(
     trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifierFactory,
+    predicateVerifier: PredicateVerifier,
     genesis: CertifiedMintTransaction,
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];
 
     const signingService = await MintSigningService.create(genesis.tokenId);
     let result: VerificationResult<unknown> = areUint8ArraysEqual(
-      PayToPublicKeyPredicate.create(signingService).encode(),
-      genesis.inclusionProof.certificationData?.lockScript.encode(),
+      PayToPublicKeyPredicate.create(signingService).toCBOR(),
+      genesis.inclusionProof.certificationData?.lockScript.toCBOR(),
     )
       ? new VerificationResult('IsLockScriptValidVerificationRule', VerificationStatus.OK)
       : new VerificationResult('IsLockScriptValidVerificationRule', VerificationStatus.FAIL);

@@ -2,13 +2,15 @@ import { TestAggregatorClient } from './TestAggregatorClient.js';
 import { CertificationData } from '../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../src/api/CertificationResponse.js';
 import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
-import { PayToPublicKeyPredicate } from '../../src/predicate/PayToPublicKeyPredicate.js';
-import { PayToPublicKeyPredicateVerifier } from '../../src/predicate/verification/PayToPublicKeyPredicateVerifier.js';
-import { PredicateVerifierFactory } from '../../src/predicate/verification/PredicateVerifierFactory.js';
+import { BuiltInPredicateVerifierFactory } from '../../src/predicate/builtin/BuiltInPredicateVerifierFactory.js';
+import { PayToPublicKeyPredicate } from '../../src/predicate/builtin/PayToPublicKeyPredicate.js';
+import { PayToPublicKeyPredicateVerifier } from '../../src/predicate/builtin/verification/PayToPublicKeyPredicateVerifier.js';
+import { PredicateEngine } from '../../src/predicate/PredicateEngine.js';
+import { PredicateVerifier } from '../../src/predicate/verification/PredicateVerifier.js';
 import { CborSerializer } from '../../src/serialization/cbor/CborSerializer.js';
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
 import { MintTransaction } from '../../src/transaction/MintTransaction.js';
-import { PayToScriptHash } from '../../src/transaction/Recipient.js';
+import { PayToScriptHash } from '../../src/transaction/PayToScriptHash.js';
 import { Token } from '../../src/transaction/Token.js';
 import { TokenId } from '../../src/transaction/TokenId.js';
 import { TokenType } from '../../src/transaction/TokenType.js';
@@ -21,7 +23,14 @@ describe('Transition', () => {
     const aggregatorClient = TestAggregatorClient.create();
     const trustBase = aggregatorClient.rootTrustBase;
     const client = new StateTransitionClient(aggregatorClient);
-    const predicateVerifier = new PredicateVerifierFactory(new Map([[1n, new PayToPublicKeyPredicateVerifier()]]));
+    const predicateVerifier = new PredicateVerifier(
+      new Map([
+        [
+          PredicateEngine.BUILT_IN,
+          new BuiltInPredicateVerifierFactory(new Map([[1n, new PayToPublicKeyPredicateVerifier()]])),
+        ],
+      ]),
+    );
 
     const signingService = new SigningService(SigningService.generatePrivateKey());
     const predicate = PayToPublicKeyPredicate.create(signingService);
@@ -79,5 +88,5 @@ describe('Transition', () => {
     );
 
     console.log(importedToken.toString());
-  });
+  }, 30000);
 });

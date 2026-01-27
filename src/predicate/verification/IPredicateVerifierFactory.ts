@@ -3,9 +3,6 @@ import { VerificationResult } from '../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../verification/VerificationStatus.js';
 import { IPredicate } from '../IPredicate.js';
 
-export interface IPredicateVerifier {
-  verify(
-    encodedPredicate: IPredicate,
-    certificationData: CertificationData,
-  ): Promise<VerificationResult<VerificationStatus>>;
+export interface IPredicateVerifierFactory {
+  verify(predicate: IPredicate, certificationData: CertificationData): Promise<VerificationResult<VerificationStatus>>;
 }

@@ -1,7 +1,9 @@
-export interface IPredicate {
-  get type(): bigint;
+import { PredicateEngine } from './PredicateEngine.js';
 
-  encode(): Uint8Array;
+export interface IPredicate {
+  get engine(): PredicateEngine;
+
+  toCBOR(): Uint8Array;
 
   toString(): string;
 }

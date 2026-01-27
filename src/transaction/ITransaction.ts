@@ -1,4 +1,4 @@
-import { PayToScriptHash } from './Recipient.js';
+import { PayToScriptHash } from './PayToScriptHash.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { IPredicate } from '../predicate/IPredicate.js';
 

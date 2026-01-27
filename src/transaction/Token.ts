@@ -1,7 +1,7 @@
 import { CertifiedMintTransaction } from './CertifiedMintTransaction.js';
 import { CertifiedTransferTransaction } from './CertifiedTransferTransaction.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
-import { PredicateVerifierFactory } from '../predicate/verification/PredicateVerifierFactory.js';
+import { PredicateVerifier } from '../predicate/verification/PredicateVerifier.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { dedent } from '../util/StringUtils.js';
 import { VerificationError } from '../verification/VerificationError.js';
@@ -10,20 +10,6 @@ import { VerificationStatus } from '../verification/VerificationStatus.js';
 import { CertifiedMintTransactionVerificationRule } from './verification/rule/CertifiedMintTransactionVerificationRule.js';
 import { CertifiedTransferTransactionVerificationRule } from './verification/rule/CertifiedTransferTransactionVerificationRule.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
-
-class TokenVerificationResult extends VerificationResult<VerificationStatus> {
-  private constructor(status: VerificationStatus, results: VerificationResult<unknown>[]) {
-    super('TokenVerification', status, '', results);
-  }
-
-  public static fail(results: VerificationResult<unknown>[]): TokenVerificationResult {
-    return new TokenVerificationResult(VerificationStatus.FAIL, results);
-  }
-
-  public static ok(results: VerificationResult<unknown>[]): TokenVerificationResult {
-    return new TokenVerificationResult(VerificationStatus.OK, results);
-  }
-}
 
 export class Token {
   private constructor(
@@ -41,13 +27,13 @@ export class Token {
 
     return new Token(
       await CertifiedMintTransaction.fromCBOR(data[0]),
-      transactions.map((transaction) => CertifiedTransferTransaction.fromCBOR(transaction)),
+      await Promise.all(transactions.map((transaction) => CertifiedTransferTransaction.fromCBOR(transaction))),
     );
   }
 
   public static async mint(
     trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifierFactory,
+    predicateVerifier: PredicateVerifier,
     genesis: CertifiedMintTransaction,
   ): Promise<Token> {
     const token = new Token(genesis);
@@ -77,7 +63,7 @@ export class Token {
 
   public async transfer(
     trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifierFactory,
+    predicateVerifier: PredicateVerifier,
     transaction: CertifiedTransferTransaction,
   ): Promise<Token> {
     const result = await CertifiedTransferTransactionVerificationRule.verify(
@@ -98,13 +84,13 @@ export class Token {
 
   public async verify(
     trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifierFactory,
-  ): Promise<TokenVerificationResult> {
+    predicateVerifier: PredicateVerifier,
+  ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];
     const result = await CertifiedMintTransactionVerificationRule.verify(trustBase, predicateVerifier, this.genesis);
     results.push(result);
     if (result.status !== VerificationStatus.OK) {
-      return TokenVerificationResult.fail(results);
+      return new VerificationResult('TokenVerification', VerificationStatus.FAIL, '', results);
     }
 
     const transferResults: VerificationResult<VerificationStatus>[] = [];
@@ -128,12 +114,13 @@ export class Token {
             transferResults,
           ),
         );
-        return TokenVerificationResult.fail(results);
+
+        return new VerificationResult('TokenVerification', VerificationStatus.FAIL, '', results);
       }
     }
 
     results.push(new VerificationResult('TokenTransferVerification', VerificationStatus.OK, ``, transferResults));
 
-    return TokenVerificationResult.ok(results);
+    return new VerificationResult('TokenVerification', VerificationStatus.OK, '', results);
   }
 }

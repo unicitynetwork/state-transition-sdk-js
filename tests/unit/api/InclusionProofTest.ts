@@ -8,8 +8,10 @@ import { DataHasherFactory } from '../../../src/crypto/hash/DataHasherFactory.js
 import { HashAlgorithm } from '../../../src/crypto/hash/HashAlgorithm.js';
 import { NodeDataHasher } from '../../../src/crypto/hash/NodeDataHasher.js';
 import { SigningService } from '../../../src/crypto/secp256k1/SigningService.js';
-import { PayToPublicKeyPredicateVerifier } from '../../../src/predicate/verification/PayToPublicKeyPredicateVerifier.js';
-import { PredicateVerifierFactory } from '../../../src/predicate/verification/PredicateVerifierFactory.js';
+import { BuiltInPredicateVerifierFactory } from '../../../src/predicate/builtin/BuiltInPredicateVerifierFactory.js';
+import { PayToPublicKeyPredicateVerifier } from '../../../src/predicate/builtin/verification/PayToPublicKeyPredicateVerifier.js';
+import { PredicateEngine } from '../../../src/predicate/PredicateEngine.js';
+import { PredicateVerifier } from '../../../src/predicate/verification/PredicateVerifier.js';
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../../src/serialization/HexConverter.js';
 import { SparseMerkleTree } from '../../../src/smt/plain/SparseMerkleTree.js';
@@ -26,7 +28,14 @@ describe('InclusionProof', () => {
     new Uint8Array(HexConverter.decode('0000000000000000000000000000000000000000000000000000000000000001')),
   );
 
-  const predicateVerifierFactory = new PredicateVerifierFactory(new Map([[1n, new PayToPublicKeyPredicateVerifier()]]));
+  const predicateVerifierFactory = new PredicateVerifier(
+    new Map([
+      [
+        PredicateEngine.BUILT_IN,
+        new BuiltInPredicateVerifierFactory(new Map([[1n, new PayToPublicKeyPredicateVerifier()]])),
+      ],
+    ]),
+  );
 
   let certificationData: CertificationData;
   let merkleTreePath: SparseMerkleTreePath;
@@ -35,11 +44,11 @@ describe('InclusionProof', () => {
 
   beforeAll(async () => {
     certificationData = CertificationData.fromJSON({
-      publicKey: '0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
-      signature:
-        '8c3f91708445bf0ddec220f0821461bcf84860a8769275f9930e798d1f645d157bb6a2998c61941108b0993c5aed6a7b92ccf31d11b50fe80d9ff93da392336a01',
+      ownerPredicate: '8301410158210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
       sourceStateHash: '00000000000000000000000000000000000000000000000000000000000000000000',
       transactionHash: '00000000000000000000000000000000000000000000000000000000000000000000',
+      witness:
+        '8c3f91708445bf0ddec220f0821461bcf84860a8769275f9930e798d1f645d157bb6a2998c61941108b0993c5aed6a7b92ccf31d11b50fe80d9ff93da392336a01',
     });
 
     const smt = new SparseMerkleTree(new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher));
@@ -78,13 +87,13 @@ describe('InclusionProof', () => {
     const inclusionProof = new InclusionProof(merkleTreePath, certificationData, unicityCertificate);
 
     expect(inclusionProof.toCBOR()).toStrictEqual(
-      CborSerializer.encodeArray(merkleTreePath.toCBOR(), certificationData.toCBOR(), unicityCertificate.toCBOR()),
+      CborSerializer.encodeArray(certificationData.toCBOR(), merkleTreePath.toCBOR(), unicityCertificate.toCBOR()),
     );
     expect(InclusionProof.fromCBOR(inclusionProof.toCBOR())).toStrictEqual(inclusionProof);
 
     expect(
       InclusionProof.fromCBOR(
-        CborSerializer.encodeArray(merkleTreePath.toCBOR(), CborSerializer.encodeNull(), unicityCertificate.toCBOR()),
+        CborSerializer.encodeArray(CborSerializer.encodeNull(), merkleTreePath.toCBOR(), unicityCertificate.toCBOR()),
       ),
     ).toStrictEqual(new InclusionProof(merkleTreePath, null, unicityCertificate));
   });
@@ -110,12 +119,12 @@ describe('InclusionProof', () => {
     const invalidTransactionHashInclusionProof = new InclusionProof(
       merkleTreePath,
       CertificationData.fromJSON({
-        publicKey: HexConverter.encode(certificationData.lockScript.encode()),
-        signature: HexConverter.encode(certificationData.unlockScript),
+        ownerPredicate: HexConverter.encode(certificationData.lockScript.toCBOR()),
         sourceStateHash: certificationData.sourceStateHash.toJSON(),
         transactionHash: DataHash.fromImprint(
           HexConverter.decode('00000000000000000000000000000000000000000000000000000000000000000001'),
         ).toJSON(),
+        witness: HexConverter.encode(certificationData.unlockScript),
       }),
       unicityCertificate,
     );
@@ -136,12 +145,12 @@ describe('InclusionProof', () => {
     const inclusionProof = new InclusionProof(
       merkleTreePath,
       CertificationData.fromJSON({
-        publicKey: HexConverter.encode(certificationData.lockScript.encode()),
-        signature: HexConverter.encode(certificationData.unlockScript),
+        ownerPredicate: HexConverter.encode(certificationData.lockScript.toCBOR()),
         sourceStateHash: certificationData.sourceStateHash.toJSON(),
         transactionHash: DataHash.fromImprint(
           HexConverter.decode('00000000000000000000000000000000000000000000000000000000000000000001'),
         ).toJSON(),
+        witness: HexConverter.encode(certificationData.unlockScript),
       }),
       unicityCertificate,
     );
@@ -157,11 +166,19 @@ describe('InclusionProof', () => {
     const stateId = await StateId.fromCertificationData(certificationData);
 
     const inclusionProof = new InclusionProof(merkleTreePath, certificationData, unicityCertificate);
+    const predicateVerifier = new PredicateVerifier(
+      new Map([
+        [
+          PredicateEngine.BUILT_IN,
+          new BuiltInPredicateVerifierFactory(new Map([[1n, new PayToPublicKeyPredicateVerifier()]])),
+        ],
+      ]),
+    );
 
     await expect(
       InclusionProofVerificationRule.verify(
         createRootTrustBase(HexConverter.decode('0000000000000000000000000000000000000000000000000000000000000001')),
-        new PredicateVerifierFactory(new Map([[1n, new PayToPublicKeyPredicateVerifier()]])),
+        predicateVerifier,
         inclusionProof,
         stateId,
       ).then((result) => result.status),

@@ -2,7 +2,7 @@ import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { InclusionProof } from '../api/InclusionProof.js';
 import { JsonRpcNetworkError } from '../api/json-rpc/JsonRpcNetworkError.js';
 import { StateId } from '../api/StateId.js';
-import { PredicateVerifierFactory } from '../predicate/verification/PredicateVerifierFactory.js';
+import { PredicateVerifier } from '../predicate/verification/PredicateVerifier.js';
 import { StateTransitionClient } from '../StateTransitionClient.js';
 import { ITransaction } from '../transaction/ITransaction.js';
 import {
@@ -33,7 +33,7 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
 
 export async function waitInclusionProof(
   trustBase: RootTrustBase,
-  predicateVerifier: PredicateVerifierFactory,
+  predicateVerifier: PredicateVerifier,
   client: StateTransitionClient,
   transaction: ITransaction,
   signal: AbortSignal = AbortSignal.timeout(10000),
