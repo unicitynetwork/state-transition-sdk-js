@@ -89,15 +89,19 @@ export class CertificationData {
   public static async fromMintTransaction(transaction: MintTransaction): Promise<CertificationData> {
     const signingService = await MintSigningService.create(transaction.tokenId);
 
-    const sourceStateHash = await transaction.calculateStateHash();
     const transactionHash = await transaction.calculateTransactionHash();
 
     const signatureDataHash = await new DataHasher(HashAlgorithm.SHA256)
-      .update(CborSerializer.encodeArray(sourceStateHash.toCBOR(), transactionHash.toCBOR()))
+      .update(CborSerializer.encodeArray(transaction.sourceStateHash.toCBOR(), transactionHash.toCBOR()))
       .digest();
     const unlockScript = await signingService.sign(signatureDataHash);
 
-    return CertificationData.create(transaction.lockScript, sourceStateHash, transactionHash, unlockScript.encode());
+    return CertificationData.create(
+      transaction.lockScript,
+      transaction.sourceStateHash,
+      transactionHash,
+      unlockScript.encode(),
+    );
   }
 
   public static async fromTransferTransaction(
@@ -105,11 +109,9 @@ export class CertificationData {
     unlockScript: Uint8Array,
   ): Promise<CertificationData> {
     unlockScript = new Uint8Array(unlockScript);
-
-    const sourceStateHash = await transaction.calculateStateHash();
     const transactionHash = await transaction.calculateTransactionHash();
 
-    return CertificationData.create(transaction.lockScript, sourceStateHash, transactionHash, unlockScript);
+    return CertificationData.create(transaction.lockScript, transaction.sourceStateHash, transactionHash, unlockScript);
   }
 
   /**

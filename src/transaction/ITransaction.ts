@@ -9,6 +9,8 @@ export interface ITransaction {
 
   readonly recipient: PayToScriptHash;
 
+  readonly sourceStateHash: DataHash;
+
   readonly x: Uint8Array;
 
   calculateStateHash(): Promise<DataHash>;

@@ -25,6 +25,7 @@ import { dedent } from '../util/StringUtils.js';
 
 export class MintTransaction implements ITransaction {
   private constructor(
+    public readonly sourceStateHash: MintTransactionState,
     public readonly lockScript: IPredicate,
     public readonly recipient: PayToScriptHash,
     public readonly tokenId: TokenId,
@@ -49,7 +50,14 @@ export class MintTransaction implements ITransaction {
     data = new Uint8Array(data);
 
     const signingService = await MintSigningService.create(tokenId);
-    return new MintTransaction(PayToPublicKeyPredicate.create(signingService), recipient, tokenId, tokenType, data);
+    return new MintTransaction(
+      await MintTransactionState.create(tokenId),
+      PayToPublicKeyPredicate.create(signingService),
+      recipient,
+      tokenId,
+      tokenType,
+      data,
+    );
   }
 
   public static async fromCBOR(bytes: Uint8Array): Promise<MintTransaction> {
@@ -65,7 +73,9 @@ export class MintTransaction implements ITransaction {
   }
 
   public calculateStateHash(): Promise<DataHash> {
-    return MintTransactionState.create(this.tokenId);
+    return new DataHasher(HashAlgorithm.SHA256)
+      .update(CborSerializer.encodeArray(this.sourceStateHash.toCBOR(), CborSerializer.encodeByteString(this.x)))
+      .digest();
   }
 
   public calculateTransactionHash(): Promise<DataHash> {

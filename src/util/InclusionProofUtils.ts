@@ -49,6 +49,7 @@ export async function waitInclusionProof(
         inclusionProof,
         stateId,
       );
+
       switch (verificationStatus.status) {
         case InclusionProofVerificationStatus.OK:
           return inclusionProof;

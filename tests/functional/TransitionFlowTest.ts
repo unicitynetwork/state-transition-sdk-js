@@ -4,7 +4,6 @@ import { CertificationStatus } from '../../src/api/CertificationResponse.js';
 import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
 import { BuiltInPredicateVerifierFactory } from '../../src/predicate/builtin/BuiltInPredicateVerifierFactory.js';
 import { PayToPublicKeyPredicate } from '../../src/predicate/builtin/PayToPublicKeyPredicate.js';
-import { PayToPublicKeyPredicateVerifier } from '../../src/predicate/builtin/verification/PayToPublicKeyPredicateVerifier.js';
 import { PredicateEngine } from '../../src/predicate/PredicateEngine.js';
 import { PredicateVerifier } from '../../src/predicate/verification/PredicateVerifier.js';
 import { CborSerializer } from '../../src/serialization/cbor/CborSerializer.js';
@@ -24,12 +23,7 @@ describe('Transition', () => {
     const trustBase = aggregatorClient.rootTrustBase;
     const client = new StateTransitionClient(aggregatorClient);
     const predicateVerifier = new PredicateVerifier(
-      new Map([
-        [
-          PredicateEngine.BUILT_IN,
-          new BuiltInPredicateVerifierFactory(new Map([[1n, new PayToPublicKeyPredicateVerifier()]])),
-        ],
-      ]),
+      new Map([[PredicateEngine.BUILT_IN, BuiltInPredicateVerifierFactory.create()]]),
     );
 
     const signingService = new SigningService(SigningService.generatePrivateKey());
@@ -56,6 +50,7 @@ describe('Transition', () => {
       ),
     );
 
+    // TODO: Sending to another person besides myself
     const transferTransaction = await TransferTransaction.create(
       token,
       predicate,
@@ -72,6 +67,25 @@ describe('Transition', () => {
     response = await client.submitCertificationRequest(certificationData);
     expect(response.status).toEqual(CertificationStatus.SUCCESS);
 
+    // Test double spend attempt
+    const doubleSpendTransferTransaction = await TransferTransaction.create(
+      token,
+      predicate,
+      await PayToScriptHash.create(predicate),
+      crypto.getRandomValues(new Uint8Array(32)),
+      CborSerializer.encodeArray(),
+    );
+
+    await expect(async () =>
+      client.submitCertificationRequest(
+        await CertificationData.fromTransferTransaction(
+          doubleSpendTransferTransaction,
+          await PayToPublicKeyPredicate.generateUnlockScript(doubleSpendTransferTransaction, signingService),
+        ),
+      ),
+    ).rejects.toThrow();
+
+    // Finish initial transfer
     token = await token.transfer(
       trustBase,
       predicateVerifier,
@@ -87,6 +101,6 @@ describe('Transition', () => {
       VerificationStatus.OK,
     );
 
-    console.log(importedToken.toString());
+    // console.log(importedToken.toString());
   }, 30000);
 });

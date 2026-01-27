@@ -48,6 +48,10 @@ export class TransferTransaction implements ITransaction {
     data: Uint8Array,
   ): Promise<TransferTransaction> {
     const transaction = token.transactions.at(-1) ?? token.genesis;
+    if (!transaction.recipient.equals(await PayToScriptHash.create(owner))) {
+      throw new Error('Predicate does not match pay to script hash.');
+    }
+
     const sourceStateHash = await transaction.calculateStateHash();
     return new TransferTransaction(sourceStateHash, owner, recipient, x, data);
   }

@@ -10,6 +10,7 @@ import { DataHasherFactory } from '../../src/crypto/hash/DataHasherFactory.js';
 import { HashAlgorithm } from '../../src/crypto/hash/HashAlgorithm.js';
 import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
 import { BuiltInPredicateVerifierFactory } from '../../src/predicate/builtin/BuiltInPredicateVerifierFactory.js';
+import { PayToPublicKeyPredicate } from '../../src/predicate/builtin/PayToPublicKeyPredicate.js';
 import { PayToPublicKeyPredicateVerifier } from '../../src/predicate/builtin/verification/PayToPublicKeyPredicateVerifier.js';
 import { EncodedPredicate } from '../../src/predicate/EncodedPredicate.js';
 import { PredicateEngine } from '../../src/predicate/PredicateEngine.js';
@@ -24,7 +25,9 @@ export class TestAggregatorClient implements IAggregatorClient {
     new Map([
       [
         PredicateEngine.BUILT_IN,
-        new BuiltInPredicateVerifierFactory(new Map([[1n, new PayToPublicKeyPredicateVerifier()]])),
+        new BuiltInPredicateVerifierFactory(
+          new Map([[PayToPublicKeyPredicate.TYPE, new PayToPublicKeyPredicateVerifier()]]),
+        ),
       ],
     ]),
   );

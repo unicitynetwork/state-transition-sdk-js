@@ -43,8 +43,8 @@ export class StateId {
     return new StateId(DataHash.fromJSON(data));
   }
 
-  public static async fromTransaction(transaction: ITransaction): Promise<StateId> {
-    return StateId.create(transaction.lockScript, await transaction.calculateStateHash());
+  public static fromTransaction(transaction: ITransaction): Promise<StateId> {
+    return StateId.create(transaction.lockScript, transaction.sourceStateHash);
   }
 
   /**
