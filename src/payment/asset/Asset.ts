@@ -7,8 +7,7 @@ export class Asset {
   public constructor(
     public readonly id: AssetId,
     private readonly _value: bigint,
-  ) {
-  }
+  ) {}
 
   public get value(): bigint {
     return this._value;

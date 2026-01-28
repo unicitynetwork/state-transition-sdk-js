@@ -16,7 +16,7 @@ export class BurnPredicate implements IPredicate {
     return PredicateEngine.BUILT_IN;
   }
 
-  public get publicKey(): Uint8Array {
+  public get reason(): Uint8Array {
     return new Uint8Array(this._reason);
   }
 
