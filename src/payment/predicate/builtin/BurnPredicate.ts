@@ -2,8 +2,8 @@ import { IPredicate } from '../../../predicate/IPredicate.js';
 import { PredicateEngine } from '../../../predicate/PredicateEngine.js';
 import { CborDeserializer } from '../../../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../../serialization/cbor/CborSerializer.js';
-import { dedent } from '../../../util/StringUtils.js';
 import { HexConverter } from '../../../serialization/HexConverter.js';
+import { dedent } from '../../../util/StringUtils.js';
 
 export class BurnPredicate implements IPredicate {
   public static readonly TYPE: bigint = 0x02n;

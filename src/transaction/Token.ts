@@ -1,5 +1,7 @@
 import { CertifiedMintTransaction } from './CertifiedMintTransaction.js';
 import { CertifiedTransferTransaction } from './CertifiedTransferTransaction.js';
+import { TokenId } from './TokenId.js';
+import { TokenType } from './TokenType.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { PredicateVerifier } from '../predicate/verification/PredicateVerifier.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
@@ -17,8 +19,16 @@ export class Token {
     private readonly _transactions: CertifiedTransferTransaction[] = [],
   ) {}
 
+  public get id(): TokenId {
+    return this.genesis.tokenId;
+  }
+
   public get transactions(): CertifiedTransferTransaction[] {
     return this._transactions.slice();
+  }
+
+  public get type(): TokenType {
+    return this.genesis.tokenType;
   }
 
   public static async fromCBOR(bytes: Uint8Array): Promise<Token> {

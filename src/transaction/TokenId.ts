@@ -1,12 +1,8 @@
-import { DataHasher } from '../crypto/hash/DataHasher.js';
-import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../serialization/HexConverter.js';
 import { BitString } from '../util/BitString.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
-
-const textEncoder = new TextEncoder();
 
 /**
  * Globally unique identifier of a token.
@@ -29,17 +25,6 @@ export class TokenId {
 
   public static fromJSON(input: string): TokenId {
     return new TokenId(HexConverter.decode(input));
-  }
-
-  /**
-   * Create token id from nametag.
-   *
-   * @param name nametag
-   * @return token id
-   */
-  public static async fromNameTag(name: string): Promise<TokenId> {
-    const hash = await new DataHasher(HashAlgorithm.SHA256).update(textEncoder.encode(name)).digest();
-    return new TokenId(hash.imprint);
   }
 
   public equals(o: unknown): boolean {
