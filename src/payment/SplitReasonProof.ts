@@ -8,15 +8,15 @@ export class SplitReasonProof {
   private constructor(
     public readonly assetId: AssetId,
     public readonly aggregationPath: SparseMerkleTreePath,
-    public readonly coinTreePath: SparseMerkleSumTreePath,
+    public readonly assetTreePath: SparseMerkleSumTreePath,
   ) {}
 
   public static create(
     assetId: AssetId,
     aggregationPath: SparseMerkleTreePath,
-    coinTreePath: SparseMerkleSumTreePath,
+    assetTreePath: SparseMerkleSumTreePath,
   ): SplitReasonProof {
-    return new SplitReasonProof(assetId, aggregationPath, coinTreePath);
+    return new SplitReasonProof(assetId, aggregationPath, assetTreePath);
   }
 
   /**
@@ -36,6 +36,10 @@ export class SplitReasonProof {
   }
 
   public toCBOR(): Uint8Array {
-    return CborSerializer.encodeArray(this.assetId.toCBOR(), this.aggregationPath.toCBOR(), this.coinTreePath.toCBOR());
+    return CborSerializer.encodeArray(
+      this.assetId.toCBOR(),
+      this.aggregationPath.toCBOR(),
+      this.assetTreePath.toCBOR(),
+    );
   }
 }

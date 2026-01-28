@@ -198,7 +198,7 @@ export class TokenSplit {
       return new VerificationResult(
         'TokenSplitReasonVerificationRule',
         VerificationStatus.FAIL,
-        'Total amount of coins differ in token and proofs.',
+        'Total amount of assets differ in token and proofs.',
         [],
       );
     }
@@ -210,12 +210,12 @@ export class TokenSplit {
         return new VerificationResult(
           'TokenSplitReasonVerificationRule',
           VerificationStatus.FAIL,
-          `Aggregation path verification failed for coin: ${proof.assetId.toString()}`,
+          `Aggregation path verification failed for asset: ${proof.assetId.toString()}`,
           [],
         );
       }
 
-      const assetTreePathResult = await proof.coinTreePath.verify(token.id.toBitString().toBigInt());
+      const assetTreePathResult = await proof.assetTreePath.verify(token.id.toBitString().toBigInt());
       if (!assetTreePathResult.isSuccessful) {
         return new VerificationResult(
           'TokenSplitReasonVerificationRule',
@@ -225,7 +225,7 @@ export class TokenSplit {
         );
       }
 
-      if (!areUint8ArraysEqual(proof.coinTreePath.root.imprint, proof.aggregationPath.steps.at(0)?.data)) {
+      if (!areUint8ArraysEqual(proof.assetTreePath.root.imprint, proof.aggregationPath.steps.at(0)?.data)) {
         return new VerificationResult(
           'TokenSplitReasonVerificationRule',
           VerificationStatus.FAIL,
@@ -244,7 +244,7 @@ export class TokenSplit {
         );
       }
 
-      if (proof.coinTreePath.steps.at(0)?.value !== amount) {
+      if (proof.assetTreePath.steps.at(0)?.value !== amount) {
         return new VerificationResult(
           'TokenSplitReasonVerificationRule',
           VerificationStatus.FAIL,

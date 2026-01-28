@@ -3,7 +3,7 @@ import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../serialization/HexConverter.js';
 import { BitString } from '../../util/BitString.js';
 
-/** Identifier for a fungible coin type. */
+/** Identifier for a asset. */
 export class AssetId {
   /**
    * @param _bytes Raw byte representation
@@ -17,7 +17,7 @@ export class AssetId {
   }
 
   /**
-   * Creates a CoinId from a byte array encoded in CBOR.
+   * Creates a AssetId from a byte array encoded in CBOR.
    * @param bytes
    */
   public static fromCBOR(bytes: Uint8Array): AssetId {
@@ -25,7 +25,7 @@ export class AssetId {
   }
 
   /**
-   * Converts the CoinId to a bitstring representation.
+   * Converts the AssetId to a bitstring representation.
    */
   public toBitString(): BitString {
     return new BitString(this._bytes);
