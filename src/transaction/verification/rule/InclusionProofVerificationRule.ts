@@ -6,12 +6,16 @@ import { DataHash } from '../../../crypto/hash/DataHash.js';
 import { PredicateVerifier } from '../../../predicate/verification/PredicateVerifier.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
+import { ITransaction } from '../../ITransaction.js';
 
 /**
  * Status codes for verifying an InclusionProof.
  */
 export enum InclusionProofVerificationStatus {
   INVALID_TRUSTBASE = 'INVALID_TRUSTBASE',
+  LEAF_VALUE_MISMATCH = 'LEAF_VALUE_MISMATCH',
+  MISSING_CERTIFICATION_DATA = 'MISSING_CERTIFICATION_DATA',
+  TRANSACTION_HASH_MISMATCH = 'TRANSACTION_HASH_MISMATCH',
   NOT_AUTHENTICATED = 'NOT_AUTHENTICATED',
   PATH_NOT_INCLUDED = 'PATH_NOT_INCLUDED',
   PATH_INVALID = 'PATH_INVALID',
@@ -26,7 +30,7 @@ export class InclusionProofVerificationRule {
     trustBase: RootTrustBase,
     predicateVerifierFactory: PredicateVerifier,
     inclusionProof: InclusionProof,
-    stateId: StateId,
+    transaction: ITransaction,
   ): Promise<VerificationResult<InclusionProofVerificationStatus>> {
     const unicityCertificateVerificationResult = await UnicityCertificateVerification.verify(trustBase, inclusionProof);
 
@@ -39,22 +43,37 @@ export class InclusionProofVerificationRule {
       );
     }
 
+    const stateId = await StateId.fromTransaction(transaction);
     const result = await inclusionProof.merkleTreePath.verify(stateId.toBitString().toBigInt());
     if (!result.isPathValid) {
       return new VerificationResult('InclusionProofVerificationRule', InclusionProofVerificationStatus.PATH_INVALID);
     }
 
-    const certificationData = inclusionProof.certificationData;
-    if (!certificationData) {
+    if (!result.isPathIncluded) {
       return new VerificationResult(
         'InclusionProofVerificationRule',
         InclusionProofVerificationStatus.PATH_NOT_INCLUDED,
       );
     }
 
+    const certificationData = inclusionProof.certificationData;
+    if (!certificationData) {
+      return new VerificationResult(
+        'InclusionProofVerificationRule',
+        InclusionProofVerificationStatus.MISSING_CERTIFICATION_DATA,
+      );
+    }
+
+    if (!certificationData.transactionHash.equals(await transaction.calculateTransactionHash())) {
+      return new VerificationResult(
+        'InclusionProofVerificationRule',
+        InclusionProofVerificationStatus.TRANSACTION_HASH_MISMATCH,
+      );
+    }
+
     const predicateVerificationResult = await predicateVerifierFactory.verify(
       certificationData.lockScript,
-      inclusionProof.certificationData,
+      certificationData,
     );
     if (predicateVerificationResult.status !== VerificationStatus.OK) {
       return new VerificationResult(
@@ -70,14 +89,7 @@ export class InclusionProofVerificationRule {
     if (!pathValue || !leafValue.equals(DataHash.fromImprint(pathValue))) {
       return new VerificationResult(
         'InclusionProofVerificationRule',
-        InclusionProofVerificationStatus.PATH_NOT_INCLUDED,
-      );
-    }
-
-    if (!result.isPathIncluded) {
-      return new VerificationResult(
-        'InclusionProofVerificationRule',
-        InclusionProofVerificationStatus.PATH_NOT_INCLUDED,
+        InclusionProofVerificationStatus.LEAF_VALUE_MISMATCH,
       );
     }
 

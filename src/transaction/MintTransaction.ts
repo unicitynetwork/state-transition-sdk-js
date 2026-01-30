@@ -16,7 +16,6 @@ import {
   InclusionProofVerificationStatus,
 } from './verification/rule/InclusionProofVerificationRule.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
-import { StateId } from '../api/StateId.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { MintSigningService } from '../crypto/MintSigningService.js';
 import { IPredicate } from '../predicate/IPredicate.js';
@@ -103,12 +102,7 @@ export class MintTransaction implements ITransaction {
     predicateVerifier: PredicateVerifier,
     inclusionProof: InclusionProof,
   ): Promise<CertifiedMintTransaction> {
-    const result = await InclusionProofVerificationRule.verify(
-      trustBase,
-      predicateVerifier,
-      inclusionProof,
-      await StateId.fromTransaction(this),
-    );
+    const result = await InclusionProofVerificationRule.verify(trustBase, predicateVerifier, inclusionProof, this);
     if (result.status !== InclusionProofVerificationStatus.OK) {
       throw new Error(`Inclusion proof verification failed: ${result.status.toString()}`);
     }

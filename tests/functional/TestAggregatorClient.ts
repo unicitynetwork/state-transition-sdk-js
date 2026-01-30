@@ -70,9 +70,11 @@ export class TestAggregatorClient implements IAggregatorClient {
     }
 
     const path = stateId.toBitString().toBigInt();
-    const leafValue = await certificationData.calculateLeafValue();
-    await this.smt.addLeaf(path, leafValue.imprint);
-    this.requests.set(path, certificationData);
+    if (!this.requests.has(path)) {
+      const leafValue = await certificationData.calculateLeafValue();
+      await this.smt.addLeaf(path, leafValue.imprint);
+      this.requests.set(path, certificationData);
+    }
 
     return CertificationResponse.create(CertificationStatus.SUCCESS);
   }

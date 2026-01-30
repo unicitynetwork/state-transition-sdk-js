@@ -4,7 +4,6 @@ import { PayToScriptHash } from './PayToScriptHash.js';
 import { Token } from './Token.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { InclusionProof } from '../api/InclusionProof.js';
-import { StateId } from '../api/StateId.js';
 import {
   InclusionProofVerificationRule,
   InclusionProofVerificationStatus,
@@ -101,12 +100,7 @@ export class TransferTransaction implements ITransaction {
     predicateVerifier: PredicateVerifier,
     inclusionProof: InclusionProof,
   ): Promise<CertifiedTransferTransaction> {
-    const result = await InclusionProofVerificationRule.verify(
-      trustBase,
-      predicateVerifier,
-      inclusionProof,
-      await StateId.fromTransaction(this),
-    );
+    const result = await InclusionProofVerificationRule.verify(trustBase, predicateVerifier, inclusionProof, this);
     if (result.status !== InclusionProofVerificationStatus.OK) {
       throw new Error(`Inclusion proof verification failed: ${result.status.toString()}`);
     }

@@ -1,6 +1,5 @@
 import { InclusionProofVerificationRule, InclusionProofVerificationStatus } from './InclusionProofVerificationRule.js';
 import { RootTrustBase } from '../../../api/bft/RootTrustBase.js';
-import { StateId } from '../../../api/StateId.js';
 import { MintSigningService } from '../../../crypto/MintSigningService.js';
 import { PayToPublicKeyPredicate } from '../../../predicate/builtin/PayToPublicKeyPredicate.js';
 import { PredicateVerifier } from '../../../predicate/verification/PredicateVerifier.js';
@@ -37,12 +36,7 @@ export class CertifiedMintTransactionVerificationRule {
       );
     }
 
-    result = await InclusionProofVerificationRule.verify(
-      trustBase,
-      predicateVerifier,
-      genesis.inclusionProof,
-      await StateId.fromTransaction(genesis),
-    );
+    result = await InclusionProofVerificationRule.verify(trustBase, predicateVerifier, genesis.inclusionProof, genesis);
     results.push(result);
     if (result.status !== InclusionProofVerificationStatus.OK) {
       return new VerificationResult(

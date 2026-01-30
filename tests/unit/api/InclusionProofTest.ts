@@ -9,6 +9,7 @@ import { HashAlgorithm } from '../../../src/crypto/hash/HashAlgorithm.js';
 import { NodeDataHasher } from '../../../src/crypto/hash/NodeDataHasher.js';
 import { SigningService } from '../../../src/crypto/secp256k1/SigningService.js';
 import { BuiltInPredicateVerifierFactory } from '../../../src/predicate/builtin/BuiltInPredicateVerifierFactory.js';
+import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
 import { PayToPublicKeyPredicateVerifier } from '../../../src/predicate/builtin/verification/PayToPublicKeyPredicateVerifier.js';
 import { PredicateEngine } from '../../../src/predicate/PredicateEngine.js';
 import { PredicateVerifier } from '../../../src/predicate/verification/PredicateVerifier.js';
@@ -16,6 +17,10 @@ import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.j
 import { HexConverter } from '../../../src/serialization/HexConverter.js';
 import { SparseMerkleTree } from '../../../src/smt/plain/SparseMerkleTree.js';
 import { SparseMerkleTreePath } from '../../../src/smt/plain/SparseMerkleTreePath.js';
+import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
+import { PayToScriptHash } from '../../../src/transaction/PayToScriptHash.js';
+import { TokenId } from '../../../src/transaction/TokenId.js';
+import { TokenType } from '../../../src/transaction/TokenType.js';
 import {
   InclusionProofVerificationRule,
   InclusionProofVerificationStatus,
@@ -37,24 +42,23 @@ describe('InclusionProof', () => {
     ]),
   );
 
+  let transaction: MintTransaction;
   let certificationData: CertificationData;
   let merkleTreePath: SparseMerkleTreePath;
   let unicityCertificate: UnicityCertificate;
   let trustBase: RootTrustBase;
 
   beforeAll(async () => {
-    certificationData = CertificationData.fromJSON({
-      ownerPredicate: '8301410158210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
-      sourceStateHash: '00000000000000000000000000000000000000000000000000000000000000000000',
-      transactionHash: '00000000000000000000000000000000000000000000000000000000000000000000',
-      witness:
-        '8c3f91708445bf0ddec220f0821461bcf84860a8769275f9930e798d1f645d157bb6a2998c61941108b0993c5aed6a7b92ccf31d11b50fe80d9ff93da392336a01',
-    });
-
-    const smt = new SparseMerkleTree(new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher));
-    const stateId = await StateId.fromCertificationData(certificationData).then((stateId) =>
-      stateId.toBitString().toBigInt(),
+    transaction = await MintTransaction.create(
+      await PayToScriptHash.create(PayToPublicKeyPredicate.create(signingService)),
+      new TokenId(crypto.getRandomValues(new Uint8Array(32))),
+      new TokenType(crypto.getRandomValues(new Uint8Array(32))),
+      new Uint8Array(),
     );
+    const smt = new SparseMerkleTree(new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher));
+    const stateId = await StateId.fromTransaction(transaction).then((stateId) => stateId.toBitString().toBigInt());
+    certificationData = await CertificationData.fromMintTransaction(transaction);
+
     await smt.addLeaf(stateId, await certificationData.calculateLeafValue().then((value) => value.imprint));
 
     const root = await smt.calculateRoot();
@@ -66,7 +70,11 @@ describe('InclusionProof', () => {
   });
 
   it('should encode and decode json', () => {
-    const inclusionProof = new InclusionProof(merkleTreePath, certificationData, unicityCertificate);
+    const inclusionProof = new InclusionProof(
+      merkleTreePath,
+      CertificationData.fromCBOR(certificationData.toCBOR()),
+      unicityCertificate,
+    );
     expect(inclusionProof.toJSON()).toEqual({
       certificationData: certificationData.toJSON(),
       merkleTreePath: merkleTreePath.toJSON(),
@@ -84,7 +92,11 @@ describe('InclusionProof', () => {
   });
 
   it('should encode and decode cbor', () => {
-    const inclusionProof = new InclusionProof(merkleTreePath, certificationData, unicityCertificate);
+    const inclusionProof = new InclusionProof(
+      merkleTreePath,
+      CertificationData.fromCBOR(certificationData.toCBOR()),
+      unicityCertificate,
+    );
 
     expect(inclusionProof.toCBOR()).toStrictEqual(
       CborSerializer.encodeArray(certificationData.toCBOR(), merkleTreePath.toCBOR(), unicityCertificate.toCBOR()),
@@ -99,11 +111,10 @@ describe('InclusionProof', () => {
   });
 
   it('verifies', async () => {
-    const stateId = await StateId.fromCertificationData(certificationData);
     const inclusionProof = new InclusionProof(merkleTreePath, certificationData, unicityCertificate);
 
     await expect(
-      InclusionProofVerificationRule.verify(trustBase, predicateVerifierFactory, inclusionProof, stateId).then(
+      InclusionProofVerificationRule.verify(trustBase, predicateVerifierFactory, inclusionProof, transaction).then(
         (result) => result.status,
       ),
     ).resolves.toEqual(InclusionProofVerificationStatus.OK);
@@ -112,7 +123,12 @@ describe('InclusionProof', () => {
         trustBase,
         predicateVerifierFactory,
         inclusionProof,
-        StateId.fromJSON('00000000000000000000000000000000000000000000000000000000000000000000'),
+        await MintTransaction.create(
+          await PayToScriptHash.create(transaction.lockScript),
+          new TokenId(crypto.getRandomValues(new Uint8Array(32))),
+          transaction.tokenType,
+          transaction.data,
+        ),
       ).then((result) => result.status),
     ).resolves.toEqual(InclusionProofVerificationStatus.PATH_NOT_INCLUDED);
 
@@ -134,37 +150,31 @@ describe('InclusionProof', () => {
         trustBase,
         predicateVerifierFactory,
         invalidTransactionHashInclusionProof,
-        stateId,
+        transaction,
       ).then((result) => result.status),
-    ).resolves.toEqual(InclusionProofVerificationStatus.NOT_AUTHENTICATED);
+    ).resolves.toEqual(InclusionProofVerificationStatus.TRANSACTION_HASH_MISMATCH);
   });
 
   it('verification fails with invalid transaction hash', async () => {
-    const stateId = await StateId.fromCertificationData(certificationData);
-
     const inclusionProof = new InclusionProof(
       merkleTreePath,
       CertificationData.fromJSON({
         ownerPredicate: HexConverter.encode(certificationData.lockScript.toCBOR()),
         sourceStateHash: certificationData.sourceStateHash.toJSON(),
-        transactionHash: DataHash.fromImprint(
-          HexConverter.decode('00000000000000000000000000000000000000000000000000000000000000000001'),
-        ).toJSON(),
-        witness: HexConverter.encode(certificationData.unlockScript),
+        transactionHash: certificationData.transactionHash.toJSON(),
+        witness: HexConverter.encode(new Uint8Array(65)),
       }),
       unicityCertificate,
     );
 
     await expect(
-      InclusionProofVerificationRule.verify(trustBase, predicateVerifierFactory, inclusionProof, stateId).then(
+      InclusionProofVerificationRule.verify(trustBase, predicateVerifierFactory, inclusionProof, transaction).then(
         (result) => result.status,
       ),
     ).resolves.toEqual(InclusionProofVerificationStatus.NOT_AUTHENTICATED);
   });
 
   it('verification fails with invalid trustbase', async () => {
-    const stateId = await StateId.fromCertificationData(certificationData);
-
     const inclusionProof = new InclusionProof(merkleTreePath, certificationData, unicityCertificate);
     const predicateVerifier = new PredicateVerifier(
       new Map([
@@ -180,7 +190,7 @@ describe('InclusionProof', () => {
         createRootTrustBase(HexConverter.decode('0000000000000000000000000000000000000000000000000000000000000001')),
         predicateVerifier,
         inclusionProof,
-        stateId,
+        transaction,
       ).then((result) => result.status),
     ).resolves.toEqual(InclusionProofVerificationStatus.INVALID_TRUSTBASE);
   });
