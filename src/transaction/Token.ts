@@ -106,7 +106,7 @@ export class Token {
     const transferResults: VerificationResult<VerificationStatus>[] = [];
     for (let i = 0; i < this._transactions.length; i++) {
       const transaction = this._transactions[i];
-      const token = new Token(this.genesis, this._transactions.slice(0, i - 1));
+      const token = new Token(this.genesis, this._transactions.slice(0, i));
       const result = await CertifiedTransferTransactionVerificationRule.verify(
         trustBase,
         predicateVerifier,

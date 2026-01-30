@@ -50,11 +50,15 @@ describe('Transition', () => {
       ),
     );
 
-    // TODO: Sending to another person besides myself
+    const receiverSigningService = new SigningService(SigningService.generatePrivateKey());
+    // Second user will generate his predicate
+    const receiverPredicate = PayToPublicKeyPredicate.create(receiverSigningService);
+    // Create pay to script hash for sender
+    const receiverScriptHash = await PayToScriptHash.create(receiverPredicate);
     const transferTransaction = await TransferTransaction.create(
       token,
       predicate,
-      await PayToScriptHash.create(predicate),
+      await PayToScriptHash.fromString(receiverScriptHash.toString()),
       crypto.getRandomValues(new Uint8Array(32)),
       CborSerializer.encodeArray(),
     );
@@ -85,7 +89,6 @@ describe('Transition', () => {
       ),
     ).rejects.toThrow();
 
-    // Finish initial transfer
     token = await token.transfer(
       trustBase,
       predicateVerifier,
@@ -96,11 +99,41 @@ describe('Transition', () => {
       ),
     );
 
-    const importedToken = await Token.fromCBOR(token.toCBOR());
-    await expect(importedToken.verify(trustBase, predicateVerifier).then((result) => result.status)).resolves.toEqual(
-      VerificationStatus.OK,
+    await expect(
+      Token.fromCBOR(token.toCBOR()).then((importedToken) =>
+        importedToken.verify(trustBase, predicateVerifier).then((result) => result.status),
+      ),
+    ).resolves.toEqual(VerificationStatus.OK);
+
+    // Return token to initial minter
+    const returnTransferTransaction = await TransferTransaction.create(
+      token,
+      receiverPredicate,
+      await PayToScriptHash.create(predicate),
+      crypto.getRandomValues(new Uint8Array(32)),
+      CborSerializer.encodeArray(),
     );
 
-    // console.log(importedToken.toString());
+    certificationData = await CertificationData.fromTransferTransaction(
+      returnTransferTransaction,
+      await PayToPublicKeyPredicate.generateUnlockScript(returnTransferTransaction, receiverSigningService),
+    );
+
+    response = await client.submitCertificationRequest(certificationData);
+    expect(response.status).toEqual(CertificationStatus.SUCCESS);
+
+    token = await token.transfer(
+      trustBase,
+      predicateVerifier,
+      await returnTransferTransaction.toCertifiedTransaction(
+        trustBase,
+        predicateVerifier,
+        await waitInclusionProof(trustBase, predicateVerifier, client, returnTransferTransaction),
+      ),
+    );
+
+    await expect(token.verify(trustBase, predicateVerifier).then((result) => result.status)).resolves.toEqual(
+      VerificationStatus.OK,
+    );
   }, 30000);
 });

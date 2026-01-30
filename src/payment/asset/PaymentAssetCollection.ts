@@ -10,11 +10,11 @@ export class PaymentAssetCollection {
   public static create(...data: Asset[]): PaymentAssetCollection {
     const assets = new Map<string, Asset>();
     for (const asset of data) {
-      const name = HexConverter.encode(asset.id.bytes);
-      if (assets.has(name)) {
+      const key = HexConverter.encode(asset.id.bytes);
+      if (assets.has(key)) {
         throw new Error('Invalid payment asset collection. Duplicate assets found.');
       }
-      assets.set(name, asset);
+      assets.set(key, asset);
     }
 
     return new PaymentAssetCollection(assets);
