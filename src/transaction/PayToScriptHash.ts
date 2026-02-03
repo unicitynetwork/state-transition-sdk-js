@@ -1,4 +1,3 @@
-import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { IPredicate } from '../predicate/IPredicate.js';

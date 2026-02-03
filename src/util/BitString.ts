@@ -1,7 +1,6 @@
-import { DataHash } from '../crypto/hash/DataHash.js';
+import { StateId } from '../api/StateId.js';
 import { BigintConverter } from '../serialization/BigintConverter.js';
 import { HexConverter } from '../serialization/HexConverter.js';
-import { StateId } from '../api/StateId.js';
 
 export class BitString {
   /**

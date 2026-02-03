@@ -34,12 +34,9 @@ export class CertifiedTransferTransaction implements ITransaction {
     return this.transaction.x;
   }
 
-  public static async fromCBOR(bytes: Uint8Array): Promise<CertifiedTransferTransaction> {
+  public static fromCBOR(bytes: Uint8Array): CertifiedTransferTransaction {
     const data = CborDeserializer.decodeArray(bytes);
-    return new CertifiedTransferTransaction(
-      await TransferTransaction.fromCBOR(data[0]),
-      InclusionProof.fromCBOR(data[1]),
-    );
+    return new CertifiedTransferTransaction(TransferTransaction.fromCBOR(data[0]), InclusionProof.fromCBOR(data[1]));
   }
 
   public calculateStateHash(): Promise<DataHash> {
