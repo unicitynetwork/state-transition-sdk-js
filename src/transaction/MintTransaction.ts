@@ -59,12 +59,12 @@ export class MintTransaction implements ITransaction {
     );
   }
 
-  public static async fromCBOR(bytes: Uint8Array): Promise<MintTransaction> {
+  public static fromCBOR(bytes: Uint8Array): Promise<MintTransaction> {
     const data = CborDeserializer.decodeArray(bytes);
     const aux = CborDeserializer.decodeArray(data[2]);
 
     return MintTransaction.create(
-      await PayToScriptHash.fromCBOR(data[0]),
+      PayToScriptHash.fromCBOR(data[0]),
       TokenId.fromCBOR(data[1]),
       TokenType.fromCBOR(aux[0]),
       CborDeserializer.decodeByteString(aux[1]),
@@ -73,7 +73,12 @@ export class MintTransaction implements ITransaction {
 
   public calculateStateHash(): Promise<DataHash> {
     return new DataHasher(HashAlgorithm.SHA256)
-      .update(CborSerializer.encodeArray(this.sourceStateHash.toCBOR(), CborSerializer.encodeByteString(this.x)))
+      .update(
+        CborSerializer.encodeArray(
+          CborSerializer.encodeByteString(this.sourceStateHash.imprint),
+          CborSerializer.encodeByteString(this.x),
+        ),
+      )
       .digest();
   }
 

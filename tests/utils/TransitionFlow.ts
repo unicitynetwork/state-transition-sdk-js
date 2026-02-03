@@ -56,7 +56,7 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
       const transferTransaction = await TransferTransaction.create(
         token,
         predicate,
-        await PayToScriptHash.fromString(receiverScriptHash.toString()),
+        PayToScriptHash.fromBytes(receiverScriptHash.bytes),
         crypto.getRandomValues(new Uint8Array(32)),
         CborSerializer.encodeArray(),
       );

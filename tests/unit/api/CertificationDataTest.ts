@@ -1,26 +1,28 @@
 import { CertificationData } from '../../../src/api/CertificationData.js';
 import { HexConverter } from '../../../src/serialization/HexConverter.js';
+import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
+import { PayToScriptHash } from '../../../src/transaction/PayToScriptHash.js';
+import { TokenId } from '../../../src/transaction/TokenId.js';
+import { TokenType } from '../../../src/transaction/TokenType.js';
 
 describe('CertificationData', () => {
-  it('should encode and decode to exactly same object', () => {
-    const certificationData = CertificationData.fromJSON({
-      ownerPredicate: '8301410158210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
-      sourceStateHash: '00000000000000000000000000000000000000000000000000000000000000000000',
-      transactionHash: '00000000000000000000000000000000000000000000000000000000000000000000',
-      witness:
-        '8c3f91708445bf0ddec220f0821461bcf84860a8769275f9930e798d1f645d157bb6a2998c61941108b0993c5aed6a7b92ccf31d11b50fe80d9ff93da392336a01',
-    });
-    expect(HexConverter.encode(certificationData.toCBOR())).toStrictEqual(
-      '848301410158210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f8179858220000000000000000000000000000000000000000000000000000000000000000000058220000000000000000000000000000000000000000000000000000000000000000000058418c3f91708445bf0ddec220f0821461bcf84860a8769275f9930e798d1f645d157bb6a2998c61941108b0993c5aed6a7b92ccf31d11b50fe80d9ff93da392336a01',
+  it('should encode and decode to exactly same object', async () => {
+    const certificationData = await CertificationData.fromMintTransaction(
+      await MintTransaction.create(
+        PayToScriptHash.fromBytes(new Uint8Array(32)),
+        new TokenId(new Uint8Array(32)),
+        new TokenType(new Uint8Array(32)),
+        new Uint8Array(0),
+      ),
     );
-    expect(CertificationData.fromCBOR(certificationData.toCBOR())).toStrictEqual(certificationData);
-    expect(certificationData.toJSON()).toEqual({
-      ownerPredicate: '8301410158210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
-      sourceStateHash: '00000000000000000000000000000000000000000000000000000000000000000000',
-      transactionHash: '00000000000000000000000000000000000000000000000000000000000000000000',
-      witness:
-        '8c3f91708445bf0ddec220f0821461bcf84860a8769275f9930e798d1f645d157bb6a2998c61941108b0993c5aed6a7b92ccf31d11b50fe80d9ff93da392336a01',
-    });
-    expect(CertificationData.fromJSON(certificationData.toJSON())).toStrictEqual(certificationData);
+    expect(HexConverter.encode(certificationData.toCBOR())).toStrictEqual(
+      '8483014101582103b00b30dcd21feaa837132ccd4b7b9595f704c9714ac66eed085f52bc396f9050582080201eff2f0c27ea9c8433eb999b4fd0fa5bfb4fe47fa2690859f0c83651604e5820d3428d83066c996da3b3ec8a68851dfe1e0df6065bac29fce57a95b35360cecc584173f16f156b8d0a854274fb765d1158ce7dc591de4b7c503f3fb06d8f92e9d96164ea64082ac1616009842c154bdcdd974c18c831899632d023e43a840cc9ba9000',
+    );
+    const result = CertificationData.fromCBOR(certificationData.toCBOR());
+
+    expect(result.lockScript.toCBOR()).toStrictEqual(certificationData.lockScript.toCBOR());
+    expect(result.sourceStateHash.imprint).toStrictEqual(certificationData.sourceStateHash.imprint);
+    expect(result.transactionHash.imprint).toStrictEqual(certificationData.transactionHash.imprint);
+    expect(HexConverter.encode(result.unlockScript)).toStrictEqual(HexConverter.encode(certificationData.unlockScript));
   });
 });

@@ -1,18 +1,6 @@
-import { CertificationData, ICertificationDataJson } from './CertificationData.js';
+import { CertificationData } from './CertificationData.js';
 import { StateId } from './StateId.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
-
-/**
- * JSON representation of a certification request.
- */
-export interface ICertificationRequestJson {
-  /** The certification data json. */
-  readonly certificationData: ICertificationDataJson;
-  /** Optional flag to request a receipt. */
-  readonly receipt?: boolean;
-  /** The state ID as a string. */
-  readonly stateId: string;
-}
 
 /**
  * Certification request object sent by the client to the aggregator.
@@ -53,18 +41,5 @@ export class CertificationRequest {
       CborSerializer.encodeBoolean(this.receipt),
       CborSerializer.encodeUnsignedInteger(0),
     );
-  }
-
-  /**
-   * Convert the request to a JSON object.
-   *
-   * @returns JSON object
-   */
-  public toJSON(): ICertificationRequestJson {
-    return {
-      certificationData: this.certificationData.toJSON(),
-      receipt: this.receipt,
-      stateId: this.stateId.toJSON(),
-    };
   }
 }

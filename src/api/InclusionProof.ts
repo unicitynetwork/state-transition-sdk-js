@@ -1,22 +1,9 @@
 import { UnicityCertificate } from './bft/UnicityCertificate.js';
-import { CertificationData, ICertificationDataJson } from './CertificationData.js';
-import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
+import { CertificationData } from './CertificationData.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
-import { ISparseMerkleTreePathJson, SparseMerkleTreePath } from '../smt/plain/SparseMerkleTreePath.js';
+import { SparseMerkleTreePath } from '../smt/plain/SparseMerkleTreePath.js';
 import { dedent } from '../util/StringUtils.js';
-
-/**
- * Interface representing the JSON structure of an InclusionProof.
- */
-export interface IInclusionProofJson {
-  /** The certification data as JSON or null. */
-  readonly certificationData: ICertificationDataJson | null;
-  /** The sparse merkle tree path as JSON. */
-  readonly merkleTreePath: ISparseMerkleTreePathJson;
-  /** The unicity certificate as a hex string. */
-  readonly unicityCertificate: string;
-}
 
 /**
  * Represents a proof of inclusion or non inclusion in a sparse merkle tree.
@@ -50,33 +37,6 @@ export class InclusionProof {
   }
 
   /**
-   * Creates an InclusionProof from a JSON object.
-   * @param data The JSON data.
-   * @returns An InclusionProof instance.
-   * @throws Error if parsing fails.
-   */
-  public static fromJSON(data: unknown): InclusionProof {
-    if (!InclusionProof.isJSON(data)) {
-      throw new InvalidJsonStructureError();
-    }
-
-    return new InclusionProof(
-      SparseMerkleTreePath.fromJSON(data.merkleTreePath),
-      data.certificationData ? CertificationData.fromJSON(data.certificationData) : null,
-      UnicityCertificate.fromJSON(data.unicityCertificate),
-    );
-  }
-
-  /**
-   * Type guard to check if data is IInclusionProofJson.
-   * @param data The data to check.
-   * @returns True if data is IInclusionProofJson, false otherwise.
-   */
-  public static isJSON(data: unknown): data is IInclusionProofJson {
-    return typeof data === 'object' && data !== null && 'merkleTreePath' in data && 'unicityCertificate' in data;
-  }
-
-  /**
    * Encodes the InclusionProof to CBOR format.
    * @returns The CBOR-encoded bytes.
    */
@@ -86,18 +46,6 @@ export class InclusionProof {
       this.merkleTreePath.toCBOR(),
       this.unicityCertificate.toCBOR(),
     );
-  }
-
-  /**
-   * Converts the InclusionProof to a JSON object.
-   * @returns The InclusionProof as IInclusionProofJson.
-   */
-  public toJSON(): IInclusionProofJson {
-    return {
-      certificationData: this.certificationData?.toJSON() ?? null,
-      merkleTreePath: this.merkleTreePath.toJSON(),
-      unicityCertificate: this.unicityCertificate.toJSON(),
-    };
   }
 
   /**

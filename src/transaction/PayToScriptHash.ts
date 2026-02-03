@@ -8,62 +8,40 @@ import { HexConverter } from '../serialization/HexConverter.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 
 export class PayToScriptHash {
-  private constructor(
-    private readonly hash: DataHash,
-    private readonly _checksum: Uint8Array,
-  ) {
-    this._checksum = new Uint8Array(_checksum);
+  private constructor(private readonly _bytes: Uint8Array) {
+    this._bytes = new Uint8Array(_bytes);
+  }
+
+  public get bytes(): Uint8Array {
+    return new Uint8Array(this._bytes);
   }
 
   public static async create(predicate: IPredicate): Promise<PayToScriptHash> {
     const hash = await new DataHasher(HashAlgorithm.SHA256).update(predicate.toCBOR()).digest();
-    return PayToScriptHash.createFromHash(hash);
+    return new PayToScriptHash(hash.data);
   }
 
-  public static fromCBOR(bytes: Uint8Array): Promise<PayToScriptHash> {
-    return PayToScriptHash.fromString(CborDeserializer.decodeTextString(bytes));
+  public static fromBytes(bytes: Uint8Array): PayToScriptHash {
+    return new PayToScriptHash(bytes);
   }
 
-  public static async fromString(data: string): Promise<PayToScriptHash> {
-    if (!data.startsWith('alpha1')) {
-      throw new Error('Invalid PayToScriptHash string format.');
-    }
-
-    const hash = HexConverter.decode(data.slice(6, -8));
-    const checksum = HexConverter.decode(data.slice(-8));
-
-    const calculatedChecksum = await new DataHasher(HashAlgorithm.SHA256)
-      .update(hash)
-      .digest()
-      .then((d) => d.imprint.slice(-4));
-
-    if (!areUint8ArraysEqual(checksum, calculatedChecksum)) {
-      throw new Error('Invalid PayToScriptHash checksum.');
-    }
-
-    return new PayToScriptHash(DataHash.fromImprint(hash), checksum);
-  }
-
-  private static async createFromHash(hash: DataHash): Promise<PayToScriptHash> {
-    return new PayToScriptHash(
-      hash,
-      // TODO: Replace with CRC32 checksum
-      await new DataHasher(HashAlgorithm.SHA256)
-        .update(hash.imprint)
-        .digest()
-        .then((d) => d.imprint.slice(-4)),
-    );
+  public static fromCBOR(bytes: Uint8Array): PayToScriptHash {
+    return PayToScriptHash.fromBytes(CborDeserializer.decodeByteString(bytes));
   }
 
   public equals(hash: PayToScriptHash): boolean {
-    return this.toString() === hash.toString();
+    return areUint8ArraysEqual(this._bytes, hash._bytes);
   }
 
   public toCBOR(): Uint8Array {
-    return CborSerializer.encodeTextString(this.toString());
+    return CborSerializer.encodeByteString(this._bytes);
   }
 
+  /**
+   * Returns a string representation of the PayToScriptHash.
+   * @returns The string representation.
+   */
   public toString(): string {
-    return `alpha1${HexConverter.encode(this.hash.imprint)}${HexConverter.encode(this._checksum)}`;
+    return `PayToScriptHash[${HexConverter.encode(this._bytes)}]`;
   }
 }

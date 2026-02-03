@@ -1,14 +1,8 @@
-import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
 import { BigintConverter } from '../../serialization/BigintConverter.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../serialization/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
-
-export interface ISparseMerkleTreePathStepJson {
-  readonly data: string | null;
-  readonly path: string;
-}
 
 export class SparseMerkleTreePathStep {
   public constructor(
@@ -33,37 +27,11 @@ export class SparseMerkleTreePathStep {
     );
   }
 
-  public static fromJSON(data: unknown): SparseMerkleTreePathStep {
-    if (!SparseMerkleTreePathStep.isJSON(data)) {
-      throw new InvalidJsonStructureError();
-    }
-
-    return new SparseMerkleTreePathStep(BigInt(data.path), data.data ? HexConverter.decode(data.data) : null);
-  }
-
-  public static isJSON(data: unknown): data is ISparseMerkleTreePathStepJson {
-    return (
-      typeof data === 'object' &&
-      data !== null &&
-      'path' in data &&
-      typeof data.path === 'string' &&
-      'data' in data &&
-      (data.data === null || typeof data.data === 'string')
-    );
-  }
-
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
       CborSerializer.encodeByteString(BigintConverter.encode(this.path)),
       CborSerializer.encodeNullable(this._data, CborSerializer.encodeByteString),
     );
-  }
-
-  public toJSON(): ISparseMerkleTreePathStepJson {
-    return {
-      data: this._data ? HexConverter.encode(this._data) : null,
-      path: this.path.toString(),
-    };
   }
 
   public toString(): string {

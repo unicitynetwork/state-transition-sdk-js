@@ -124,10 +124,6 @@ export class UnicityCertificate {
     );
   }
 
-  public toJSON(): string {
-    return HexConverter.encode(this.toCBOR());
-  }
-
   /**
    * Returns a string representation of the UnicityCertificate.
    * @returns The string representation.

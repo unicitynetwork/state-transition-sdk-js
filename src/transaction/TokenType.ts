@@ -19,18 +19,9 @@ export class TokenType {
     return new TokenType(CborDeserializer.decodeByteString(bytes));
   }
 
-  public static fromJSON(input: string): TokenType {
-    return new TokenType(HexConverter.decode(input));
-  }
-
   /** CBOR serialization. */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeByteString(this._bytes);
-  }
-
-  /** Hex representation for JSON serialization. */
-  public toJSON(): string {
-    return HexConverter.encode(this._bytes);
   }
 
   /** Convert instance to readable string */

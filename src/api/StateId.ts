@@ -3,27 +3,29 @@ import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { IPredicate } from '../predicate/IPredicate.js';
+import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
+import { HexConverter } from '../serialization/HexConverter.js';
 import { ITransaction } from '../transaction/ITransaction.js';
 import { BitString } from '../util/BitString.js';
+import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 
 /**
  * Represents a unique state identifier derived from a public key and state hash.
  */
 export class StateId {
-  /**
-   * Constructs a StateId instance.
-   * @param hash The DataHash representing the state ID.
-   */
-  private constructor(private readonly hash: DataHash) {}
+  private readonly _bytes: Uint8Array;
 
-  /**
-   * Decodes a StateId from CBOR bytes.
-   * @param data The CBOR-encoded bytes.
-   * @returns A StateId instance.
-   */
-  public static fromCBOR(data: Uint8Array): StateId {
-    return new StateId(DataHash.fromCBOR(data));
+  private constructor(hash: DataHash) {
+    this._bytes = new Uint8Array(hash.data);
+  }
+
+  public get bytes(): Uint8Array {
+    return new Uint8Array(this._bytes);
+  }
+
+  public static fromCBOR(bytes: Uint8Array): StateId {
+    return new StateId(new DataHash(HashAlgorithm.SHA256, CborDeserializer.decodeByteString(bytes)));
   }
 
   /**
@@ -32,15 +34,6 @@ export class StateId {
    */
   public static fromCertificationData(certificationData: CertificationData): Promise<StateId> {
     return StateId.create(certificationData.lockScript, certificationData.sourceStateHash);
-  }
-
-  /**
-   * Creates a StateId from a JSON string.
-   * @param data The JSON string.
-   * @returns A StateId instance.
-   */
-  public static fromJSON(data: string): StateId {
-    return new StateId(DataHash.fromJSON(data));
   }
 
   public static fromTransaction(transaction: ITransaction): Promise<StateId> {
@@ -61,20 +54,20 @@ export class StateId {
     return new StateId(hash);
   }
 
+  public equals(id: StateId): boolean {
+    return areUint8ArraysEqual(this._bytes, id._bytes);
+  }
+
   /**
    * Converts the StateId to a BitString.
    * @return The BitString representation of the StateId.
    */
   public toBitString(): BitString {
-    return BitString.fromStateId(this.hash);
+    return BitString.fromStateId(this);
   }
 
   public toCBOR(): Uint8Array {
-    return this.hash.toCBOR();
-  }
-
-  public toJSON(): string {
-    return this.hash.toJSON();
+    return CborSerializer.encodeByteString(this._bytes);
   }
 
   /**
@@ -82,6 +75,6 @@ export class StateId {
    * @returns The string representation.
    */
   public toString(): string {
-    return `StateId[${this.hash.toString()}]`;
+    return `StateId[${HexConverter.encode(this._bytes)}]`;
   }
 }

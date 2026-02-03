@@ -5,11 +5,11 @@ import { HashAlgorithm } from './HashAlgorithm.js';
 import { IDataHasher } from './IDataHasher.js';
 
 export const Algorithm = {
-  [HashAlgorithm.RIPEMD160]: 'RIPEMD160',
-  [HashAlgorithm.SHA224]: 'SHA224',
-  [HashAlgorithm.SHA256]: 'SHA256',
-  [HashAlgorithm.SHA384]: 'SHA384',
-  [HashAlgorithm.SHA512]: 'SHA512',
+  [HashAlgorithm.RIPEMD160.id]: 'RIPEMD160',
+  [HashAlgorithm.SHA224.id]: 'SHA224',
+  [HashAlgorithm.SHA256.id]: 'SHA256',
+  [HashAlgorithm.SHA384.id]: 'SHA384',
+  [HashAlgorithm.SHA512.id]: 'SHA512',
 };
 
 export class NodeDataHasher implements IDataHasher {
@@ -20,7 +20,7 @@ export class NodeDataHasher implements IDataHasher {
    * @param {string} algorithm
    */
   public constructor(public readonly algorithm: HashAlgorithm) {
-    this._hasher = createHash(Algorithm[this.algorithm]);
+    this._hasher = createHash(Algorithm[this.algorithm.id]);
   }
 
   /**
