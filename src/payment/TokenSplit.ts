@@ -172,7 +172,9 @@ export class TokenSplit {
     parsePaymentData: (bytes: Uint8Array) => Promise<ISplitPaymentData>,
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifier,
-  ): Promise<VerificationResult<unknown>> {
+  ): Promise<VerificationResult<VerificationStatus>> {
+    // TODO: Check initial token also or that should be done by client beforehand?
+
     const data = await parsePaymentData(token.genesis.data);
 
     if (data.assets == null) {

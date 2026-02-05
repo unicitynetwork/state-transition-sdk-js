@@ -11,6 +11,8 @@ import { IPredicateVerifier } from '../../verification/IPredicateVerifier.js';
 import { PayToPublicKeyPredicate } from '../PayToPublicKeyPredicate.js';
 
 export class PayToPublicKeyPredicateVerifier implements IPredicateVerifier {
+  public readonly type = PayToPublicKeyPredicate.TYPE;
+
   public async verify(
     encodedPredicate: IPredicate,
     certificationData: CertificationData,

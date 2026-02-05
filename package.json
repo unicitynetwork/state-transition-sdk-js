@@ -12,8 +12,8 @@
   "scripts": {
     "prebuild": "rm -rf lib",
     "build": "tsc",
-    "build:check": "tsc --noEmit",
-    "lint": "eslint \"src/**/*\" \"tests/**/*\"",
+    "build:check": "tsc --project tsconfig.eslint.json --noEmit",
+    "lint": "eslint \"src/**/*\" \"tests/**/*\" \"examples/**/*\"",
     "lint:fix": "eslint \"src/**/*\" \"tests/**/*\" --fix",
     "test": "jest --testPathPatterns=tests --testPathIgnorePatterns=tests/e2e",
     "test:unit": "jest --testPathPatterns=tests/unit --testPathPatterns=tests/functional",

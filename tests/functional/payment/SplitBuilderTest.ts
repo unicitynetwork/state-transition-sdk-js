@@ -10,9 +10,7 @@ import { TokenAssetMissingError } from '../../../src/payment/error/TokenAssetMis
 import { TokenAssetValueMismatchError } from '../../../src/payment/error/TokenAssetValueMismatchError.js';
 import { SplitReason } from '../../../src/payment/SplitReason.js';
 import { TokenSplit } from '../../../src/payment/TokenSplit.js';
-import { BuiltInPredicateVerifierFactory } from '../../../src/predicate/builtin/BuiltInPredicateVerifierFactory.js';
 import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
-import { PredicateEngine } from '../../../src/predicate/PredicateEngine.js';
 import { PredicateVerifier } from '../../../src/predicate/verification/PredicateVerifier.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
@@ -30,9 +28,7 @@ describe('SplitBuilder Functional Test', () => {
     const aggregatorClient = TestAggregatorClient.create();
     const trustBase = aggregatorClient.rootTrustBase;
     const client = new StateTransitionClient(aggregatorClient);
-    const predicateVerifier = new PredicateVerifier(
-      new Map([[PredicateEngine.BUILT_IN, BuiltInPredicateVerifierFactory.create()]]),
-    );
+    const predicateVerifier = PredicateVerifier.create();
 
     const signingService = new SigningService(SigningService.generatePrivateKey());
     const predicate = PayToPublicKeyPredicate.create(signingService);

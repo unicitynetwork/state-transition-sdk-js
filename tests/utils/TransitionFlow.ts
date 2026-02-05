@@ -2,9 +2,7 @@ import { RootTrustBase } from '../../src/api/bft/RootTrustBase.js';
 import { CertificationData } from '../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../src/api/CertificationResponse.js';
 import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
-import { BuiltInPredicateVerifierFactory } from '../../src/predicate/builtin/BuiltInPredicateVerifierFactory.js';
 import { PayToPublicKeyPredicate } from '../../src/predicate/builtin/PayToPublicKeyPredicate.js';
-import { PredicateEngine } from '../../src/predicate/PredicateEngine.js';
 import { PredicateVerifier } from '../../src/predicate/verification/PredicateVerifier.js';
 import { CborSerializer } from '../../src/serialization/cbor/CborSerializer.js';
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
@@ -20,9 +18,7 @@ import { VerificationStatus } from '../../src/verification/VerificationStatus.js
 export const transitionFlowTest = (client: StateTransitionClient, trustBase: RootTrustBase): void => {
   describe('Transition', () => {
     it('default successful flow', async () => {
-      const predicateVerifier = new PredicateVerifier(
-        new Map([[PredicateEngine.BUILT_IN, BuiltInPredicateVerifierFactory.create()]]),
-      );
+      const predicateVerifier = PredicateVerifier.create();
 
       const signingService = new SigningService(SigningService.generatePrivateKey());
       const predicate = PayToPublicKeyPredicate.create(signingService);

@@ -1,11 +1,9 @@
 # State Transition SDK
 
-An SDK for managing assets on the Unicity Protocol, supporting off-chain state with on-chain security guarantees.
-
 ## Overview
 
 The State Transition SDK is a TypeScript library that provides an off-chain token transaction framework. Tokens are managed, stored, and transferred off-chain with only cryptographic commitments published on-chain, ensuring privacy while preventing double-spending through single-spend proofs.
-
+This is a low-level SDK, that supports transferring tokens, making payments, and splitting tokens. 
 In this system, tokens are self-contained entities containing complete transaction history and cryptographic proofs attesting to their current state (ownership, value, etc.). State transitions are verified through consultation with blockchain infrastructure (Unicity) to produce proof of single spend.
 
 ### Key Features
@@ -129,16 +127,11 @@ npm run lint:fix
 
 ## Examples
 
-### Minting Tokens
-
-Note that the examples here are using some utility functions and classes that are defined below in a separate section.
-
-```typescript
-```
+### Minting Tokens 
+`examples/mint/index.ts`
 
 ### Token Transfer
-
-### Checking Token Status
+`examples/transfer/index.ts`
 
 ## Unicity Signature Standard
 
