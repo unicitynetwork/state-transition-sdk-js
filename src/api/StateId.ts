@@ -8,20 +8,19 @@ import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../serialization/HexConverter.js';
 import { ITransaction } from '../transaction/ITransaction.js';
 import { BitString } from '../util/BitString.js';
-import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 
 /**
  * Represents a unique state identifier derived from a public key and state hash.
  */
 export class StateId {
-  private readonly _bytes: Uint8Array;
+  private constructor(private readonly hash: DataHash) {}
 
-  private constructor(hash: DataHash) {
-    this._bytes = new Uint8Array(hash.data);
+  public get data(): Uint8Array {
+    return this.hash.data;
   }
 
-  public get bytes(): Uint8Array {
-    return new Uint8Array(this._bytes);
+  public get imprint(): Uint8Array {
+    return this.hash.imprint;
   }
 
   public static fromCBOR(bytes: Uint8Array): StateId {
@@ -48,14 +47,14 @@ export class StateId {
    */
   private static async create(predicate: IPredicate, stateHash: DataHash): Promise<StateId> {
     const hash = await new DataHasher(HashAlgorithm.SHA256)
-      .update(CborSerializer.encodeArray(predicate.toCBOR(), CborSerializer.encodeByteString(stateHash.imprint)))
+      .update(CborSerializer.encodeArray(predicate.toCBOR(), CborSerializer.encodeByteString(stateHash.data)))
       .digest();
 
     return new StateId(hash);
   }
 
   public equals(id: StateId): boolean {
-    return areUint8ArraysEqual(this._bytes, id._bytes);
+    return this.hash.equals(id.hash);
   }
 
   /**
@@ -67,7 +66,7 @@ export class StateId {
   }
 
   public toCBOR(): Uint8Array {
-    return CborSerializer.encodeByteString(this._bytes);
+    return CborSerializer.encodeByteString(this.data);
   }
 
   /**
@@ -75,6 +74,6 @@ export class StateId {
    * @returns The string representation.
    */
   public toString(): string {
-    return `StateId[${HexConverter.encode(this._bytes)}]`;
+    return `StateId[${HexConverter.encode(this.data)}]`;
   }
 }

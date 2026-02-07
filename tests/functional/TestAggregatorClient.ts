@@ -15,6 +15,9 @@ import { SparseMerkleTree } from '../../src/smt/plain/SparseMerkleTree.js';
 import { createRootTrustBase } from '../utils/RootTrustBaseFixture.js';
 import { createUnicityCertificate } from '../utils/UnicityCertificateFixture.js';
 
+/**
+ * Test aggregator client implementation that stores all submitted certification requests in memory.
+ */
 export class TestAggregatorClient implements IAggregatorClient {
   public readonly rootTrustBase: RootTrustBase;
   private readonly predicateVerifier = PredicateVerifier.create();
@@ -27,6 +30,10 @@ export class TestAggregatorClient implements IAggregatorClient {
     this.rootTrustBase = createRootTrustBase(this.signingService.publicKey);
   }
 
+  /**
+   * Creates a new TestAggregatorClient instance with optional private key.
+   * If no private key is provided, a new one is generated.
+   */
   public static create(privateKey: Uint8Array = SigningService.generatePrivateKey()): TestAggregatorClient {
     return new TestAggregatorClient(
       new SparseMerkleTree(new DataHasherFactory(HashAlgorithm.SHA256, DataHasher)),
@@ -34,6 +41,9 @@ export class TestAggregatorClient implements IAggregatorClient {
     );
   }
 
+  /**
+   * @inheritDoc
+   */
   public async getInclusionProof(stateId: StateId): Promise<InclusionProofResponse> {
     const certificationData = this.requests.get(stateId.toBitString().toBigInt());
     const root = await this.smt.calculateRoot();
@@ -49,6 +59,9 @@ export class TestAggregatorClient implements IAggregatorClient {
     );
   }
 
+  /**
+   * @inheritDoc
+   */
   public async submitCertificationRequest(certificationData: CertificationData): Promise<CertificationResponse> {
     const stateId = await StateId.fromCertificationData(certificationData);
 

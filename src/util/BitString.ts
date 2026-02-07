@@ -22,7 +22,7 @@ export class BitString {
    * @return {BitString} A BitString instance
    */
   public static fromStateId(stateId: StateId): BitString {
-    return new BitString(stateId.bytes);
+    return new BitString(stateId.imprint);
   }
 
   /**

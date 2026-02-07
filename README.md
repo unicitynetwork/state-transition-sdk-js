@@ -61,6 +61,35 @@ I --> J[End]
 
 ### Token Structure
 
+```
+Token {
+  genesis: CertifiedMintTransaction {
+    transaction: MintTransaction {
+      sourceStateHash: MintTransactionState,
+      lockScript: IPredicate,
+      recipient: PayToScriptHash,
+      tokenId: TokenId,
+      tokenType: TokenType,
+      data: Uint8Array
+    },
+    inclusionProof: InclusionProof
+  },
+  transactions: [
+    CertifiedTransferTransaction {
+      transaction: TransferTransaction {
+        sourceStateHash: DataHash,
+        lockScript: IPredicate,
+        recipient: PayToScriptHash,
+        x: Uint8Array,
+        data: Uint8Array
+      },
+      inclusionProof: InclusionProof
+    },
+    ...
+  ]
+}
+```
+
 ### Privacy Model
 - **Commitment-based**: Only cryptographic commitments published on-chain
 - **Self-contained**: Tokens include complete transaction history

@@ -2,6 +2,7 @@ import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { MintSigningService } from '../crypto/MintSigningService.js';
+import { PayToPublicKeyPredicate } from '../predicate/builtin/PayToPublicKeyPredicate.js';
 import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
 import { IPredicate } from '../predicate/IPredicate.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
@@ -54,23 +55,11 @@ export class CertificationData {
   public static async fromMintTransaction(transaction: MintTransaction): Promise<CertificationData> {
     const signingService = await MintSigningService.create(transaction.tokenId);
 
-    const transactionHash = await transaction.calculateTransactionHash();
-
-    const signatureDataHash = await new DataHasher(HashAlgorithm.SHA256)
-      .update(
-        CborSerializer.encodeArray(
-          CborSerializer.encodeByteString(transaction.sourceStateHash.imprint),
-          CborSerializer.encodeByteString(transactionHash.imprint),
-        ),
-      )
-      .digest();
-    const unlockScript = await signingService.sign(signatureDataHash);
-
     return CertificationData.create(
       transaction.lockScript,
       transaction.sourceStateHash,
-      transactionHash,
-      unlockScript.encode(),
+      await transaction.calculateTransactionHash(),
+      await PayToPublicKeyPredicate.generateUnlockScript(transaction, signingService),
     );
   }
 

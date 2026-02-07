@@ -31,8 +31,8 @@ export class PayToPublicKeyPredicateVerifier implements IPredicateVerifier {
       await new DataHasher(HashAlgorithm.SHA256)
         .update(
           CborSerializer.encodeArray(
-            CborSerializer.encodeByteString(certificationData.sourceStateHash.imprint),
-            CborSerializer.encodeByteString(certificationData.transactionHash.imprint),
+            CborSerializer.encodeByteString(certificationData.sourceStateHash.data),
+            CborSerializer.encodeByteString(certificationData.transactionHash.data),
           ),
         )
         .digest(),
