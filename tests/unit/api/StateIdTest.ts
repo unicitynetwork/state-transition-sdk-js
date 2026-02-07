@@ -17,7 +17,7 @@ describe('StateId', () => {
     );
 
     expect(HexConverter.encode(stateId.toCBOR())).toStrictEqual(
-      '58202d3f8a3769426d10ccafa08f332955faf34ba22873ae096d0ee2b19303b2d171',
+      '58205b4e69562ce02e38923a4c48727fabb8f0b2f4489e5d02c014a618ad83382891',
     );
     expect(StateId.fromCBOR(stateId.toCBOR())).toStrictEqual(stateId);
   });
