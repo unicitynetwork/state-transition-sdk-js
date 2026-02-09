@@ -14,7 +14,7 @@
     "build": "tsc",
     "build:check": "tsc --project tsconfig.eslint.json --noEmit",
     "lint": "eslint \"src/**/*\" \"tests/**/*\" \"examples/**/*\"",
-    "lint:fix": "eslint \"src/**/*\" \"tests/**/*\" --fix",
+    "lint:fix": "eslint \"src/**/*\" \"tests/**/*\" \"examples/**/*\" --fix",
     "test": "jest --testPathPatterns=tests --testPathIgnorePatterns=tests/e2e",
     "test:unit": "jest --testPathPatterns=tests/unit --testPathPatterns=tests/functional",
     "test:integration": "jest --testPathPatterns=tests/integration",

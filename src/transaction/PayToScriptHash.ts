@@ -1,3 +1,4 @@
+import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { IPredicate } from '../predicate/IPredicate.js';
@@ -21,7 +22,8 @@ export class PayToScriptHash {
   }
 
   public static fromBytes(bytes: Uint8Array): PayToScriptHash {
-    return new PayToScriptHash(bytes);
+    const hash = new DataHash(HashAlgorithm.SHA256, bytes);
+    return new PayToScriptHash(hash.data);
   }
 
   public static fromCBOR(bytes: Uint8Array): PayToScriptHash {

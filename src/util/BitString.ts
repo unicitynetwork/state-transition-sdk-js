@@ -17,7 +17,7 @@ export class BitString {
   }
 
   /**
-   * Creates a BitString from a DataHash imprint.
+   * Creates a BitString from a StateId.
    * @param {StateId} stateId
    * @return {BitString} A BitString instance
    */
