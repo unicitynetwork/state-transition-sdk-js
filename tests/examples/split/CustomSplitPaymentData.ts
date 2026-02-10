@@ -1,8 +1,8 @@
-import { PaymentAssetCollection } from '../../src/payment/asset/PaymentAssetCollection.js';
-import { ISplitPaymentData } from '../../src/payment/ISplitPaymentData.js';
-import { SplitReason } from '../../src/payment/SplitReason.js';
-import { CborDeserializer } from '../../src/serialization/cbor/CborDeserializer.js';
-import { CborSerializer } from '../../src/serialization/cbor/CborSerializer.js';
+import { PaymentAssetCollection } from '../../../src/payment/asset/PaymentAssetCollection.js';
+import { ISplitPaymentData } from '../../../src/payment/ISplitPaymentData.js';
+import { SplitReason } from '../../../src/payment/SplitReason.js';
+import { CborDeserializer } from '../../../src/serialization/cbor/CborDeserializer.js';
+import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 
 export class CustomSplitPaymentData implements ISplitPaymentData {
   public constructor(

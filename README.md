@@ -157,10 +157,13 @@ npm run lint:fix
 ## Examples
 
 ### Minting Tokens 
-`examples/mint/index.ts`
+`tests/examples/mint/ExampleTest.ts`
 
 ### Token Transfer
-`examples/transfer/index.ts`
+`tests/examples/transfer/ExampleTest.ts`
+
+### Token Splitting
+`tests/examples/split/ExampleTest.ts`
 
 ## Unicity Signature Standard
 
