@@ -12,7 +12,7 @@ export class VerificationError extends Error {
    */
   public constructor(
     message: string,
-    public readonly verificationResult: VerificationResult,
+    public readonly verificationResult: VerificationResult<unknown>,
   ) {
     super(message);
   }

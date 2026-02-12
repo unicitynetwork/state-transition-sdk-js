@@ -20,7 +20,7 @@ export class JsonRpcHttpTransport {
   /**
    * Send a JSON-RPC request.
    */
-  public async request(method: string, params: unknown | null, headers = new Headers()): Promise<unknown> {
+  public async request(method: string, params: unknown, headers = new Headers()): Promise<unknown> {
     headers.set('Content-Type', 'application/json');
 
     const response = await fetch(this.url, {

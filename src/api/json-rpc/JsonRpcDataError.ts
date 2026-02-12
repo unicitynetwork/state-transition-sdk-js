@@ -1,9 +1,9 @@
 /**
  * JSON-RPC error object.
  */
-export class JsonRpcDataError implements Error {
+export class JsonRpcDataError extends Error {
   public readonly code: number;
-  public readonly message: string;
+
   public readonly name: string = 'JsonRpcError';
 
   /**
@@ -11,8 +11,8 @@ export class JsonRpcDataError implements Error {
    * @param {{code: number; message: string}} data Error data.
    */
   public constructor({ code, message }: { code: number; message: string }) {
+    super(message);
     this.code = code;
-    this.message = message;
   }
 
   /**

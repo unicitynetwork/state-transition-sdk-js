@@ -1,11 +1,11 @@
-import { Authenticator } from './Authenticator.js';
+import { CertificationData } from './CertificationData.js';
+import { CertificationRequest } from './CertificationRequest.js';
+import { CertificationResponse } from './CertificationResponse.js';
 import { IAggregatorClient } from './IAggregatorClient.js';
 import { InclusionProofResponse } from './InclusionProofResponse.js';
 import { JsonRpcHttpTransport } from './json-rpc/JsonRpcHttpTransport.js';
-import { RequestId } from './RequestId.js';
-import { SubmitCommitmentRequest } from './SubmitCommitmentRequest.js';
-import { SubmitCommitmentResponse } from './SubmitCommitmentResponse.js';
-import { DataHash } from '../hash/DataHash.js';
+import { StateId } from './StateId.js';
+import { HexConverter } from '../serialization/HexConverter.js';
 
 /**
  * Client implementation for communicating with an aggregator via JSON-RPC.
@@ -26,34 +26,6 @@ export class AggregatorClient implements IAggregatorClient {
     this.transport = new JsonRpcHttpTransport(url);
   }
 
-  /**
-   * @inheritDoc
-   */
-  public async submitCommitment(
-    requestId: RequestId,
-    transactionHash: DataHash,
-    authenticator: Authenticator,
-    receipt: boolean = false,
-  ): Promise<SubmitCommitmentResponse> {
-    const request = new SubmitCommitmentRequest(requestId, transactionHash, authenticator, receipt);
-
-    const response = await this.transport.request(
-      'submit_commitment',
-      request.toJSON(),
-      this.key ? new Headers([['X-API-Key', this.key]]) : undefined,
-    );
-
-    return SubmitCommitmentResponse.fromJSON(response);
-  }
-
-  /**
-   * @inheritDoc
-   */
-  public async getInclusionProof(requestId: RequestId): Promise<InclusionProofResponse> {
-    const data = { requestId: requestId.toJSON() };
-    return InclusionProofResponse.fromJSON(await this.transport.request('get_inclusion_proof', data));
-  }
-
   public async getBlockHeight(): Promise<bigint> {
     const response = await this.transport.request('get_block_height', {});
     if (
@@ -67,5 +39,33 @@ export class AggregatorClient implements IAggregatorClient {
       return BigInt(response.blockNumber);
     }
     throw new Error('Invalid response format for block height');
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public async getInclusionProof(stateId: StateId): Promise<InclusionProofResponse> {
+    const data = { stateId: HexConverter.encode(stateId.data) };
+    return InclusionProofResponse.fromCBOR(
+      HexConverter.decode((await this.transport.request('get_inclusion_proof.v2', data)) as string),
+    );
+  }
+
+  /**
+   * @inheritDoc
+   */
+  public async submitCertificationRequest(
+    certificationData: CertificationData,
+    receipt: boolean = false,
+  ): Promise<CertificationResponse> {
+    const request = await CertificationRequest.create(certificationData, receipt);
+
+    const response = await this.transport.request(
+      'certification_request',
+      HexConverter.encode(request.toCBOR()),
+      this.key ? new Headers([['X-API-Key', this.key]]) : undefined,
+    );
+
+    return CertificationResponse.fromJSON(response);
   }
 }

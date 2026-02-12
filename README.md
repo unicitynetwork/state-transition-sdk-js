@@ -1,11 +1,9 @@
 # State Transition SDK
 
-An SDK for managing assets on the Unicity Protocol, supporting off-chain state with on-chain security guarantees.
-
 ## Overview
 
 The State Transition SDK is a TypeScript library that provides an off-chain token transaction framework. Tokens are managed, stored, and transferred off-chain with only cryptographic commitments published on-chain, ensuring privacy while preventing double-spending through single-spend proofs.
-
+This is a low-level SDK, that supports transferring tokens, making payments, and splitting tokens. 
 In this system, tokens are self-contained entities containing complete transaction history and cryptographic proofs attesting to their current state (ownership, value, etc.). State transitions are verified through consultation with blockchain infrastructure (Unicity) to produce proof of single spend.
 
 ### Key Features
@@ -33,75 +31,13 @@ Note: for examples, see further down in the [Examples section](#examples) or bro
 
 The main SDK interface for token operations:
 
-- `submitMintCommitment()` - Submit mint commitment to aggregator
-- `submitTransferCommitment()` - Submit transaction commitment to aggregator
-- `finalizeTransaction()` - Complete token transfers
-- `getTokenStatus()` - Check token status via inclusion proofs
+- `submitCertificationRequest()` - Submit transaction to aggregator
 - `getInclusionProof()` - Retrieve inclusion proof for a commitment
-
-### Address System
-
-**DirectAddress**: Cryptographic addresses with checksums for immediate ownership
-**ProxyAddress**: Addresses which uses nametags
-
-To use address sent by someone:
-```typescript
-const address = await AddressFactory.createAddress('DIRECT://582200004d8489e2b1244335ad8784a23826228e653658a2ecdb0abc17baa143f4fe560d9c81365b');
-```
-
-To obtain an address for minting, or for sending the address to someone, the address is calculated from a predicate reference. Such addresses add privacy and unlinkability in the case of the masked predicate:
-```typescript
-const reference = await MaskedPredicateReference.create(
-  tokenType,
-  signingAlgorithm,
-  publicKey,
-  hashAlgorithm,
-  nonce,
-);
-
-const address = await reference.toAddress();
-console.log(address.toJSON()) // --> DIRECT://582200004d8489e2b1244335ad8784a23826228e653658a2ecdb0abc17baa143f4fe560d9c81365b
-```
-
-### Predicate System
-
-Predicates define unlock conditions for tokens:
-
-- **UnmaskedPredicate**: Direct public key ownership
-- **MaskedPredicate**: Privacy-preserving ownership (hides public keys)
-- **BurnPredicate**: One-way predicate for token destruction
-
-```typescript
-// Create an unmasked predicate for direct ownership
-const unmaskedPredicate = UnmaskedPredicate.create(token.id, token.type, signingService, HashAlgorithm.SHA256, salt);
-
-// Create a masked predicate for privacy
-const maskedPredicate = await MaskedPredicate.create(
-  token.id,
-  token.type,
-  signingService,
-  HashAlgorithm.SHA256,
-  nonce
-);
-```
-
-### Token Types
-
-**Fungible Tokens**: Standard value-bearing tokens
-
-```typescript
-const textEncoder = new TextEncoder();
-
-const tokenData = TokenCoinData.create([
-  [new CoinId(textEncoder.encode('ALPHA_COIN')), BigInt(1000)]
-]);
-```
 
 ### Transaction Flow
 
 1. **Minting**: Create new tokens
 2. **Transfer**: Submit state transitions between owners
-3. **Completion**: Finalize transfers with new token state
 
 #### Transfer flow
 
@@ -111,50 +47,48 @@ Recipient knows some info about token, like token type for generating address.
 ```text
 A[Start] 
 A --> B[Recipient Generates Address]
-B --> C[Recipient Shares Address And New Data Hash with Sender]
-C --> D[Sender Creates Transaction Commitment]
-D --> E[Sender Submits Transaction Commitment]
+B --> C[Recipient Shares Address with Sender]
+C --> D[Sender Creates Transaction]
+D --> E[Sender Submits Transaction]
 E --> F[Sender Retrieves Inclusion Proof]
-F --> G[Sender Creates Transaction]
-G --> H[Sender Sends Transaction and Token to Recipient]
-H --> I[Recipient Imports Token and Transaction]
-I --> J[Recipient Verifies Transaction]
-J --> K[Recipient Finishes Transaction]
-K --> L[End]
-```
-
-#### Offline Transfer flow
-
-For situations where immediate network connectivity isn't available:
-
-```text
-A[Start] 
-A --> B[Recipient Generates Address]
-B --> C[Recipient Shares Address And New Data Hash with Sender]
-C --> D[Sender Creates Transaction Commitment]
-D --> E[Recipient Submits Transaction Commitment]
-E --> F[Recipient Retrieves Inclusion Proof]
-F --> G[Recipient Creates Transaction]
-G --> H[Recipient Sends Transaction and Token to Recipient]
-H --> I[Recipient Imports Token and Transaction]
-I --> J[Recipient Verifies Transaction]
-J --> K[Recipient Finishes Transaction]
-K --> L[End]
+F --> G[Sender Creates Certified Transaction]
+G --> H[Sender Updates Token with Certified Transaction]
+H --> I[Sender Sends Token to Recipient]
+I --> J[End]
 ```
 
 ## Architecture
 
 ### Token Structure
 
-Tokens contain:
-- **id**: Unique 256-bit identifier
-- **type**: Token class identifier
-- **version**: Token format version
-- **predicate**: Current ownership condition
-- **coins**: Coins of various types and amounts owned by this token (the coins can also represent tokens from other blockchains)
-- **nametagTokens**: Name tags for addressing
-- **data**: Token-specific data
-- **transactions**: The history of transactions performed with this token
+```
+Token {
+  genesis: CertifiedMintTransaction {
+    transaction: MintTransaction {
+      sourceStateHash: MintTransactionState,
+      lockScript: IPredicate,
+      recipient: PayToScriptHash,
+      tokenId: TokenId,
+      tokenType: TokenType,
+      data: Uint8Array
+    },
+    inclusionProof: InclusionProof
+  },
+  transactions: [
+    CertifiedTransferTransaction {
+      transaction: TransferTransaction {
+        sourceStateHash: DataHash,
+        lockScript: IPredicate,
+        recipient: PayToScriptHash,
+        x: Uint8Array,
+        data: Uint8Array
+      },
+      inclusionProof: InclusionProof
+    },
+    ...
+  ]
+}
+```
 
 ### Privacy Model
 - **Commitment-based**: Only cryptographic commitments published on-chain
@@ -222,239 +156,14 @@ npm run lint:fix
 
 ## Examples
 
-### Minting Tokens
-
-Note that the examples here are using some utility functions and classes that are defined below in a separate section.
-
-```typescript
-const secret = crypto.getRandomValues(new Uint8Array(128)); // User secret key
-const tokenId = new TokenId(crypto.getRandomValues(new Uint8Array(32))); // Chosen ID
-const tokenType = new TokenType(crypto.getRandomValues(new Uint8Array(32))); // Token type
-const tokenData = null; /* Your own token data object with ISerializable attributes */
-const coinData = TokenCoinData.create([/* [CoinId, value] elements to have coins in token */]);
-const salt = crypto.getRandomValues(new Uint8Array(32)); /* Your random salt bytes */
-
-// Create aggregator client
-const aggregatorClient = new AggregatorClient('https://gateway-test.unicity.network:443');
-const client = new StateTransitionClient(aggregatorClient);
-
-// Create root trust base from desired location, current example is for nodejs
-const trustBaseJsonString = fs.readFileSync(path.join(__dirname, 'trust-base.json'), 'utf-8');
-const trustBase = RootTrustBase.fromJSON(JSON.parse(trustBaseJsonString));
-
-const nonce = crypto.getRandomValues(new Uint8Array(32));
-const predicate = MaskedPredicate.create(
-  tokenId,
-  tokenType,
-  await SigningService.createFromSecret(secret, nonce),
-  HashAlgorithm.SHA256,
-  nonce,
-);
-
-const predicateReference = await predicate.getReference();
-const commitment = await MintCommitment.create(
-  await MintTransactionData.create(
-    tokenId,
-    tokenType,
-    tokenData,
-    coinData,
-    await predicateReference.toAddress(),
-    salt,
-    null,
-    null,
-  ),
-);
-
-const response = await client.submitMintCommitment(commitment);
-if (response.status !== SubmitCommitmentStatus.SUCCESS) {
-  throw new Error(`Failed to submit mint commitment: ${response.status}`);
-}
-
-return Token.mint(
-  trustBase,
-  new TokenState(predicate, null),
-  commitment.toTransaction(await waitInclusionProof(trustBase, client, commitment)),
-);
-```
+### Minting Tokens 
+`tests/examples/mint/ExampleTest.ts`
 
 ### Token Transfer
+`tests/examples/transfer/ExampleTest.ts`
 
-This example begins after the previous example. Here we assume that the tokens have already been minted and we wish to send the tokens to a new recipient.
-
-Note that the examples here are using some utility functions and classes that are defined below in a separate section.
-
-#### Sender side
-```typescript
-// Assume that token has already been minted or received
-const token: Token;
-const signingService: SigningService; // Sender's signing service, same as mint example predicate signing service
-
-const recipient = ProxyAddress.fromNametag('RECIPIENT');
-const receiverDataHash = null; // Hash of the data for the receiver, or null if no data
-
-const commitment = await TransferCommitment.create(
-  token,
-  recipient,
-  crypto.getRandomValues(new Uint8Array(32)),
-  receiverDataHash,
-  textEncoder.encode('my transaction message'),
-  signingService,
-);
-
-const response = await client.submitTransferCommitment(commitment);
-if (response.status !== SubmitCommitmentStatus.SUCCESS) {
-  throw new Error(`Failed to submit transaction commitment: ${response.status}`);
-}
-
-const transaction = commitment.toTransaction(await waitInclusionProof(trustBase, client, commitment));
-
-// Transfer transaction and token to recipient
-JSON.stringify(transaction);
-JSON.stringify(token);
-```
-
-#### Receiver side
-
-1. Create nametag
-    
-Nametag target address can currently only be created from unmasked predicate reference.
-
-```typescript
-const secret = crypto.getRandomValues(new Uint8Array(128)); // User secret key
-const tokenType = new TokenType(crypto.getRandomValues(new Uint8Array(32))); // Token type
-const salt = crypto.getRandomValues(new Uint8Array(32)); /* Your random salt bytes */
-
-const targetAddressReference = await UnmaskedPredicateReference.createFromSigningService(
-  tokenType,
-  SigningService.createFromSecret(secret, null),
-  HashAlgorithm.SHA256,
-);
-
-const nonce = crypto.getRandomValues(new Uint8Array(32));
-const predicateReference = await MaskedPredicateReference.createFromSigningService(
-  tokenType,
-  SigningService.createFromSecret(secret, null),
-  HashAlgorithm.SHA256,
-  nonce
-);
-
-const nametag = 'RECIPIENT';
-    
-const commitment = await MintCommitment.create(
-  await MintTransactionData.createFromNametag(
-    nametag,
-    tokenType,
-    await predicateReference.toAddress(),
-    salt,
-    await targetAddressReference.toAddress()
-  ),
-);
-
-const response = await client.submitMintCommitment(commitment);
-if (response.status !== SubmitCommitmentStatus.SUCCESS) {
-  throw new Error(`Failed to submit mint commitment: ${response.status}`);
-}
-
-const predicate = await MaskedPredicate.create(
-  commitment.transactionData.tokenId,
-  commitment.transactionData.tokenType,
-  await SigningService.createFromSecret(secret, nonce),
-  HashAlgorithm.SHA256,
-  nonce,
-);
-
-const nametagToken = Token.mint(
-  trustBase,
-  new TokenState(predicate, null),
-  commitment.toTransaction(await waitInclusionProof(trustBase, client, commitment)),
-);
-```
-
-2. Receive the token
-
-```typescript
-let secret; // Same secret as target address secret for nametag
-const token = await Token.fromJSON(JSON.parse(tokenJson));
-const transaction = await TransferTransaction.fromJSON(JSON.parse(transactionJson));
-
-const transactionData = null; // Transaction data which hash was set by recipient
-
-const predicate = await UnmaskedPredicate.create(
-  token.id,
-  token.type,
-  SigningService.createFromSecret(secret, null),
-  HashAlgorithm.SHA256,
-  transaction.data.salt
-);
-
-// Finish the transaction with the Bob's predicate
-const finalizedToken = await client.finalizeTransaction(
-  trustBase,
-  token,
-  new TokenState(predicate, null),
-  transaction,
-);
-```
-
-### Checking Token Status
-
-```typescript
-// You need the public key of the current owner to check token status
-const publicKey = signingService.getPublicKey();
-const status = await client.getTokenStatus(trustBase, token, publicKey);
-/* 
-  status InclusionProofVerificationStatus.OK is spent
-  status InclusionProofVerificationStatus.PATH_NOT_INCLUDED is unspent
- */
-```
-
-### The Token Split Operation
-
-```typescript
-// Assume that token has already been minted or received
-const token: Token;
-const signingService: SigningService; // Sender's signing service, same as mint example predicate signing service
-
-const builder = new TokenSplitBuilder();
-
-builder
-  .createToken(
-    new TokenId(crypto.getRandomValues(new Uint8Array(32))),
-    new TokenType(crypto.getRandomValues(new Uint8Array(32))),
-    null,
-    TokenCoinData.create([[new CoinId(textEncoder.encode('TEST1')), 10n]]),
-    ProxyAddress.fromNameTag('RECIPIENT'),
-    crypto.getRandomValues(new Uint8Array(32)),
-    null,
-  )
-  .createToken(
-    new TokenId(crypto.getRandomValues(new Uint8Array(32))),
-    new TokenType(crypto.getRandomValues(new Uint8Array(32))),
-    null,
-    TokenCoinData.create([[new CoinId(textEncoder.encode('TEST2')), 20n]]),
-    ProxyAddress.fromNameTag('RECIPIENT'),
-    crypto.getRandomValues(new Uint8Array(32)),
-    null,
-  );
-
-const split = await builder.build(token);
-const burnCommitment = await split.createBurnCommitment(
-  crypto.getRandomValues(new Uint8Array(32)),
-  await SigningService.createFromSecret(ownerSecret, nonce),
-);
-
-const response = await client.submitTransferCommitment(burnCommitment);
-if (response.status !== SubmitCommitmentStatus.SUCCESS) {
-  throw new Error(`Submitting burn commitment failed: ${response.status}`);
-}
-
-const splitMintCommitments = await split.createSplitMintCommitments(
-  trustBase,
-  burnCommitment.toTransaction(await waitInclusionProof(trustBase, client, burnCommitment)),
-);
-
-// Proceed with usual minting flow for each split commitment
-```
+### Token Splitting
+`tests/examples/split/ExampleTest.ts`
 
 ## Unicity Signature Standard
 

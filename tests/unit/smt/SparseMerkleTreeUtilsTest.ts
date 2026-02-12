@@ -1,4 +1,4 @@
-import { calculateCommonPath } from '../../../src/mtree/plain/SparseMerkleTreePathUtils.js';
+import { calculateCommonPath } from '../../../src/smt/SparseMerkleTreePathUtils.js';
 
 describe('Sparse Merkle Tree tests', function () {
   it('calculate common path', () => {
