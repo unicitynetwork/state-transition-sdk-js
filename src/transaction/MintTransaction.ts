@@ -16,7 +16,6 @@ import {
   InclusionProofVerificationStatus,
 } from './verification/rule/InclusionProofVerificationRule.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
-import { StateId } from '../api/StateId.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { MintSigningService } from '../crypto/MintSigningService.js';
 import { IPredicate } from '../predicate/IPredicate.js';
@@ -25,6 +24,7 @@ import { dedent } from '../util/StringUtils.js';
 
 export class MintTransaction implements ITransaction {
   private constructor(
+    public readonly sourceStateHash: MintTransactionState,
     public readonly lockScript: IPredicate,
     public readonly recipient: PayToScriptHash,
     public readonly tokenId: TokenId,
@@ -49,15 +49,22 @@ export class MintTransaction implements ITransaction {
     data = new Uint8Array(data);
 
     const signingService = await MintSigningService.create(tokenId);
-    return new MintTransaction(PayToPublicKeyPredicate.create(signingService), recipient, tokenId, tokenType, data);
+    return new MintTransaction(
+      await MintTransactionState.create(tokenId),
+      PayToPublicKeyPredicate.create(signingService),
+      recipient,
+      tokenId,
+      tokenType,
+      data,
+    );
   }
 
-  public static async fromCBOR(bytes: Uint8Array): Promise<MintTransaction> {
+  public static fromCBOR(bytes: Uint8Array): Promise<MintTransaction> {
     const data = CborDeserializer.decodeArray(bytes);
     const aux = CborDeserializer.decodeArray(data[2]);
 
     return MintTransaction.create(
-      await PayToScriptHash.fromCBOR(data[0]),
+      PayToScriptHash.fromCBOR(data[0]),
       TokenId.fromCBOR(data[1]),
       TokenType.fromCBOR(aux[0]),
       CborDeserializer.decodeByteString(aux[1]),
@@ -65,7 +72,14 @@ export class MintTransaction implements ITransaction {
   }
 
   public calculateStateHash(): Promise<DataHash> {
-    return MintTransactionState.create(this.tokenId);
+    return new DataHasher(HashAlgorithm.SHA256)
+      .update(
+        CborSerializer.encodeArray(
+          CborSerializer.encodeByteString(this.sourceStateHash.imprint),
+          CborSerializer.encodeByteString(this.x),
+        ),
+      )
+      .digest();
   }
 
   public calculateTransactionHash(): Promise<DataHash> {
@@ -93,12 +107,7 @@ export class MintTransaction implements ITransaction {
     predicateVerifier: PredicateVerifier,
     inclusionProof: InclusionProof,
   ): Promise<CertifiedMintTransaction> {
-    const result = await InclusionProofVerificationRule.verify(
-      trustBase,
-      predicateVerifier,
-      inclusionProof,
-      await StateId.fromTransaction(this),
-    );
+    const result = await InclusionProofVerificationRule.verify(trustBase, predicateVerifier, inclusionProof, this);
     if (result.status !== InclusionProofVerificationStatus.OK) {
       throw new Error(`Inclusion proof verification failed: ${result.status.toString()}`);
     }

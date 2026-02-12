@@ -4,7 +4,6 @@ import { PayToScriptHash } from './PayToScriptHash.js';
 import { Token } from './Token.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { InclusionProof } from '../api/InclusionProof.js';
-import { StateId } from '../api/StateId.js';
 import {
   InclusionProofVerificationRule,
   InclusionProofVerificationStatus,
@@ -48,17 +47,21 @@ export class TransferTransaction implements ITransaction {
     data: Uint8Array,
   ): Promise<TransferTransaction> {
     const transaction = token.transactions.at(-1) ?? token.genesis;
+    if (!transaction.recipient.equals(await PayToScriptHash.create(owner))) {
+      throw new Error('Predicate does not match pay to script hash.');
+    }
+
     const sourceStateHash = await transaction.calculateStateHash();
     return new TransferTransaction(sourceStateHash, owner, recipient, x, data);
   }
 
-  public static async fromCBOR(bytes: Uint8Array): Promise<TransferTransaction> {
+  public static fromCBOR(bytes: Uint8Array): TransferTransaction {
     const data = CborDeserializer.decodeArray(bytes);
 
     return new TransferTransaction(
-      DataHash.fromCBOR(data[0]),
+      new DataHash(HashAlgorithm.SHA256, CborDeserializer.decodeByteString(data[0])),
       EncodedPredicate.fromCBOR(CborDeserializer.decodeByteString(data[1])),
-      await PayToScriptHash.fromCBOR(data[2]),
+      PayToScriptHash.fromCBOR(data[2]),
       CborDeserializer.decodeByteString(data[3]),
       CborDeserializer.decodeByteString(data[4]),
     );
@@ -66,7 +69,12 @@ export class TransferTransaction implements ITransaction {
 
   public calculateStateHash(): Promise<DataHash> {
     return new DataHasher(HashAlgorithm.SHA256)
-      .update(CborSerializer.encodeArray(this.sourceStateHash.toCBOR(), CborSerializer.encodeByteString(this._x)))
+      .update(
+        CborSerializer.encodeArray(
+          CborSerializer.encodeByteString(this.sourceStateHash.imprint),
+          CborSerializer.encodeByteString(this._x),
+        ),
+      )
       .digest();
   }
 
@@ -84,7 +92,7 @@ export class TransferTransaction implements ITransaction {
 
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
-      this.sourceStateHash.toCBOR(),
+      CborSerializer.encodeByteString(this.sourceStateHash.data),
       CborSerializer.encodeByteString(this.lockScript.toCBOR()),
       this.recipient.toCBOR(),
       CborSerializer.encodeByteString(this._x),
@@ -97,12 +105,7 @@ export class TransferTransaction implements ITransaction {
     predicateVerifier: PredicateVerifier,
     inclusionProof: InclusionProof,
   ): Promise<CertifiedTransferTransaction> {
-    const result = await InclusionProofVerificationRule.verify(
-      trustBase,
-      predicateVerifier,
-      inclusionProof,
-      await StateId.fromTransaction(this),
-    );
+    const result = await InclusionProofVerificationRule.verify(trustBase, predicateVerifier, inclusionProof, this);
     if (result.status !== InclusionProofVerificationStatus.OK) {
       throw new Error(`Inclusion proof verification failed: ${result.status.toString()}`);
     }

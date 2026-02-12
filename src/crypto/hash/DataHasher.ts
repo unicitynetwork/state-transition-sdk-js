@@ -15,11 +15,11 @@ interface IMessageDigest {
 }
 
 export const Algorithm = {
-  [HashAlgorithm.RIPEMD160]: ripemd160,
-  [HashAlgorithm.SHA224]: sha224,
-  [HashAlgorithm.SHA256]: sha256,
-  [HashAlgorithm.SHA384]: sha384,
-  [HashAlgorithm.SHA512]: sha512,
+  [HashAlgorithm.RIPEMD160.id]: ripemd160,
+  [HashAlgorithm.SHA224.id]: sha224,
+  [HashAlgorithm.SHA256.id]: sha256,
+  [HashAlgorithm.SHA384.id]: sha384,
+  [HashAlgorithm.SHA512.id]: sha512,
 };
 
 /**
@@ -33,11 +33,11 @@ export class DataHasher implements IDataHasher {
    * @param {HashAlgorithm} algorithm
    */
   public constructor(public readonly algorithm: HashAlgorithm) {
-    if (!Algorithm[algorithm]) {
+    if (!Algorithm[algorithm.id]) {
       throw new UnsupportedHashAlgorithmError(algorithm);
     }
 
-    this._messageDigest = Algorithm[algorithm].create();
+    this._messageDigest = Algorithm[algorithm.id].create();
   }
 
   /**

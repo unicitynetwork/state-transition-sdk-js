@@ -7,6 +7,7 @@ import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
 import { BigintConverter } from '../../serialization/BigintConverter.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
+import { HexConverter } from '../../serialization/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
 import { PathVerificationResult } from '../PathVerificationResult.js';
 
@@ -26,7 +27,7 @@ export class SparseMerkleSumTreePath {
     const steps = CborDeserializer.decodeArray(data[1]);
 
     return new SparseMerkleSumTreePath(
-      DataHash.fromCBOR(data[0]),
+      DataHash.fromImprint(CborDeserializer.decodeByteString(data[0])),
       steps.map((step) => SparseMerkleSumTreePathStep.fromCBOR(step)),
     );
   }
@@ -37,7 +38,7 @@ export class SparseMerkleSumTreePath {
     }
 
     return new SparseMerkleSumTreePath(
-      DataHash.fromJSON(data.root),
+      DataHash.fromImprint(HexConverter.decode(data.root)),
       data.steps.map((step: unknown) => SparseMerkleSumTreePathStep.fromJSON(step)),
     );
   }
@@ -56,16 +57,9 @@ export class SparseMerkleSumTreePath {
 
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
-      this.root.toCBOR(),
+      CborSerializer.encodeByteString(this.root.imprint),
       CborSerializer.encodeArray(...this.steps.map((step) => step.toCBOR())),
     );
-  }
-
-  public toJSON(): ISparseMerkleSumTreePathJson {
-    return {
-      root: this.root.toJSON(),
-      steps: this.steps.map((step) => step.toJSON()),
-    };
   }
 
   public toString(): string {

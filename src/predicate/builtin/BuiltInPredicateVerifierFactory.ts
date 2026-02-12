@@ -3,11 +3,31 @@ import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { VerificationResult } from '../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../verification/VerificationStatus.js';
 import { IPredicate } from '../IPredicate.js';
+import { PredicateEngine } from '../PredicateEngine.js';
 import { IPredicateVerifier } from '../verification/IPredicateVerifier.js';
 import { IPredicateVerifierFactory } from '../verification/IPredicateVerifierFactory.js';
+import { PayToPublicKeyPredicateVerifier } from './verification/PayToPublicKeyPredicateVerifier.js';
 
 export class BuiltInPredicateVerifierFactory implements IPredicateVerifierFactory {
-  public constructor(private readonly factories: Map<bigint, IPredicateVerifier>) {}
+  public readonly engine: PredicateEngine = PredicateEngine.BUILT_IN;
+
+  private readonly factories: Map<bigint, IPredicateVerifier>;
+  public constructor(factories: IPredicateVerifier[]) {
+    const result = new Map<bigint, IPredicateVerifier>();
+    for (const factory of factories) {
+      if (result.has(factory.type)) {
+        throw new Error('Found duplicate predicate verifier.');
+      }
+
+      result.set(factory.type, factory);
+    }
+
+    this.factories = result;
+  }
+
+  public static create(): BuiltInPredicateVerifierFactory {
+    return new BuiltInPredicateVerifierFactory([new PayToPublicKeyPredicateVerifier()]);
+  }
 
   public verify(
     predicate: IPredicate,

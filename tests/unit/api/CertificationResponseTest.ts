@@ -2,6 +2,7 @@ import { CertificationData } from '../../../src/api/CertificationData.js';
 import { CertificationResponse, CertificationStatus } from '../../../src/api/CertificationResponse.js';
 import { SigningService } from '../../../src/crypto/secp256k1/SigningService.js';
 import { InvalidJsonStructureError } from '../../../src/InvalidJsonStructureError.js';
+import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../../src/serialization/HexConverter.js';
 
 describe('CertificationResponse', () => {
@@ -27,13 +28,18 @@ describe('CertificationResponse', () => {
 
     response = await CertificationResponse.createWithReceipt(
       signingService,
-      CertificationData.fromJSON({
-        ownerPredicate: '8301410158210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
-        sourceStateHash: '00000000000000000000000000000000000000000000000000000000000000000000',
-        transactionHash: '00000000000000000000000000000000000000000000000000000000000000000000',
-        witness:
-          '8c3f91708445bf0ddec220f0821461bcf84860a8769275f9930e798d1f645d157bb6a2998c61941108b0993c5aed6a7b92ccf31d11b50fe80d9ff93da392336a01',
-      }),
+      CertificationData.fromCBOR(
+        CborSerializer.encodeArray(
+          HexConverter.decode('8301410158210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798'),
+          CborSerializer.encodeByteString(new Uint8Array(32)),
+          CborSerializer.encodeByteString(new Uint8Array(32)),
+          CborSerializer.encodeByteString(
+            HexConverter.decode(
+              '8c3f91708445bf0ddec220f0821461bcf84860a8769275f9930e798d1f645d157bb6a2998c61941108b0993c5aed6a7b92ccf31d11b50fe80d9ff93da392336a01',
+            ),
+          ),
+        ),
+      ),
       CertificationStatus.SUCCESS,
     );
 
@@ -72,13 +78,18 @@ describe('CertificationResponse', () => {
       new Uint8Array(HexConverter.decode('0000000000000000000000000000000000000000000000000000000000000001')),
     );
 
-    const certificationData = CertificationData.fromJSON({
-      ownerPredicate: '8301410158210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
-      sourceStateHash: '00000000000000000000000000000000000000000000000000000000000000000000',
-      transactionHash: '00000000000000000000000000000000000000000000000000000000000000000000',
-      witness:
-        '8c3f91708445bf0ddec220f0821461bcf84860a8769275f9930e798d1f645d157bb6a2998c61941108b0993c5aed6a7b92ccf31d11b50fe80d9ff93da392336a01',
-    });
+    const certificationData = CertificationData.fromCBOR(
+      CborSerializer.encodeArray(
+        HexConverter.decode('8301410158210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798'),
+        CborSerializer.encodeByteString(new Uint8Array(32)),
+        CborSerializer.encodeByteString(new Uint8Array(32)),
+        CborSerializer.encodeByteString(
+          HexConverter.decode(
+            '8c3f91708445bf0ddec220f0821461bcf84860a8769275f9930e798d1f645d157bb6a2998c61941108b0993c5aed6a7b92ccf31d11b50fe80d9ff93da392336a01',
+          ),
+        ),
+      ),
+    );
     let response = await CertificationResponse.createWithReceipt(
       signingService,
       certificationData,
@@ -92,13 +103,18 @@ describe('CertificationResponse', () => {
     await expect(response.verifyReceipt(certificationData)).resolves.toBe(true);
 
     // Test with wrong signature should fail verification
-    const invalidCertificationData = CertificationData.fromJSON({
-      ownerPredicate: '8301410158210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798',
-      sourceStateHash: '00000000000000000000000000000000000000000000000000000000000000000000',
-      transactionHash: '00000000000000000000000000000000000000000000000000000000000000000000',
-      witness:
-        '8c3f91708445bf0ddec220f0821461bcf84860a8769275f9930e798d1f645d157bb6a2998c61941108b0993c5aed6a7b92ccf31d11b50fe80d9ff93da392336a00',
-    });
+    const invalidCertificationData = CertificationData.fromCBOR(
+      CborSerializer.encodeArray(
+        HexConverter.decode('8301410158210279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798'),
+        CborSerializer.encodeByteString(new Uint8Array(32)),
+        CborSerializer.encodeByteString(new Uint8Array(32)),
+        CborSerializer.encodeByteString(
+          HexConverter.decode(
+            '8c3f91708445bf0ddec220f0821461bcf84860a8769275f9930e798d1f645d157bb6a2998c61941108b0993c5aed6a7b92ccf31d11b50fe80d9ff93da392336a00',
+          ),
+        ),
+      ),
+    );
 
     await expect(response.verifyReceipt(invalidCertificationData)).resolves.toBe(false);
 

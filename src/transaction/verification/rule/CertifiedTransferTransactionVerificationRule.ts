@@ -1,6 +1,5 @@
 import { InclusionProofVerificationRule, InclusionProofVerificationStatus } from './InclusionProofVerificationRule.js';
 import { RootTrustBase } from '../../../api/bft/RootTrustBase.js';
-import { StateId } from '../../../api/StateId.js';
 import { PredicateVerifier } from '../../../predicate/verification/PredicateVerifier.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
@@ -24,7 +23,7 @@ export class CertifiedTransferTransactionVerificationRule {
       trustBase,
       predicateVerifier,
       transaction.inclusionProof,
-      await StateId.fromTransaction(transaction),
+      transaction,
     );
     results.push(result);
 

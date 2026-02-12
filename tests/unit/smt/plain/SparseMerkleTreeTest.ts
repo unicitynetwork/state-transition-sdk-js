@@ -2,6 +2,7 @@ import { DataHash } from '../../../../src/crypto/hash/DataHash.js';
 import { DataHasherFactory } from '../../../../src/crypto/hash/DataHasherFactory.js';
 import { HashAlgorithm } from '../../../../src/crypto/hash/HashAlgorithm.js';
 import { NodeDataHasher } from '../../../../src/crypto/hash/NodeDataHasher.js';
+import { HexConverter } from '../../../../src/serialization/HexConverter.js';
 import { FinalizedLeafBranch } from '../../../../src/smt/plain/FinalizedLeafBranch.js';
 import { FinalizedNodeBranch } from '../../../../src/smt/plain/FinalizedNodeBranch.js';
 import { PendingLeafBranch } from '../../../../src/smt/plain/PendingLeafBranch.js';
@@ -45,7 +46,9 @@ describe('Sparse Merkle Tree tests', function () {
 
     const root = await smt.calculateRoot();
 
-    expect(root.hash.toJSON()).toStrictEqual('0000d2fcbfec1b01fc404a03776b7b351786bf91bf94321a006c23376ccb1807faf8');
+    expect(root.hash.imprint).toStrictEqual(
+      HexConverter.decode('0000d2fcbfec1b01fc404a03776b7b351786bf91bf94321a006c23376ccb1807faf8'),
+    );
   });
 
   it('get path', async () => {

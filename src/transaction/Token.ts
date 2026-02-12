@@ -1,5 +1,7 @@
 import { CertifiedMintTransaction } from './CertifiedMintTransaction.js';
 import { CertifiedTransferTransaction } from './CertifiedTransferTransaction.js';
+import { TokenId } from './TokenId.js';
+import { TokenType } from './TokenType.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { PredicateVerifier } from '../predicate/verification/PredicateVerifier.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
@@ -17,8 +19,16 @@ export class Token {
     private readonly _transactions: CertifiedTransferTransaction[] = [],
   ) {}
 
+  public get id(): TokenId {
+    return this.genesis.tokenId;
+  }
+
   public get transactions(): CertifiedTransferTransaction[] {
     return this._transactions.slice();
+  }
+
+  public get type(): TokenType {
+    return this.genesis.tokenType;
   }
 
   public static async fromCBOR(bytes: Uint8Array): Promise<Token> {
@@ -27,7 +37,7 @@ export class Token {
 
     return new Token(
       await CertifiedMintTransaction.fromCBOR(data[0]),
-      await Promise.all(transactions.map((transaction) => CertifiedTransferTransaction.fromCBOR(transaction))),
+      transactions.map((transaction) => CertifiedTransferTransaction.fromCBOR(transaction)),
     );
   }
 
@@ -96,7 +106,7 @@ export class Token {
     const transferResults: VerificationResult<VerificationStatus>[] = [];
     for (let i = 0; i < this._transactions.length; i++) {
       const transaction = this._transactions[i];
-      const token = new Token(this.genesis, this._transactions.slice(0, i - 1));
+      const token = new Token(this.genesis, this._transactions.slice(0, i));
       const result = await CertifiedTransferTransactionVerificationRule.verify(
         trustBase,
         predicateVerifier,

@@ -28,6 +28,10 @@ export class CertifiedMintTransaction implements ITransaction {
     return this.transaction.recipient;
   }
 
+  public get sourceStateHash(): DataHash {
+    return this.transaction.sourceStateHash;
+  }
+
   public get tokenId(): TokenId {
     return this.transaction.tokenId;
   }

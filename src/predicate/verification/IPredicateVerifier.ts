@@ -4,6 +4,8 @@ import { VerificationStatus } from '../../verification/VerificationStatus.js';
 import { IPredicate } from '../IPredicate.js';
 
 export interface IPredicateVerifier {
+  readonly type: bigint;
+
   verify(
     encodedPredicate: IPredicate,
     certificationData: CertificationData,

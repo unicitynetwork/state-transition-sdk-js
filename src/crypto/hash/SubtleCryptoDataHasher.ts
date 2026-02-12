@@ -4,11 +4,11 @@ import { IDataHasher } from './IDataHasher.js';
 import { UnsupportedHashAlgorithmError } from './UnsupportedHashAlgorithmError.js';
 
 export const Algorithm = {
-  [HashAlgorithm.RIPEMD160]: null,
-  [HashAlgorithm.SHA224]: null,
-  [HashAlgorithm.SHA256]: 'SHA-256',
-  [HashAlgorithm.SHA384]: 'SHA-384',
-  [HashAlgorithm.SHA512]: 'SHA-512',
+  [HashAlgorithm.RIPEMD160.id]: null,
+  [HashAlgorithm.SHA224.id]: null,
+  [HashAlgorithm.SHA256.id]: 'SHA-256',
+  [HashAlgorithm.SHA384.id]: 'SHA-384',
+  [HashAlgorithm.SHA512.id]: 'SHA-512',
 };
 
 /**
@@ -22,7 +22,7 @@ export class SubtleCryptoDataHasher implements IDataHasher {
    * @param {string} algorithm
    */
   public constructor(public readonly algorithm: HashAlgorithm) {
-    if (!Algorithm[algorithm]) {
+    if (!Algorithm[algorithm.id]) {
       throw new UnsupportedHashAlgorithmError(algorithm);
     }
 
@@ -36,7 +36,7 @@ export class SubtleCryptoDataHasher implements IDataHasher {
   public async digest(): Promise<DataHash> {
     return new DataHash(
       this.algorithm,
-      new Uint8Array(await window.crypto.subtle.digest({ name: Algorithm[this.algorithm] as string }, this._data)),
+      new Uint8Array(await window.crypto.subtle.digest({ name: Algorithm[this.algorithm.id] as string }, this._data)),
     );
   }
 

@@ -1,8 +1,7 @@
 import { HashAlgorithm } from './HashAlgorithm.js';
 import { HashError } from './HashError.js';
-import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
-import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../serialization/HexConverter.js';
+import { areUint8ArraysEqual } from '../../util/TypedArrayUtils.js';
 
 export class DataHash {
   private readonly _imprint: Uint8Array;
@@ -11,9 +10,13 @@ export class DataHash {
     public readonly algorithm: HashAlgorithm,
     private readonly _data: Uint8Array,
   ) {
+    if (_data.length !== algorithm.length) {
+      throw new HashError('Invalid data length for the specified hash algorithm.');
+    }
+
     this._data = new Uint8Array(_data);
     this._imprint = new Uint8Array(_data.length + 2);
-    this._imprint.set([(algorithm & 0xff00) >> 8, algorithm & 0xff]);
+    this._imprint.set([(algorithm.id & 0xff00) >> 8, algorithm.id & 0xff]);
     this._imprint.set(new Uint8Array(_data), 2);
   }
 
@@ -30,36 +33,20 @@ export class DataHash {
     return new Uint8Array(this._imprint);
   }
 
-  public static fromCBOR(bytes: Uint8Array): DataHash {
-    return DataHash.fromImprint(CborDeserializer.decodeByteString(bytes));
-  }
-
   public static fromImprint(imprint: Uint8Array): DataHash {
     if (imprint.length < 3) {
       throw new HashError('Imprint must have 2 bytes of algorithm and at least 1 byte of data.');
     }
 
     const algorithm = (imprint[0] << 8) | imprint[1];
-    return new DataHash(algorithm, imprint.subarray(2));
-  }
-
-  public static fromJSON(data: string): DataHash {
-    return DataHash.fromImprint(HexConverter.decode(data));
+    return new DataHash(HashAlgorithm.fromId(algorithm), imprint.subarray(2));
   }
 
   public equals(hash: DataHash): boolean {
-    return HexConverter.encode(this._imprint) === HexConverter.encode(hash._imprint);
-  }
-
-  public toCBOR(): Uint8Array {
-    return CborSerializer.encodeByteString(this._imprint);
-  }
-
-  public toJSON(): string {
-    return HexConverter.encode(this._imprint);
+    return areUint8ArraysEqual(this._imprint, hash._imprint);
   }
 
   public toString(): string {
-    return `[${HashAlgorithm[this.algorithm]}]${HexConverter.encode(this._data)}`;
+    return `[${this.algorithm.toString()}]${HexConverter.encode(this._data)}`;
   }
 }

@@ -47,8 +47,9 @@ export async function waitInclusionProof(
         trustBase,
         predicateVerifier,
         inclusionProof,
-        stateId,
+        transaction,
       );
+
       switch (verificationStatus.status) {
         case InclusionProofVerificationStatus.OK:
           return inclusionProof;

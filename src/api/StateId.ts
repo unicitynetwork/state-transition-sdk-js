@@ -3,7 +3,9 @@ import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { IPredicate } from '../predicate/IPredicate.js';
+import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
+import { HexConverter } from '../serialization/HexConverter.js';
 import { ITransaction } from '../transaction/ITransaction.js';
 import { BitString } from '../util/BitString.js';
 
@@ -11,19 +13,18 @@ import { BitString } from '../util/BitString.js';
  * Represents a unique state identifier derived from a public key and state hash.
  */
 export class StateId {
-  /**
-   * Constructs a StateId instance.
-   * @param hash The DataHash representing the state ID.
-   */
   private constructor(private readonly hash: DataHash) {}
 
-  /**
-   * Decodes a StateId from CBOR bytes.
-   * @param data The CBOR-encoded bytes.
-   * @returns A StateId instance.
-   */
-  public static fromCBOR(data: Uint8Array): StateId {
-    return new StateId(DataHash.fromCBOR(data));
+  public get data(): Uint8Array {
+    return this.hash.data;
+  }
+
+  public get imprint(): Uint8Array {
+    return this.hash.imprint;
+  }
+
+  public static fromCBOR(bytes: Uint8Array): StateId {
+    return new StateId(new DataHash(HashAlgorithm.SHA256, CborDeserializer.decodeByteString(bytes)));
   }
 
   /**
@@ -34,17 +35,8 @@ export class StateId {
     return StateId.create(certificationData.lockScript, certificationData.sourceStateHash);
   }
 
-  /**
-   * Creates a StateId from a JSON string.
-   * @param data The JSON string.
-   * @returns A StateId instance.
-   */
-  public static fromJSON(data: string): StateId {
-    return new StateId(DataHash.fromJSON(data));
-  }
-
-  public static async fromTransaction(transaction: ITransaction): Promise<StateId> {
-    return StateId.create(transaction.lockScript, await transaction.calculateStateHash());
+  public static fromTransaction(transaction: ITransaction): Promise<StateId> {
+    return StateId.create(transaction.lockScript, transaction.sourceStateHash);
   }
 
   /**
@@ -55,10 +47,14 @@ export class StateId {
    */
   private static async create(predicate: IPredicate, stateHash: DataHash): Promise<StateId> {
     const hash = await new DataHasher(HashAlgorithm.SHA256)
-      .update(CborSerializer.encodeArray(predicate.toCBOR(), CborSerializer.encodeByteString(stateHash.imprint)))
+      .update(CborSerializer.encodeArray(predicate.toCBOR(), CborSerializer.encodeByteString(stateHash.data)))
       .digest();
 
     return new StateId(hash);
+  }
+
+  public equals(id: StateId): boolean {
+    return this.hash.equals(id.hash);
   }
 
   /**
@@ -66,15 +62,11 @@ export class StateId {
    * @return The BitString representation of the StateId.
    */
   public toBitString(): BitString {
-    return BitString.fromStateId(this.hash);
+    return BitString.fromStateId(this);
   }
 
   public toCBOR(): Uint8Array {
-    return this.hash.toCBOR();
-  }
-
-  public toJSON(): string {
-    return this.hash.toJSON();
+    return CborSerializer.encodeByteString(this.data);
   }
 
   /**
@@ -82,6 +74,6 @@ export class StateId {
    * @returns The string representation.
    */
   public toString(): string {
-    return `StateId[${this.hash.toString()}]`;
+    return `StateId[${HexConverter.encode(this.data)}]`;
   }
 }

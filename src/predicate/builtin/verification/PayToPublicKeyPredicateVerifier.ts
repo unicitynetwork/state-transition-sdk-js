@@ -11,6 +11,8 @@ import { IPredicateVerifier } from '../../verification/IPredicateVerifier.js';
 import { PayToPublicKeyPredicate } from '../PayToPublicKeyPredicate.js';
 
 export class PayToPublicKeyPredicateVerifier implements IPredicateVerifier {
+  public readonly type = PayToPublicKeyPredicate.TYPE;
+
   public async verify(
     encodedPredicate: IPredicate,
     certificationData: CertificationData,
@@ -29,8 +31,8 @@ export class PayToPublicKeyPredicateVerifier implements IPredicateVerifier {
       await new DataHasher(HashAlgorithm.SHA256)
         .update(
           CborSerializer.encodeArray(
-            certificationData.sourceStateHash.toCBOR(),
-            certificationData.transactionHash.toCBOR(),
+            CborSerializer.encodeByteString(certificationData.sourceStateHash.data),
+            CborSerializer.encodeByteString(certificationData.transactionHash.data),
           ),
         )
         .digest(),
