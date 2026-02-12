@@ -37,7 +37,7 @@ export class Token {
 
     return new Token(
       await CertifiedMintTransaction.fromCBOR(data[0]),
-      await Promise.all(transactions.map((transaction) => CertifiedTransferTransaction.fromCBOR(transaction))),
+      transactions.map((transaction) => CertifiedTransferTransaction.fromCBOR(transaction)),
     );
   }
 

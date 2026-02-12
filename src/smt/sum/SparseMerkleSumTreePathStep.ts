@@ -73,14 +73,6 @@ export class SparseMerkleSumTreePathStep {
     );
   }
 
-  public toJSON(): ISparseMerkleSumTreePathStepJson {
-    return {
-      data: this._data ? HexConverter.encode(this._data) : null,
-      path: this.path.toString(),
-      value: this.value.toString(),
-    };
-  }
-
   public toString(): string {
     return dedent`
       Merkle Tree Path Step

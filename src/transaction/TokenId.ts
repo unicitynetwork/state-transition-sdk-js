@@ -23,10 +23,6 @@ export class TokenId {
     return new TokenId(CborDeserializer.decodeByteString(bytes));
   }
 
-  public static fromJSON(input: string): TokenId {
-    return new TokenId(HexConverter.decode(input));
-  }
-
   public equals(o: unknown): boolean {
     if (this === o) {
       return true;
@@ -49,11 +45,6 @@ export class TokenId {
   /** CBOR serialisation. */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeByteString(this._bytes);
-  }
-
-  /** Encode as a hex string for JSON. */
-  public toJSON(): string {
-    return HexConverter.encode(this._bytes);
   }
 
   /** Convert instance to readable string */

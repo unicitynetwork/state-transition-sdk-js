@@ -9,39 +9,41 @@ import { DataHasher } from '../../src/crypto/hash/DataHasher.js';
 import { DataHasherFactory } from '../../src/crypto/hash/DataHasherFactory.js';
 import { HashAlgorithm } from '../../src/crypto/hash/HashAlgorithm.js';
 import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
-import { BuiltInPredicateVerifierFactory } from '../../src/predicate/builtin/BuiltInPredicateVerifierFactory.js';
-import { PayToPublicKeyPredicate } from '../../src/predicate/builtin/PayToPublicKeyPredicate.js';
-import { PayToPublicKeyPredicateVerifier } from '../../src/predicate/builtin/verification/PayToPublicKeyPredicateVerifier.js';
 import { EncodedPredicate } from '../../src/predicate/EncodedPredicate.js';
-import { PredicateEngine } from '../../src/predicate/PredicateEngine.js';
 import { PredicateVerifier } from '../../src/predicate/verification/PredicateVerifier.js';
 import { SparseMerkleTree } from '../../src/smt/plain/SparseMerkleTree.js';
 import { createRootTrustBase } from '../utils/RootTrustBaseFixture.js';
 import { createUnicityCertificate } from '../utils/UnicityCertificateFixture.js';
 
+/**
+ * Test aggregator client implementation that stores all submitted certification requests in memory.
+ */
 export class TestAggregatorClient implements IAggregatorClient {
   public readonly rootTrustBase: RootTrustBase;
-  private readonly predicateVerifier = new PredicateVerifier(
-    new Map([
-      [
-        PredicateEngine.BUILT_IN,
-        new BuiltInPredicateVerifierFactory(
-          new Map([[PayToPublicKeyPredicate.TYPE, new PayToPublicKeyPredicateVerifier()]]),
-        ),
-      ],
-    ]),
-  );
+  private readonly predicateVerifier = PredicateVerifier.create();
   private readonly requests: Map<bigint, CertificationData> = new Map();
-  private readonly signingService = new SigningService(SigningService.generatePrivateKey());
 
-  private constructor(private readonly smt: SparseMerkleTree) {
+  private constructor(
+    private readonly smt: SparseMerkleTree,
+    private readonly signingService: SigningService,
+  ) {
     this.rootTrustBase = createRootTrustBase(this.signingService.publicKey);
   }
 
-  public static create(): TestAggregatorClient {
-    return new TestAggregatorClient(new SparseMerkleTree(new DataHasherFactory(HashAlgorithm.SHA256, DataHasher)));
+  /**
+   * Creates a new TestAggregatorClient instance with optional private key.
+   * If no private key is provided, a new one is generated.
+   */
+  public static create(privateKey: Uint8Array = SigningService.generatePrivateKey()): TestAggregatorClient {
+    return new TestAggregatorClient(
+      new SparseMerkleTree(new DataHasherFactory(HashAlgorithm.SHA256, DataHasher)),
+      new SigningService(privateKey),
+    );
   }
 
+  /**
+   * @inheritDoc
+   */
   public async getInclusionProof(stateId: StateId): Promise<InclusionProofResponse> {
     const certificationData = this.requests.get(stateId.toBitString().toBigInt());
     const root = await this.smt.calculateRoot();
@@ -57,6 +59,9 @@ export class TestAggregatorClient implements IAggregatorClient {
     );
   }
 
+  /**
+   * @inheritDoc
+   */
   public async submitCertificationRequest(certificationData: CertificationData): Promise<CertificationResponse> {
     const stateId = await StateId.fromCertificationData(certificationData);
 

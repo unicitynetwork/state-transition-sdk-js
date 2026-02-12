@@ -5,19 +5,20 @@
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "type": "module",
+  "exports": {
+    "./lib/*.js": "./lib/*.js",
+    "./lib/*": "./lib/*.js"
+  },
   "scripts": {
-    "prebuild": "rm -rf lib",
     "build": "tsc",
-    "build:check": "tsc --noEmit",
+    "build:check": "tsc --project tsconfig.eslint.json --noEmit",
     "lint": "eslint \"src/**/*\" \"tests/**/*\"",
     "lint:fix": "eslint \"src/**/*\" \"tests/**/*\" --fix",
-    "test": "jest --testPathPatterns=tests --testPathIgnorePatterns=tests/e2e",
+    "test": "npm run-script test:unit",
     "test:unit": "jest --testPathPatterns=tests/unit --testPathPatterns=tests/functional",
-    "test:integration": "jest --testPathPatterns=tests/integration",
     "test:e2e": "jest --testPathPatterns=tests/e2e",
-    "test:ci": "DEBUG=testcontainers:containers jest --testPathPatterns=tests --testPathIgnorePatterns=tests/e2e --ci --reporters=default",
-    "test:single": "jest",
-    "prepublishOnly": "npm run build"
+    "test:examples": "jest --testPathPatterns=tests/examples",
+    "test:ci": "jest --testPathPatterns=tests --testPathIgnorePatterns=tests/e2e --testPathIgnorePatterns=tests/examples --ci --reporters=default"
   },
   "repository": {
     "type": "git",
@@ -37,18 +38,18 @@
     "uuid": "13.0.0"
   },
   "devDependencies": {
-    "@babel/preset-env": "7.28.5",
+    "@babel/preset-env": "7.29.0",
     "@babel/preset-typescript": "7.28.5",
-    "@eslint/js": "9.39.1",
+    "@eslint/js": "9.39.2",
     "@types/jest": "30.0.0",
     "babel-jest": "30.2.0",
-    "eslint": "9.39.1",
+    "eslint": "9.39.2",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-import": "2.32.0",
-    "eslint-plugin-prettier": "5.5.4",
-    "globals": "16.5.0",
+    "eslint-plugin-prettier": "5.5.5",
+    "globals": "17.3.0",
     "jest": "30.2.0",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.49.0"
+    "typescript-eslint": "8.54.0"
   }
 }

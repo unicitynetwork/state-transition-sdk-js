@@ -1,19 +1,13 @@
 import { bitLen } from '@noble/curves/utils.js';
 
 import { PathVerificationResult } from '../PathVerificationResult.js';
-import { ISparseMerkleTreePathStepJson, SparseMerkleTreePathStep } from './SparseMerkleTreePathStep.js';
+import { SparseMerkleTreePathStep } from './SparseMerkleTreePathStep.js';
 import { DataHash } from '../../crypto/hash/DataHash.js';
 import { DataHasher } from '../../crypto/hash/DataHasher.js';
-import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
 import { BigintConverter } from '../../serialization/BigintConverter.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
 import { dedent } from '../../util/StringUtils.js';
-
-export interface ISparseMerkleTreePathJson {
-  readonly root: string;
-  readonly steps: ReadonlyArray<ISparseMerkleTreePathStepJson>;
-}
 
 export class SparseMerkleTreePath {
   public constructor(
@@ -26,46 +20,16 @@ export class SparseMerkleTreePath {
     const steps = CborDeserializer.decodeArray(data[1]);
 
     return new SparseMerkleTreePath(
-      DataHash.fromCBOR(data[0]),
+      DataHash.fromImprint(CborDeserializer.decodeByteString(data[0])),
       steps.map((step) => SparseMerkleTreePathStep.fromCBOR(step)),
-    );
-  }
-
-  public static fromJSON(data: unknown): SparseMerkleTreePath {
-    if (!SparseMerkleTreePath.isJSON(data)) {
-      throw new InvalidJsonStructureError();
-    }
-
-    return new SparseMerkleTreePath(
-      DataHash.fromJSON(data.root),
-      data.steps.map((step: unknown) => SparseMerkleTreePathStep.fromJSON(step)),
-    );
-  }
-
-  public static isJSON(data: unknown): data is ISparseMerkleTreePathJson {
-    return (
-      typeof data === 'object' &&
-      data !== null &&
-      'root' in data &&
-      typeof data.root === 'string' &&
-      'steps' in data &&
-      Array.isArray(data.steps) &&
-      data.steps.length > 0
     );
   }
 
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
-      this.root.toCBOR(),
+      CborSerializer.encodeByteString(this.root.imprint),
       CborSerializer.encodeArray(...this.steps.map((step: SparseMerkleTreePathStep) => step.toCBOR())),
     );
-  }
-
-  public toJSON(): ISparseMerkleTreePathJson {
-    return {
-      root: this.root.toJSON(),
-      steps: this.steps.map((step) => step.toJSON()),
-    };
   }
 
   public toString(): string {

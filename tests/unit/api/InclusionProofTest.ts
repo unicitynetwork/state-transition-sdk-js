@@ -8,10 +8,7 @@ import { DataHasherFactory } from '../../../src/crypto/hash/DataHasherFactory.js
 import { HashAlgorithm } from '../../../src/crypto/hash/HashAlgorithm.js';
 import { NodeDataHasher } from '../../../src/crypto/hash/NodeDataHasher.js';
 import { SigningService } from '../../../src/crypto/secp256k1/SigningService.js';
-import { BuiltInPredicateVerifierFactory } from '../../../src/predicate/builtin/BuiltInPredicateVerifierFactory.js';
 import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
-import { PayToPublicKeyPredicateVerifier } from '../../../src/predicate/builtin/verification/PayToPublicKeyPredicateVerifier.js';
-import { PredicateEngine } from '../../../src/predicate/PredicateEngine.js';
 import { PredicateVerifier } from '../../../src/predicate/verification/PredicateVerifier.js';
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../../src/serialization/HexConverter.js';
@@ -33,14 +30,7 @@ describe('InclusionProof', () => {
     new Uint8Array(HexConverter.decode('0000000000000000000000000000000000000000000000000000000000000001')),
   );
 
-  const predicateVerifierFactory = new PredicateVerifier(
-    new Map([
-      [
-        PredicateEngine.BUILT_IN,
-        new BuiltInPredicateVerifierFactory(new Map([[1n, new PayToPublicKeyPredicateVerifier()]])),
-      ],
-    ]),
-  );
+  const predicateVerifierFactory = PredicateVerifier.create();
 
   let transaction: MintTransaction;
   let certificationData: CertificationData;
@@ -67,28 +57,6 @@ describe('InclusionProof', () => {
 
     unicityCertificate = await createUnicityCertificate(root.hash, signingService);
     trustBase = createRootTrustBase(signingService.publicKey);
-  });
-
-  it('should encode and decode json', () => {
-    const inclusionProof = new InclusionProof(
-      merkleTreePath,
-      CertificationData.fromCBOR(certificationData.toCBOR()),
-      unicityCertificate,
-    );
-    expect(inclusionProof.toJSON()).toEqual({
-      certificationData: certificationData.toJSON(),
-      merkleTreePath: merkleTreePath.toJSON(),
-      unicityCertificate: unicityCertificate.toJSON(),
-    });
-
-    expect(InclusionProof.fromJSON(inclusionProof.toJSON())).toStrictEqual(inclusionProof);
-    expect(
-      InclusionProof.fromJSON({
-        certificationData: null,
-        merkleTreePath: merkleTreePath.toJSON(),
-        unicityCertificate: unicityCertificate.toJSON(),
-      }),
-    ).toStrictEqual(new InclusionProof(merkleTreePath, null, unicityCertificate));
   });
 
   it('should encode and decode cbor', () => {
@@ -134,17 +102,20 @@ describe('InclusionProof', () => {
 
     const invalidTransactionHashInclusionProof = new InclusionProof(
       merkleTreePath,
-      CertificationData.fromJSON({
-        ownerPredicate: HexConverter.encode(certificationData.lockScript.toCBOR()),
-        sourceStateHash: certificationData.sourceStateHash.toJSON(),
-        transactionHash: DataHash.fromImprint(
-          HexConverter.decode('00000000000000000000000000000000000000000000000000000000000000000001'),
-        ).toJSON(),
-        witness: HexConverter.encode(certificationData.unlockScript),
-      }),
+      CertificationData.fromCBOR(
+        CborSerializer.encodeArray(
+          certificationData.lockScript.toCBOR(),
+          CborSerializer.encodeByteString(certificationData.sourceStateHash.data),
+          CborSerializer.encodeByteString(
+            DataHash.fromImprint(
+              HexConverter.decode('00000000000000000000000000000000000000000000000000000000000000000001'),
+            ).data,
+          ),
+          CborSerializer.encodeByteString(certificationData.unlockScript),
+        ),
+      ),
       unicityCertificate,
     );
-
     await expect(
       InclusionProofVerificationRule.verify(
         trustBase,
@@ -158,12 +129,14 @@ describe('InclusionProof', () => {
   it('verification fails with invalid transaction hash', async () => {
     const inclusionProof = new InclusionProof(
       merkleTreePath,
-      CertificationData.fromJSON({
-        ownerPredicate: HexConverter.encode(certificationData.lockScript.toCBOR()),
-        sourceStateHash: certificationData.sourceStateHash.toJSON(),
-        transactionHash: certificationData.transactionHash.toJSON(),
-        witness: HexConverter.encode(new Uint8Array(65)),
-      }),
+      CertificationData.fromCBOR(
+        CborSerializer.encodeArray(
+          certificationData.lockScript.toCBOR(),
+          CborSerializer.encodeByteString(certificationData.sourceStateHash.data),
+          CborSerializer.encodeByteString(certificationData.transactionHash.data),
+          CborSerializer.encodeByteString(new Uint8Array(65)),
+        ),
+      ),
       unicityCertificate,
     );
 
@@ -176,14 +149,7 @@ describe('InclusionProof', () => {
 
   it('verification fails with invalid trustbase', async () => {
     const inclusionProof = new InclusionProof(merkleTreePath, certificationData, unicityCertificate);
-    const predicateVerifier = new PredicateVerifier(
-      new Map([
-        [
-          PredicateEngine.BUILT_IN,
-          new BuiltInPredicateVerifierFactory(new Map([[1n, new PayToPublicKeyPredicateVerifier()]])),
-        ],
-      ]),
-    );
+    const predicateVerifier = PredicateVerifier.create();
 
     await expect(
       InclusionProofVerificationRule.verify(

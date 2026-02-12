@@ -15,6 +15,7 @@ export class SplitReason {
     return this._proofs.slice();
   }
 
+  // TODO: should we verify if reason integrity is valid here?
   public static create(token: Token, proofs: SplitReasonProof[]): SplitReason {
     if (proofs.length === 0) {
       throw new Error('proofs cannot be empty.');

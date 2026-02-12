@@ -54,8 +54,8 @@ export class PayToPublicKeyPredicate implements IPredicate {
     const hash = await new DataHasher(HashAlgorithm.SHA256)
       .update(
         CborSerializer.encodeArray(
-          transaction.sourceStateHash.toCBOR(),
-          await transaction.calculateTransactionHash().then((hash) => hash.toCBOR()),
+          CborSerializer.encodeByteString(transaction.sourceStateHash.data),
+          await transaction.calculateTransactionHash().then((hash) => CborSerializer.encodeByteString(hash.data)),
         ),
       )
       .digest();

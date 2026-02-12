@@ -13,11 +13,6 @@ describe('SparseMerkleTreePath', () => {
       '8258220000000000000000000000000000000000000000000000000000000000000000000081834043010203410a',
     );
     expect(SparseMerkleSumTreePath.fromCBOR(path.toCBOR())).toStrictEqual(path);
-    expect(path.toJSON()).toEqual({
-      root: '00000000000000000000000000000000000000000000000000000000000000000000',
-      steps: [{ data: '010203', path: '0', value: '10' }],
-    });
-    expect(SparseMerkleSumTreePath.fromJSON(path.toJSON())).toStrictEqual(path);
   });
 
   it('should verify inclusion path', async () => {
