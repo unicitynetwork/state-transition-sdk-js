@@ -57,7 +57,8 @@ class ProofMapEntry {
       input !== null &&
       Array.isArray(input) &&
       input.length === 2 &&
-      input.every((entry) => entry.length === 2 && typeof entry[0] === 'string' && Array.isArray(entry[1]))
+      typeof input[0] === 'string' &&
+      Array.isArray(input[1])
     );
   }
 
@@ -147,7 +148,7 @@ class ProofMap {
 /**
  * Token split request object.
  */
-class TokenSplit {
+export class TokenSplit {
   public constructor(
     public readonly predicate: BurnPredicate,
     public readonly commitment: TransferCommitment,
