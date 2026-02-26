@@ -13,7 +13,7 @@ import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
 import { SigningService } from '../sign/SigningService.js';
 import { Token } from '../token/Token.js';
 
-interface ITransferCommitmentJson {
+export interface ITransferCommitmentJson {
   readonly requestId: string;
   readonly transactionData: ITransferTransactionDataJson;
   readonly authenticator: IAuthenticatorJson;

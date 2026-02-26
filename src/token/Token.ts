@@ -252,11 +252,11 @@ export class Token<R extends IMintTransactionReason> {
     const reference = await predicate.getReference();
     const expectedRecipient = await reference.toAddress();
 
-    const previousTransaction = this.transactions.length
-      ? (this.transactions.at(-1) as Transaction<TransferTransactionData>)
+    const previousTransaction = this._transactions.length
+      ? (this._transactions.at(-1) as Transaction<TransferTransactionData>)
       : this.genesis;
 
-    const transactionRecipient = await ProxyAddress.resolve(previousTransaction.data.recipient, this.nametagTokens);
+    const transactionRecipient = await ProxyAddress.resolve(previousTransaction.data.recipient, this._nametagTokens);
     if (expectedRecipient.address !== transactionRecipient?.address) {
       return new VerificationResult(VerificationResultCode.FAIL, 'Recipient address mismatch');
     }
@@ -265,8 +265,8 @@ export class Token<R extends IMintTransactionReason> {
   }
 
   public async verifyRecipientData(): Promise<VerificationResult> {
-    const previousTransaction = this.transactions.length
-      ? (this.transactions.at(-1) as Transaction<TransferTransactionData>)
+    const previousTransaction = this._transactions.length
+      ? (this._transactions.at(-1) as Transaction<TransferTransactionData>)
       : this.genesis;
 
     if (!(await previousTransaction.containsRecipientData(this.state.data))) {
@@ -310,10 +310,10 @@ export class Token<R extends IMintTransactionReason> {
           Genesis: 
             ${this.genesis.toString()}
           Transactions: [
-            ${this.transactions.map((transition) => transition.toString()).join('\n')}
+            ${this._transactions.map((transition) => transition.toString()).join('\n')}
           ]
           Nametag Tokens: [ 
-            ${this.nametagTokens.map((token) => token.toString()).join('\n')}
+            ${this._nametagTokens.map((token) => token.toString()).join('\n')}
           ]
       `;
   }

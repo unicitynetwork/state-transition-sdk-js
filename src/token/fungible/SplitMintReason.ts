@@ -5,6 +5,7 @@ import { CborSerializer } from '../../serializer/cbor/CborSerializer.js';
 import { areUint8ArraysEqual } from '../../util/TypedArrayUtils.js';
 import { ITokenJson, Token } from '../Token.js';
 import { ISplitMintReasonProofJson, SplitMintReasonProof } from './SplitMintReasonProof.js';
+import { RootTrustBase } from '../../bft/RootTrustBase.js';
 import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
 import { IMintTransactionReason } from '../../transaction/IMintTransactionReason.js';
 import { MintReasonType } from '../../transaction/MintReasonType.js';
@@ -60,9 +61,17 @@ export class SplitMintReason implements IMintTransactionReason {
     );
   }
 
-  public async verify(transaction: MintTransaction<IMintTransactionReason>): Promise<VerificationResult> {
+  public async verify(
+    trustBase: RootTrustBase,
+    transaction: MintTransaction<IMintTransactionReason>,
+  ): Promise<VerificationResult> {
     if (transaction.data.coinData == null) {
       return Promise.resolve(new VerificationResult(VerificationResultCode.FAIL, 'Coin data is missing.'));
+    }
+
+    const tokenVerificationResult = await this.token.verify(trustBase);
+    if (!tokenVerificationResult.isSuccessful) {
+      return Promise.resolve(new VerificationResult(VerificationResultCode.FAIL, 'Token verification failed.'));
     }
 
     const predicate = await PredicateEngineService.createPredicate(this.token.state.predicate);
