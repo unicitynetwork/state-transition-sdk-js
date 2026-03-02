@@ -4,7 +4,7 @@ import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.j
 import { HexConverter } from '../../../src/serialization/HexConverter.js';
 
 describe('CertificationRequest', () => {
-  it('should encode and decode CBOR to exactly same object', async () => {
+  it('should encode object to expected CBOR bytes', async () => {
     const request = await CertificationRequest.create(
       CertificationData.fromCBOR(
         CborSerializer.encodeArray(
