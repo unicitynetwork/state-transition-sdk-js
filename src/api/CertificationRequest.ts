@@ -10,23 +10,20 @@ export class CertificationRequest {
    * Constructs a CertificationRequest instance.
    * @param {StateId} stateId Unique state identifier.
    * @param {CertificationData} certificationData Certification data.
-   * @param {boolean} receipt Optional flag to request a receipt.
    */
   private constructor(
     public readonly stateId: StateId,
     public readonly certificationData: CertificationData,
-    public readonly receipt: boolean = false,
   ) {}
 
   /**
    * Create a new CertificationRequest instance.
    * @param {CertificationData} certificationData Certification data.
-   * @param {boolean} receipt Optional flag to request a receipt.
    *
    * @returns {Promise<CertificationRequest>} A promise that resolves to a CertificationRequest instance.
    */
-  public static async create(certificationData: CertificationData, receipt?: boolean): Promise<CertificationRequest> {
-    return new CertificationRequest(await StateId.fromCertificationData(certificationData), certificationData, receipt);
+  public static async create(certificationData: CertificationData): Promise<CertificationRequest> {
+    return new CertificationRequest(await StateId.fromCertificationData(certificationData), certificationData);
   }
 
   /**
@@ -38,7 +35,6 @@ export class CertificationRequest {
     return CborSerializer.encodeArray(
       this.stateId.toCBOR(),
       this.certificationData.toCBOR(),
-      CborSerializer.encodeBoolean(this.receipt),
       CborSerializer.encodeUnsignedInteger(0),
     );
   }

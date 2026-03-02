@@ -19,8 +19,7 @@ export interface IAggregatorClient {
    * Submit a transaction commitment for inclusion in the ledger.
    *
    * @param {CertificationData} certificationData  The certification data to submit
-   * @param {boolean} receipt   Require a signed receipt of the commitment, default is false
    * @returns Result status from the aggregator
    */
-  submitCertificationRequest(certificationData: CertificationData, receipt: boolean): Promise<CertificationResponse>;
+  submitCertificationRequest(certificationData: CertificationData): Promise<CertificationResponse>;
 }
