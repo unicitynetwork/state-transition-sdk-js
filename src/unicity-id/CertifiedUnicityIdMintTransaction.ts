@@ -1,18 +1,20 @@
-import { Address } from './Address.js';
-import { ITransaction } from './ITransaction.js';
-import { MintTransaction } from './MintTransaction.js';
-import { TokenId } from './TokenId.js';
-import { TokenType } from './TokenType.js';
+import { UnicityIdMintTransaction } from './UnicityIdMintTransaction.js';
 import { InclusionProof } from '../api/InclusionProof.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { IPredicate } from '../predicate/IPredicate.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
+import { Address } from '../transaction/Address.js';
+import { ITransaction } from '../transaction/ITransaction.js';
+import { TokenId } from '../transaction/TokenId.js';
+import { TokenType } from '../transaction/TokenType.js';
 import { dedent } from '../util/StringUtils.js';
+import { PayToPublicKeyPredicate } from '../predicate/builtin/PayToPublicKeyPredicate.js';
+import { UnicityId } from './UnicityId.js';
 
-export class CertifiedMintTransaction implements ITransaction {
+export class CertifiedUnicityIdMintTransaction implements ITransaction {
   public constructor(
-    private readonly transaction: MintTransaction,
+    private readonly transaction: UnicityIdMintTransaction,
     public readonly inclusionProof: InclusionProof,
   ) {}
 
@@ -32,6 +34,10 @@ export class CertifiedMintTransaction implements ITransaction {
     return this.transaction.sourceStateHash;
   }
 
+  public get targetPredicate(): PayToPublicKeyPredicate {
+    return this.transaction.targetPredicate;
+  }
+
   public get tokenId(): TokenId {
     return this.transaction.tokenId;
   }
@@ -40,13 +46,20 @@ export class CertifiedMintTransaction implements ITransaction {
     return this.transaction.tokenType;
   }
 
+  public get unicityId(): UnicityId {
+    return this.transaction.unicityId;
+  }
+
   public get x(): Uint8Array {
     return this.transaction.x;
   }
 
-  public static async fromCBOR(bytes: Uint8Array): Promise<CertifiedMintTransaction> {
+  public static async fromCBOR(bytes: Uint8Array): Promise<CertifiedUnicityIdMintTransaction> {
     const data = CborDeserializer.decodeArray(bytes);
-    return new CertifiedMintTransaction(await MintTransaction.fromCBOR(data[0]), InclusionProof.fromCBOR(data[1]));
+    return new CertifiedUnicityIdMintTransaction(
+      await UnicityIdMintTransaction.fromCBOR(data[0]),
+      InclusionProof.fromCBOR(data[1]),
+    );
   }
 
   public calculateStateHash(): Promise<DataHash> {

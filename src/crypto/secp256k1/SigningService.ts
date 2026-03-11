@@ -35,6 +35,10 @@ export class SigningService implements ISigningService<Signature> {
     return secp256k1.utils.randomSecretKey();
   }
 
+  public static isPublicKeyValid(publicKey: Uint8Array): boolean {
+    return secp256k1.utils.isValidPublicKey(publicKey, true);
+  }
+
   public static verifySignatureWithRecoveredPublicKey(hash: DataHash, signature: Signature): Promise<boolean> {
     const publicKey = secp256k1.Signature.fromBytes(
       new Uint8Array([signature.recovery, ...signature.bytes]),

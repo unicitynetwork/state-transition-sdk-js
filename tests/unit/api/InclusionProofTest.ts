@@ -14,8 +14,8 @@ import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.j
 import { HexConverter } from '../../../src/serialization/HexConverter.js';
 import { SparseMerkleTree } from '../../../src/smt/plain/SparseMerkleTree.js';
 import { SparseMerkleTreePath } from '../../../src/smt/plain/SparseMerkleTreePath.js';
+import { Address } from '../../../src/transaction/Address.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
-import { PayToScriptHash } from '../../../src/transaction/PayToScriptHash.js';
 import { TokenId } from '../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
 import {
@@ -40,7 +40,7 @@ describe('InclusionProof', () => {
 
   beforeAll(async () => {
     transaction = await MintTransaction.create(
-      await PayToScriptHash.create(PayToPublicKeyPredicate.create(signingService)),
+      await Address.fromPredicate(PayToPublicKeyPredicate.fromSigningService(signingService)),
       new TokenId(crypto.getRandomValues(new Uint8Array(32))),
       new TokenType(crypto.getRandomValues(new Uint8Array(32))),
       new Uint8Array(),
@@ -92,7 +92,7 @@ describe('InclusionProof', () => {
         predicateVerifierFactory,
         inclusionProof,
         await MintTransaction.create(
-          await PayToScriptHash.create(transaction.lockScript),
+          await Address.fromPredicate(transaction.lockScript),
           new TokenId(crypto.getRandomValues(new Uint8Array(32))),
           transaction.tokenType,
           transaction.data,

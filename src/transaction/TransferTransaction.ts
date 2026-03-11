@@ -1,6 +1,6 @@
+import { Address } from './Address.js';
 import { CertifiedTransferTransaction } from './CertifiedTransferTransaction.js';
 import { ITransaction } from './ITransaction.js';
-import { PayToScriptHash } from './PayToScriptHash.js';
 import { Token } from './Token.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { InclusionProof } from '../api/InclusionProof.js';
@@ -23,7 +23,7 @@ export class TransferTransaction implements ITransaction {
   private constructor(
     public readonly sourceStateHash: DataHash,
     public readonly lockScript: IPredicate,
-    public readonly recipient: PayToScriptHash,
+    public readonly recipient: Address,
     private readonly _x: Uint8Array,
     private readonly _data: Uint8Array,
   ) {
@@ -42,12 +42,12 @@ export class TransferTransaction implements ITransaction {
   public static async create(
     token: Token,
     owner: IPredicate,
-    recipient: PayToScriptHash,
+    recipient: Address,
     x: Uint8Array,
     data: Uint8Array,
   ): Promise<TransferTransaction> {
     const transaction = token.transactions.at(-1) ?? token.genesis;
-    if (!transaction.recipient.equals(await PayToScriptHash.create(owner))) {
+    if (!transaction.recipient.equals(await Address.fromPredicate(owner))) {
       throw new Error('Predicate does not match pay to script hash.');
     }
 
@@ -61,7 +61,7 @@ export class TransferTransaction implements ITransaction {
     return new TransferTransaction(
       new DataHash(HashAlgorithm.SHA256, CborDeserializer.decodeByteString(data[0])),
       EncodedPredicate.fromCBOR(CborDeserializer.decodeByteString(data[1])),
-      PayToScriptHash.fromCBOR(data[2]),
+      Address.fromCBOR(data[2]),
       CborDeserializer.decodeByteString(data[3]),
       CborDeserializer.decodeByteString(data[4]),
     );

@@ -73,7 +73,9 @@ export class InclusionProofVerificationRule {
 
     const predicateVerificationResult = await predicateVerifierFactory.verify(
       certificationData.lockScript,
-      certificationData,
+      certificationData.sourceStateHash,
+      certificationData.transactionHash,
+      certificationData.unlockScript,
     );
     if (predicateVerificationResult.status !== VerificationStatus.OK) {
       return new VerificationResult(

@@ -8,8 +8,8 @@ import { IPredicate } from '../predicate/IPredicate.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../serialization/HexConverter.js';
+import { ITransaction } from '../transaction/ITransaction.js';
 import { MintTransaction } from '../transaction/MintTransaction.js';
-import { TransferTransaction } from '../transaction/TransferTransaction.js';
 import { dedent } from '../util/StringUtils.js';
 
 export class CertificationData {
@@ -55,31 +55,17 @@ export class CertificationData {
   public static async fromMintTransaction(transaction: MintTransaction): Promise<CertificationData> {
     const signingService = await MintSigningService.create(transaction.tokenId);
 
-    return CertificationData.create(
-      transaction.lockScript,
-      transaction.sourceStateHash,
-      await transaction.calculateTransactionHash(),
+    return CertificationData.fromTransaction(
+      transaction,
       await PayToPublicKeyPredicate.generateUnlockScript(transaction, signingService),
     );
   }
 
-  public static async fromTransferTransaction(
-    transaction: TransferTransaction,
-    unlockScript: Uint8Array,
-  ): Promise<CertificationData> {
+  public static async fromTransaction(transaction: ITransaction, unlockScript: Uint8Array): Promise<CertificationData> {
     unlockScript = new Uint8Array(unlockScript);
     const transactionHash = await transaction.calculateTransactionHash();
 
-    return CertificationData.create(transaction.lockScript, transaction.sourceStateHash, transactionHash, unlockScript);
-  }
-
-  private static create(
-    lockScript: IPredicate,
-    sourceStateHash: DataHash,
-    transactionHash: DataHash,
-    unlockScript: Uint8Array,
-  ): CertificationData {
-    return new CertificationData(lockScript, sourceStateHash, transactionHash, unlockScript);
+    return new CertificationData(transaction.lockScript, transaction.sourceStateHash, transactionHash, unlockScript);
   }
 
   /**

@@ -12,6 +12,7 @@ import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
 import { EncodedPredicate } from '../../src/predicate/EncodedPredicate.js';
 import { PredicateVerifier } from '../../src/predicate/verification/PredicateVerifier.js';
 import { SparseMerkleTree } from '../../src/smt/plain/SparseMerkleTree.js';
+import { VerificationStatus } from '../../src/verification/VerificationStatus.js';
 import { createRootTrustBase } from '../utils/RootTrustBaseFixture.js';
 import { createUnicityCertificate } from '../utils/UnicityCertificateFixture.js';
 
@@ -67,10 +68,12 @@ export class TestAggregatorClient implements IAggregatorClient {
 
     const result = await this.predicateVerifier.verify(
       EncodedPredicate.fromCBOR(certificationData.lockScript.toCBOR()),
-      certificationData,
+      certificationData.sourceStateHash,
+      certificationData.transactionHash,
+      certificationData.unlockScript,
     );
 
-    if (!result) {
+    if (result.status !== VerificationStatus.OK) {
       return CertificationResponse.create(CertificationStatus.SIGNATURE_VERIFICATION_FAILED);
     }
 

@@ -8,8 +8,8 @@ import { PredicateVerifier } from '../../../src/predicate/verification/Predicate
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../../src/serialization/HexConverter.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
+import { Address } from '../../../src/transaction/Address.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
-import { PayToScriptHash } from '../../../src/transaction/PayToScriptHash.js';
 import { Token } from '../../../src/transaction/Token.js';
 import { TokenId } from '../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
@@ -26,10 +26,10 @@ it('Token minting', async () => {
 
   const ownerPrivateKey = HexConverter.decode(config.ownerPrivateKey);
   const ownerSigningService = new SigningService(ownerPrivateKey);
-  const ownerPredicate = PayToPublicKeyPredicate.create(ownerSigningService);
+  const ownerPredicate = PayToPublicKeyPredicate.fromSigningService(ownerSigningService);
 
   const mintTransaction = await MintTransaction.create(
-    await PayToScriptHash.create(ownerPredicate),
+    await Address.fromPredicate(ownerPredicate),
     new TokenId(crypto.getRandomValues(new Uint8Array(32))),
     new TokenType(crypto.getRandomValues(new Uint8Array(32))),
     CborSerializer.encodeTextString('My custom data'),

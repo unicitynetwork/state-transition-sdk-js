@@ -1,4 +1,4 @@
-import { CertificationData } from '../../../api/CertificationData.js';
+import { DataHash } from '../../../crypto/hash/DataHash.js';
 import { DataHasher } from '../../../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../../../crypto/hash/HashAlgorithm.js';
 import { Signature } from '../../../crypto/secp256k1/Signature.js';
@@ -8,35 +8,31 @@ import { VerificationResult } from '../../../verification/VerificationResult.js'
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
 import { IPredicate } from '../../IPredicate.js';
 import { IPredicateVerifier } from '../../verification/IPredicateVerifier.js';
+import { PredicateVerifier } from '../../verification/PredicateVerifier.js';
 import { PayToPublicKeyPredicate } from '../PayToPublicKeyPredicate.js';
 
 export class PayToPublicKeyPredicateVerifier implements IPredicateVerifier {
   public readonly type = PayToPublicKeyPredicate.TYPE;
 
   public async verify(
+    _: PredicateVerifier,
     encodedPredicate: IPredicate,
-    certificationData: CertificationData,
+    sourceStateHash: DataHash,
+    transactionHash: DataHash,
+    unlockScript: Uint8Array,
   ): Promise<VerificationResult<VerificationStatus>> {
-    const predicate = PayToPublicKeyPredicate.decode(encodedPredicate.toCBOR());
-
-    if (certificationData === null) {
-      return new VerificationResult(
-        'PayToPublicKeyPredicateVerifier',
-        VerificationStatus.FAIL,
-        'Certification data is missing.',
-      );
-    }
+    const predicate = PayToPublicKeyPredicate.fromCBOR(encodedPredicate.toCBOR());
 
     const result = await SigningService.verifyWithPublicKey(
       await new DataHasher(HashAlgorithm.SHA256)
         .update(
           CborSerializer.encodeArray(
-            CborSerializer.encodeByteString(certificationData.sourceStateHash.data),
-            CborSerializer.encodeByteString(certificationData.transactionHash.data),
+            CborSerializer.encodeByteString(sourceStateHash.data),
+            CborSerializer.encodeByteString(transactionHash.data),
           ),
         )
         .digest(),
-      Signature.decode(certificationData.unlockScript).bytes,
+      Signature.decode(unlockScript).bytes,
       predicate.publicKey,
     );
 

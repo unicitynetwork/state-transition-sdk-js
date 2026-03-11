@@ -13,7 +13,6 @@ import { TokenAssetValueMismatchError } from './error/TokenAssetValueMismatchErr
 import { SparseMerkleTree } from '../smt/plain/SparseMerkleTree.js';
 import { SparseMerkleSumTree } from '../smt/sum/SparseMerkleSumTree.js';
 import { SparseMerkleSumTreeRootNode } from '../smt/sum/SparseMerkleSumTreeRootNode.js';
-import { PayToScriptHash } from '../transaction/PayToScriptHash.js';
 import { Token } from '../transaction/Token.js';
 import { TokenId } from '../transaction/TokenId.js';
 import { TransferTransaction } from '../transaction/TransferTransaction.js';
@@ -22,6 +21,7 @@ import { PaymentAssetCollection } from './asset/PaymentAssetCollection.js';
 import { TokenAssetCountMismatchError } from './error/TokenAssetCountMismatchError.js';
 import { BurnPredicate } from './predicate/builtin/BurnPredicate.js';
 import { SplitReasonProof } from './SplitReasonProof.js';
+import { Address } from '../transaction/Address.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 import { VerificationResult } from '../verification/VerificationResult.js';
 import { VerificationStatus } from '../verification/VerificationStatus.js';
@@ -137,7 +137,7 @@ export class TokenSplit {
     const burnTransaction = await TransferTransaction.create(
       token,
       ownerPredicate,
-      await PayToScriptHash.create(burnPredicate),
+      await Address.fromPredicate(burnPredicate),
       crypto.getRandomValues(new Uint8Array(32)),
       CborSerializer.encodeNull(),
     );
@@ -257,7 +257,7 @@ export class TokenSplit {
 
       if (
         !burntTokenLastTransaction?.recipient.equals(
-          await PayToScriptHash.create(BurnPredicate.create(proof.aggregationPath.root.imprint)),
+          await Address.fromPredicate(BurnPredicate.create(proof.aggregationPath.root.imprint)),
         )
       ) {
         return new VerificationResult(

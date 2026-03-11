@@ -1,5 +1,5 @@
+import { Address } from './Address.js';
 import { ITransaction } from './ITransaction.js';
-import { PayToScriptHash } from './PayToScriptHash.js';
 import { TransferTransaction } from './TransferTransaction.js';
 import { InclusionProof } from '../api/InclusionProof.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
@@ -22,7 +22,7 @@ export class CertifiedTransferTransaction implements ITransaction {
     return this.transaction.lockScript;
   }
 
-  public get recipient(): PayToScriptHash {
+  public get recipient(): Address {
     return this.transaction.recipient;
   }
 

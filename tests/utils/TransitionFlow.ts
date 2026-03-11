@@ -3,15 +3,20 @@ import { CertificationData } from '../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../src/api/CertificationResponse.js';
 import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
 import { PayToPublicKeyPredicate } from '../../src/predicate/builtin/PayToPublicKeyPredicate.js';
+import { UnicityIdPredicate } from '../../src/predicate/builtin/UnicityIdPredicate.js';
+import { UnicityIdPredicateUnlockScript } from '../../src/predicate/builtin/UnicityIdPredicateUnlockScript.js';
 import { PredicateVerifier } from '../../src/predicate/verification/PredicateVerifier.js';
 import { CborSerializer } from '../../src/serialization/cbor/CborSerializer.js';
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
+import { Address } from '../../src/transaction/Address.js';
 import { MintTransaction } from '../../src/transaction/MintTransaction.js';
-import { PayToScriptHash } from '../../src/transaction/PayToScriptHash.js';
 import { Token } from '../../src/transaction/Token.js';
 import { TokenId } from '../../src/transaction/TokenId.js';
 import { TokenType } from '../../src/transaction/TokenType.js';
 import { TransferTransaction } from '../../src/transaction/TransferTransaction.js';
+import { UnicityId } from '../../src/unicity-id/UnicityId.js';
+import { UnicityIdMintTransaction } from '../../src/unicity-id/UnicityIdMintTransaction.js';
+import { UnicityIdToken } from '../../src/unicity-id/UnicityIdToken.js';
 import { waitInclusionProof } from '../../src/util/InclusionProofUtils.js';
 import { VerificationStatus } from '../../src/verification/VerificationStatus.js';
 
@@ -20,11 +25,44 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
     it('default successful flow', async () => {
       const predicateVerifier = PredicateVerifier.create();
 
+      const unicityIdSigningService = new SigningService(SigningService.generatePrivateKey());
+
       const signingService = new SigningService(SigningService.generatePrivateKey());
-      const predicate = PayToPublicKeyPredicate.create(signingService);
+      const targetPredicate = PayToPublicKeyPredicate.fromSigningService(signingService);
+
+      const unicityIdMintTransaction = await UnicityIdMintTransaction.create(
+        unicityIdSigningService,
+        await Address.fromPredicate(targetPredicate),
+        new UnicityId('unicity-labs/test', 'martti007'),
+        new TokenType(crypto.getRandomValues(new Uint8Array(32))),
+        targetPredicate,
+      );
+
+      const unicityIdCertificationData = await CertificationData.fromTransaction(
+        unicityIdMintTransaction,
+        await PayToPublicKeyPredicate.generateUnlockScript(unicityIdMintTransaction, unicityIdSigningService),
+      );
+
+      const unicityIdResponse = await client.submitCertificationRequest(unicityIdCertificationData);
+      expect(unicityIdResponse.status).toEqual(CertificationStatus.SUCCESS);
+
+      const unicityIdToken = await UnicityIdToken.mint(
+        trustBase,
+        predicateVerifier,
+        await unicityIdMintTransaction.toCertifiedTransaction(
+          trustBase,
+          predicateVerifier,
+          await waitInclusionProof(trustBase, predicateVerifier, client, unicityIdMintTransaction),
+        ),
+      );
+
+      const unicityIdPredicate = UnicityIdPredicate.create(
+        unicityIdSigningService.publicKey,
+        unicityIdMintTransaction.unicityId,
+      );
 
       const mintTransaction = await MintTransaction.create(
-        await PayToScriptHash.create(predicate),
+        await Address.fromPredicate(unicityIdPredicate),
         new TokenId(crypto.getRandomValues(new Uint8Array(32))),
         new TokenType(crypto.getRandomValues(new Uint8Array(32))),
         CborSerializer.encodeArray(),
@@ -46,28 +84,23 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
 
       const receiverSigningService = new SigningService(SigningService.generatePrivateKey());
       // Second user will generate his predicate
-      const receiverPredicate = PayToPublicKeyPredicate.create(receiverSigningService);
+      const receiverPredicate = PayToPublicKeyPredicate.fromSigningService(receiverSigningService);
       // Create pay to script hash for sender
-      const receiverScriptHash = await PayToScriptHash.create(receiverPredicate);
+      const receiverScriptHash = await Address.fromPredicate(receiverPredicate);
       const transferTransaction = await TransferTransaction.create(
         token,
-        predicate,
-        PayToScriptHash.fromBytes(receiverScriptHash.bytes),
+        unicityIdPredicate,
+        Address.fromBytes(receiverScriptHash.bytes),
         crypto.getRandomValues(new Uint8Array(32)),
         CborSerializer.encodeArray(),
-      );
-
-      certificationData = await CertificationData.fromTransferTransaction(
-        transferTransaction,
-        await PayToPublicKeyPredicate.generateUnlockScript(transferTransaction, signingService),
       );
 
       await expect(
         client
           .submitCertificationRequest(
-            await CertificationData.fromTransferTransaction(
+            await CertificationData.fromTransaction(
               transferTransaction,
-              await PayToPublicKeyPredicate.generateUnlockScript(transferTransaction, signingService),
+              await UnicityIdPredicateUnlockScript.create(unicityIdToken, transferTransaction, signingService),
             ),
           )
           .then((response) => response.status),
@@ -76,8 +109,8 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
       // Test double spend attempt
       const doubleSpendTransferTransaction = await TransferTransaction.create(
         token,
-        predicate,
-        await PayToScriptHash.create(predicate),
+        unicityIdPredicate,
+        await Address.fromPredicate(targetPredicate),
         crypto.getRandomValues(new Uint8Array(32)),
         CborSerializer.encodeArray(),
       );
@@ -85,9 +118,13 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
       await expect(
         client
           .submitCertificationRequest(
-            await CertificationData.fromTransferTransaction(
+            await CertificationData.fromTransaction(
               doubleSpendTransferTransaction,
-              await PayToPublicKeyPredicate.generateUnlockScript(doubleSpendTransferTransaction, signingService),
+              await UnicityIdPredicateUnlockScript.create(
+                unicityIdToken,
+                doubleSpendTransferTransaction,
+                signingService,
+              ),
             ),
           )
           .then((response) => response.status),
@@ -117,12 +154,12 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
       const returnTransferTransaction = await TransferTransaction.create(
         token,
         receiverPredicate,
-        await PayToScriptHash.create(predicate),
+        await Address.fromPredicate(targetPredicate),
         crypto.getRandomValues(new Uint8Array(32)),
         CborSerializer.encodeArray(),
       );
 
-      certificationData = await CertificationData.fromTransferTransaction(
+      certificationData = await CertificationData.fromTransaction(
         returnTransferTransaction,
         await PayToPublicKeyPredicate.generateUnlockScript(returnTransferTransaction, receiverSigningService),
       );

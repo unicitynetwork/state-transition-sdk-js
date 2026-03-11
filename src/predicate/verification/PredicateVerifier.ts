@@ -5,6 +5,7 @@ import { VerificationStatus } from '../../verification/VerificationStatus.js';
 import { BuiltInPredicateVerifierFactory } from '../builtin/BuiltInPredicateVerifierFactory.js';
 import { IPredicate } from '../IPredicate.js';
 import { PredicateEngine } from '../PredicateEngine.js';
+import { DataHash } from '../../crypto/hash/DataHash.js';
 
 export class PredicateVerifier {
   private readonly factories: Map<PredicateEngine, IPredicateVerifierFactory>;
@@ -27,13 +28,15 @@ export class PredicateVerifier {
 
   public verify(
     predicate: IPredicate,
-    certificationData: CertificationData,
+    sourceStateHash: DataHash,
+    transactionHash: DataHash,
+    unlockScript: Uint8Array,
   ): Promise<VerificationResult<VerificationStatus>> {
     const factory = this.factories.get(predicate.engine);
     if (!factory) {
       throw new Error('Unsupported predicate engine.');
     }
 
-    return factory.verify(predicate, certificationData);
+    return factory.verify(this, predicate, sourceStateHash, transactionHash, unlockScript);
   }
 }

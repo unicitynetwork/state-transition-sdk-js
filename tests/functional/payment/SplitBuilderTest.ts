@@ -1,4 +1,5 @@
 import { TestPaymentData } from './TestPaymentData.js';
+import { TestSplitPaymentData } from './TestSplitPaymentData.js';
 import { CertificationData } from '../../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../../src/api/CertificationResponse.js';
 import { SigningService } from '../../../src/crypto/secp256k1/SigningService.js';
@@ -13,15 +14,14 @@ import { TokenSplit } from '../../../src/payment/TokenSplit.js';
 import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
 import { PredicateVerifier } from '../../../src/predicate/verification/PredicateVerifier.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
+import { Address } from '../../../src/transaction/Address.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
-import { PayToScriptHash } from '../../../src/transaction/PayToScriptHash.js';
 import { Token } from '../../../src/transaction/Token.js';
 import { TokenId } from '../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
 import { waitInclusionProof } from '../../../src/util/InclusionProofUtils.js';
 import { VerificationStatus } from '../../../src/verification/VerificationStatus.js';
 import { TestAggregatorClient } from '../TestAggregatorClient.js';
-import { TestSplitPaymentData } from './TestSplitPaymentData.js';
 
 describe('SplitBuilder Functional Test', () => {
   it('should mint a token and split it using SplitBuilder', async () => {
@@ -31,7 +31,7 @@ describe('SplitBuilder Functional Test', () => {
     const predicateVerifier = PredicateVerifier.create();
 
     const signingService = new SigningService(SigningService.generatePrivateKey());
-    const predicate = PayToPublicKeyPredicate.create(signingService);
+    const predicate = PayToPublicKeyPredicate.fromSigningService(signingService);
 
     const assets = [
       new Asset(new AssetId(crypto.getRandomValues(new Uint8Array(10))), 500n),
@@ -40,7 +40,7 @@ describe('SplitBuilder Functional Test', () => {
 
     const paymentData = new TestPaymentData(PaymentAssetCollection.create(...assets));
     const mintTransaction = await MintTransaction.create(
-      await PayToScriptHash.create(predicate),
+      await Address.fromPredicate(predicate),
       new TokenId(crypto.getRandomValues(new Uint8Array(32))),
       new TokenType(crypto.getRandomValues(new Uint8Array(32))),
       await paymentData.toCBOR(),
@@ -93,7 +93,7 @@ describe('SplitBuilder Functional Test', () => {
     ];
     const result = await TokenSplit.split(token, predicate, TestPaymentData.fromCBOR, splitTokens);
 
-    certificationData = await CertificationData.fromTransferTransaction(
+    certificationData = await CertificationData.fromTransaction(
       result.burn.transaction,
       await PayToPublicKeyPredicate.generateUnlockScript(result.burn.transaction, signingService),
     );
@@ -120,7 +120,7 @@ describe('SplitBuilder Functional Test', () => {
       const paymentData = new TestSplitPaymentData(assets, SplitReason.create(token, entry.proofs));
 
       const mintTransaction = await MintTransaction.create(
-        await PayToScriptHash.create(predicate),
+        await Address.fromPredicate(predicate),
         tokenId,
         new TokenType(crypto.getRandomValues(new Uint8Array(32))),
         await paymentData.toCBOR(),

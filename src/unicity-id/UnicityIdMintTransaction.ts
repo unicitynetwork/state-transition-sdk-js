@@ -1,39 +1,41 @@
-import { Address } from './Address.js';
-import { CertifiedMintTransaction } from './CertifiedMintTransaction.js';
-import { ITransaction } from './ITransaction.js';
-import { MintTransactionState } from './MintTransactionState.js';
-import { TokenId } from './TokenId.js';
-import { TokenType } from './TokenType.js';
+import { CertifiedUnicityIdMintTransaction } from './CertifiedUnicityIdMintTransaction.js';
+import { UnicityId } from './UnicityId.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { InclusionProof } from '../api/InclusionProof.js';
+import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
+import { SigningService } from '../crypto/secp256k1/SigningService.js';
 import { PayToPublicKeyPredicate } from '../predicate/builtin/PayToPublicKeyPredicate.js';
+import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
+import { IPredicate } from '../predicate/IPredicate.js';
 import { PredicateVerifier } from '../predicate/verification/PredicateVerifier.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
+import { Address } from '../transaction/Address.js';
+import { ITransaction } from '../transaction/ITransaction.js';
+import { MintTransactionState } from '../transaction/MintTransactionState.js';
+import { TokenId } from '../transaction/TokenId.js';
+import { TokenType } from '../transaction/TokenType.js';
 import {
   InclusionProofVerificationRule,
   InclusionProofVerificationStatus,
-} from './verification/rule/InclusionProofVerificationRule.js';
-import { DataHash } from '../crypto/hash/DataHash.js';
-import { MintSigningService } from '../crypto/MintSigningService.js';
-import { IPredicate } from '../predicate/IPredicate.js';
-import { HexConverter } from '../serialization/HexConverter.js';
+} from '../transaction/verification/rule/InclusionProofVerificationRule.js';
 import { dedent } from '../util/StringUtils.js';
 
-export class MintTransaction implements ITransaction {
+export class UnicityIdMintTransaction implements ITransaction {
   private constructor(
     public readonly sourceStateHash: MintTransactionState,
     public readonly lockScript: IPredicate,
     public readonly recipient: Address,
     public readonly tokenId: TokenId,
     public readonly tokenType: TokenType,
-    private readonly _data: Uint8Array,
+    public readonly targetPredicate: PayToPublicKeyPredicate,
+    public readonly unicityId: UnicityId,
   ) {}
 
   public get data(): Uint8Array {
-    return new Uint8Array(this._data);
+    return this.targetPredicate.toCBOR();
   }
 
   public get x(): Uint8Array {
@@ -41,33 +43,40 @@ export class MintTransaction implements ITransaction {
   }
 
   public static async create(
+    signingService: SigningService,
     recipient: Address,
-    tokenId: TokenId,
+    unicityId: UnicityId,
     tokenType: TokenType,
-    data: Uint8Array,
-  ): Promise<MintTransaction> {
-    data = new Uint8Array(data);
+    targetPredicate: PayToPublicKeyPredicate,
+  ): Promise<UnicityIdMintTransaction> {
+    const tokenId = await TokenId.fromUnicityId(unicityId);
 
-    const signingService = await MintSigningService.create(tokenId);
-    return new MintTransaction(
+    return new UnicityIdMintTransaction(
       await MintTransactionState.create(tokenId),
       PayToPublicKeyPredicate.fromSigningService(signingService),
       recipient,
       tokenId,
       tokenType,
-      data,
+      targetPredicate,
+      unicityId,
     );
   }
 
-  public static fromCBOR(bytes: Uint8Array): Promise<MintTransaction> {
+  public static async fromCBOR(bytes: Uint8Array): Promise<UnicityIdMintTransaction> {
     const data = CborDeserializer.decodeArray(bytes);
-    const aux = CborDeserializer.decodeArray(data[2]);
+    const aux = CborDeserializer.decodeArray(data[3]);
 
-    return MintTransaction.create(
-      Address.fromCBOR(data[0]),
-      TokenId.fromCBOR(data[1]),
+    const unicityId = UnicityId.fromCBOR(data[2]);
+    const tokenId = await TokenId.fromUnicityId(unicityId);
+
+    return new UnicityIdMintTransaction(
+      await MintTransactionState.create(tokenId),
+      EncodedPredicate.fromCBOR(data[0]),
+      Address.fromCBOR(data[1]),
+      tokenId,
       TokenType.fromCBOR(aux[0]),
-      CborDeserializer.decodeByteString(aux[1]),
+      PayToPublicKeyPredicate.fromCBOR(aux[1]),
+      unicityId,
     );
   }
 
@@ -83,14 +92,23 @@ export class MintTransaction implements ITransaction {
   }
 
   public calculateTransactionHash(): Promise<DataHash> {
-    return new DataHasher(HashAlgorithm.SHA256).update(this.toCBOR()).digest();
+    return new DataHasher(HashAlgorithm.SHA256)
+      .update(
+        CborSerializer.encodeArray(
+          this.recipient.toCBOR(),
+          this.tokenId.toCBOR(),
+          CborSerializer.encodeArray(this.tokenType.toCBOR(), this.targetPredicate.toCBOR()),
+        ),
+      )
+      .digest();
   }
 
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
+      this.lockScript.toCBOR(),
       this.recipient.toCBOR(),
-      this.tokenId.toCBOR(),
-      CborSerializer.encodeArray(this.tokenType.toCBOR(), CborSerializer.encodeByteString(this._data)),
+      this.unicityId.toCBOR(),
+      CborSerializer.encodeArray(this.tokenType.toCBOR(), this.targetPredicate.toCBOR()),
     );
   }
 
@@ -98,23 +116,26 @@ export class MintTransaction implements ITransaction {
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifier,
     inclusionProof: InclusionProof,
-  ): Promise<CertifiedMintTransaction> {
+  ): Promise<CertifiedUnicityIdMintTransaction> {
     const result = await InclusionProofVerificationRule.verify(trustBase, predicateVerifier, inclusionProof, this);
     if (result.status !== InclusionProofVerificationStatus.OK) {
       throw new Error(`Inclusion proof verification failed: ${result.status.toString()}`);
     }
 
-    return new CertifiedMintTransaction(this, inclusionProof);
+    return new CertifiedUnicityIdMintTransaction(this, inclusionProof);
   }
 
   public toString(): string {
     return dedent`
-      MintTransaction
+      UnicityIdMintTransaction
         Lock Script: 
           ${this.lockScript.toString()}
         Recipient: ${this.recipient.toString()}
         Token ID: ${this.tokenId.toString()}
         Token Type: ${this.tokenType.toString()}
-        Data: ${HexConverter.encode(this._data)}`;
+        Unicity ID: 
+          ${this.unicityId.toString()}
+        Target Predicate:
+          ${this.targetPredicate.toString()}`;
   }
 }

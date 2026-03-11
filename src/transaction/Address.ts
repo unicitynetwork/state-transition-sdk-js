@@ -7,8 +7,9 @@ import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../serialization/HexConverter.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 
-export class PayToScriptHash {
-  private constructor(private readonly _bytes: Uint8Array) {
+export class Address {
+  public constructor(private readonly _bytes: Uint8Array) {
+    // TODO: Add check for length, should be 32 bytes
     this._bytes = new Uint8Array(_bytes);
   }
 
@@ -16,22 +17,22 @@ export class PayToScriptHash {
     return new Uint8Array(this._bytes);
   }
 
-  public static async create(predicate: IPredicate): Promise<PayToScriptHash> {
-    const hash = await new DataHasher(HashAlgorithm.SHA256).update(predicate.toCBOR()).digest();
-    return new PayToScriptHash(hash.data);
-  }
-
-  public static fromBytes(bytes: Uint8Array): PayToScriptHash {
+  public static fromBytes(bytes: Uint8Array): Address {
     const hash = new DataHash(HashAlgorithm.SHA256, bytes);
-    return new PayToScriptHash(hash.data);
+    return new Address(hash.data);
   }
 
-  public static fromCBOR(bytes: Uint8Array): PayToScriptHash {
-    return PayToScriptHash.fromBytes(CborDeserializer.decodeByteString(bytes));
+  public static fromCBOR(bytes: Uint8Array): Address {
+    return new Address(CborDeserializer.decodeByteString(bytes));
   }
 
-  public equals(hash: PayToScriptHash): boolean {
-    return areUint8ArraysEqual(this._bytes, hash._bytes);
+  public static async fromPredicate(predicate: IPredicate): Promise<Address> {
+    const hash = await new DataHasher(HashAlgorithm.SHA256).update(predicate.toCBOR()).digest();
+    return new Address(hash.data);
+  }
+
+  public equals(recipient: Address): boolean {
+    return areUint8ArraysEqual(this._bytes, recipient.bytes);
   }
 
   public toCBOR(): Uint8Array {
@@ -43,6 +44,6 @@ export class PayToScriptHash {
    * @returns The string representation.
    */
   public toString(): string {
-    return `PayToScriptHash[${HexConverter.encode(this._bytes)}]`;
+    return `Address[${HexConverter.encode(this._bytes)}]`;
   }
 }

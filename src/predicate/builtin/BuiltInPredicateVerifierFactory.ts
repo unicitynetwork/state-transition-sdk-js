@@ -1,4 +1,4 @@
-import { CertificationData } from '../../api/CertificationData.js';
+import { DataHash } from '../../crypto/hash/DataHash.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { VerificationResult } from '../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../verification/VerificationStatus.js';
@@ -7,6 +7,8 @@ import { PredicateEngine } from '../PredicateEngine.js';
 import { IPredicateVerifier } from '../verification/IPredicateVerifier.js';
 import { IPredicateVerifierFactory } from '../verification/IPredicateVerifierFactory.js';
 import { PayToPublicKeyPredicateVerifier } from './verification/PayToPublicKeyPredicateVerifier.js';
+import { UnicityIdPredicateVerifier } from './verification/UnicityIdPredicateVerifier.js';
+import { PredicateVerifier } from '../verification/PredicateVerifier.js';
 
 export class BuiltInPredicateVerifierFactory implements IPredicateVerifierFactory {
   public readonly engine: PredicateEngine = PredicateEngine.BUILT_IN;
@@ -26,12 +28,18 @@ export class BuiltInPredicateVerifierFactory implements IPredicateVerifierFactor
   }
 
   public static create(): BuiltInPredicateVerifierFactory {
-    return new BuiltInPredicateVerifierFactory([new PayToPublicKeyPredicateVerifier()]);
+    return new BuiltInPredicateVerifierFactory([
+      new PayToPublicKeyPredicateVerifier(),
+      new UnicityIdPredicateVerifier(),
+    ]);
   }
 
   public verify(
+    verifier: PredicateVerifier,
     predicate: IPredicate,
-    certificationData: CertificationData,
+    sourceStateHash: DataHash,
+    transactionHash: DataHash,
+    unlockScript: Uint8Array,
   ): Promise<VerificationResult<VerificationStatus>> {
     const data = CborDeserializer.decodeArray(predicate.toCBOR());
     const type = CborDeserializer.decodeUnsignedInteger(CborDeserializer.decodeByteString(data[1]));
@@ -41,6 +49,6 @@ export class BuiltInPredicateVerifierFactory implements IPredicateVerifierFactor
       throw new Error('Unsupported predicate type for verification.');
     }
 
-    return factory.verify(predicate, certificationData);
+    return factory.verify(verifier, predicate, sourceStateHash, transactionHash, unlockScript);
   }
 }
