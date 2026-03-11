@@ -23,11 +23,7 @@ export class UnicityIdPredicateVerifier implements IPredicateVerifier {
 
     const tokenId = await TokenId.fromUnicityId(predicate.unicityId);
     if (!tokenId.equals(decodedUnlockScript.token.id)) {
-      return new VerificationResult(
-        'PayToPublicKeyPredicateVerifier',
-        VerificationStatus.FAIL,
-        'Signature verification failed.',
-      );
+      return new VerificationResult('UnicityIdPredicateVerifier', VerificationStatus.FAIL, 'Token ID mismatch.');
     }
 
     const targetPredicateResult = await verifier.verify(
@@ -36,6 +32,13 @@ export class UnicityIdPredicateVerifier implements IPredicateVerifier {
       transactionHash,
       decodedUnlockScript.unlockScript,
     );
+    if (targetPredicateResult.status !== VerificationStatus.OK) {
+      return new VerificationResult(
+        'UnicityIdPredicateVerifier',
+        VerificationStatus.FAIL,
+        'Could not verify target predicate.',
+      );
+    }
 
     return new VerificationResult('UnicityIdPredicateVerifier', VerificationStatus.OK);
   }

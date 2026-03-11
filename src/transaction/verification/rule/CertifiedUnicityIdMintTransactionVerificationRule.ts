@@ -25,13 +25,13 @@ export class CertifiedUnicityIdMintTransactionVerificationRule {
     results.push(result);
     if (result.status !== InclusionProofVerificationStatus.OK) {
       return new VerificationResult(
-        'CertifiedMintTransactionVerificationRule',
+        'CertifiedUnicityIdMintTransactionVerificationRule',
         VerificationStatus.FAIL,
         `Inclusion proof verification failed: ${result.status?.toString()}`,
         results,
       );
     }
 
-    return new VerificationResult('CertifiedMintTransactionVerificationRule', VerificationStatus.OK, '', results);
+    return new VerificationResult('CertifiedUnicityIdMintTransactionVerificationRule', VerificationStatus.OK, '', results);
   }
 }
