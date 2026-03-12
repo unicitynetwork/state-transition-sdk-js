@@ -32,6 +32,11 @@ export class CertifiedUnicityIdMintTransactionVerificationRule {
       );
     }
 
-    return new VerificationResult('CertifiedUnicityIdMintTransactionVerificationRule', VerificationStatus.OK, '', results);
+    return new VerificationResult(
+      'CertifiedUnicityIdMintTransactionVerificationRule',
+      VerificationStatus.OK,
+      '',
+      results,
+    );
   }
 }

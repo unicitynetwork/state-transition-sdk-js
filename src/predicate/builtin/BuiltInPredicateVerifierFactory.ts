@@ -1,3 +1,4 @@
+import { RootTrustBase } from '../../api/bft/RootTrustBase.js';
 import { DataHash } from '../../crypto/hash/DataHash.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { VerificationResult } from '../../verification/VerificationResult.js';
@@ -27,15 +28,14 @@ export class BuiltInPredicateVerifierFactory implements IPredicateVerifierFactor
     this.factories = result;
   }
 
-  public static create(): BuiltInPredicateVerifierFactory {
+  public static create(verifier: PredicateVerifier, trustBase: RootTrustBase): BuiltInPredicateVerifierFactory {
     return new BuiltInPredicateVerifierFactory([
       new PayToPublicKeyPredicateVerifier(),
-      new UnicityIdPredicateVerifier(),
+      new UnicityIdPredicateVerifier(verifier, trustBase),
     ]);
   }
 
   public verify(
-    verifier: PredicateVerifier,
     predicate: IPredicate,
     sourceStateHash: DataHash,
     transactionHash: DataHash,
@@ -49,6 +49,6 @@ export class BuiltInPredicateVerifierFactory implements IPredicateVerifierFactor
       throw new Error('Unsupported predicate type for verification.');
     }
 
-    return factory.verify(verifier, predicate, sourceStateHash, transactionHash, unlockScript);
+    return factory.verify(predicate, sourceStateHash, transactionHash, unlockScript);
   }
 }

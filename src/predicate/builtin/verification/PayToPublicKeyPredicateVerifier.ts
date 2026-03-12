@@ -8,14 +8,12 @@ import { VerificationResult } from '../../../verification/VerificationResult.js'
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
 import { IPredicate } from '../../IPredicate.js';
 import { IPredicateVerifier } from '../../verification/IPredicateVerifier.js';
-import { PredicateVerifier } from '../../verification/PredicateVerifier.js';
 import { PayToPublicKeyPredicate } from '../PayToPublicKeyPredicate.js';
 
 export class PayToPublicKeyPredicateVerifier implements IPredicateVerifier {
   public readonly type = PayToPublicKeyPredicate.TYPE;
 
   public async verify(
-    _: PredicateVerifier,
     encodedPredicate: IPredicate,
     sourceStateHash: DataHash,
     transactionHash: DataHash,

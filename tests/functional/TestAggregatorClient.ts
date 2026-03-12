@@ -21,7 +21,7 @@ import { createUnicityCertificate } from '../utils/UnicityCertificateFixture.js'
  */
 export class TestAggregatorClient implements IAggregatorClient {
   public readonly rootTrustBase: RootTrustBase;
-  private readonly predicateVerifier = PredicateVerifier.create();
+  private readonly predicateVerifier;
   private readonly requests: Map<bigint, CertificationData> = new Map();
 
   private constructor(
@@ -29,6 +29,7 @@ export class TestAggregatorClient implements IAggregatorClient {
     private readonly signingService: SigningService,
   ) {
     this.rootTrustBase = createRootTrustBase(this.signingService.publicKey);
+    this.predicateVerifier = PredicateVerifier.create(this.rootTrustBase);
   }
 
   /**

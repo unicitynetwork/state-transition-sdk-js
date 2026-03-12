@@ -1,5 +1,6 @@
 import { CertifiedMintTransaction } from './CertifiedMintTransaction.js';
 import { CertifiedTransferTransaction } from './CertifiedTransferTransaction.js';
+import { ITransaction } from './ITransaction.js';
 import { TokenId } from './TokenId.js';
 import { TokenType } from './TokenType.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
@@ -12,7 +13,6 @@ import { VerificationStatus } from '../verification/VerificationStatus.js';
 import { CertifiedMintTransactionVerificationRule } from './verification/rule/CertifiedMintTransactionVerificationRule.js';
 import { CertifiedTransferTransactionVerificationRule } from './verification/rule/CertifiedTransferTransactionVerificationRule.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
-import { ITransaction } from './ITransaction.js';
 
 export class Token {
   private constructor(

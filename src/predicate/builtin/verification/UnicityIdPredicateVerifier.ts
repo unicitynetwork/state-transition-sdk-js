@@ -1,3 +1,4 @@
+import { RootTrustBase } from '../../../api/bft/RootTrustBase.js';
 import { DataHash } from '../../../crypto/hash/DataHash.js';
 import { TokenId } from '../../../transaction/TokenId.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
@@ -11,8 +12,12 @@ import { UnicityIdPredicateUnlockScript } from '../UnicityIdPredicateUnlockScrip
 export class UnicityIdPredicateVerifier implements IPredicateVerifier {
   public readonly type = UnicityIdPredicate.TYPE;
 
+  public constructor(
+    private readonly verifier: PredicateVerifier,
+    private readonly trustBase: RootTrustBase,
+  ) {}
+
   public async verify(
-    verifier: PredicateVerifier,
     encodedPredicate: IPredicate,
     sourceStateHash: DataHash,
     transactionHash: DataHash,
@@ -26,17 +31,28 @@ export class UnicityIdPredicateVerifier implements IPredicateVerifier {
       return new VerificationResult('UnicityIdPredicateVerifier', VerificationStatus.FAIL, 'Token ID mismatch.');
     }
 
-    const targetPredicateResult = await verifier.verify(
+    let result = await decodedUnlockScript.token.verify(this.trustBase, this.verifier);
+    if (result.status !== VerificationStatus.OK) {
+      return new VerificationResult(
+        'UnicityIdPredicateVerifier',
+        VerificationStatus.FAIL,
+        'Could not verify unicity id token.',
+        [result],
+      );
+    }
+
+    result = await this.verifier.verify(
       decodedUnlockScript.token.genesis.targetPredicate,
       sourceStateHash,
       transactionHash,
       decodedUnlockScript.unlockScript,
     );
-    if (targetPredicateResult.status !== VerificationStatus.OK) {
+    if (result.status !== VerificationStatus.OK) {
       return new VerificationResult(
         'UnicityIdPredicateVerifier',
         VerificationStatus.FAIL,
         'Could not verify target predicate.',
+        [result],
       );
     }
 

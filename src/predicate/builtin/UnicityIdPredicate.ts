@@ -1,12 +1,6 @@
-import { PayToPublicKeyPredicate } from './PayToPublicKeyPredicate.js';
-import { DataHasher } from '../../crypto/hash/DataHasher.js';
-import { HashAlgorithm } from '../../crypto/hash/HashAlgorithm.js';
-import { SigningService } from '../../crypto/secp256k1/SigningService.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../serialization/HexConverter.js';
-import { ITransaction } from '../../transaction/ITransaction.js';
-import { Token } from '../../transaction/Token.js';
 import { dedent } from '../../util/StringUtils.js';
 import { IPredicate } from '../IPredicate.js';
 import { PredicateEngine } from '../PredicateEngine.js';

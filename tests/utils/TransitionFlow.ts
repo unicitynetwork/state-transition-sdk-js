@@ -23,7 +23,7 @@ import { VerificationStatus } from '../../src/verification/VerificationStatus.js
 export const transitionFlowTest = (client: StateTransitionClient, trustBase: RootTrustBase): void => {
   describe('Transition', () => {
     it('default successful flow', async () => {
-      const predicateVerifier = PredicateVerifier.create();
+      const predicateVerifier = PredicateVerifier.create(trustBase);
 
       const unicityIdSigningService = new SigningService(SigningService.generatePrivateKey());
 
