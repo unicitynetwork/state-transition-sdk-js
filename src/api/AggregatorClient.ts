@@ -54,11 +54,8 @@ export class AggregatorClient implements IAggregatorClient {
   /**
    * @inheritDoc
    */
-  public async submitCertificationRequest(
-    certificationData: CertificationData,
-    receipt: boolean = false,
-  ): Promise<CertificationResponse> {
-    const request = await CertificationRequest.create(certificationData, receipt);
+  public async submitCertificationRequest(certificationData: CertificationData): Promise<CertificationResponse> {
+    const request = await CertificationRequest.create(certificationData);
 
     const response = await this.transport.request(
       'certification_request',
