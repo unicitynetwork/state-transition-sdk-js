@@ -1,0 +1,712 @@
+{
+  "token": {
+    "coins": [
+      [
+        "4ac6fa8faf1045db6786e06b268747ea968e0273bde3662bb5de5a2a0ef04ada",
+        "5"
+      ],
+      [
+        "9263017c7b53b5d559697bcedac92a3acf4cbbe8a5afbc43640bd88924a820d8",
+        "3"
+      ]
+    ],
+    "data": "a24083e563a0d13823242bf3f3b20997c0ad65ebf9ca305dbd8b323f181b44df",
+    "id": "8cec46834669f7ee037f40ec87e1dc6f851dd95275d76c5e09c0f54d98527a96",
+    "nametagTokens": [],
+    "state": {
+      "data": "1f410774878fde9998f4dd9ed3966198bb84b2aeb1ac1d30e9a5dbc0705ffaf5",
+      "unlockPredicate": {
+        "algorithm": "secp256k1",
+        "hashAlgorithm": 0,
+        "nonce": "1fac0b3c090c170eb6c7f9ffa130f278076206fa75048a91af61ce013e152167",
+        "publicKey": "03b558185db63020d45271623671113fbbf26ad1b4a088c624872617f752b08d2b",
+        "type": "MASKED"
+      }
+    },
+    "transactions": [
+      {
+        "data": {
+          "dataHash": "00008f40a5f492b7ff3ecdf84e7137f81cde62ed06b3a3bdf30c13e57f471bcaf876",
+          "reason": {
+            "type": "TOKEN_SPLIT",
+            "burnedToken": {
+              "coins": [
+                [
+                  "4ac6fa8faf1045db6786e06b268747ea968e0273bde3662bb5de5a2a0ef04ada",
+                  "10"
+                ],
+                [
+                  "9263017c7b53b5d559697bcedac92a3acf4cbbe8a5afbc43640bd88924a820d8",
+                  "5"
+                ]
+              ],
+              "data": "b62d8a63e0d73e76e4fd47d35956634ddcf45efd219f1bcc15250eb46f6e42d8",
+              "id": "232e040bd061dda7adde20eaa52082cf2d1458ee6717eb6bc429db1feefb80ec",
+              "nametagTokens": [],
+              "state": {
+                "data": "6d7920637573746f6d2064617461",
+                "unlockPredicate": {
+                  "nonce": "99ac4e38fc02ec565a966463fa1edb64790052cdfc5df345c9ce135ffd4a6c40",
+                  "type": "BURN",
+                  "burnReason": "0000fa4e40e72c5d694386761cc968234b6076666a1ee0642222931a0ec7cda7a4c9"
+                }
+              },
+              "transactions": [
+                {
+                  "data": {
+                    "dataHash": "0000912a54746a6f31f00ac3fb34947534f2c49e2a098df219ae760b9fefb34d876a",
+                    "reason": {
+                      "type": "TOKEN_SPLIT",
+                      "burnedToken": {
+                        "coins": [
+                          [
+                            "4ac6fa8faf1045db6786e06b268747ea968e0273bde3662bb5de5a2a0ef04ada",
+                            "10"
+                          ],
+                          [
+                            "9263017c7b53b5d559697bcedac92a3acf4cbbe8a5afbc43640bd88924a820d8",
+                            "20"
+                          ]
+                        ],
+                        "data": "e3df473b8afaaae270a3f35df5b00440c21048edcc6f1e0dda70dd3a253fe9c5",
+                        "id": "c64296657621080e8c865f2204c5005d5ee5eacdf4c7ac29dfbe694a62083227",
+                        "nametagTokens": [],
+                        "state": {
+                          "data": "6d7920637573746f6d2064617461",
+                          "unlockPredicate": {
+                            "nonce": "431b8b4ddcbef5524b97ff4164b576fcd3244ca1d4833c394650580bb989d393",
+                            "type": "BURN",
+                            "burnReason": "0000a03d1ec9464a6f1d206584a6da09afbcdd5f5e0bd2e5f9403d8dba73ce156dbe"
+                          }
+                        },
+                        "transactions": [
+                          {
+                            "data": {
+                              "dataHash": "0000612dc841be7e8958aa0833655349d16605ba5d3c3b4c15fccc333b4cf594461e",
+                              "reason": null,
+                              "recipient": "DIRECT://58220000a8dc0b5c84cedbb5eabaf032c7b6cf860479ab5dcd857f2fd2b01dfb9593d57392485a12",
+                              "salt": "c21a009bca70ad65bd71a52b9678be57b4df4a16f61f91868085e7742afcd5ba"
+                            },
+                            "inclusionProof": {
+                              "authenticator": {
+                                "algorithm": "secp256k1",
+                                "publicKey": "03586feff294213c5c0ffaf7f047311905ca9aabb1a97916b2e2922bfda77d9d50",
+                                "signature": "14590d6101fa15cfb34a286a36819ac14d34569e9c693d60fd8c2d21b625c13f31e1fcfe43a463edebb52c5f4fae52c5faf11abc585c23a9a1e3edb1b739620601",
+                                "stateHash": "0000b6a7bfae662babe736800bcca350614fd966beeeeda689f63e92009fdb9c5bac"
+                              },
+                              "merkleTreePath": {
+                                "root": "000067b617e031efcdc7df5e73870a77065efa5f99808a1eff4e00ee55b927466bee",
+                                "steps": [
+                                  {
+                                    "branch": [
+                                      "000092f27edc83d0b2d5fad712ffed3965069931fa9af3624f6e3064fd2ac6101ed3"
+                                    ],
+                                    "path": "14821403926674169513153897727730690512220229397214667863787178075404776237454649",
+                                    "sibling": "0000e4cd292b7a8b700312db9a3c37c63521f1cec147559e0349d08f2a69f2b9b92b"
+                                  },
+                                  {
+                                    "branch": [],
+                                    "path": "7",
+                                    "sibling": "00008b722a602595794927293580ab051a0656307e43e1e4e3f64d551e6c7b69d787"
+                                  },
+                                  {
+                                    "branch": [],
+                                    "path": "2",
+                                    "sibling": "0000f2d4b9e234b0190c09b439daae1acf49ed63e192c20e469eaffe44a14c205f7f"
+                                  },
+                                  {
+                                    "branch": [],
+                                    "path": "2",
+                                    "sibling": "0000c8643c288e3182e11bbcda74dc4e93a01512abd4407149f7362c9341ad34d4f3"
+                                  },
+                                  {
+                                    "branch": [],
+                                    "path": "3",
+                                    "sibling": "0000e2113201ab7191dee42d4f251b23884669482ecb62dc9cbc8660c5e9a7c3f8b3"
+                                  },
+                                  {
+                                    "branch": [],
+                                    "path": "2",
+                                    "sibling": "0000de36a45f3a6d3a4b4c30f44f9c0e84f684397b155f23e5183b6190ad4ba1f90a"
+                                  },
+                                  {
+                                    "branch": [],
+                                    "path": "2",
+                                    "sibling": "00009521984bbd9e8a689f83e9d7137deca36d46f7475b647cce9234767615fd7839"
+                                  },
+                                  {
+                                    "branch": [],
+                                    "path": "2",
+                                    "sibling": "00007fa415bbd372bf39d2bdcfa4e031ead5644f79b4e7c572f743359c7bec2a8d5f"
+                                  },
+                                  {
+                                    "branch": [],
+                                    "path": "2",
+                                    "sibling": "0000a1b21fe2535e676bdf02a3470ffdf1a6cf234fa47463e6b6df10aec901794821"
+                                  }
+                                ]
+                              },
+                              "transactionHash": "00001b3ae00b568318ec3823378e1764a555b55224c09268ba063710d0c74d8b7fb5"
+                            }
+                          },
+                          {
+                            "data": {
+                              "dataHash": "0000371dd350eb385a9eb4ccf52c532b9f2fb5b24834ea634f4c27739b604cb08102",
+                              "message": "6d79206d657373616765",
+                              "nameTags": [],
+                              "recipient": "DIRECT://58220000eae22a0b4f3004f087be6b364f4f0a2daf7530a93cec1a3477c12a2d8b1610b0966b54d1",
+                              "salt": "646c8d8a23f6e266248a60010d248ad82608b22ca0fdc9e733d337b849269bb2",
+                              "sourceState": {
+                                "data": "10d73810d56c28b53cb95a51a26159008d04da4756308a2cb09e0606f735f049",
+                                "unlockPredicate": {
+                                  "algorithm": "secp256k1",
+                                  "hashAlgorithm": 0,
+                                  "nonce": "75d3c1f354ac6870e3f6d2ae8b66db0205ddb151d0efcf777376d995484eb9cf",
+                                  "publicKey": "0338ed5987450dfd2ffc944c63516599bf1b95b480e1675443078350c7eadb5493",
+                                  "type": "MASKED"
+                                }
+                              }
+                            },
+                            "inclusionProof": {
+                              "authenticator": {
+                                "algorithm": "secp256k1",
+                                "publicKey": "0338ed5987450dfd2ffc944c63516599bf1b95b480e1675443078350c7eadb5493",
+                                "signature": "efb4eca82e5fbf4d97d54e06adc0c3572395983ea77b7f90c6a9aa5dd18b903a442309127de3f87dfacc119d41c2d99fefaa33e78c9963d02e0134a974d13d0101",
+                                "stateHash": "0000c425f9bb9b4d38c594c85e2b190235a935fd3808880124db58f06258dc7b9f36"
+                              },
+                              "merkleTreePath": {
+                                "root": "0000865fbf34863910d10c253d64c62085539a673c2172992064b43d5c1bcaa0c8ad",
+                                "steps": [
+                                  {
+                                    "branch": [
+                                      "00004b320587561c9692fce86571773d8f14935b1aa0a7db337d304ff2ff9e73c92e"
+                                    ],
+                                    "path": "118572820081974794563576602546650320580821370898870120604343430151784629466892437",
+                                    "sibling": "0000ee06c319022d0ea6ceb4b1ad5dbc135bf941885b5d53c3ddc3caee06c3eb487b"
+                                  },
+                                  {
+                                    "branch": [],
+                                    "path": "5",
+                                    "sibling": "00006b78a9feff8f1b653f294d58602657769316292d872dbf5a6b9fd6ce6a49e086"
+                                  },
+                                  {
+                                    "branch": [],
+                                    "path": "2",
+                                    "sibling": "0000e339a78d80eb30b4374f1326a6467cab7e676bcb93b31e9ee227b711ad32bb81"
+                                  },
+                                  {
+                                    "branch": [],
+                                    "path": "3",
+                                    "sibling": "0000ad59fe7c5334346c5a556c17593663c0e3ad67b0856fff41e453e1efc91c9616"
+                                  },
+                                  {
+                                    "branch": [],
+                                    "path": "3",
+                                    "sibling": "0000ec1ef1763d3679fbc8a62be94d78884d549298c25fdac254174749a4a6b7c8ab"
+                                  },
+                                  {
+                                    "branch": [],
+                                    "path": "2",
+                                    "sibling": "0000a1b21fe2535e676bdf02a3470ffdf1a6cf234fa47463e6b6df10aec901794821"
+                                  }
+                                ]
+                              },
+                              "transactionHash": "0000c6fa64d64f34e3ee5ce39c9e5db088fb71bcd489513c800d8d5433231d3159fa"
+                            }
+                          }
+                        ],
+                        "type": "1c5821bd6904a387902b7741766e4114275cf64f3bef8919c59229ea1ceb5ed9",
+                        "version": "2.0"
+                      },
+                      "burnProofsByCoinId": [
+                        [
+                          "4ac6fa8faf1045db6786e06b268747ea968e0273bde3662bb5de5a2a0ef04ada",
+                          [
+                            {
+                              "pathPaddingBits": "256",
+                              "items": [
+                                {
+                                  "type": "root",
+                                  "rootHash": "a03d1ec9464a6f1d206584a6da09afbcdd5f5e0bd2e5f9403d8dba73ce156dbe"
+                                },
+                                {
+                                  "type": "internalNode",
+                                  "prefix": "2"
+                                },
+                                {
+                                  "type": "internalNode",
+                                  "prefix": "74807402530799722310059206388513108325181627845142710329196258707274766755181",
+                                  "siblingHash": "29b53b4f1cf995755b23c6ebd3a5328f58ca3c4c94e5309b2740811dce4d116a"
+                                },
+                                {
+                                  "type": "leaf",
+                                  "value": "b0d73acead24dda4e40c0330b378b92831da99cdf2b896e92c7fb32e87f331ed",
+                                  "valueType": "string"
+                                }
+                              ]
+                            },
+                            {
+                              "pathPaddingBits": "256",
+                              "items": [
+                                {
+                                  "type": "sumRoot",
+                                  "rootHash": "b0d73acead24dda4e40c0330b378b92831da99cdf2b896e92c7fb32e87f331ed",
+                                  "sum": "10"
+                                },
+                                {
+                                  "type": "sumInternalNode",
+                                  "prefix": "131704341828200341535132278255156836381371202512833562081855737616799010357484"
+                                },
+                                {
+                                  "type": "sumLeaf",
+                                  "value": "",
+                                  "valueType": "Uint8Array",
+                                  "numericValue": "10"
+                                }
+                              ]
+                            }
+                          ]
+                        ],
+                        [
+                          "9263017c7b53b5d559697bcedac92a3acf4cbbe8a5afbc43640bd88924a820d8",
+                          [
+                            {
+                              "pathPaddingBits": "256",
+                              "items": [
+                                {
+                                  "type": "root",
+                                  "rootHash": "a03d1ec9464a6f1d206584a6da09afbcdd5f5e0bd2e5f9403d8dba73ce156dbe"
+                                },
+                                {
+                                  "type": "internalNode",
+                                  "prefix": "2"
+                                },
+                                {
+                                  "type": "internalNode",
+                                  "prefix": "91002346623826864990873093650288959460640388924730578192065881561373579939948",
+                                  "siblingHash": "c6cbb950f6f3fd9b11b91e7a83acb05b45b3ce78f71d70eeff41726ae16ce42a"
+                                },
+                                {
+                                  "type": "leaf",
+                                  "value": "e713ae1514680b36991711ce327c9980983c0c54dbc95685a4e2758f690ea9ed",
+                                  "valueType": "string"
+                                }
+                              ]
+                            },
+                            {
+                              "pathPaddingBits": "256",
+                              "items": [
+                                {
+                                  "type": "sumRoot",
+                                  "rootHash": "e713ae1514680b36991711ce327c9980983c0c54dbc95685a4e2758f690ea9ed",
+                                  "sum": "20"
+                                },
+                                {
+                                  "type": "sumInternalNode",
+                                  "prefix": "131704341828200341535132278255156836381371202512833562081855737616799010357484",
+                                  "siblingHash": "21f24b773c330904e6d8de97b3db14b78aec04d67e5a5ccbe30c2205970d08f3",
+                                  "siblingSum": "15"
+                                },
+                                {
+                                  "type": "sumLeaf",
+                                  "value": "",
+                                  "valueType": "Uint8Array",
+                                  "numericValue": "5"
+                                }
+                              ]
+                            }
+                          ]
+                        ]
+                      ]
+                    },
+                    "recipient": "DIRECT://58220000d6b735f622f76f762d8d71c4e30a14c9ecdc43b759fd67d938dcb1d42d7b28a36cc7bbb1",
+                    "salt": "03329d1d856a906a51137d169fe50a9a7286e6d2cd2242c856ef307c3f86eef0"
+                  },
+                  "inclusionProof": {
+                    "authenticator": {
+                      "algorithm": "secp256k1",
+                      "publicKey": "0273afa933164a87f64c3716da12c8de686d826ccaf0599cb59f2bc75ac4fd05dc",
+                      "signature": "9a383f360834f7790b0fa2e17a1f39adaa2b9ce420310ccbf4f88cbfe4af7a6425e895b64b8da85fb735e7609a958c8079a899e290552992afa583b8b373fcd501",
+                      "stateHash": "0000768b45e83d56608a88ce159474b4207676c0851c3c28379afa971c1d96c3d0d2"
+                    },
+                    "merkleTreePath": {
+                      "root": "000045721f567a5a9a856a725c8c669f72f830f171460fcfbe5f1c6a99ff99a9c291",
+                      "steps": [
+                        {
+                          "branch": [
+                            "0000ae25b8c443fb69d3ed0445a45130a036b296055bbec0f59909cf0bb96a7a7489"
+                          ],
+                          "path": "926349992248863625633634942259099131583229430382980110619818239968589892945711",
+                          "sibling": "00003670140a84c6a04dddfb943360021dd972d38bba42afa70aea0045a7096e8eb5"
+                        },
+                        {
+                          "branch": [],
+                          "path": "86",
+                          "sibling": "00005e1cad08b9f7d3c4bfbf5ab24a56510a8c011c1f12182e7a4356afb7aef74014"
+                        },
+                        {
+                          "branch": [],
+                          "path": "3",
+                          "sibling": "0000d0b1595d43fb77eff8511c5a237e2b6b66e9454ef6f43f4805ca5fe04f7d5b8b"
+                        },
+                        {
+                          "branch": [],
+                          "path": "2",
+                          "sibling": "00009e8519b495f9439f6c05c644f2d27517fa08f6ee4e95b1e95b0905ed5f0fbb6f"
+                        },
+                        {
+                          "branch": [],
+                          "path": "2",
+                          "sibling": "0000e346df729f036ec9917292c3f0c7c7f15b1a1e9bd8a36a74b3800c6387aab5a1"
+                        },
+                        {
+                          "branch": [],
+                          "path": "3",
+                          "sibling": "0000e30b55460d5291fd714c44e89d59ae8540a9870ff19a05740b14f8fa52cd09e5"
+                        },
+                        {
+                          "branch": [],
+                          "path": "2",
+                          "sibling": "000076ddb7084357a3194ef515b67a6357ee3578723dee0e58f943f104ab5cabcdc1"
+                        },
+                        {
+                          "branch": [],
+                          "path": "3",
+                          "sibling": "0000787d8b9982e16453a06bfcb916513c2a03fca0199b11ef0b09573fad5ed00cef"
+                        },
+                        {
+                          "branch": [],
+                          "path": "3",
+                          "sibling": "0000c6cc19d474232cb9981133af6712f9a72f910f791c3632b08f35dd8b2389c8fd"
+                        }
+                      ]
+                    },
+                    "transactionHash": "0000583e76f06f067fd33d8bff26838cafedf263043ec23b6e266972ea67fbf37b09"
+                  }
+                },
+                {
+                  "data": {
+                    "dataHash": "0000371dd350eb385a9eb4ccf52c532b9f2fb5b24834ea634f4c27739b604cb08102",
+                    "message": "6d79206d657373616765",
+                    "nameTags": [],
+                    "recipient": "DIRECT://58220000ec0d156ae764f73a3d1039963283c446d2cfdba1f845636c7caf1331bda60e9e0409955e",
+                    "salt": "44d7128efe8dabab4e51515710c2007092a8283535492c1755ea7f39555381ee",
+                    "sourceState": {
+                      "data": "3e352d5f7c011faf48172087b9a527d22e97aee383ef6f178985b9a0fe058026",
+                      "unlockPredicate": {
+                        "algorithm": "secp256k1",
+                        "hashAlgorithm": 0,
+                        "nonce": "b6ad1310a2614974e2a6c218cd2ef8b595589b61c2f6409fa59a567652c3236d",
+                        "publicKey": "03efde880937c631464178cf8fd5749f849bcedff4840734d2e351e04d64550233",
+                        "type": "MASKED"
+                      }
+                    }
+                  },
+                  "inclusionProof": {
+                    "authenticator": {
+                      "algorithm": "secp256k1",
+                      "publicKey": "03efde880937c631464178cf8fd5749f849bcedff4840734d2e351e04d64550233",
+                      "signature": "87cb13c2fc07441a91757681a05171c06445b31f9eb8b4e7f1fc720923c10eed1d7e5da96d70752dd7226107cd014853295b33ed59a253b5d5f66e944e28ece700",
+                      "stateHash": "0000214f7c52fec650b7da34fb1f98db83e45962f4357c80f4af25a0dbb4ba1c0bb7"
+                    },
+                    "merkleTreePath": {
+                      "root": "00000543f9529e14cfc5262981d5e6da5f39190889797e8d8e6ddb591346dbe23a97",
+                      "steps": [
+                        {
+                          "branch": [
+                            "00002a990c2e4344b4dba81fd6c5f1ea159d1590e46ec3719a3f94bb6f49dd24caa0"
+                          ],
+                          "path": "14821552127812494272600488164067065337067880270560351217858401171283012984374058",
+                          "sibling": "0000b7e3b3bb2f1b1c96a75fbfb1f30c695094ca54951427c3726df6e69ad2f50633"
+                        },
+                        {
+                          "branch": [],
+                          "path": "4",
+                          "sibling": "0000d328526c858430b89d7b8df021123b316ec41b0a01b141e9dce6aefacd67b4a4"
+                        },
+                        {
+                          "branch": [],
+                          "path": "4",
+                          "sibling": "00003193d0efb07b090780b58f1c5199fe0ae24d018260708e642cb20cbf9754bb7d"
+                        },
+                        {
+                          "branch": [],
+                          "path": "2",
+                          "sibling": "000011b310bee4976d858231f150e3dcd5ced692a27b2d93f80493105e67a6b283fc"
+                        },
+                        {
+                          "branch": [],
+                          "path": "2",
+                          "sibling": "0000e339a78d80eb30b4374f1326a6467cab7e676bcb93b31e9ee227b711ad32bb81"
+                        },
+                        {
+                          "branch": [],
+                          "path": "3",
+                          "sibling": "0000ad59fe7c5334346c5a556c17593663c0e3ad67b0856fff41e453e1efc91c9616"
+                        },
+                        {
+                          "branch": [],
+                          "path": "3",
+                          "sibling": "0000ec1ef1763d3679fbc8a62be94d78884d549298c25fdac254174749a4a6b7c8ab"
+                        },
+                        {
+                          "branch": [],
+                          "path": "2",
+                          "sibling": "0000ce57358a67d922f432651c2d8c8a60ff3bc27e0fa03e64a6a8a6b3ef5b8cfbe6"
+                        }
+                      ]
+                    },
+                    "transactionHash": "0000306d28ab631370b7e160be774d212d42342421b97903c4459692c94a1de63372"
+                  }
+                },
+                {
+                  "data": {
+                    "dataHash": "0000371dd350eb385a9eb4ccf52c532b9f2fb5b24834ea634f4c27739b604cb08102",
+                    "message": "6d7920637573746f6d206d657373616765",
+                    "nameTags": [],
+                    "recipient": "DIRECT://5822000016e466c853986d7b1f857749258878f178acdc9de449a61771ec54b22f3dc9e371dfbaa2",
+                    "salt": "6520269248d60883130f2b6a8bb7b77d592e03753dd1ae96c89ff452818de7ed",
+                    "sourceState": {
+                      "data": "6d7920637573746f6d2064617461",
+                      "unlockPredicate": {
+                        "algorithm": "secp256k1",
+                        "hashAlgorithm": 0,
+                        "nonce": "72eb102cf26cf3dfb228deb2e46fead2f90e977df8b91f84f13e4c6db6c54197",
+                        "publicKey": "02f2b20c566350e887d6f9206b42aad349cd109da759f858da6df08b00503a45dd",
+                        "type": "MASKED"
+                      }
+                    }
+                  },
+                  "inclusionProof": {
+                    "authenticator": {
+                      "algorithm": "secp256k1",
+                      "publicKey": "02f2b20c566350e887d6f9206b42aad349cd109da759f858da6df08b00503a45dd",
+                      "signature": "6e1a99851f85285ae6cd98c6d19a04a06d7acfbdf653907399e829aba170ba197ddb1417f2e4c3be480944c95458a0da0e1c45541c249d8fd15b219cb47dd3c301",
+                      "stateHash": "0000f51cfd9f98c3bc3bf1ed201086bf51fe874942f268fdc5d6da1582c5f97547d4"
+                    },
+                    "merkleTreePath": {
+                      "root": "0000bc873f715618b47c544cb0fb5d77e82363f1100ca37ff6be852a7148bbd994f6",
+                      "steps": [
+                        {
+                          "branch": [
+                            "0000dc0c1338141710388c9b975deeb566b9c2131714c28b246cd962785310cd6d86"
+                          ],
+                          "path": "118571962441777102647254022285559986666034470514935381791723234419893686002273143",
+                          "sibling": "00003fa428bce9da1d3072cabd5259b1c33d6ae247d0b16029d75ae9845539b15b31"
+                        },
+                        {
+                          "branch": [],
+                          "path": "3",
+                          "sibling": "00000de656e38d6533b2e47ee3e8ebc4b2a92f0c55ca990d8198e83296d7d8f95464"
+                        },
+                        {
+                          "branch": [],
+                          "path": "3",
+                          "sibling": "00001a842cef3589b465d79ce9322eb3dafb18974f80125e4e82705f3df10e5be807"
+                        },
+                        {
+                          "branch": [],
+                          "path": "2",
+                          "sibling": "0000d88a551e7cf110722203149c55f2614e4397c7518ae63c50254ab5c756bfde03"
+                        },
+                        {
+                          "branch": [],
+                          "path": "3",
+                          "sibling": "0000229d9e52beca387f0312bbe0451fee9e2302c43cb9606a70b15dcbf3003ca488"
+                        },
+                        {
+                          "branch": [],
+                          "path": "2",
+                          "sibling": "0000269b505933b85e755105e041324e07631f6cac6653b3e070f43290445a26b677"
+                        },
+                        {
+                          "branch": [],
+                          "path": "3",
+                          "sibling": "00005e8246baf574b1a548fcec90bbcb01c90a4fce9cc434d985f1a353c6da980a5c"
+                        }
+                      ]
+                    },
+                    "transactionHash": "00009292a7150a611eb90f46bcc59d2049d7d9a1977ca44aa4a41463b092f28ab3b6"
+                  }
+                }
+              ],
+              "type": "1c5821bd6904a387902b7741766e4114275cf64f3bef8919c59229ea1ceb5ed9",
+              "version": "2.0"
+            },
+            "burnProofsByCoinId": [
+              [
+                "4ac6fa8faf1045db6786e06b268747ea968e0273bde3662bb5de5a2a0ef04ada",
+                [
+                  {
+                    "pathPaddingBits": "256",
+                    "items": [
+                      {
+                        "type": "root",
+                        "rootHash": "fa4e40e72c5d694386761cc968234b6076666a1ee0642222931a0ec7cda7a4c9"
+                      },
+                      {
+                        "type": "internalNode",
+                        "prefix": "2"
+                      },
+                      {
+                        "type": "internalNode",
+                        "prefix": "74807402530799722310059206388513108325181627845142710329196258707274766755181",
+                        "siblingHash": "1084f20b9e8651e03311c2c1276c61f0fe4a0ed9088bc1d837e8c500986d925e"
+                      },
+                      {
+                        "type": "leaf",
+                        "value": "4ef8b0e051c4404bdfac0e2730a098da35b00342396dc9de4a45cb9a96d075fc",
+                        "valueType": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "pathPaddingBits": "256",
+                    "items": [
+                      {
+                        "type": "sumRoot",
+                        "rootHash": "4ef8b0e051c4404bdfac0e2730a098da35b00342396dc9de4a45cb9a96d075fc",
+                        "sum": "10"
+                      },
+                      {
+                        "type": "sumInternalNode",
+                        "prefix": "2"
+                      },
+                      {
+                        "type": "sumInternalNode",
+                        "prefix": "89766675303836965276489268580058915640036166794239747503278536550948583062859",
+                        "siblingHash": "df97a253707383c210942533604d54e616304cf283fb99e57afa2093a21a4991",
+                        "siblingSum": "5"
+                      },
+                      {
+                        "type": "sumLeaf",
+                        "value": "",
+                        "valueType": "Uint8Array",
+                        "numericValue": "5"
+                      }
+                    ]
+                  }
+                ]
+              ],
+              [
+                "9263017c7b53b5d559697bcedac92a3acf4cbbe8a5afbc43640bd88924a820d8",
+                [
+                  {
+                    "pathPaddingBits": "256",
+                    "items": [
+                      {
+                        "type": "root",
+                        "rootHash": "fa4e40e72c5d694386761cc968234b6076666a1ee0642222931a0ec7cda7a4c9"
+                      },
+                      {
+                        "type": "internalNode",
+                        "prefix": "2"
+                      },
+                      {
+                        "type": "internalNode",
+                        "prefix": "91002346623826864990873093650288959460640388924730578192065881561373579939948",
+                        "siblingHash": "b88f811c90817568efd51561758363c933cc48a41c1c15d13e08e2e8a4291e02"
+                      },
+                      {
+                        "type": "leaf",
+                        "value": "403310bc21a5019d4d739a866b207ad0c806be13061bc2bb0dcee3f60f22eb4a",
+                        "valueType": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "pathPaddingBits": "256",
+                    "items": [
+                      {
+                        "type": "sumRoot",
+                        "rootHash": "403310bc21a5019d4d739a866b207ad0c806be13061bc2bb0dcee3f60f22eb4a",
+                        "sum": "5"
+                      },
+                      {
+                        "type": "sumInternalNode",
+                        "prefix": "2"
+                      },
+                      {
+                        "type": "sumInternalNode",
+                        "prefix": "89766675303836965276489268580058915640036166794239747503278536550948583062859",
+                        "siblingHash": "1c66301a763f7af9b52631a51b12a37d7942d9489d26894c8d762f5941b8e3b7",
+                        "siblingSum": "2"
+                      },
+                      {
+                        "type": "sumLeaf",
+                        "value": "",
+                        "valueType": "Uint8Array",
+                        "numericValue": "3"
+                      }
+                    ]
+                  }
+                ]
+              ]
+            ]
+          },
+          "recipient": "DIRECT://5822000094cd6574e301440c35810e3f47312230f11738fba2576962e92f27b9582bfdc9fd281e6a",
+          "salt": "065323e7001433c2caf4d04fc53b6290e982c0ce1fcc61c00b89b0ae972ed4cc"
+        },
+        "inclusionProof": {
+          "authenticator": {
+            "algorithm": "secp256k1",
+            "publicKey": "0261817af3df9fe07eb42b8440d4ea39441ef74adfb4d9f0e089efbbc55db3436f",
+            "signature": "cb3b1a32bad60e0c975daac668805fd53c7c3d9550c8cd8096d39d583942be8f40ec6301627626fd005993dcdea4a8e70ec14db93207107515e0502ac91c1f0b00",
+            "stateHash": "00001920bda0ae4a59173f67b457bd84142e22cc4e54b253599e8f3efb0719ac5750"
+          },
+          "merkleTreePath": {
+            "root": "0000134e72b8c245f806820ad7cdbeaa6e0db5bde2d0a4e1e34a24d64e6003c1d1f5",
+            "steps": [
+              {
+                "branch": [
+                  "000036feb98135e5b417aeb70d149166ea0bb6003d0bacf10c0b4b0ae309dad6bfa8"
+                ],
+                "path": "59285725814792116176166116695380202531786799844162885548155346508598509863843649",
+                "sibling": "00006145e4aabfc11429d8c3b7c58e14361afa8c292959d5096f3da8e0e2ac12af85"
+              },
+              {
+                "branch": [],
+                "path": "3",
+                "sibling": "0000a5518e328c6813eea9c3b7d992007a241c119d21f8aef2df36586a23e8b00762"
+              },
+              {
+                "branch": [],
+                "path": "3",
+                "sibling": "00008347b48d6c9c0dffffe3139c801c39da001c935c1bcf16737ea92467d36f49a3"
+              },
+              {
+                "branch": [],
+                "path": "3",
+                "sibling": "0000e2113201ab7191dee42d4f251b23884669482ecb62dc9cbc8660c5e9a7c3f8b3"
+              },
+              {
+                "branch": [],
+                "path": "2",
+                "sibling": "0000de36a45f3a6d3a4b4c30f44f9c0e84f684397b155f23e5183b6190ad4ba1f90a"
+              },
+              {
+                "branch": [],
+                "path": "2",
+                "sibling": "0000300c0a9b79ecf30d31905a0309865ee4e77e89f1088c7d75f6589701138874af"
+              },
+              {
+                "branch": [],
+                "path": "2",
+                "sibling": "0000291ef9ddf2526d66fd084acf2a929793d92fb2c5c3e9f0e06f71cc8aea3df873"
+              },
+              {
+                "branch": [],
+                "path": "2",
+                "sibling": "0000367c2b3d3f76afe91bd3d6346790913369834a40f57c2572e2aacde2c79842ab"
+              }
+            ]
+          },
+          "transactionHash": "000065480164c8997aa08398d3ca10bcf9200eabfa79a42b4983b7e62d7c86706617"
+        }
+      }
+    ],
+    "type": "1c5821bd6904a387902b7741766e4114275cf64f3bef8919c59229ea1ceb5ed9",
+    "version": "2.0"
+  },
+  "transaction": null
+}

@@ -50,6 +50,7 @@ export async function waitInclusionProof(
         transaction,
       );
 
+      console.log(stateId.toString(), verificationStatus);
       switch (verificationStatus.status) {
         case InclusionProofVerificationStatus.OK:
           return inclusionProof;

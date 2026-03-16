@@ -1,0 +1,62 @@
+import { World, setWorldConstructor, setDefaultTimeout } from '@cucumber/cucumber';
+
+import { ITestSetup, IUser } from './TestSetup.js';
+import { ITokenTree } from './TokenTreeBuilder.js';
+import { CertificationResponse, CertificationStatus } from '../../../../src/api/CertificationResponse.js';
+import { AssetId } from '../../../../src/payment/asset/AssetId.js';
+import { PaymentAssetCollection } from '../../../../src/payment/asset/PaymentAssetCollection.js';
+import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
+import { Token } from '../../../../src/transaction/Token.js';
+import { TokenId } from '../../../../src/transaction/TokenId.js';
+import { TokenType } from '../../../../src/transaction/TokenType.js';
+import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
+import { VerificationResult } from '../../../../src/verification/VerificationResult.js';
+import { VerificationStatus } from '../../../../src/verification/VerificationStatus.js';
+
+export const DEFAULT_STEP_TIMEOUT = 30_000;
+export const TREE_BUILD_TIMEOUT = 120_000;
+
+export class TokenWorld extends World {
+  public alice!: IUser;
+  public assetId1!: AssetId;
+  public assetId2!: AssetId;
+  public assetIds: AssetId[] = [];
+  public bob!: IUser;
+  public bobToken!: Token;
+  public burnedToken!: Token;
+  public carol!: IUser;
+  public carolToken!: Token;
+  public cborData!: Uint8Array;
+  public certificationStatus!: CertificationStatus;
+  public certificationStatusTree: CertificationStatus | null = null;
+  public currentToken!: Token;
+  public dave!: IUser;
+  public daveToken!: Token;
+  public finalToken!: Token;
+  public firstResponse!: CertificationResponse;
+  public firstTransferTransaction!: TransferTransaction;
+  public importedToken!: Token;
+  public mintError: Error | null = null;
+  public mintTokenId!: TokenId;
+  public mintTokenType!: TokenType;
+  public originalToken!: Token;
+  public secondMintTransaction!: MintTransaction;
+  public secondResponse!: CertificationResponse;
+  public secondTransferTransaction!: TransferTransaction;
+  public setup!: ITestSetup;
+  public splitError: Error | null = null;
+  public splitTokens!: Token[];
+  public subSplitTokens!: Token[];
+  public token!: Token;
+  public tokens!: PaymentAssetCollection;
+  public transferError: Error | null = null;
+  public transferTransaction: TransferTransaction | null = null;
+  public transferredToken: Token | null = null;
+  public tree!: ITokenTree;
+  public user!: IUser;
+  public users!: Map<string, IUser>;
+  public verificationResult!: VerificationResult<VerificationStatus>;
+}
+
+setWorldConstructor(TokenWorld);
+setDefaultTimeout(DEFAULT_STEP_TIMEOUT);

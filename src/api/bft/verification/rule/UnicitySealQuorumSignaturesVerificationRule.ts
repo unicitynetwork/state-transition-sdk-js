@@ -49,6 +49,7 @@ export class UnicitySealQuorumSignaturesVerificationRule {
     signature: Uint8Array,
     hash: DataHash,
   ): Promise<VerificationResult<VerificationStatus>> {
+    //     console.log(trustBase);
     const node = trustBase.rootNodes.find((node) => node.nodeId === nodeId) ?? null;
     if (node == null) {
       return new VerificationResult(

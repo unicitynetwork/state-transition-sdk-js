@@ -1,0 +1,364 @@
+{
+  "token": {
+    "coins": [
+      [
+        "4ac6fa8faf1045db6786e06b268747ea968e0273bde3662bb5de5a2a0ef04ada",
+        "10"
+      ],
+      [
+        "9263017c7b53b5d559697bcedac92a3acf4cbbe8a5afbc43640bd88924a820d8",
+        "5"
+      ]
+    ],
+    "data": "b62d8a63e0d73e76e4fd47d35956634ddcf45efd219f1bcc15250eb46f6e42d8",
+    "id": "232e040bd061dda7adde20eaa52082cf2d1458ee6717eb6bc429db1feefb80ec",
+    "nametagTokens": [],
+    "state": {
+      "data": "3e352d5f7c011faf48172087b9a527d22e97aee383ef6f178985b9a0fe058026",
+      "unlockPredicate": {
+        "algorithm": "secp256k1",
+        "hashAlgorithm": 0,
+        "nonce": "b6ad1310a2614974e2a6c218cd2ef8b595589b61c2f6409fa59a567652c3236d",
+        "publicKey": "03efde880937c631464178cf8fd5749f849bcedff4840734d2e351e04d64550233",
+        "type": "MASKED"
+      }
+    },
+    "transactions": [
+      {
+        "data": {
+          "dataHash": "0000912a54746a6f31f00ac3fb34947534f2c49e2a098df219ae760b9fefb34d876a",
+          "reason": {
+            "type": "TOKEN_SPLIT",
+            "burnedToken": {
+              "coins": [
+                [
+                  "4ac6fa8faf1045db6786e06b268747ea968e0273bde3662bb5de5a2a0ef04ada",
+                  "10"
+                ],
+                [
+                  "9263017c7b53b5d559697bcedac92a3acf4cbbe8a5afbc43640bd88924a820d8",
+                  "20"
+                ]
+              ],
+              "data": "e3df473b8afaaae270a3f35df5b00440c21048edcc6f1e0dda70dd3a253fe9c5",
+              "id": "c64296657621080e8c865f2204c5005d5ee5eacdf4c7ac29dfbe694a62083227",
+              "nametagTokens": [],
+              "state": {
+                "data": "6d7920637573746f6d2064617461",
+                "unlockPredicate": {
+                  "nonce": "431b8b4ddcbef5524b97ff4164b576fcd3244ca1d4833c394650580bb989d393",
+                  "type": "BURN",
+                  "burnReason": "0000a03d1ec9464a6f1d206584a6da09afbcdd5f5e0bd2e5f9403d8dba73ce156dbe"
+                }
+              },
+              "transactions": [
+                {
+                  "data": {
+                    "dataHash": "0000612dc841be7e8958aa0833655349d16605ba5d3c3b4c15fccc333b4cf594461e",
+                    "reason": null,
+                    "recipient": "DIRECT://58220000a8dc0b5c84cedbb5eabaf032c7b6cf860479ab5dcd857f2fd2b01dfb9593d57392485a12",
+                    "salt": "c21a009bca70ad65bd71a52b9678be57b4df4a16f61f91868085e7742afcd5ba"
+                  },
+                  "inclusionProof": {
+                    "authenticator": {
+                      "algorithm": "secp256k1",
+                      "publicKey": "03586feff294213c5c0ffaf7f047311905ca9aabb1a97916b2e2922bfda77d9d50",
+                      "signature": "14590d6101fa15cfb34a286a36819ac14d34569e9c693d60fd8c2d21b625c13f31e1fcfe43a463edebb52c5f4fae52c5faf11abc585c23a9a1e3edb1b739620601",
+                      "stateHash": "0000b6a7bfae662babe736800bcca350614fd966beeeeda689f63e92009fdb9c5bac"
+                    },
+                    "merkleTreePath": {
+                      "root": "000067b617e031efcdc7df5e73870a77065efa5f99808a1eff4e00ee55b927466bee",
+                      "steps": [
+                        {
+                          "branch": [
+                            "000092f27edc83d0b2d5fad712ffed3965069931fa9af3624f6e3064fd2ac6101ed3"
+                          ],
+                          "path": "14821403926674169513153897727730690512220229397214667863787178075404776237454649",
+                          "sibling": "0000e4cd292b7a8b700312db9a3c37c63521f1cec147559e0349d08f2a69f2b9b92b"
+                        },
+                        {
+                          "branch": [],
+                          "path": "7",
+                          "sibling": "00008b722a602595794927293580ab051a0656307e43e1e4e3f64d551e6c7b69d787"
+                        },
+                        {
+                          "branch": [],
+                          "path": "2",
+                          "sibling": "0000f2d4b9e234b0190c09b439daae1acf49ed63e192c20e469eaffe44a14c205f7f"
+                        },
+                        {
+                          "branch": [],
+                          "path": "2",
+                          "sibling": "0000c8643c288e3182e11bbcda74dc4e93a01512abd4407149f7362c9341ad34d4f3"
+                        },
+                        {
+                          "branch": [],
+                          "path": "3",
+                          "sibling": "0000e2113201ab7191dee42d4f251b23884669482ecb62dc9cbc8660c5e9a7c3f8b3"
+                        },
+                        {
+                          "branch": [],
+                          "path": "2",
+                          "sibling": "0000de36a45f3a6d3a4b4c30f44f9c0e84f684397b155f23e5183b6190ad4ba1f90a"
+                        },
+                        {
+                          "branch": [],
+                          "path": "2",
+                          "sibling": "00009521984bbd9e8a689f83e9d7137deca36d46f7475b647cce9234767615fd7839"
+                        },
+                        {
+                          "branch": [],
+                          "path": "2",
+                          "sibling": "00007fa415bbd372bf39d2bdcfa4e031ead5644f79b4e7c572f743359c7bec2a8d5f"
+                        },
+                        {
+                          "branch": [],
+                          "path": "2",
+                          "sibling": "0000a1b21fe2535e676bdf02a3470ffdf1a6cf234fa47463e6b6df10aec901794821"
+                        }
+                      ]
+                    },
+                    "transactionHash": "00001b3ae00b568318ec3823378e1764a555b55224c09268ba063710d0c74d8b7fb5"
+                  }
+                },
+                {
+                  "data": {
+                    "dataHash": "0000371dd350eb385a9eb4ccf52c532b9f2fb5b24834ea634f4c27739b604cb08102",
+                    "message": "6d79206d657373616765",
+                    "nameTags": [],
+                    "recipient": "DIRECT://58220000eae22a0b4f3004f087be6b364f4f0a2daf7530a93cec1a3477c12a2d8b1610b0966b54d1",
+                    "salt": "646c8d8a23f6e266248a60010d248ad82608b22ca0fdc9e733d337b849269bb2",
+                    "sourceState": {
+                      "data": "10d73810d56c28b53cb95a51a26159008d04da4756308a2cb09e0606f735f049",
+                      "unlockPredicate": {
+                        "algorithm": "secp256k1",
+                        "hashAlgorithm": 0,
+                        "nonce": "75d3c1f354ac6870e3f6d2ae8b66db0205ddb151d0efcf777376d995484eb9cf",
+                        "publicKey": "0338ed5987450dfd2ffc944c63516599bf1b95b480e1675443078350c7eadb5493",
+                        "type": "MASKED"
+                      }
+                    }
+                  },
+                  "inclusionProof": {
+                    "authenticator": {
+                      "algorithm": "secp256k1",
+                      "publicKey": "0338ed5987450dfd2ffc944c63516599bf1b95b480e1675443078350c7eadb5493",
+                      "signature": "efb4eca82e5fbf4d97d54e06adc0c3572395983ea77b7f90c6a9aa5dd18b903a442309127de3f87dfacc119d41c2d99fefaa33e78c9963d02e0134a974d13d0101",
+                      "stateHash": "0000c425f9bb9b4d38c594c85e2b190235a935fd3808880124db58f06258dc7b9f36"
+                    },
+                    "merkleTreePath": {
+                      "root": "0000865fbf34863910d10c253d64c62085539a673c2172992064b43d5c1bcaa0c8ad",
+                      "steps": [
+                        {
+                          "branch": [
+                            "00004b320587561c9692fce86571773d8f14935b1aa0a7db337d304ff2ff9e73c92e"
+                          ],
+                          "path": "118572820081974794563576602546650320580821370898870120604343430151784629466892437",
+                          "sibling": "0000ee06c319022d0ea6ceb4b1ad5dbc135bf941885b5d53c3ddc3caee06c3eb487b"
+                        },
+                        {
+                          "branch": [],
+                          "path": "5",
+                          "sibling": "00006b78a9feff8f1b653f294d58602657769316292d872dbf5a6b9fd6ce6a49e086"
+                        },
+                        {
+                          "branch": [],
+                          "path": "2",
+                          "sibling": "0000e339a78d80eb30b4374f1326a6467cab7e676bcb93b31e9ee227b711ad32bb81"
+                        },
+                        {
+                          "branch": [],
+                          "path": "3",
+                          "sibling": "0000ad59fe7c5334346c5a556c17593663c0e3ad67b0856fff41e453e1efc91c9616"
+                        },
+                        {
+                          "branch": [],
+                          "path": "3",
+                          "sibling": "0000ec1ef1763d3679fbc8a62be94d78884d549298c25fdac254174749a4a6b7c8ab"
+                        },
+                        {
+                          "branch": [],
+                          "path": "2",
+                          "sibling": "0000a1b21fe2535e676bdf02a3470ffdf1a6cf234fa47463e6b6df10aec901794821"
+                        }
+                      ]
+                    },
+                    "transactionHash": "0000c6fa64d64f34e3ee5ce39c9e5db088fb71bcd489513c800d8d5433231d3159fa"
+                  }
+                }
+              ],
+              "type": "1c5821bd6904a387902b7741766e4114275cf64f3bef8919c59229ea1ceb5ed9",
+              "version": "2.0"
+            },
+            "burnProofsByCoinId": [
+              [
+                "4ac6fa8faf1045db6786e06b268747ea968e0273bde3662bb5de5a2a0ef04ada",
+                [
+                  {
+                    "pathPaddingBits": "256",
+                    "items": [
+                      {
+                        "type": "root",
+                        "rootHash": "a03d1ec9464a6f1d206584a6da09afbcdd5f5e0bd2e5f9403d8dba73ce156dbe"
+                      },
+                      {
+                        "type": "internalNode",
+                        "prefix": "2"
+                      },
+                      {
+                        "type": "internalNode",
+                        "prefix": "74807402530799722310059206388513108325181627845142710329196258707274766755181",
+                        "siblingHash": "29b53b4f1cf995755b23c6ebd3a5328f58ca3c4c94e5309b2740811dce4d116a"
+                      },
+                      {
+                        "type": "leaf",
+                        "value": "b0d73acead24dda4e40c0330b378b92831da99cdf2b896e92c7fb32e87f331ed",
+                        "valueType": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "pathPaddingBits": "256",
+                    "items": [
+                      {
+                        "type": "sumRoot",
+                        "rootHash": "b0d73acead24dda4e40c0330b378b92831da99cdf2b896e92c7fb32e87f331ed",
+                        "sum": "10"
+                      },
+                      {
+                        "type": "sumInternalNode",
+                        "prefix": "131704341828200341535132278255156836381371202512833562081855737616799010357484"
+                      },
+                      {
+                        "type": "sumLeaf",
+                        "value": "",
+                        "valueType": "Uint8Array",
+                        "numericValue": "10"
+                      }
+                    ]
+                  }
+                ]
+              ],
+              [
+                "9263017c7b53b5d559697bcedac92a3acf4cbbe8a5afbc43640bd88924a820d8",
+                [
+                  {
+                    "pathPaddingBits": "256",
+                    "items": [
+                      {
+                        "type": "root",
+                        "rootHash": "a03d1ec9464a6f1d206584a6da09afbcdd5f5e0bd2e5f9403d8dba73ce156dbe"
+                      },
+                      {
+                        "type": "internalNode",
+                        "prefix": "2"
+                      },
+                      {
+                        "type": "internalNode",
+                        "prefix": "91002346623826864990873093650288959460640388924730578192065881561373579939948",
+                        "siblingHash": "c6cbb950f6f3fd9b11b91e7a83acb05b45b3ce78f71d70eeff41726ae16ce42a"
+                      },
+                      {
+                        "type": "leaf",
+                        "value": "e713ae1514680b36991711ce327c9980983c0c54dbc95685a4e2758f690ea9ed",
+                        "valueType": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "pathPaddingBits": "256",
+                    "items": [
+                      {
+                        "type": "sumRoot",
+                        "rootHash": "e713ae1514680b36991711ce327c9980983c0c54dbc95685a4e2758f690ea9ed",
+                        "sum": "20"
+                      },
+                      {
+                        "type": "sumInternalNode",
+                        "prefix": "131704341828200341535132278255156836381371202512833562081855737616799010357484",
+                        "siblingHash": "21f24b773c330904e6d8de97b3db14b78aec04d67e5a5ccbe30c2205970d08f3",
+                        "siblingSum": "15"
+                      },
+                      {
+                        "type": "sumLeaf",
+                        "value": "",
+                        "valueType": "Uint8Array",
+                        "numericValue": "5"
+                      }
+                    ]
+                  }
+                ]
+              ]
+            ]
+          },
+          "recipient": "DIRECT://58220000d6b735f622f76f762d8d71c4e30a14c9ecdc43b759fd67d938dcb1d42d7b28a36cc7bbb1",
+          "salt": "03329d1d856a906a51137d169fe50a9a7286e6d2cd2242c856ef307c3f86eef0"
+        },
+        "inclusionProof": {
+          "authenticator": {
+            "algorithm": "secp256k1",
+            "publicKey": "0273afa933164a87f64c3716da12c8de686d826ccaf0599cb59f2bc75ac4fd05dc",
+            "signature": "9a383f360834f7790b0fa2e17a1f39adaa2b9ce420310ccbf4f88cbfe4af7a6425e895b64b8da85fb735e7609a958c8079a899e290552992afa583b8b373fcd501",
+            "stateHash": "0000768b45e83d56608a88ce159474b4207676c0851c3c28379afa971c1d96c3d0d2"
+          },
+          "merkleTreePath": {
+            "root": "000045721f567a5a9a856a725c8c669f72f830f171460fcfbe5f1c6a99ff99a9c291",
+            "steps": [
+              {
+                "branch": [
+                  "0000ae25b8c443fb69d3ed0445a45130a036b296055bbec0f59909cf0bb96a7a7489"
+                ],
+                "path": "926349992248863625633634942259099131583229430382980110619818239968589892945711",
+                "sibling": "00003670140a84c6a04dddfb943360021dd972d38bba42afa70aea0045a7096e8eb5"
+              },
+              {
+                "branch": [],
+                "path": "86",
+                "sibling": "00005e1cad08b9f7d3c4bfbf5ab24a56510a8c011c1f12182e7a4356afb7aef74014"
+              },
+              {
+                "branch": [],
+                "path": "3",
+                "sibling": "0000d0b1595d43fb77eff8511c5a237e2b6b66e9454ef6f43f4805ca5fe04f7d5b8b"
+              },
+              {
+                "branch": [],
+                "path": "2",
+                "sibling": "00009e8519b495f9439f6c05c644f2d27517fa08f6ee4e95b1e95b0905ed5f0fbb6f"
+              },
+              {
+                "branch": [],
+                "path": "2",
+                "sibling": "0000e346df729f036ec9917292c3f0c7c7f15b1a1e9bd8a36a74b3800c6387aab5a1"
+              },
+              {
+                "branch": [],
+                "path": "3",
+                "sibling": "0000e30b55460d5291fd714c44e89d59ae8540a9870ff19a05740b14f8fa52cd09e5"
+              },
+              {
+                "branch": [],
+                "path": "2",
+                "sibling": "000076ddb7084357a3194ef515b67a6357ee3578723dee0e58f943f104ab5cabcdc1"
+              },
+              {
+                "branch": [],
+                "path": "3",
+                "sibling": "0000787d8b9982e16453a06bfcb916513c2a03fca0199b11ef0b09573fad5ed00cef"
+              },
+              {
+                "branch": [],
+                "path": "3",
+                "sibling": "0000c6cc19d474232cb9981133af6712f9a72f910f791c3632b08f35dd8b2389c8fd"
+              }
+            ]
+          },
+          "transactionHash": "0000583e76f06f067fd33d8bff26838cafedf263043ec23b6e266972ea67fbf37b09"
+        }
+      }
+    ],
+    "type": "1c5821bd6904a387902b7741766e4114275cf64f3bef8919c59229ea1ceb5ed9",
+    "version": "2.0"
+  },
+  "transaction": null
+}

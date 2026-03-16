@@ -120,7 +120,7 @@ describe('SplitBuilder Functional Test', () => {
       const paymentData = new TestSplitPaymentData(assets, SplitReason.create(token, entry.proofs));
 
       const mintTransaction = await MintTransaction.create(
-        await PayToScriptHash.create(predicate),
+        await PayToScriptHash.create(predicate), //if here I as a owner can I specify
         tokenId,
         new TokenType(crypto.getRandomValues(new Uint8Array(32))),
         await paymentData.toCBOR(),
