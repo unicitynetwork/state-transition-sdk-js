@@ -18,6 +18,6 @@ export class StateTransitionClient {
   }
 
   public submitCertificationRequest(certificationData: CertificationData): Promise<CertificationResponse> {
-    return this.client.submitCertificationRequest(certificationData, false);
+    return this.client.submitCertificationRequest(certificationData);
   }
 }
