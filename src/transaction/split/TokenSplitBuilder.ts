@@ -1,122 +1,212 @@
-import { IAddress } from '../../address/IAddress.js';
-import { RootTrustBase } from '../../bft/RootTrustBase.js';
-import { DataHash } from '../../hash/DataHash.js';
 import { DataHasher } from '../../hash/DataHasher.js';
 import { DataHasherFactory } from '../../hash/DataHasherFactory.js';
 import { HashAlgorithm } from '../../hash/HashAlgorithm.js';
+import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
 import { SparseMerkleTree } from '../../mtree/plain/SparseMerkleTree.js';
-import { SparseMerkleTreeRootNode } from '../../mtree/plain/SparseMerkleTreeRootNode.js';
 import { SparseMerkleSumTree } from '../../mtree/sum/SparseMerkleSumTree.js';
 import { SparseMerkleSumTreeRootNode } from '../../mtree/sum/SparseMerkleSumTreeRootNode.js';
 import { BurnPredicate } from '../../predicate/embedded/BurnPredicate.js';
-import { BurnPredicateReference } from '../../predicate/embedded/BurnPredicateReference.js';
+import { CborDeserializer } from '../../serializer/cbor/CborDeserializer.js';
+import { CborSerializer } from '../../serializer/cbor/CborSerializer.js';
 import { SigningService } from '../../sign/SigningService.js';
 import { CoinId } from '../../token/fungible/CoinId.js';
-import { SplitMintReason } from '../../token/fungible/SplitMintReason.js';
 import { SplitMintReasonProof } from '../../token/fungible/SplitMintReasonProof.js';
 import { TokenCoinData } from '../../token/fungible/TokenCoinData.js';
-import { Token } from '../../token/Token.js';
+import { ITokenJson, Token } from '../../token/Token.js';
 import { TokenId } from '../../token/TokenId.js';
-import { TokenState } from '../../token/TokenState.js';
-import { TokenType } from '../../token/TokenType.js';
+import { HexConverter } from '../../util/HexConverter.js';
 import { IMintTransactionReason } from '../IMintTransactionReason.js';
-import { MintCommitment } from '../MintCommitment.js';
-import { MintTransactionData } from '../MintTransactionData.js';
-import { TransferCommitment } from '../TransferCommitment.js';
-import { TransferTransaction } from '../TransferTransaction.js';
+import { ITransferCommitmentJson, TransferCommitment } from '../TransferCommitment.js';
 
-/**
- * New token request for generating it out of burnt token.
- */
-class TokenRequest {
-  public constructor(
-    public readonly id: TokenId,
-    public readonly type: TokenType,
-    public readonly data: Uint8Array | null,
-    public readonly coinData: TokenCoinData | null,
-    public readonly recipient: IAddress,
-    public readonly salt: Uint8Array,
-    public readonly recipientDataHash: DataHash | null,
+type IProofMapEntryJson = [string, unknown[]];
+
+interface ITokenSplitJson {
+  readonly predicate: string;
+  readonly commitment: ITransferCommitmentJson;
+  readonly proofs: IProofMapEntryJson[];
+  readonly token: ITokenJson;
+}
+
+class ProofMapEntry {
+  private constructor(
+    public readonly tokenId: TokenId,
+    private readonly _proofs: SplitMintReasonProof[],
   ) {
-    if (coinData?.length == 0) {
-      throw new Error('Token must have at least one coin');
+    this._proofs = _proofs.slice();
+  }
+
+  public get proofs(): SplitMintReasonProof[] {
+    return this._proofs.slice();
+  }
+
+  public static create(tokenId: TokenId, proofs: SplitMintReasonProof[]): ProofMapEntry {
+    return new ProofMapEntry(tokenId, proofs);
+  }
+
+  public static fromCBOR(bytes: Uint8Array): ProofMapEntry {
+    const data = CborDeserializer.readArray(bytes);
+    return new ProofMapEntry(
+      TokenId.fromCBOR(data[0]),
+      CborDeserializer.readArray(data[1]).map((proof) => SplitMintReasonProof.fromCBOR(proof)),
+    );
+  }
+
+  public static isJSON(input: unknown): input is IProofMapEntryJson {
+    return (
+      typeof input === 'object' &&
+      input !== null &&
+      Array.isArray(input) &&
+      input.length === 2 &&
+      typeof input[0] === 'string' &&
+      Array.isArray(input[1])
+    );
+  }
+
+  public static fromJSON(input: unknown): ProofMapEntry {
+    if (!ProofMapEntry.isJSON(input)) {
+      throw new InvalidJsonStructureError();
     }
+
+    return new ProofMapEntry(
+      TokenId.fromJSON(input[0]),
+      input[1].map((proof) => SplitMintReasonProof.fromJSON(proof)),
+    );
+  }
+
+  public toCBOR(): Uint8Array {
+    return CborSerializer.encodeArray(
+      this.tokenId.toCBOR(),
+      CborSerializer.encodeArray(...this._proofs.map((proof) => proof.toCBOR())),
+    );
+  }
+
+  public toJSON(): IProofMapEntryJson {
+    return [this.tokenId.toJSON(), this._proofs.map((proof) => proof.toJSON())];
+  }
+}
+
+class ProofMap {
+  private constructor(private readonly _proofs: Map<string, ProofMapEntry>) {}
+
+  public static create(data: [TokenId, SplitMintReasonProof[]][]): ProofMap {
+    return new ProofMap(
+      new Map(
+        data.map(([tokenId, proofs]) => [HexConverter.encode(tokenId.bytes), ProofMapEntry.create(tokenId, proofs)]),
+      ),
+    );
+  }
+
+  public static fromCBOR(bytes: Uint8Array): ProofMap {
+    return new ProofMap(
+      new Map(
+        CborDeserializer.readArray(bytes)
+          .map((entry) => ProofMapEntry.fromCBOR(entry))
+          .map((entry) => [HexConverter.encode(entry.tokenId.bytes), entry]),
+      ),
+    );
+  }
+
+  public static fromJSON(input: unknown): ProofMap {
+    if (!Array.isArray(input)) {
+      throw new InvalidJsonStructureError();
+    }
+
+    return new ProofMap(
+      new Map(
+        input
+          .map((entry) => ProofMapEntry.fromJSON(entry))
+          .map((entry) => [HexConverter.encode(entry.tokenId.bytes), entry]),
+      ),
+    );
+  }
+
+  public get(id: TokenId): ProofMapEntry | null {
+    return this._proofs.get(HexConverter.encode(id.bytes)) ?? null;
+  }
+
+  public size(): number {
+    return this._proofs.size;
+  }
+
+  public keys(): TokenId[] {
+    return Array.from(this._proofs.values()).map((entry) => entry.tokenId);
+  }
+
+  public entries(): ProofMapEntry[] {
+    return Array.from(this._proofs.values());
+  }
+
+  public toCBOR(): Uint8Array {
+    return CborSerializer.encodeArray(...this.entries().map((entry) => entry.toCBOR()));
+  }
+
+  public toJSON(): IProofMapEntryJson[] {
+    return this.entries().map((entry) => entry.toJSON());
   }
 }
 
 /**
  * Token split request object.
  */
-class TokenSplit {
+export class TokenSplit {
   public constructor(
-    private readonly token: Token<IMintTransactionReason>,
-    private readonly aggregationRoot: SparseMerkleTreeRootNode,
-    private readonly coinRoots: Map<string, SparseMerkleSumTreeRootNode>,
-    private readonly tokens: TokenRequest[],
+    public readonly predicate: BurnPredicate,
+    public readonly commitment: TransferCommitment,
+    public readonly proofs: ProofMap,
+    public readonly token: Token<IMintTransactionReason>,
   ) {}
 
-  /**
-   * Create burn commitment to burn token going through split.
-   *
-   * @param salt           burn commitment salt
-   * @param signingService signing service used to unlock token
-   * @return transfer commitment for sending to unicity service
-   */
-  public async createBurnCommitment(salt: Uint8Array, signingService: SigningService): Promise<TransferCommitment> {
-    const predicateReference = await BurnPredicateReference.create(this.token.type, this.aggregationRoot.hash);
-
-    return TransferCommitment.create(
-      this.token,
-      await predicateReference.toAddress(),
-      salt,
-      null,
-      null,
-      signingService,
+  public static async fromCBOR(bytes: Uint8Array): Promise<TokenSplit> {
+    const data = CborDeserializer.readArray(bytes);
+    return new TokenSplit(
+      BurnPredicate.fromCBOR(data[0]),
+      await TransferCommitment.fromCBOR(data[1]),
+      ProofMap.fromCBOR(data[2]),
+      await Token.fromCBOR(data[3]),
     );
   }
 
-  /**
-   * Create split mint commitments after burn transaction is received.
-   *
-   * @param trustBase       trust base for burn transaction verification
-   * @param burnTransaction burn transaction
-   * @return list of mint commitments for sending to unicity service
-   * @throws VerificationException if token verification fails
-   */
-  public async createSplitMintCommitments(
-    trustBase: RootTrustBase,
-    burnTransaction: TransferTransaction,
-  ): Promise<MintCommitment<IMintTransactionReason>[]> {
-    const burnedToken = await this.token.update(
-      trustBase,
-      new TokenState(new BurnPredicate(this.token.id, this.token.type, this.aggregationRoot.hash), null),
-      burnTransaction,
+  public static isJSON(input: unknown): input is ITokenSplitJson {
+    return (
+      typeof input === 'object' &&
+      input !== null &&
+      'predicate' in input &&
+      typeof input.predicate === 'string' &&
+      'commitment' in input &&
+      'proofs' in input &&
+      'token' in input
     );
+  }
 
-    return Promise.all(
-      this.tokens.map((request) =>
-        MintTransactionData.create(
-          request.id,
-          request.type,
-          request.data,
-          request.coinData,
-          request.recipient,
-          request.salt,
-          request.recipientDataHash,
-          new SplitMintReason(
-            burnedToken,
-            request.coinData!.coins.map(
-              ([coinId]) =>
-                new SplitMintReasonProof(
-                  coinId,
-                  this.aggregationRoot.getPath(coinId.toBitString().toBigInt()),
-                  this.coinRoots.get(coinId.toJSON())!.getPath(request.id.toBitString().toBigInt()),
-                ),
-            ),
-          ),
-        ).then((data) => MintCommitment.create(data)),
-      ),
+  public static async fromJSON(input: unknown): Promise<TokenSplit> {
+    if (!TokenSplit.isJSON(input)) {
+      throw new InvalidJsonStructureError();
+    }
+
+    return new TokenSplit(
+      BurnPredicate.fromCBOR(HexConverter.decode(input.predicate)),
+      await TransferCommitment.fromJSON(input.commitment),
+      ProofMap.fromJSON(input.proofs),
+      await Token.fromJSON(input.token),
     );
+  }
+
+  public toCBOR(): Uint8Array {
+    return CborSerializer.encodeArray(
+      this.predicate.encodeParameters(),
+      this.commitment.toCBOR(),
+      this.proofs.toCBOR(),
+      this.token.toCBOR(),
+    );
+  }
+
+  public toJSON(): ITokenSplitJson {
+    return {
+      commitment: this.commitment.toJSON(),
+      predicate: HexConverter.encode(this.predicate.encodeParameters()),
+      proofs: this.proofs.toJSON(),
+      token: this.token.toJSON(),
+    };
   }
 }
 
@@ -124,52 +214,32 @@ class TokenSplit {
  * Token splitting builder.
  */
 export class TokenSplitBuilder {
-  private readonly tokens = new Map<string, TokenRequest>();
-
-  /**
-   * Create new token which will be created from selected token.
-   *
-   * @param id                new token id
-   * @param type              new token type
-   * @param data              new token data
-   * @param coinData          new token coin data
-   * @param recipient         new token recipient address
-   * @param salt              new token salt
-   * @param recipientDataHash new token recipient data hash
-   * @return current builder
-   */
-  public createToken(
-    id: TokenId,
-    type: TokenType,
-    data: Uint8Array | null,
-    coinData: TokenCoinData | null,
-    recipient: IAddress,
-    salt: Uint8Array,
-    recipientDataHash: DataHash | null,
-  ): this {
-    this.tokens.set(id.toJSON(), new TokenRequest(id, type, data, coinData, recipient, salt, recipientDataHash));
-
-    return this;
-  }
-
   /**
    * Split old token to new tokens.
    *
    * @param token token to be used for split
+   * @param splitTokens
+   * @param salt
+   * @param signingService
    * @return token split object for submitting info
    */
-  public async build(token: Token<IMintTransactionReason>): Promise<TokenSplit> {
+  public static async split(
+    token: Token<IMintTransactionReason>,
+    splitTokens: [TokenId, TokenCoinData][],
+    salt: Uint8Array,
+    signingService: SigningService,
+  ): Promise<TokenSplit> {
     const trees = new Map<string, [CoinId, SparseMerkleSumTree]>();
 
-    for (const data of this.tokens.values()) {
-      for (const [coinId, amount] of data.coinData!.coins) {
+    for (const [id, coinData] of splitTokens) {
+      for (const [coinId, amount] of coinData.coins) {
         let tree = trees.get(coinId.toJSON())?.[1];
         if (!tree) {
           tree = new SparseMerkleSumTree(new DataHasherFactory(HashAlgorithm.SHA256, DataHasher));
           trees.set(coinId.toJSON(), [coinId, tree]);
         }
 
-        await tree.addLeaf(data.id.toBitString().toBigInt(), coinId.bytes, amount);
+        await tree.addLeaf(id.toBitString().toBigInt(), coinId.bytes, amount);
       }
     }
 
@@ -183,13 +253,46 @@ export class TokenSplitBuilder {
       const coinsInToken = token.coins.get(coinId);
       const root = await tree.calculateRoot();
       if (root.value !== coinsInToken) {
-        throw new Error(`Token contained ${coinsInToken} ${coinId} coins, but tree has ${root.value}`);
+        throw new Error(
+          `Token contained ${coinsInToken ?? 0} coins of id '${HexConverter.encode(coinId.bytes)}', but tree has ${root.value}`,
+        );
       }
 
       coinRoots.set(coinId.toJSON(), root);
       await aggregationTree.addLeaf(coinId.toBitString().toBigInt(), root.hash.imprint);
     }
 
-    return new TokenSplit(token, await aggregationTree.calculateRoot(), coinRoots, Array.from(this.tokens.values()));
+    const aggregationRoot = await aggregationTree.calculateRoot();
+
+    const proofs: [TokenId, SplitMintReasonProof[]][] = [];
+
+    for (const [id, coinData] of splitTokens) {
+      proofs.push([
+        id,
+        coinData!.coins.map(
+          ([coinId]) =>
+            new SplitMintReasonProof(
+              coinId,
+              aggregationRoot.getPath(coinId.toBitString().toBigInt()),
+              coinRoots.get(coinId.toJSON())!.getPath(id.toBitString().toBigInt()),
+            ),
+        ),
+      ]);
+    }
+
+    const burnPredicate = new BurnPredicate(token.id, token.type, aggregationRoot.hash);
+    return new TokenSplit(
+      burnPredicate,
+      await TransferCommitment.create(
+        token,
+        await burnPredicate.getReference().then((reference) => reference.toAddress()),
+        salt,
+        null,
+        null,
+        signingService,
+      ),
+      ProofMap.create(proofs),
+      token,
+    );
   }
 }

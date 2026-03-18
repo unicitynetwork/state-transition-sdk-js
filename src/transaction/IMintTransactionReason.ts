@@ -1,4 +1,5 @@
 import { MintTransaction } from './MintTransaction.js';
+import { RootTrustBase } from '../bft/RootTrustBase.js';
 import { VerificationResult } from '../verification/VerificationResult.js';
 
 /**
@@ -8,10 +9,11 @@ export interface IMintTransactionReason {
   /**
    * Verify mint reason for genesis.
    *
+   * @param trustBase Root trust base
    * @param genesis Genesis to verify against
    * @return verification result
    */
-  verify(genesis: MintTransaction<IMintTransactionReason>): Promise<VerificationResult>;
+  verify(trustBase: RootTrustBase, genesis: MintTransaction<IMintTransactionReason>): Promise<VerificationResult>;
 
   /**
    * Convert mint transaction reason to CBOR bytes.

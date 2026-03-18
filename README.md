@@ -414,46 +414,74 @@ const status = await client.getTokenStatus(trustBase, token, publicKey);
 // Assume that token has already been minted or received
 const token: Token;
 const signingService: SigningService; // Sender's signing service, same as mint example predicate signing service
-
-const builder = new TokenSplitBuilder();
-
-builder
-  .createToken(
+const splitTokenData: [TokenId, TokenCoinData][] = [
+  [
     new TokenId(crypto.getRandomValues(new Uint8Array(32))),
-    new TokenType(crypto.getRandomValues(new Uint8Array(32))),
-    null,
     TokenCoinData.create([[new CoinId(textEncoder.encode('TEST1')), 10n]]),
-    ProxyAddress.fromNameTag('RECIPIENT'),
-    crypto.getRandomValues(new Uint8Array(32)),
-    null,
-  )
-  .createToken(
+  ],
+  [
     new TokenId(crypto.getRandomValues(new Uint8Array(32))),
-    new TokenType(crypto.getRandomValues(new Uint8Array(32))),
-    null,
     TokenCoinData.create([[new CoinId(textEncoder.encode('TEST2')), 20n]]),
-    ProxyAddress.fromNameTag('RECIPIENT'),
-    crypto.getRandomValues(new Uint8Array(32)),
-    null,
-  );
+  ],
+];
 
-const split = await builder.build(token);
-const burnCommitment = await split.createBurnCommitment(
+const split = await TokenSplitBuilder.split(
+  token,
+  splitTokenData,
   crypto.getRandomValues(new Uint8Array(32)),
-  await SigningService.createFromSecret(ownerSecret, nonce),
+  signingService,
 );
 
-const response = await client.submitTransferCommitment(burnCommitment);
-if (response.status !== SubmitCommitmentStatus.SUCCESS) {
-  throw new Error(`Submitting burn commitment failed: ${response.status}`);
+// If you want to send split info to another person, you can serialize it
+
+const response = await client.submitTransferCommitment(split.commitment);
+expect(response.status).toEqual(SubmitCommitmentStatus.SUCCESS);
+
+const burntToken = await token.update(
+  trustBase,
+  new TokenState(split.predicate, null),
+  split.commitment.toTransaction(await waitInclusionProof(trustBase, client, split.commitment)),
+);
+
+const commitments: [MintCommitment<SplitMintReason>, MaskedPredicate][] = [];
+for (const [tokenId, coinData] of splitTokenData) {
+  const tokenType = new TokenType(crypto.getRandomValues(new Uint8Array(32)));
+  const nonce = crypto.getRandomValues(new Uint8Array(32));
+  const signingService = await SigningService.createFromSecret(ownerSecret, nonce);
+
+  const predicate = MaskedPredicate.create(tokenId, tokenType, signingService, HashAlgorithm.SHA256, nonce);
+
+  commitments.push([
+    await MintCommitment.create(
+      await MintTransactionData.create(
+        tokenId,
+        tokenType,
+        null,
+        coinData,
+        await predicate.getReference().then((reference) => reference.toAddress()),
+        crypto.getRandomValues(new Uint8Array(32)),
+        await new DataHasher(HashAlgorithm.SHA256).update(textEncoder.encode(customDataString)).digest(),
+        new SplitMintReason(burntToken, split.proofs.get(tokenId)!.proofs),
+      ),
+    ),
+    predicate,
+  ]);
 }
 
-const splitMintCommitments = await split.createSplitMintCommitments(
-  trustBase,
-  burnCommitment.toTransaction(await waitInclusionProof(trustBase, client, burnCommitment)),
-);
+return Promise.all(
+  commitments.map(async ([commitment, predicate]) => {
+    const response = await client.submitMintCommitment(commitment);
+    if (response.status !== SubmitCommitmentStatus.SUCCESS) {
+      throw new Error(`Submitting mint commitment failed: ${response.status}`);
+    }
 
-// Proceed with usual minting flow for each split commitment
+    return Token.mint(
+      trustBase,
+      new TokenState(predicate, textEncoder.encode(customDataString)),
+      commitment.toTransaction(await waitInclusionProof(trustBase, client, commitment)),
+    );
+  }),
+);
 ```
 
 ## Unicity Signature Standard

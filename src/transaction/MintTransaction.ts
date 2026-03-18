@@ -74,7 +74,7 @@ export class MintTransaction<R extends IMintTransactionReason> extends Transacti
     }
 
     const reasonVerificationResult =
-      (await this.data.reason?.verify(this)) ?? new VerificationResult(VerificationResultCode.OK);
+      (await this.data.reason?.verify(trustBase, this)) ?? new VerificationResult(VerificationResultCode.OK);
     if (!reasonVerificationResult.isSuccessful) {
       return new VerificationResult(VerificationResultCode.FAIL, 'Mint reason verification', [
         reasonVerificationResult,

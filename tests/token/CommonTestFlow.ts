@@ -10,12 +10,15 @@ import { PredicateEngineService } from '../../src/predicate/PredicateEngineServi
 import { SigningService } from '../../src/sign/SigningService.js';
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
 import { CoinId } from '../../src/token/fungible/CoinId.js';
+import { SplitMintReason } from '../../src/token/fungible/SplitMintReason.js';
 import { TokenCoinData } from '../../src/token/fungible/TokenCoinData.js';
 import { Token } from '../../src/token/Token.js';
 import { TokenId } from '../../src/token/TokenId.js';
 import { TokenState } from '../../src/token/TokenState.js';
 import { TokenType } from '../../src/token/TokenType.js';
 import { IMintTransactionReason } from '../../src/transaction/IMintTransactionReason.js';
+import { MintCommitment } from '../../src/transaction/MintCommitment.js';
+import { MintTransactionData } from '../../src/transaction/MintTransactionData.js';
 import { TokenSplitBuilder } from '../../src/transaction/split/TokenSplitBuilder.js';
 import { TransferCommitment } from '../../src/transaction/TransferCommitment.js';
 import { TransferTransaction } from '../../src/transaction/TransferTransaction.js';
@@ -396,67 +399,57 @@ async function splitToken(
   customDataString: string,
   client: StateTransitionClient,
 ): Promise<Token<IMintTransactionReason>[]> {
-  const builder = new TokenSplitBuilder();
-  const nonces = new Map<string, Uint8Array>();
-  for (const coins of coinsPerNewTokens) {
-    const tokenId = new TokenId(crypto.getRandomValues(new Uint8Array(32)));
-    const tokenType = new TokenType(crypto.getRandomValues(new Uint8Array(32)));
-    const nonce = crypto.getRandomValues(new Uint8Array(32));
-    const signingService = await SigningService.createFromSecret(ownerSecret, nonce);
-
-    const predicateReference = await MaskedPredicateReference.createFromSigningService(
-      tokenType,
-      signingService,
-      HashAlgorithm.SHA256,
-      nonce,
-    );
-    nonces.set(tokenId.toJSON(), nonce);
-
-    builder.createToken(
-      tokenId,
-      tokenType,
-      null,
-      coins,
-      await predicateReference.toAddress(),
-      crypto.getRandomValues(new Uint8Array(32)),
-      await new DataHasher(HashAlgorithm.SHA256).update(textEncoder.encode(customDataString)).digest(),
-    );
-  }
-
-  const tokenSplitRequest = await builder.build(token);
-  const commitment = await tokenSplitRequest.createBurnCommitment(
+  const tokenSplit = await TokenSplitBuilder.split(
+    token,
+    coinsPerNewTokens.map((coins) => [new TokenId(crypto.getRandomValues(new Uint8Array(32))), coins]),
     crypto.getRandomValues(new Uint8Array(32)),
     await SigningService.createFromSecret(ownerSecret, nonce),
   );
 
-  const response = await client.submitTransferCommitment(commitment);
+  const response = await client.submitTransferCommitment(tokenSplit.commitment);
   expect(response.status).toEqual(SubmitCommitmentStatus.SUCCESS);
-
-  const splittedTokenMintCommitments = await tokenSplitRequest.createSplitMintCommitments(
+  const burntToken = await token.update(
     trustBase,
-    commitment.toTransaction(await waitInclusionProof(trustBase, client, commitment)),
+    new TokenState(tokenSplit.predicate, null),
+    tokenSplit.commitment.toTransaction(await waitInclusionProof(trustBase, client, tokenSplit.commitment)),
   );
 
+  const proofs = tokenSplit.proofs.entries();
+  const commitments: [MintCommitment<SplitMintReason>, MaskedPredicate][] = [];
+  for (const proof of proofs) {
+    const tokenType = new TokenType(crypto.getRandomValues(new Uint8Array(32)));
+    const nonce = crypto.getRandomValues(new Uint8Array(32));
+    const signingService = await SigningService.createFromSecret(ownerSecret, nonce);
+
+    const predicate = MaskedPredicate.create(proof.tokenId, tokenType, signingService, HashAlgorithm.SHA256, nonce);
+
+    commitments.push([
+      await MintCommitment.create(
+        await MintTransactionData.create(
+          proof.tokenId,
+          tokenType,
+          null,
+          TokenCoinData.create(proof.proofs.map((proof) => [proof.coinId, proof.coinTreePath.steps[0].value])),
+          await predicate.getReference().then((reference) => reference.toAddress()),
+          crypto.getRandomValues(new Uint8Array(32)),
+          await new DataHasher(HashAlgorithm.SHA256).update(textEncoder.encode(customDataString)).digest(),
+          new SplitMintReason(burntToken, proof.proofs),
+        ),
+      ),
+      predicate,
+    ]);
+  }
+
   return Promise.all(
-    splittedTokenMintCommitments.map(async (commitment) => {
+    commitments.map(async ([commitment, predicate]) => {
       const response = await client.submitMintCommitment(commitment);
       if (response.status !== SubmitCommitmentStatus.SUCCESS) {
         throw new Error(`Submitting mint commitment failed: ${response.status}`);
       }
 
-      const nonce = nonces.get(commitment.transactionData.tokenId.toJSON())!;
       return Token.mint(
         trustBase,
-        new TokenState(
-          MaskedPredicate.create(
-            commitment.transactionData.tokenId,
-            commitment.transactionData.tokenType,
-            await SigningService.createFromSecret(ownerSecret, nonce),
-            HashAlgorithm.SHA256,
-            nonce,
-          ),
-          textEncoder.encode(customDataString),
-        ),
+        new TokenState(predicate, textEncoder.encode(customDataString)),
         commitment.toTransaction(await waitInclusionProof(trustBase, client, commitment)),
       );
     }),
