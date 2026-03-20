@@ -1,5 +1,7 @@
 import { World, setWorldConstructor, setDefaultTimeout } from '@cucumber/cucumber';
 
+import { ShardLoadRunner } from './ShardLoadRunner.js';
+import { ILoadTestReport, IPreparedOperation } from './ShardLoadTypes.js';
 import { ITestSetup, IUser } from './TestSetup.js';
 import { ITokenTree } from './TokenTreeBuilder.js';
 import { CertificationResponse, CertificationStatus } from '../../../../src/api/CertificationResponse.js';
@@ -14,6 +16,7 @@ import { VerificationResult } from '../../../../src/verification/VerificationRes
 import { VerificationStatus } from '../../../../src/verification/VerificationStatus.js';
 
 export const DEFAULT_STEP_TIMEOUT = 30_000;
+export const LOAD_TEST_TIMEOUT = 600_000;
 export const TREE_BUILD_TIMEOUT = 120_000;
 
 export class TokenWorld extends World {
@@ -36,14 +39,19 @@ export class TokenWorld extends World {
   public firstResponse!: CertificationResponse;
   public firstTransferTransaction!: TransferTransaction;
   public importedToken!: Token;
+  public loadTestReport!: ILoadTestReport;
+  public loadTestRunner!: ShardLoadRunner;
   public mintError: Error | null = null;
   public mintTokenId!: TokenId;
   public mintTokenType!: TokenType;
   public originalToken!: Token;
+  public preparedOperations!: Map<number, IPreparedOperation[]>;
   public secondMintTransaction!: MintTransaction;
   public secondResponse!: CertificationResponse;
   public secondTransferTransaction!: TransferTransaction;
   public setup!: ITestSetup;
+  public shardCount!: number;
+  public shardIdLength!: number;
   public splitError: Error | null = null;
   public splitTokens!: Token[];
   public subSplitTokens!: Token[];

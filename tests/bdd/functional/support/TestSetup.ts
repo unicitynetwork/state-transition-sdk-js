@@ -1,5 +1,7 @@
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
+
+import { ShardAwareAggregatorClient } from './ShardAwareAggregatorClient.js';
 import { AggregatorClient } from '../../../../src/api/AggregatorClient.js';
 import { RootTrustBase } from '../../../../src/api/bft/RootTrustBase.js';
 import { CertificationData } from '../../../../src/api/CertificationData.js';
@@ -26,7 +28,6 @@ import { TokenId } from '../../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../../src/transaction/TokenType.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
 import { waitInclusionProof } from '../../../../src/util/InclusionProofUtils.js';
-import { ShardAwareAggregatorClient } from './ShardAwareAggregatorClient.js';
 
 export interface ITestSetup {
   readonly aggregatorClient: IAggregatorClient;
@@ -44,8 +45,9 @@ export function createTestSetup(): ITestSetup {
   const aggregatorClient = createAggregatorClient();
   const client = new StateTransitionClient(aggregatorClient);
   const predicateVerifier = PredicateVerifier.create();
-  const trustBasePath = process.env.TRUST_BASE_PATH
-    ?? fileURLToPath(new URL('../../../../tests/functional/trust-base.json', import.meta.url));
+  const trustBasePath =
+    process.env.TRUST_BASE_PATH ??
+    fileURLToPath(new URL('../../../../tests/functional/trust-base.json', import.meta.url));
   const trustBaseJsonString = readFileSync(trustBasePath, 'utf-8');
   const trustBase = RootTrustBase.fromJSON(JSON.parse(trustBaseJsonString));
 
@@ -54,9 +56,10 @@ export function createTestSetup(): ITestSetup {
 
 function createAggregatorClient(): IAggregatorClient {
   const apiKey = process.env.AGGREGATOR_API_KEY ?? null;
+  const shardIdLength = parseInt(process.env.SHARD_ID_LENGTH ?? '1', 10);
+  const firstShardId = 1 << shardIdLength;
 
-  if (process.env.SHARD_2_URL) {
-    const shardIdLength = parseInt(process.env.SHARD_ID_LENGTH ?? '1', 10);
+  if (process.env[`SHARD_${firstShardId}_URL`]) {
     const baseId = 1 << shardIdLength;
     const expectedCount = 1 << shardIdLength;
     const shardMap = new Map<number, AggregatorClient>();
