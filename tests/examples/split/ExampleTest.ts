@@ -12,7 +12,8 @@ import { PaymentAssetCollection } from '../../../src/payment/asset/PaymentAssetC
 import { SplitReason } from '../../../src/payment/SplitReason.js';
 import { TokenSplit } from '../../../src/payment/TokenSplit.js';
 import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
-import { PredicateVerifier } from '../../../src/predicate/verification/PredicateVerifier.js';
+import { PayToPublicKeyPredicateUnlockScript } from '../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
+import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
 import { HexConverter } from '../../../src/serialization/HexConverter.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
 import { Address } from '../../../src/transaction/Address.js';
@@ -30,7 +31,7 @@ it('Token splitting', async () => {
 
   const client = new StateTransitionClient(aggregatorClient);
 
-  const predicateVerifier = PredicateVerifier.create();
+  const predicateVerifier = PredicateVerifierService.create(trustBase);
 
   const ownerPrivateKey = HexConverter.decode(config.ownerPrivateKey);
   const ownerSigningService = new SigningService(ownerPrivateKey);
@@ -48,7 +49,7 @@ it('Token splitting', async () => {
     await Address.fromPredicate(ownerPredicate),
     new TokenId(crypto.getRandomValues(new Uint8Array(32))),
     new TokenType(crypto.getRandomValues(new Uint8Array(32))),
-    await paymentData.toCBOR(),
+    await paymentData.encode(),
   );
 
   let response = await client.submitCertificationRequest(await CertificationData.fromMintTransaction(mintTransaction));
@@ -81,12 +82,12 @@ it('Token splitting', async () => {
     ],
   ];
 
-  const result = await TokenSplit.split(token, ownerPredicate, CustomPaymentData.fromCBOR, splitTokens);
+  const result = await TokenSplit.split(token, ownerPredicate, CustomPaymentData.decode, splitTokens);
 
   response = await client.submitCertificationRequest(
     await CertificationData.fromTransaction(
       result.burn.transaction,
-      await PayToPublicKeyPredicate.generateUnlockScript(result.burn.transaction, ownerSigningService),
+      await PayToPublicKeyPredicateUnlockScript.create(result.burn.transaction, ownerSigningService),
     ),
   );
 
@@ -117,7 +118,7 @@ it('Token splitting', async () => {
       await Address.fromPredicate(ownerPredicate),
       tokenId,
       new TokenType(crypto.getRandomValues(new Uint8Array(32))),
-      await splitPaymentData.toCBOR(),
+      await splitPaymentData.encode(),
     );
 
     const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
@@ -139,7 +140,7 @@ it('Token splitting', async () => {
 
     const splitResult = await TokenSplit.verify(
       await Token.fromCBOR(splitToken.toCBOR()),
-      CustomSplitPaymentData.fromCBOR,
+      CustomSplitPaymentData.decode,
       trustBase,
       predicateVerifier,
     );

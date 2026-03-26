@@ -1,6 +1,7 @@
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
+import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
 import { IPredicate } from '../predicate/IPredicate.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
@@ -8,8 +9,11 @@ import { HexConverter } from '../serialization/HexConverter.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 
 export class Address {
-  public constructor(private readonly _bytes: Uint8Array) {
-    // TODO: Add check for length, should be 32 bytes
+  private constructor(private readonly _bytes: Uint8Array) {
+    if (_bytes.length !== 32) {
+      throw new Error('Address must be 32 bytes long.');
+    }
+
     this._bytes = new Uint8Array(_bytes);
   }
 
@@ -23,11 +27,13 @@ export class Address {
   }
 
   public static fromCBOR(bytes: Uint8Array): Address {
-    return new Address(CborDeserializer.decodeByteString(bytes));
+    return Address.fromBytes(CborDeserializer.decodeByteString(bytes));
   }
 
   public static async fromPredicate(predicate: IPredicate): Promise<Address> {
-    const hash = await new DataHasher(HashAlgorithm.SHA256).update(predicate.toCBOR()).digest();
+    const hash = await new DataHasher(HashAlgorithm.SHA256)
+      .update(EncodedPredicate.fromPredicate(predicate).toCBOR())
+      .digest();
     return new Address(hash.data);
   }
 

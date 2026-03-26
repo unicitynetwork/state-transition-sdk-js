@@ -3,9 +3,10 @@ import { CertificationData } from '../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../src/api/CertificationResponse.js';
 import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
 import { PayToPublicKeyPredicate } from '../../src/predicate/builtin/PayToPublicKeyPredicate.js';
+import { PayToPublicKeyPredicateUnlockScript } from '../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
 import { UnicityIdPredicate } from '../../src/predicate/builtin/UnicityIdPredicate.js';
 import { UnicityIdPredicateUnlockScript } from '../../src/predicate/builtin/UnicityIdPredicateUnlockScript.js';
-import { PredicateVerifier } from '../../src/predicate/verification/PredicateVerifier.js';
+import { PredicateVerifierService } from '../../src/predicate/verification/PredicateVerifierService.js';
 import { CborSerializer } from '../../src/serialization/cbor/CborSerializer.js';
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
 import { Address } from '../../src/transaction/Address.js';
@@ -23,7 +24,7 @@ import { VerificationStatus } from '../../src/verification/VerificationStatus.js
 export const transitionFlowTest = (client: StateTransitionClient, trustBase: RootTrustBase): void => {
   describe('Transition', () => {
     it('default successful flow', async () => {
-      const predicateVerifier = PredicateVerifier.create(trustBase);
+      const predicateVerifier = PredicateVerifierService.create(trustBase);
 
       const unicityIdSigningService = new SigningService(SigningService.generatePrivateKey());
 
@@ -40,7 +41,7 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
 
       const unicityIdCertificationData = await CertificationData.fromTransaction(
         unicityIdMintTransaction,
-        await PayToPublicKeyPredicate.generateUnlockScript(unicityIdMintTransaction, unicityIdSigningService),
+        await PayToPublicKeyPredicateUnlockScript.create(unicityIdMintTransaction, unicityIdSigningService),
       );
 
       const unicityIdResponse = await client.submitCertificationRequest(unicityIdCertificationData);
@@ -161,7 +162,7 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
 
       certificationData = await CertificationData.fromTransaction(
         returnTransferTransaction,
-        await PayToPublicKeyPredicate.generateUnlockScript(returnTransferTransaction, receiverSigningService),
+        await PayToPublicKeyPredicateUnlockScript.create(returnTransferTransaction, receiverSigningService),
       );
 
       response = await client.submitCertificationRequest(certificationData);

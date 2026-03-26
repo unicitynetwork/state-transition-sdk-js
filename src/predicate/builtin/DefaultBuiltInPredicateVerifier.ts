@@ -6,30 +6,32 @@ import { VerificationStatus } from '../../verification/VerificationStatus.js';
 import { IPredicate } from '../IPredicate.js';
 import { PredicateEngine } from '../PredicateEngine.js';
 import { IPredicateVerifier } from '../verification/IPredicateVerifier.js';
-import { IPredicateVerifierFactory } from '../verification/IPredicateVerifierFactory.js';
 import { PayToPublicKeyPredicateVerifier } from './verification/PayToPublicKeyPredicateVerifier.js';
 import { UnicityIdPredicateVerifier } from './verification/UnicityIdPredicateVerifier.js';
-import { PredicateVerifier } from '../verification/PredicateVerifier.js';
+import { PredicateVerifierService } from '../verification/PredicateVerifierService.js';
+import { IBuiltInPredicateVerifier } from './verification/IBuiltInPredicateVerifier.js';
 
-export class BuiltInPredicateVerifierFactory implements IPredicateVerifierFactory {
+export class DefaultBuiltInPredicateVerifier implements IPredicateVerifier {
   public readonly engine: PredicateEngine = PredicateEngine.BUILT_IN;
 
-  private readonly factories: Map<bigint, IPredicateVerifier>;
-  public constructor(factories: IPredicateVerifier[]) {
-    const result = new Map<bigint, IPredicateVerifier>();
-    for (const factory of factories) {
-      if (result.has(factory.type)) {
+  private readonly verifiers: Map<bigint, IBuiltInPredicateVerifier>;
+
+  public constructor(verifiers: IBuiltInPredicateVerifier[]) {
+    const result = new Map<bigint, IBuiltInPredicateVerifier>();
+    for (const verifier of verifiers) {
+      const type = BigInt(verifier.type);
+      if (result.has(type)) {
         throw new Error('Found duplicate predicate verifier.');
       }
 
-      result.set(factory.type, factory);
+      result.set(type, verifier);
     }
 
-    this.factories = result;
+    this.verifiers = result;
   }
 
-  public static create(verifier: PredicateVerifier, trustBase: RootTrustBase): BuiltInPredicateVerifierFactory {
-    return new BuiltInPredicateVerifierFactory([
+  public static create(verifier: PredicateVerifierService, trustBase: RootTrustBase): DefaultBuiltInPredicateVerifier {
+    return new DefaultBuiltInPredicateVerifier([
       new PayToPublicKeyPredicateVerifier(),
       new UnicityIdPredicateVerifier(verifier, trustBase),
     ]);
@@ -41,14 +43,13 @@ export class BuiltInPredicateVerifierFactory implements IPredicateVerifierFactor
     transactionHash: DataHash,
     unlockScript: Uint8Array,
   ): Promise<VerificationResult<VerificationStatus>> {
-    const data = CborDeserializer.decodeArray(predicate.toCBOR());
-    const type = CborDeserializer.decodeUnsignedInteger(CborDeserializer.decodeByteString(data[1]));
+    const type = CborDeserializer.decodeUnsignedInteger(predicate.encodeCode());
 
-    const factory = this.factories.get(type);
-    if (!factory) {
+    const verifier = this.verifiers.get(type);
+    if (!verifier) {
       throw new Error('Unsupported predicate type for verification.');
     }
 
-    return factory.verify(predicate, sourceStateHash, transactionHash, unlockScript);
+    return verifier.verify(predicate, sourceStateHash, transactionHash, unlockScript);
   }
 }

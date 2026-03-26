@@ -5,7 +5,8 @@ import { CertificationData } from '../../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../../src/api/CertificationResponse.js';
 import { SigningService } from '../../../src/crypto/secp256k1/SigningService.js';
 import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
-import { PredicateVerifier } from '../../../src/predicate/verification/PredicateVerifier.js';
+import { PayToPublicKeyPredicateUnlockScript } from '../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
+import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../../src/serialization/HexConverter.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
@@ -20,7 +21,7 @@ import { VerificationStatus } from '../../../src/verification/VerificationStatus
 import trustBaseJson from '../trust-base.json' with { type: 'json' };
 
 async function receiveToken(client: StateTransitionClient, trustBase: RootTrustBase): Promise<string> {
-  const predicateVerifier = PredicateVerifier.create();
+  const predicateVerifier = PredicateVerifierService.create(trustBase);
 
   const ownerPrivateKey = HexConverter.decode(config.ownerPrivateKey);
   const ownerSigningService = new SigningService(ownerPrivateKey);
@@ -53,7 +54,7 @@ it('Token transfer', async () => {
   const aggregatorClient = new AggregatorClient(config.aggregatorUrl);
   const trustBase = RootTrustBase.fromJSON(trustBaseJson);
   const client = new StateTransitionClient(aggregatorClient);
-  const predicateVerifier = PredicateVerifier.create();
+  const predicateVerifier = PredicateVerifierService.create(trustBase);
 
   const ownerPrivateKey = HexConverter.decode(config.ownerPrivateKey);
   const ownerSigningService = new SigningService(ownerPrivateKey);
@@ -78,7 +79,7 @@ it('Token transfer', async () => {
 
   const certificationData = await CertificationData.fromTransaction(
     transferTransaction,
-    await PayToPublicKeyPredicate.generateUnlockScript(transferTransaction, ownerSigningService),
+    await PayToPublicKeyPredicateUnlockScript.create(transferTransaction, ownerSigningService),
   );
 
   const response = await client.submitCertificationRequest(certificationData);

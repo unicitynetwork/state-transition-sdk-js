@@ -6,19 +6,15 @@ import { TokenId } from './TokenId.js';
 import { TokenType } from './TokenType.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { InclusionProof } from '../api/InclusionProof.js';
+import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
+import { MintSigningService } from '../crypto/MintSigningService.js';
 import { PayToPublicKeyPredicate } from '../predicate/builtin/PayToPublicKeyPredicate.js';
-import { PredicateVerifier } from '../predicate/verification/PredicateVerifier.js';
+import { IPredicate } from '../predicate/IPredicate.js';
+import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
-import {
-  InclusionProofVerificationRule,
-  InclusionProofVerificationStatus,
-} from './verification/rule/InclusionProofVerificationRule.js';
-import { DataHash } from '../crypto/hash/DataHash.js';
-import { MintSigningService } from '../crypto/MintSigningService.js';
-import { IPredicate } from '../predicate/IPredicate.js';
 import { HexConverter } from '../serialization/HexConverter.js';
 import { dedent } from '../util/StringUtils.js';
 
@@ -94,17 +90,12 @@ export class MintTransaction implements ITransaction {
     );
   }
 
-  public async toCertifiedTransaction(
+  public toCertifiedTransaction(
     trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifier,
+    predicateVerifier: PredicateVerifierService,
     inclusionProof: InclusionProof,
   ): Promise<CertifiedMintTransaction> {
-    const result = await InclusionProofVerificationRule.verify(trustBase, predicateVerifier, inclusionProof, this);
-    if (result.status !== InclusionProofVerificationStatus.OK) {
-      throw new Error(`Inclusion proof verification failed: ${result.status.toString()}`);
-    }
-
-    return new CertifiedMintTransaction(this, inclusionProof);
+    return CertifiedMintTransaction.fromTransaction(trustBase, predicateVerifier, this, inclusionProof);
   }
 
   public toString(): string {

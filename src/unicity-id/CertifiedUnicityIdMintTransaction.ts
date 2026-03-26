@@ -2,7 +2,6 @@ import { UnicityId } from './UnicityId.js';
 import { UnicityIdMintTransaction } from './UnicityIdMintTransaction.js';
 import { InclusionProof } from '../api/InclusionProof.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
-import { PayToPublicKeyPredicate } from '../predicate/builtin/PayToPublicKeyPredicate.js';
 import { IPredicate } from '../predicate/IPredicate.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
@@ -34,7 +33,7 @@ export class CertifiedUnicityIdMintTransaction implements ITransaction {
     return this.transaction.sourceStateHash;
   }
 
-  public get targetPredicate(): PayToPublicKeyPredicate {
+  public get targetPredicate(): IPredicate {
     return this.transaction.targetPredicate;
   }
 

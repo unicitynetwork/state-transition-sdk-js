@@ -10,7 +10,7 @@ export class CustomSplitPaymentData implements ISplitPaymentData {
     public readonly reason: SplitReason,
   ) {}
 
-  public static async fromCBOR(bytes: Uint8Array): Promise<CustomSplitPaymentData> {
+  public static async decode(bytes: Uint8Array): Promise<CustomSplitPaymentData> {
     const data = CborDeserializer.decodeArray(bytes);
 
     return Promise.resolve(
@@ -18,7 +18,7 @@ export class CustomSplitPaymentData implements ISplitPaymentData {
     );
   }
 
-  public toCBOR(): Promise<Uint8Array> {
+  public encode(): Promise<Uint8Array> {
     return Promise.resolve(CborSerializer.encodeArray(this.assets.toCBOR(), this.reason.toCBOR()));
   }
 }

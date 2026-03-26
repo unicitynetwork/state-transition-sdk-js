@@ -1,15 +1,22 @@
 import { Address } from './Address.js';
 import { ITransaction } from './ITransaction.js';
 import { TransferTransaction } from './TransferTransaction.js';
+import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { InclusionProof } from '../api/InclusionProof.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { IPredicate } from '../predicate/IPredicate.js';
+import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { dedent } from '../util/StringUtils.js';
+import { VerificationError } from '../verification/VerificationError.js';
+import {
+  InclusionProofVerificationRule,
+  InclusionProofVerificationStatus,
+} from './verification/rule/InclusionProofVerificationRule.js';
 
 export class CertifiedTransferTransaction implements ITransaction {
-  public constructor(
+  private constructor(
     private readonly transaction: TransferTransaction,
     public readonly inclusionProof: InclusionProof,
   ) {}
@@ -37,6 +44,25 @@ export class CertifiedTransferTransaction implements ITransaction {
   public static fromCBOR(bytes: Uint8Array): CertifiedTransferTransaction {
     const data = CborDeserializer.decodeArray(bytes);
     return new CertifiedTransferTransaction(TransferTransaction.fromCBOR(data[0]), InclusionProof.fromCBOR(data[1]));
+  }
+
+  public static async fromTransaction(
+    trustBase: RootTrustBase,
+    predicateVerifier: PredicateVerifierService,
+    transaction: TransferTransaction,
+    inclusionProof: InclusionProof,
+  ): Promise<CertifiedTransferTransaction> {
+    const result = await InclusionProofVerificationRule.verify(
+      trustBase,
+      predicateVerifier,
+      inclusionProof,
+      transaction,
+    );
+    if (result.status !== InclusionProofVerificationStatus.OK) {
+      throw new VerificationError('Inclusion proof verification failed', result);
+    }
+
+    return new CertifiedTransferTransaction(transaction, inclusionProof);
   }
 
   public calculateStateHash(): Promise<DataHash> {

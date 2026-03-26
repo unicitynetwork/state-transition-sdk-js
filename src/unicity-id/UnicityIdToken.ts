@@ -1,10 +1,9 @@
 import { CertifiedUnicityIdMintTransaction } from './CertifiedUnicityIdMintTransaction.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
-import { PredicateVerifier } from '../predicate/verification/PredicateVerifier.js';
+import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { CertifiedTransferTransaction } from '../transaction/CertifiedTransferTransaction.js';
-import { ITransaction } from '../transaction/ITransaction.js';
 import { TokenId } from '../transaction/TokenId.js';
 import { TokenType } from '../transaction/TokenType.js';
 import { CertifiedTransferTransactionVerificationRule } from '../transaction/verification/rule/CertifiedTransferTransactionVerificationRule.js';
@@ -22,10 +21,6 @@ export class UnicityIdToken {
 
   public get id(): TokenId {
     return this.genesis.tokenId;
-  }
-
-  public get latestTransaction(): ITransaction {
-    return this._transactions.at(-1) ?? this.genesis;
   }
 
   public get transactions(): CertifiedTransferTransaction[] {
@@ -48,7 +43,7 @@ export class UnicityIdToken {
 
   public static async mint(
     trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifier,
+    predicateVerifier: PredicateVerifierService,
     genesis: CertifiedUnicityIdMintTransaction,
   ): Promise<UnicityIdToken> {
     const token = new UnicityIdToken(genesis);
@@ -85,7 +80,7 @@ export class UnicityIdToken {
   //   const result = await CertifiedTransferTransactionVerificationRule.verify(
   //     trustBase,
   //     predicateVerifier,
-  //     this.latestTransaction,
+  //     this._transactions.at(-1) ?? this.genesis,
   //     transaction,
   //   );
   //   if (result.status !== VerificationStatus.OK) {
@@ -100,7 +95,7 @@ export class UnicityIdToken {
 
   public async verify(
     trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifier,
+    predicateVerifier: PredicateVerifierService,
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];
     const result = await CertifiedUnicityIdMintTransactionVerificationRule.verify(
@@ -116,11 +111,10 @@ export class UnicityIdToken {
     const transferResults: VerificationResult<VerificationStatus>[] = [];
     for (let i = 0; i < this._transactions.length; i++) {
       const transaction = this._transactions[i];
-      const token = new UnicityIdToken(this.genesis, this._transactions.slice(0, i));
       const result = await CertifiedTransferTransactionVerificationRule.verify(
         trustBase,
         predicateVerifier,
-        token.latestTransaction,
+        i === 0 ? this.genesis : this._transactions[i - 1],
         transaction,
       );
       transferResults.push(result);

@@ -9,14 +9,14 @@ export class CustomPaymentData implements IPaymentData {
     public readonly otherData: string,
   ) {}
 
-  public static fromCBOR(bytes: Uint8Array): Promise<CustomPaymentData> {
+  public static decode(bytes: Uint8Array): Promise<CustomPaymentData> {
     const data = CborDeserializer.decodeArray(bytes);
     return Promise.resolve(
       new CustomPaymentData(PaymentAssetCollection.fromCBOR(data[0]), CborDeserializer.decodeTextString(data[1])),
     );
   }
 
-  public toCBOR(): Promise<Uint8Array> {
+  public encode(): Promise<Uint8Array> {
     return Promise.resolve(
       CborSerializer.encodeArray(this.assets.toCBOR(), CborSerializer.encodeTextString(this.otherData)),
     );

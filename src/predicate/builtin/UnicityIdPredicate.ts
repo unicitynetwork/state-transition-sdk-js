@@ -5,11 +5,10 @@ import { dedent } from '../../util/StringUtils.js';
 import { IPredicate } from '../IPredicate.js';
 import { PredicateEngine } from '../PredicateEngine.js';
 import { BuiltInPredicateType } from './BuiltInPredicateType.js';
+import { IBuiltInPredicate } from './IBuiltInPredicate.js';
 import { UnicityId } from '../../unicity-id/UnicityId.js';
 
-export class UnicityIdPredicate implements IPredicate {
-  public static readonly TYPE: bigint = BigInt(BuiltInPredicateType.UnicityId);
-
+export class UnicityIdPredicate implements IBuiltInPredicate {
   private constructor(
     private readonly _publicKey: Uint8Array,
     public readonly unicityId: UnicityId,
@@ -25,39 +24,35 @@ export class UnicityIdPredicate implements IPredicate {
     return new Uint8Array(this._publicKey);
   }
 
-  public get type(): bigint {
-    return UnicityIdPredicate.TYPE;
+  public get type(): BuiltInPredicateType {
+    return BuiltInPredicateType.UnicityId;
   }
 
   public static create(publicKey: Uint8Array, unicityId: UnicityId): UnicityIdPredicate {
     return new UnicityIdPredicate(publicKey, unicityId);
   }
 
-  public static fromCBOR(bytes: Uint8Array): UnicityIdPredicate {
-    const data = CborDeserializer.decodeArray(bytes);
-    const engine = CborDeserializer.decodeUnsignedInteger(data[0]);
-    if (engine !== BigInt(PredicateEngine.BUILT_IN)) {
-      throw new Error('Invalid predicate engine.');
+  public static fromPredicate(predicate: IPredicate): UnicityIdPredicate {
+    if (predicate.engine !== PredicateEngine.BUILT_IN) {
+      throw new Error(`Predicate engine must be ${PredicateEngine.BUILT_IN}.`);
     }
 
-    const type = CborDeserializer.decodeUnsignedInteger(CborDeserializer.decodeByteString(data[1]));
-    if (type !== UnicityIdPredicate.TYPE) {
-      throw new Error('Invalid predicate type.');
+    const type = CborDeserializer.decodeUnsignedInteger(predicate.encodeCode());
+    if (type !== BigInt(BuiltInPredicateType.UnicityId)) {
+      throw new Error(`Predicate type must be ${BuiltInPredicateType.UnicityId}.`);
     }
 
-    const params = CborDeserializer.decodeArray(CborDeserializer.decodeByteString(data[2]));
+    const params = CborDeserializer.decodeArray(predicate.encodeParameters());
 
     return new UnicityIdPredicate(CborDeserializer.decodeByteString(params[0]), UnicityId.fromCBOR(params[1]));
   }
 
-  public toCBOR(): Uint8Array {
-    return CborSerializer.encodeArray(
-      CborSerializer.encodeUnsignedInteger(BigInt(this.engine)),
-      CborSerializer.encodeByteString(CborSerializer.encodeUnsignedInteger(this.type)),
-      CborSerializer.encodeByteString(
-        CborSerializer.encodeArray(CborSerializer.encodeByteString(this._publicKey), this.unicityId.toCBOR()),
-      ),
-    );
+  public encodeCode(): Uint8Array {
+    return CborSerializer.encodeUnsignedInteger(this.type);
+  }
+
+  public encodeParameters(): Uint8Array {
+    return CborSerializer.encodeArray(CborSerializer.encodeByteString(this._publicKey), this.unicityId.toCBOR());
   }
 
   public toString(): string {

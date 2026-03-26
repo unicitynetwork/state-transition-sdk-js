@@ -7,11 +7,12 @@ import { CborSerializer } from '../../../serialization/cbor/CborSerializer.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
 import { IPredicate } from '../../IPredicate.js';
-import { IPredicateVerifier } from '../../verification/IPredicateVerifier.js';
 import { PayToPublicKeyPredicate } from '../PayToPublicKeyPredicate.js';
+import { IBuiltInPredicateVerifier } from './IBuiltInPredicateVerifier.js';
+import { BuiltInPredicateType } from '../BuiltInPredicateType.js';
 
-export class PayToPublicKeyPredicateVerifier implements IPredicateVerifier {
-  public readonly type = PayToPublicKeyPredicate.TYPE;
+export class PayToPublicKeyPredicateVerifier implements IBuiltInPredicateVerifier {
+  public readonly type = BuiltInPredicateType.PayToPublicKey;
 
   public async verify(
     encodedPredicate: IPredicate,
@@ -19,7 +20,7 @@ export class PayToPublicKeyPredicateVerifier implements IPredicateVerifier {
     transactionHash: DataHash,
     unlockScript: Uint8Array,
   ): Promise<VerificationResult<VerificationStatus>> {
-    const predicate = PayToPublicKeyPredicate.fromCBOR(encodedPredicate.toCBOR());
+    const predicate = PayToPublicKeyPredicate.fromPredicate(encodedPredicate);
 
     const result = await SigningService.verifyWithPublicKey(
       await new DataHasher(HashAlgorithm.SHA256)

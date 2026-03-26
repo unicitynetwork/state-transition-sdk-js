@@ -1,4 +1,5 @@
 import { CertificationData } from '../../../src/api/CertificationData.js';
+import { EncodedPredicate } from '../../../src/predicate/EncodedPredicate.js';
 import { HexConverter } from '../../../src/serialization/HexConverter.js';
 import { Address } from '../../../src/transaction/Address.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
@@ -20,7 +21,9 @@ describe('CertificationData', () => {
     );
     const result = CertificationData.fromCBOR(certificationData.toCBOR());
 
-    expect(result.lockScript.toCBOR()).toStrictEqual(certificationData.lockScript.toCBOR());
+    expect(EncodedPredicate.fromPredicate(result.lockScript).toCBOR()).toStrictEqual(
+      EncodedPredicate.fromPredicate(certificationData.lockScript).toCBOR(),
+    );
     expect(result.sourceStateHash.imprint).toStrictEqual(certificationData.sourceStateHash.imprint);
     expect(result.transactionHash.imprint).toStrictEqual(certificationData.transactionHash.imprint);
     expect(HexConverter.encode(result.unlockScript)).toStrictEqual(HexConverter.encode(certificationData.unlockScript));

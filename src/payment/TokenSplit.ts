@@ -6,10 +6,11 @@ import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { DataHasherFactory } from '../crypto/hash/DataHasherFactory.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { IPredicate } from '../predicate/IPredicate.js';
-import { PredicateVerifier } from '../predicate/verification/PredicateVerifier.js';
+import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../serialization/HexConverter.js';
 import { TokenAssetValueMismatchError } from './error/TokenAssetValueMismatchError.js';
+import { SplitReasonProof } from './SplitReasonProof.js';
 import { SparseMerkleTree } from '../smt/plain/SparseMerkleTree.js';
 import { SparseMerkleSumTree } from '../smt/sum/SparseMerkleSumTree.js';
 import { SparseMerkleSumTreeRootNode } from '../smt/sum/SparseMerkleSumTreeRootNode.js';
@@ -19,8 +20,7 @@ import { TransferTransaction } from '../transaction/TransferTransaction.js';
 import { AssetId } from './asset/AssetId.js';
 import { PaymentAssetCollection } from './asset/PaymentAssetCollection.js';
 import { TokenAssetCountMismatchError } from './error/TokenAssetCountMismatchError.js';
-import { BurnPredicate } from './predicate/builtin/BurnPredicate.js';
-import { SplitReasonProof } from './SplitReasonProof.js';
+import { BurnPredicate } from '../predicate/builtin/BurnPredicate.js';
 import { Address } from '../transaction/Address.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 import { VerificationResult } from '../verification/VerificationResult.js';
@@ -81,14 +81,14 @@ export class TokenSplit {
    *
    * @param token token to be used for split
    * @param ownerPredicate
-   * @param parsePaymentData
+   * @param decodePaymentData
    * @param splitTokens
    * @return token split object for submitting info
    */
   public static async split(
     token: Token,
     ownerPredicate: IPredicate,
-    parsePaymentData: (bytes: Uint8Array) => Promise<IPaymentData>,
+    decodePaymentData: (bytes: Uint8Array) => Promise<IPaymentData>,
     splitTokens: [TokenId, PaymentAssetCollection][],
   ): Promise<ISplit> {
     const hasher = new DataHasherFactory(HashAlgorithm.SHA256, DataHasher);
@@ -108,7 +108,7 @@ export class TokenSplit {
     }
 
     // Parse this from user object
-    const paymentData = await parsePaymentData(token.genesis.data);
+    const paymentData = await decodePaymentData(token.genesis.data);
     const assets = paymentData.assets;
 
     if (trees.size !== assets.size()) {
@@ -171,7 +171,7 @@ export class TokenSplit {
     token: Token,
     parsePaymentData: (bytes: Uint8Array) => Promise<ISplitPaymentData>,
     trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifier,
+    predicateVerifier: PredicateVerifierService,
   ): Promise<VerificationResult<VerificationStatus>> {
     // TODO: Check initial token also or that should be done by client beforehand?
 

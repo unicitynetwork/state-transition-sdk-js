@@ -2,9 +2,10 @@ import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { MintSigningService } from '../crypto/MintSigningService.js';
-import { PayToPublicKeyPredicate } from '../predicate/builtin/PayToPublicKeyPredicate.js';
+import { PayToPublicKeyPredicateUnlockScript } from '../predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
 import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
 import { IPredicate } from '../predicate/IPredicate.js';
+import { IUnlockScript } from '../predicate/IUnlockScript.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../serialization/HexConverter.js';
@@ -57,15 +58,22 @@ export class CertificationData {
 
     return CertificationData.fromTransaction(
       transaction,
-      await PayToPublicKeyPredicate.generateUnlockScript(transaction, signingService),
+      await PayToPublicKeyPredicateUnlockScript.create(transaction, signingService),
     );
   }
 
-  public static async fromTransaction(transaction: ITransaction, unlockScript: Uint8Array): Promise<CertificationData> {
-    unlockScript = new Uint8Array(unlockScript);
+  public static async fromTransaction(
+    transaction: ITransaction,
+    unlockScript: IUnlockScript,
+  ): Promise<CertificationData> {
     const transactionHash = await transaction.calculateTransactionHash();
 
-    return new CertificationData(transaction.lockScript, transaction.sourceStateHash, transactionHash, unlockScript);
+    return new CertificationData(
+      transaction.lockScript,
+      transaction.sourceStateHash,
+      transactionHash,
+      unlockScript.encode(),
+    );
   }
 
   /**
@@ -80,11 +88,11 @@ export class CertificationData {
   /**
    * Convert the certification data to CBOR bytes.
    *
-   * @returns {Uint8Array} CBOR bytes
+   * @returns {Promise<Uint8Array>} CBOR bytes
    */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
-      this.lockScript.toCBOR(),
+      EncodedPredicate.fromPredicate(this.lockScript).toCBOR(),
       CborSerializer.encodeByteString(this.sourceStateHash.data),
       CborSerializer.encodeByteString(this.transactionHash.data),
       CborSerializer.encodeByteString(this._unlockScript),

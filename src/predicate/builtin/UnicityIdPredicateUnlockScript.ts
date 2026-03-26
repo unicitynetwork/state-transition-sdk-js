@@ -1,4 +1,4 @@
-import { PayToPublicKeyPredicate } from './PayToPublicKeyPredicate.js';
+import { PayToPublicKeyPredicateUnlockScript } from './PayToPublicKeyPredicateUnlockScript.js';
 import { UnicityIdPredicate } from './UnicityIdPredicate.js';
 import { SigningService } from '../../crypto/secp256k1/SigningService.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
@@ -6,9 +6,9 @@ import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
 import { ITransaction } from '../../transaction/ITransaction.js';
 import { TokenId } from '../../transaction/TokenId.js';
 import { UnicityIdToken } from '../../unicity-id/UnicityIdToken.js';
+import { IUnlockScript } from '../IUnlockScript.js';
 
-// TODO: Move token out of unlock script.
-export class UnicityIdPredicateUnlockScript {
+export class UnicityIdPredicateUnlockScript implements IUnlockScript {
   private constructor(
     private readonly _unlockScript: Uint8Array,
     public readonly token: UnicityIdToken,
@@ -24,19 +24,17 @@ export class UnicityIdPredicateUnlockScript {
     token: UnicityIdToken,
     transaction: ITransaction,
     signingService: SigningService,
-  ): Promise<Uint8Array> {
-    const predicate = UnicityIdPredicate.fromCBOR(transaction.lockScript.toCBOR());
+  ): Promise<UnicityIdPredicateUnlockScript> {
+    const predicate = UnicityIdPredicate.fromPredicate(transaction.lockScript);
     if (!token.id.equals(await TokenId.fromUnicityId(predicate.unicityId))) {
       throw new Error('Invalid Unicity ID for transaction');
     }
 
-    return new UnicityIdPredicateUnlockScript(
-      await PayToPublicKeyPredicate.generateUnlockScript(transaction, signingService),
-      token,
-    ).toCBOR();
+    const unlockScript = await PayToPublicKeyPredicateUnlockScript.create(transaction, signingService);
+    return new UnicityIdPredicateUnlockScript(unlockScript.encode(), token);
   }
 
-  public static async fromCBOR(bytes: Uint8Array): Promise<UnicityIdPredicateUnlockScript> {
+  public static async decode(bytes: Uint8Array): Promise<UnicityIdPredicateUnlockScript> {
     const [unlockScriptBytes, tokenBytes] = CborDeserializer.decodeArray(bytes);
     return new UnicityIdPredicateUnlockScript(
       CborDeserializer.decodeByteString(unlockScriptBytes),
@@ -44,7 +42,7 @@ export class UnicityIdPredicateUnlockScript {
     );
   }
 
-  public toCBOR(): Uint8Array {
+  public encode(): Uint8Array {
     return CborSerializer.encodeArray(CborSerializer.encodeByteString(this.unlockScript), this.token.toCBOR());
   }
 }

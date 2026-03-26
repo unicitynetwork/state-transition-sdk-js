@@ -1,21 +1,24 @@
+import { IBuiltInPredicateVerifier } from './IBuiltInPredicateVerifier.js';
 import { RootTrustBase } from '../../../api/bft/RootTrustBase.js';
 import { DataHash } from '../../../crypto/hash/DataHash.js';
 import { TokenId } from '../../../transaction/TokenId.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
 import { IPredicate } from '../../IPredicate.js';
-import { IPredicateVerifier } from '../../verification/IPredicateVerifier.js';
-import { PredicateVerifier } from '../../verification/PredicateVerifier.js';
+import { PredicateVerifierService } from '../../verification/PredicateVerifierService.js';
+import { BuiltInPredicateType } from '../BuiltInPredicateType.js';
 import { UnicityIdPredicate } from '../UnicityIdPredicate.js';
 import { UnicityIdPredicateUnlockScript } from '../UnicityIdPredicateUnlockScript.js';
 
-export class UnicityIdPredicateVerifier implements IPredicateVerifier {
-  public readonly type = UnicityIdPredicate.TYPE;
-
+export class UnicityIdPredicateVerifier implements IBuiltInPredicateVerifier {
   public constructor(
-    private readonly verifier: PredicateVerifier,
+    private readonly verifier: PredicateVerifierService,
     private readonly trustBase: RootTrustBase,
   ) {}
+
+  public get type(): BuiltInPredicateType {
+    return BuiltInPredicateType.UnicityId;
+  }
 
   public async verify(
     encodedPredicate: IPredicate,
@@ -23,8 +26,8 @@ export class UnicityIdPredicateVerifier implements IPredicateVerifier {
     transactionHash: DataHash,
     unlockScript: Uint8Array,
   ): Promise<VerificationResult<VerificationStatus>> {
-    const predicate = UnicityIdPredicate.fromCBOR(encodedPredicate.toCBOR());
-    const decodedUnlockScript = await UnicityIdPredicateUnlockScript.fromCBOR(unlockScript);
+    const predicate = UnicityIdPredicate.fromPredicate(encodedPredicate);
+    const decodedUnlockScript = await UnicityIdPredicateUnlockScript.decode(unlockScript);
 
     const tokenId = await TokenId.fromUnicityId(predicate.unicityId);
     if (!tokenId.equals(decodedUnlockScript.token.id)) {

@@ -3,7 +3,7 @@ import { UnicityCertificateVerification } from '../../../api/bft/verification/Un
 import { InclusionProof } from '../../../api/InclusionProof.js';
 import { StateId } from '../../../api/StateId.js';
 import { DataHash } from '../../../crypto/hash/DataHash.js';
-import { PredicateVerifier } from '../../../predicate/verification/PredicateVerifier.js';
+import { PredicateVerifierService } from '../../../predicate/verification/PredicateVerifierService.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
 import { ITransaction } from '../../ITransaction.js';
@@ -28,7 +28,7 @@ export enum InclusionProofVerificationStatus {
 export class InclusionProofVerificationRule {
   public static async verify(
     trustBase: RootTrustBase,
-    predicateVerifierFactory: PredicateVerifier,
+    predicateVerifierFactory: PredicateVerifierService,
     inclusionProof: InclusionProof,
     transaction: ITransaction,
   ): Promise<VerificationResult<InclusionProofVerificationStatus>> {

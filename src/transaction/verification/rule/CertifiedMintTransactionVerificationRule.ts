@@ -2,8 +2,8 @@ import { InclusionProofVerificationRule, InclusionProofVerificationStatus } from
 import { RootTrustBase } from '../../../api/bft/RootTrustBase.js';
 import { MintSigningService } from '../../../crypto/MintSigningService.js';
 import { PayToPublicKeyPredicate } from '../../../predicate/builtin/PayToPublicKeyPredicate.js';
-import { PredicateVerifier } from '../../../predicate/verification/PredicateVerifier.js';
-import { areUint8ArraysEqual } from '../../../util/TypedArrayUtils.js';
+import { EncodedPredicate } from '../../../predicate/EncodedPredicate.js';
+import { PredicateVerifierService } from '../../../predicate/verification/PredicateVerifierService.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
 import { CertifiedMintTransaction } from '../../CertifiedMintTransaction.js';
@@ -14,15 +14,15 @@ import { CertifiedMintTransaction } from '../../CertifiedMintTransaction.js';
 export class CertifiedMintTransactionVerificationRule {
   public static async verify(
     trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifier,
+    predicateVerifier: PredicateVerifierService,
     genesis: CertifiedMintTransaction,
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];
 
     const signingService = await MintSigningService.create(genesis.tokenId);
-    let result: VerificationResult<unknown> = areUint8ArraysEqual(
-      PayToPublicKeyPredicate.fromSigningService(signingService).toCBOR(),
-      genesis.inclusionProof.certificationData?.lockScript.toCBOR(),
+    let result: VerificationResult<unknown> = EncodedPredicate.equals(
+      PayToPublicKeyPredicate.fromSigningService(signingService),
+      genesis.inclusionProof.certificationData?.lockScript,
     )
       ? new VerificationResult('IsLockScriptValidVerificationRule', VerificationStatus.OK)
       : new VerificationResult('IsLockScriptValidVerificationRule', VerificationStatus.FAIL);

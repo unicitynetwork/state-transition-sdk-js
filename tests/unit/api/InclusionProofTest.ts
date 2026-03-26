@@ -9,7 +9,8 @@ import { HashAlgorithm } from '../../../src/crypto/hash/HashAlgorithm.js';
 import { NodeDataHasher } from '../../../src/crypto/hash/NodeDataHasher.js';
 import { SigningService } from '../../../src/crypto/secp256k1/SigningService.js';
 import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
-import { PredicateVerifier } from '../../../src/predicate/verification/PredicateVerifier.js';
+import { EncodedPredicate } from '../../../src/predicate/EncodedPredicate.js';
+import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../../src/serialization/HexConverter.js';
 import { SparseMerkleTree } from '../../../src/smt/plain/SparseMerkleTree.js';
@@ -30,8 +31,7 @@ describe('InclusionProof', () => {
     new Uint8Array(HexConverter.decode('0000000000000000000000000000000000000000000000000000000000000001')),
   );
 
-  const predicateVerifierFactory = PredicateVerifier.create();
-
+  let predicateVerifier: PredicateVerifierService;
   let transaction: MintTransaction;
   let certificationData: CertificationData;
   let merkleTreePath: SparseMerkleTreePath;
@@ -57,6 +57,7 @@ describe('InclusionProof', () => {
 
     unicityCertificate = await createUnicityCertificate(root.hash, signingService);
     trustBase = createRootTrustBase(signingService.publicKey);
+    predicateVerifier = PredicateVerifierService.create(trustBase);
   });
 
   it('should encode and decode cbor', () => {
@@ -82,14 +83,14 @@ describe('InclusionProof', () => {
     const inclusionProof = new InclusionProof(merkleTreePath, certificationData, unicityCertificate);
 
     await expect(
-      InclusionProofVerificationRule.verify(trustBase, predicateVerifierFactory, inclusionProof, transaction).then(
+      InclusionProofVerificationRule.verify(trustBase, predicateVerifier, inclusionProof, transaction).then(
         (result) => result.status,
       ),
     ).resolves.toEqual(InclusionProofVerificationStatus.OK);
     await expect(
       InclusionProofVerificationRule.verify(
         trustBase,
-        predicateVerifierFactory,
+        predicateVerifier,
         inclusionProof,
         await MintTransaction.create(
           await Address.fromPredicate(transaction.lockScript),
@@ -104,7 +105,7 @@ describe('InclusionProof', () => {
       merkleTreePath,
       CertificationData.fromCBOR(
         CborSerializer.encodeArray(
-          certificationData.lockScript.toCBOR(),
+          EncodedPredicate.fromPredicate(certificationData.lockScript).toCBOR(),
           CborSerializer.encodeByteString(certificationData.sourceStateHash.data),
           CborSerializer.encodeByteString(
             DataHash.fromImprint(
@@ -119,7 +120,7 @@ describe('InclusionProof', () => {
     await expect(
       InclusionProofVerificationRule.verify(
         trustBase,
-        predicateVerifierFactory,
+        predicateVerifier,
         invalidTransactionHashInclusionProof,
         transaction,
       ).then((result) => result.status),
@@ -131,7 +132,7 @@ describe('InclusionProof', () => {
       merkleTreePath,
       CertificationData.fromCBOR(
         CborSerializer.encodeArray(
-          certificationData.lockScript.toCBOR(),
+          EncodedPredicate.fromPredicate(certificationData.lockScript).toCBOR(),
           CborSerializer.encodeByteString(certificationData.sourceStateHash.data),
           CborSerializer.encodeByteString(certificationData.transactionHash.data),
           CborSerializer.encodeByteString(new Uint8Array(65)),
@@ -141,7 +142,7 @@ describe('InclusionProof', () => {
     );
 
     await expect(
-      InclusionProofVerificationRule.verify(trustBase, predicateVerifierFactory, inclusionProof, transaction).then(
+      InclusionProofVerificationRule.verify(trustBase, predicateVerifier, inclusionProof, transaction).then(
         (result) => result.status,
       ),
     ).resolves.toEqual(InclusionProofVerificationStatus.NOT_AUTHENTICATED);
@@ -149,7 +150,6 @@ describe('InclusionProof', () => {
 
   it('verification fails with invalid trustbase', async () => {
     const inclusionProof = new InclusionProof(merkleTreePath, certificationData, unicityCertificate);
-    const predicateVerifier = PredicateVerifier.create();
 
     await expect(
       InclusionProofVerificationRule.verify(

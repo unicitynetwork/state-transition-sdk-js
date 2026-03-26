@@ -1,6 +1,6 @@
 import { InclusionProofVerificationRule, InclusionProofVerificationStatus } from './InclusionProofVerificationRule.js';
 import { RootTrustBase } from '../../../api/bft/RootTrustBase.js';
-import { PredicateVerifier } from '../../../predicate/verification/PredicateVerifier.js';
+import { PredicateVerifierService } from '../../../predicate/verification/PredicateVerifierService.js';
 import { CertifiedUnicityIdMintTransaction } from '../../../unicity-id/CertifiedUnicityIdMintTransaction.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
@@ -11,7 +11,7 @@ import { VerificationStatus } from '../../../verification/VerificationStatus.js'
 export class CertifiedUnicityIdMintTransactionVerificationRule {
   public static async verify(
     trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifier,
+    predicateVerifier: PredicateVerifierService,
     genesis: CertifiedUnicityIdMintTransaction,
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];

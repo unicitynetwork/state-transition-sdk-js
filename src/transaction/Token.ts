@@ -4,7 +4,7 @@ import { ITransaction } from './ITransaction.js';
 import { TokenId } from './TokenId.js';
 import { TokenType } from './TokenType.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
-import { PredicateVerifier } from '../predicate/verification/PredicateVerifier.js';
+import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { dedent } from '../util/StringUtils.js';
 import { VerificationError } from '../verification/VerificationError.js';
@@ -48,7 +48,7 @@ export class Token {
 
   public static async mint(
     trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifier,
+    predicateVerifier: PredicateVerifierService,
     genesis: CertifiedMintTransaction,
   ): Promise<Token> {
     const token = new Token(genesis);
@@ -78,7 +78,7 @@ export class Token {
 
   public async transfer(
     trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifier,
+    predicateVerifier: PredicateVerifierService,
     transaction: CertifiedTransferTransaction,
   ): Promise<Token> {
     const result = await CertifiedTransferTransactionVerificationRule.verify(
@@ -99,7 +99,7 @@ export class Token {
 
   public async verify(
     trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifier,
+    predicateVerifier: PredicateVerifierService,
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];
     const result = await CertifiedMintTransactionVerificationRule.verify(trustBase, predicateVerifier, this.genesis);
@@ -111,11 +111,10 @@ export class Token {
     const transferResults: VerificationResult<VerificationStatus>[] = [];
     for (let i = 0; i < this._transactions.length; i++) {
       const transaction = this._transactions[i];
-      const token = new Token(this.genesis, this._transactions.slice(0, i));
       const result = await CertifiedTransferTransactionVerificationRule.verify(
         trustBase,
         predicateVerifier,
-        token.latestTransaction,
+        i === 0 ? this.genesis : this._transactions[i - 1],
         transaction,
       );
       transferResults.push(result);

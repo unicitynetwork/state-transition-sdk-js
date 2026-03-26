@@ -3,15 +3,22 @@ import { ITransaction } from './ITransaction.js';
 import { MintTransaction } from './MintTransaction.js';
 import { TokenId } from './TokenId.js';
 import { TokenType } from './TokenType.js';
+import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { InclusionProof } from '../api/InclusionProof.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { IPredicate } from '../predicate/IPredicate.js';
+import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { dedent } from '../util/StringUtils.js';
+import { VerificationError } from '../verification/VerificationError.js';
+import {
+  InclusionProofVerificationRule,
+  InclusionProofVerificationStatus,
+} from './verification/rule/InclusionProofVerificationRule.js';
 
 export class CertifiedMintTransaction implements ITransaction {
-  public constructor(
+  private constructor(
     private readonly transaction: MintTransaction,
     public readonly inclusionProof: InclusionProof,
   ) {}
@@ -47,6 +54,25 @@ export class CertifiedMintTransaction implements ITransaction {
   public static async fromCBOR(bytes: Uint8Array): Promise<CertifiedMintTransaction> {
     const data = CborDeserializer.decodeArray(bytes);
     return new CertifiedMintTransaction(await MintTransaction.fromCBOR(data[0]), InclusionProof.fromCBOR(data[1]));
+  }
+
+  public static async fromTransaction(
+    trustBase: RootTrustBase,
+    predicateVerifier: PredicateVerifierService,
+    transaction: MintTransaction,
+    inclusionProof: InclusionProof,
+  ): Promise<CertifiedMintTransaction> {
+    const result = await InclusionProofVerificationRule.verify(
+      trustBase,
+      predicateVerifier,
+      inclusionProof,
+      transaction,
+    );
+    if (result.status !== InclusionProofVerificationStatus.OK) {
+      throw new VerificationError('Inclusion proof verification failed', result);
+    }
+
+    return new CertifiedMintTransaction(transaction, inclusionProof);
   }
 
   public calculateStateHash(): Promise<DataHash> {

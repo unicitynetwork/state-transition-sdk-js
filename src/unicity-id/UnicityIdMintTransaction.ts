@@ -9,7 +9,7 @@ import { SigningService } from '../crypto/secp256k1/SigningService.js';
 import { PayToPublicKeyPredicate } from '../predicate/builtin/PayToPublicKeyPredicate.js';
 import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
 import { IPredicate } from '../predicate/IPredicate.js';
-import { PredicateVerifier } from '../predicate/verification/PredicateVerifier.js';
+import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { Address } from '../transaction/Address.js';
@@ -35,7 +35,7 @@ export class UnicityIdMintTransaction implements ITransaction {
   ) {}
 
   public get data(): Uint8Array {
-    return this.targetPredicate.toCBOR();
+    return EncodedPredicate.fromPredicate(this.targetPredicate).toCBOR();
   }
 
   public get x(): Uint8Array {
@@ -75,7 +75,7 @@ export class UnicityIdMintTransaction implements ITransaction {
       Address.fromCBOR(data[1]),
       tokenId,
       TokenType.fromCBOR(aux[0]),
-      PayToPublicKeyPredicate.fromCBOR(aux[1]),
+      PayToPublicKeyPredicate.fromPredicate(EncodedPredicate.fromCBOR(aux[1])),
       unicityId,
     );
   }
@@ -97,7 +97,10 @@ export class UnicityIdMintTransaction implements ITransaction {
         CborSerializer.encodeArray(
           this.recipient.toCBOR(),
           this.tokenId.toCBOR(),
-          CborSerializer.encodeArray(this.tokenType.toCBOR(), this.targetPredicate.toCBOR()),
+          CborSerializer.encodeArray(
+            this.tokenType.toCBOR(),
+            EncodedPredicate.fromPredicate(this.targetPredicate).toCBOR(),
+          ),
         ),
       )
       .digest();
@@ -105,16 +108,19 @@ export class UnicityIdMintTransaction implements ITransaction {
 
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
-      this.lockScript.toCBOR(),
+      EncodedPredicate.fromPredicate(this.lockScript).toCBOR(),
       this.recipient.toCBOR(),
       this.unicityId.toCBOR(),
-      CborSerializer.encodeArray(this.tokenType.toCBOR(), this.targetPredicate.toCBOR()),
+      CborSerializer.encodeArray(
+        this.tokenType.toCBOR(),
+        EncodedPredicate.fromPredicate(this.targetPredicate).toCBOR(),
+      ),
     );
   }
 
   public async toCertifiedTransaction(
     trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifier,
+    predicateVerifier: PredicateVerifierService,
     inclusionProof: InclusionProof,
   ): Promise<CertifiedUnicityIdMintTransaction> {
     const result = await InclusionProofVerificationRule.verify(trustBase, predicateVerifier, inclusionProof, this);
