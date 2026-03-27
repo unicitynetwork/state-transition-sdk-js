@@ -1,18 +1,14 @@
-import { mintToken, transferToken, transferTokenWithTransaction } from './TokenUtils.js';
+import { mintToken, transferToken } from './TokenUtils.js';
 import { RootTrustBase } from '../../src/api/bft/RootTrustBase.js';
 import { CertificationData } from '../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../src/api/CertificationResponse.js';
 import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
 import { PayToPublicKeyPredicate } from '../../src/predicate/builtin/PayToPublicKeyPredicate.js';
 import { PayToPublicKeyPredicateUnlockScript } from '../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
-import { UnicityIdPredicate } from '../../src/predicate/builtin/UnicityIdPredicate.js';
-import { UnicityIdPredicateUnlockScript } from '../../src/predicate/builtin/UnicityIdPredicateUnlockScript.js';
 import { PredicateVerifierService } from '../../src/predicate/verification/PredicateVerifierService.js';
-import { CborSerializer } from '../../src/serialization/cbor/CborSerializer.js';
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
 import { Address } from '../../src/transaction/Address.js';
 import { TokenType } from '../../src/transaction/TokenType.js';
-import { TransferTransaction } from '../../src/transaction/TransferTransaction.js';
 import { UnicityId } from '../../src/unicity-id/UnicityId.js';
 import { UnicityIdMintTransaction } from '../../src/unicity-id/UnicityIdMintTransaction.js';
 import { UnicityIdToken } from '../../src/unicity-id/UnicityIdToken.js';
@@ -48,7 +44,7 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
       const unicityIdResponse = await client.submitCertificationRequest(unicityIdCertificationData);
       expect(unicityIdResponse.status).toEqual(CertificationStatus.SUCCESS);
 
-      const unicityIdToken = await UnicityIdToken.mint(
+      const aliceUnicityIdToken = await UnicityIdToken.mint(
         trustBase,
         predicateVerifier,
         await unicityIdMintTransaction.toCertifiedTransaction(
@@ -58,30 +54,23 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
         ),
       );
       await expect(
-        unicityIdToken.verify(trustBase, predicateVerifier).then((result) => result.status),
+        aliceUnicityIdToken.verify(trustBase, predicateVerifier).then((result) => result.status),
       ).resolves.toEqual(VerificationStatus.OK);
 
       const aliceToken = await mintToken(
         client,
         trustBase,
         predicateVerifier,
-        await Address.fromPredicate(UnicityIdPredicate.create(unicityId)),
-      );
-      const aliceToBobTransaction = await TransferTransaction.create(
-        aliceToken,
-        UnicityIdPredicate.create(unicityId),
-        await Address.fromPredicate(PayToPublicKeyPredicate.create(BOB_SIGNING_SERVICE.publicKey)),
-        crypto.getRandomValues(new Uint8Array(32)),
-        CborSerializer.encodeArray(),
+        await Address.fromPredicate(aliceUnicityIdToken.genesis.targetPredicate),
       );
 
-      const bobToken = await transferTokenWithTransaction(
+      const bobToken = await transferToken(
         client,
         trustBase,
         predicateVerifier,
-        aliceToken,
-        aliceToBobTransaction,
-        await UnicityIdPredicateUnlockScript.create(unicityIdToken, aliceToBobTransaction, ALICE_SIGNING_SERVICE),
+        aliceToken.toCBOR(),
+        await Address.fromPredicate(PayToPublicKeyPredicate.create(BOB_SIGNING_SERVICE.publicKey)),
+        ALICE_SIGNING_SERVICE,
       );
 
       const carolToken = await transferToken(

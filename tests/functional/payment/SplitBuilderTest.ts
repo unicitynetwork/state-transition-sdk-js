@@ -11,8 +11,8 @@ import { TokenAssetMissingError } from '../../../src/payment/error/TokenAssetMis
 import { TokenAssetValueMismatchError } from '../../../src/payment/error/TokenAssetValueMismatchError.js';
 import { SplitReason } from '../../../src/payment/SplitReason.js';
 import { TokenSplit } from '../../../src/payment/TokenSplit.js';
-import { BurnPredicateUnlockScript } from '../../../src/predicate/builtin/BurnPredicateUnlockScript.js';
 import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
+import { PayToPublicKeyPredicateUnlockScript } from '../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
 import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
 import { Address } from '../../../src/transaction/Address.js';
@@ -93,7 +93,7 @@ describe('SplitBuilder Functional Test', () => {
 
     certificationData = await CertificationData.fromTransaction(
       result.burn.transaction,
-      BurnPredicateUnlockScript.create(result.burn.transaction),
+      await PayToPublicKeyPredicateUnlockScript.create(result.burn.transaction, signingService),
     );
 
     response = await client.submitCertificationRequest(certificationData);
