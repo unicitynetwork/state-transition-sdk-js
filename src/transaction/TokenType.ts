@@ -19,6 +19,10 @@ export class TokenType {
     return new TokenType(CborDeserializer.decodeByteString(bytes));
   }
 
+  public static generate(): TokenType {
+    return new TokenType(crypto.getRandomValues(new Uint8Array(32)));
+  }
+
   /** CBOR serialization. */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeByteString(this._bytes);

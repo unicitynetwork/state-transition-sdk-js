@@ -11,8 +11,8 @@ import { TokenAssetMissingError } from '../../../src/payment/error/TokenAssetMis
 import { TokenAssetValueMismatchError } from '../../../src/payment/error/TokenAssetValueMismatchError.js';
 import { SplitReason } from '../../../src/payment/SplitReason.js';
 import { TokenSplit } from '../../../src/payment/TokenSplit.js';
+import { BurnPredicateUnlockScript } from '../../../src/predicate/builtin/BurnPredicateUnlockScript.js';
 import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
-import { PayToPublicKeyPredicateUnlockScript } from '../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
 import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
 import { Address } from '../../../src/transaction/Address.js';
@@ -42,8 +42,8 @@ describe('SplitBuilder Functional Test', () => {
     const paymentData = new TestPaymentData(PaymentAssetCollection.create(...assets));
     const mintTransaction = await MintTransaction.create(
       await Address.fromPredicate(predicate),
-      new TokenId(crypto.getRandomValues(new Uint8Array(32))),
-      new TokenType(crypto.getRandomValues(new Uint8Array(32))),
+      TokenId.generate(),
+      TokenType.generate(),
       await paymentData.encode(),
     );
     let certificationData = await CertificationData.fromMintTransaction(mintTransaction);
@@ -57,20 +57,20 @@ describe('SplitBuilder Functional Test', () => {
       await mintTransaction.toCertifiedTransaction(
         trustBase,
         predicateVerifier,
-        await waitInclusionProof(trustBase, predicateVerifier, client, mintTransaction),
+        await waitInclusionProof(client, trustBase, predicateVerifier, mintTransaction),
       ),
     );
 
     await expect(
       TokenSplit.split(token, predicate, TestPaymentData.decode, [
-        [new TokenId(crypto.getRandomValues(new Uint8Array(32))), PaymentAssetCollection.create(assets[0])],
+        [TokenId.generate(), PaymentAssetCollection.create(assets[0])],
       ]),
     ).rejects.toThrow(TokenAssetCountMismatchError);
 
     await expect(
       TokenSplit.split(token, predicate, TestPaymentData.decode, [
         [
-          new TokenId(crypto.getRandomValues(new Uint8Array(32))),
+          TokenId.generate(),
           PaymentAssetCollection.create(
             assets[0],
             new Asset(new AssetId(crypto.getRandomValues(new Uint8Array(10))), 400n),
@@ -81,22 +81,19 @@ describe('SplitBuilder Functional Test', () => {
 
     await expect(
       TokenSplit.split(token, predicate, TestPaymentData.decode, [
-        [
-          new TokenId(crypto.getRandomValues(new Uint8Array(32))),
-          PaymentAssetCollection.create(assets[0], new Asset(assets[1].id, 1500n)),
-        ],
+        [TokenId.generate(), PaymentAssetCollection.create(assets[0], new Asset(assets[1].id, 1500n))],
       ]),
     ).rejects.toThrow(TokenAssetValueMismatchError);
 
     const splitTokens: [TokenId, PaymentAssetCollection][] = [
-      [new TokenId(crypto.getRandomValues(new Uint8Array(32))), PaymentAssetCollection.create(assets[0])],
-      [new TokenId(crypto.getRandomValues(new Uint8Array(32))), PaymentAssetCollection.create(assets[1])],
+      [TokenId.generate(), PaymentAssetCollection.create(assets[0])],
+      [TokenId.generate(), PaymentAssetCollection.create(assets[1])],
     ];
     const result = await TokenSplit.split(token, predicate, TestPaymentData.decode, splitTokens);
 
     certificationData = await CertificationData.fromTransaction(
       result.burn.transaction,
-      await PayToPublicKeyPredicateUnlockScript.create(result.burn.transaction, signingService),
+      BurnPredicateUnlockScript.create(result.burn.transaction),
     );
 
     response = await client.submitCertificationRequest(certificationData);
@@ -108,7 +105,7 @@ describe('SplitBuilder Functional Test', () => {
       await result.burn.transaction.toCertifiedTransaction(
         trustBase,
         predicateVerifier,
-        await waitInclusionProof(trustBase, predicateVerifier, client, result.burn.transaction),
+        await waitInclusionProof(client, trustBase, predicateVerifier, result.burn.transaction),
       ),
     );
 
@@ -123,7 +120,7 @@ describe('SplitBuilder Functional Test', () => {
       const mintTransaction = await MintTransaction.create(
         await Address.fromPredicate(predicate),
         tokenId,
-        new TokenType(crypto.getRandomValues(new Uint8Array(32))),
+        TokenType.generate(),
         await paymentData.encode(),
       );
 
@@ -138,7 +135,7 @@ describe('SplitBuilder Functional Test', () => {
         await mintTransaction.toCertifiedTransaction(
           trustBase,
           predicateVerifier,
-          await waitInclusionProof(trustBase, predicateVerifier, client, mintTransaction),
+          await waitInclusionProof(client, trustBase, predicateVerifier, mintTransaction),
         ),
       );
 

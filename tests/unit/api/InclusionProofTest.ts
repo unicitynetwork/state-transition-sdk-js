@@ -41,8 +41,8 @@ describe('InclusionProof', () => {
   beforeAll(async () => {
     transaction = await MintTransaction.create(
       await Address.fromPredicate(PayToPublicKeyPredicate.fromSigningService(signingService)),
-      new TokenId(crypto.getRandomValues(new Uint8Array(32))),
-      new TokenType(crypto.getRandomValues(new Uint8Array(32))),
+      TokenId.generate(),
+      TokenType.generate(),
       new Uint8Array(),
     );
     const smt = new SparseMerkleTree(new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher));
@@ -94,7 +94,7 @@ describe('InclusionProof', () => {
         inclusionProof,
         await MintTransaction.create(
           await Address.fromPredicate(transaction.lockScript),
-          new TokenId(crypto.getRandomValues(new Uint8Array(32))),
+          TokenId.generate(),
           transaction.tokenType,
           transaction.data,
         ),

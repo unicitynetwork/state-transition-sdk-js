@@ -29,8 +29,8 @@ async function receiveToken(client: StateTransitionClient, trustBase: RootTrustB
 
   const mintTransaction = await MintTransaction.create(
     await Address.fromPredicate(ownerPredicate),
-    new TokenId(crypto.getRandomValues(new Uint8Array(32))),
-    new TokenType(crypto.getRandomValues(new Uint8Array(32))),
+    TokenId.generate(),
+    TokenType.generate(),
     CborSerializer.encodeTextString('My custom data'),
   );
   const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
@@ -43,7 +43,7 @@ async function receiveToken(client: StateTransitionClient, trustBase: RootTrustB
     await mintTransaction.toCertifiedTransaction(
       trustBase,
       predicateVerifier,
-      await waitInclusionProof(trustBase, predicateVerifier, client, mintTransaction),
+      await waitInclusionProof(client, trustBase, predicateVerifier, mintTransaction),
     ),
   );
 
@@ -94,7 +94,7 @@ it('Token transfer', async () => {
     await transferTransaction.toCertifiedTransaction(
       trustBase,
       predicateVerifier,
-      await waitInclusionProof(trustBase, predicateVerifier, client, transferTransaction),
+      await waitInclusionProof(client, trustBase, predicateVerifier, transferTransaction),
     ),
   );
 

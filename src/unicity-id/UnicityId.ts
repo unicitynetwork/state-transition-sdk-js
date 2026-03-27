@@ -1,5 +1,8 @@
+import { DataHasher } from '../crypto/hash/DataHasher.js';
+import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
+import { TokenId } from '../transaction/TokenId.js';
 
 export class UnicityId {
   public constructor(
@@ -24,5 +27,19 @@ export class UnicityId {
 
   public toString(): string {
     return `@${this.domain ?? ''}/${this.name}`;
+  }
+
+  public async toTokenId(): Promise<TokenId> {
+    const hash = await new DataHasher(HashAlgorithm.SHA256)
+      .update(
+        CborSerializer.encodeArray(
+          CborSerializer.encodeTextString('NAMETAG_'),
+          CborSerializer.encodeNullable(this.domain, CborSerializer.encodeTextString),
+          CborSerializer.encodeTextString(this.name),
+        ),
+      )
+      .digest();
+
+    return new TokenId(hash.data);
   }
 }

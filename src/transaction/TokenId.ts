@@ -1,9 +1,6 @@
-import { DataHasher } from '../crypto/hash/DataHasher.js';
-import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../serialization/HexConverter.js';
-import { UnicityId } from '../unicity-id/UnicityId.js';
 import { BitString } from '../util/BitString.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 
@@ -26,18 +23,8 @@ export class TokenId {
     return new TokenId(CborDeserializer.decodeByteString(bytes));
   }
 
-  public static async fromUnicityId(unicityId: UnicityId): Promise<TokenId> {
-    const hash = await new DataHasher(HashAlgorithm.SHA256)
-      .update(
-        CborSerializer.encodeArray(
-          CborSerializer.encodeTextString('NAMETAG_'),
-          CborSerializer.encodeNullable(unicityId.domain, CborSerializer.encodeTextString),
-          CborSerializer.encodeTextString(unicityId.name),
-        ),
-      )
-      .digest();
-
-    return new TokenId(hash.data);
+  public static generate(): TokenId {
+    return new TokenId(crypto.getRandomValues(new Uint8Array(32)));
   }
 
   public equals(o: unknown): boolean {

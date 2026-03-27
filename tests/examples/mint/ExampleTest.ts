@@ -22,7 +22,7 @@ it('Token minting', async () => {
 
   const client = new StateTransitionClient(aggregatorClient);
 
-  const predicateVerifier = PredicateVerifierService.create();
+  const predicateVerifier = PredicateVerifierService.create(trustBase);
 
   const ownerPrivateKey = HexConverter.decode(config.ownerPrivateKey);
   const ownerSigningService = new SigningService(ownerPrivateKey);
@@ -30,8 +30,8 @@ it('Token minting', async () => {
 
   const mintTransaction = await MintTransaction.create(
     await Address.fromPredicate(ownerPredicate),
-    new TokenId(crypto.getRandomValues(new Uint8Array(32))),
-    new TokenType(crypto.getRandomValues(new Uint8Array(32))),
+    TokenId.generate(),
+    TokenType.generate(),
     CborSerializer.encodeTextString('My custom data'),
   );
   const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
@@ -44,7 +44,7 @@ it('Token minting', async () => {
     await mintTransaction.toCertifiedTransaction(
       trustBase,
       predicateVerifier,
-      await waitInclusionProof(trustBase, predicateVerifier, client, mintTransaction),
+      await waitInclusionProof(client, trustBase, predicateVerifier, mintTransaction),
     ),
   );
 

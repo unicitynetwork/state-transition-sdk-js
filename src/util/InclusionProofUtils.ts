@@ -32,9 +32,9 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
 }
 
 export async function waitInclusionProof(
+  client: StateTransitionClient,
   trustBase: RootTrustBase,
   predicateVerifier: PredicateVerifierService,
-  client: StateTransitionClient,
   transaction: ITransaction,
   signal: AbortSignal = AbortSignal.timeout(10000),
   interval: number = 1000,

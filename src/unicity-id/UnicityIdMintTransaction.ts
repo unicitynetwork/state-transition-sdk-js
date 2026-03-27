@@ -49,7 +49,7 @@ export class UnicityIdMintTransaction implements ITransaction {
     tokenType: TokenType,
     targetPredicate: PayToPublicKeyPredicate,
   ): Promise<UnicityIdMintTransaction> {
-    const tokenId = await TokenId.fromUnicityId(unicityId);
+    const tokenId = await unicityId.toTokenId();
 
     return new UnicityIdMintTransaction(
       await MintTransactionState.create(tokenId),
@@ -67,7 +67,7 @@ export class UnicityIdMintTransaction implements ITransaction {
     const aux = CborDeserializer.decodeArray(data[3]);
 
     const unicityId = UnicityId.fromCBOR(data[2]);
-    const tokenId = await TokenId.fromUnicityId(unicityId);
+    const tokenId = await unicityId.toTokenId();
 
     return new UnicityIdMintTransaction(
       await MintTransactionState.create(tokenId),
