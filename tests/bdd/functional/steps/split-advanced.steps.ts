@@ -148,7 +148,7 @@ When(
     this.splitTokens[tokenIndex] = transferredToken;
 
     // Update token tracking
-    let toTokens = this.userSplitTokens.get(toUser) ?? [];
+    const toTokens = this.userSplitTokens.get(toUser) ?? [];
     toTokens.push(transferredToken);
     this.userSplitTokens.set(toUser, toTokens);
   },
@@ -185,7 +185,7 @@ When(
     this.transferredToken = transferredToken;
 
     // Update token tracking
-    let toTokens = this.userSplitTokens.get(toUser) ?? [];
+    const toTokens = this.userSplitTokens.get(toUser) ?? [];
     toTokens.push(transferredToken);
     this.userSplitTokens.set(toUser, toTokens);
   },
@@ -235,7 +235,9 @@ When(
     ];
 
     // Use the parseSplitPaymentData to properly parse the nested split data
-    const parseSplitPaymentData = async (bytes: Uint8Array): Promise<{ assets: PaymentAssetCollection; toCBOR: () => Promise<Uint8Array> }> => {
+    const parseSplitPaymentData = async (
+      bytes: Uint8Array,
+    ): Promise<{ assets: PaymentAssetCollection; toCBOR: () => Promise<Uint8Array> }> => {
       const data = CborDeserializer.decodeArray(bytes);
       const assets = PaymentAssetCollection.fromCBOR(data[0]);
       return {
@@ -259,28 +261,34 @@ When(
   },
 );
 
-Then('{string} should own split token {int}', async function (this: TokenWorld, userName: string, splitIndex: number): Promise<void> {
-  const user = this.users.get(userName);
-  if (!user) {
-    throw new Error(`User ${userName} not found in registry`);
-  }
+Then(
+  '{string} should own split token {int}',
+  async function (this: TokenWorld, userName: string, splitIndex: number): Promise<void> {
+    const user = this.users.get(userName);
+    if (!user) {
+      throw new Error(`User ${userName} not found in registry`);
+    }
 
-  const tokenIndex = splitIndex - 1;
-  const token = this.splitTokens[tokenIndex];
-  const result = await token.verify(this.setup.trustBase, this.setup.predicateVerifier);
-  assert.strictEqual(result.status, VerificationStatus.OK);
-});
+    const tokenIndex = splitIndex - 1;
+    const token = this.splitTokens[tokenIndex];
+    const result = await token.verify(this.setup.trustBase, this.setup.predicateVerifier);
+    assert.strictEqual(result.status, VerificationStatus.OK);
+  },
+);
 
-Then('{string} should own the transferred split token', async function (this: TokenWorld, userName: string): Promise<void> {
-  const user = this.users.get(userName);
-  if (!user) {
-    throw new Error(`User ${userName} not found in registry`);
-  }
+Then(
+  '{string} should own the transferred split token',
+  async function (this: TokenWorld, userName: string): Promise<void> {
+    const user = this.users.get(userName);
+    if (!user) {
+      throw new Error(`User ${userName} not found in registry`);
+    }
 
-  const token = this.transferredToken ?? this.currentToken;
-  const result = await token.verify(this.setup.trustBase, this.setup.predicateVerifier);
-  assert.strictEqual(result.status, VerificationStatus.OK);
-});
+    const token = this.transferredToken ?? this.currentToken;
+    const result = await token.verify(this.setup.trustBase, this.setup.predicateVerifier);
+    assert.strictEqual(result.status, VerificationStatus.OK);
+  },
+);
 
 Then('both split tokens should pass verification', async function (this: TokenWorld): Promise<void> {
   for (const token of this.splitTokens) {
@@ -322,74 +330,80 @@ Then('the imported split token should pass verification', async function (this: 
   assert.strictEqual(result.status, VerificationStatus.OK);
 });
 
-When('{string} tries to split {string}\'s token', async function (this: TokenWorld, attackerName: string, ownerName: string): Promise<void> {
-  const attacker = this.users.get(attackerName);
-  const owner = this.users.get(ownerName);
-  if (!attacker) {
-    throw new Error(`User ${attackerName} not found in registry`);
-  }
-  if (!owner) {
-    throw new Error(`User ${ownerName} not found in registry`);
-  }
+When(
+  "{string} tries to split {string}'s token",
+  async function (this: TokenWorld, attackerName: string, ownerName: string): Promise<void> {
+    const attacker = this.users.get(attackerName);
+    const owner = this.users.get(ownerName);
+    if (!attacker) {
+      throw new Error(`User ${attackerName} not found in registry`);
+    }
+    if (!owner) {
+      throw new Error(`User ${ownerName} not found in registry`);
+    }
 
-  // The token should be the currentToken which was transferred to the owner
-  const tokenToSplit = this.currentToken;
-  if (!tokenToSplit) {
-    throw new Error(`No current token available - expected ${ownerName}'s token`);
-  }
+    // The token should be the currentToken which was transferred to the owner
+    const tokenToSplit = this.currentToken;
+    if (!tokenToSplit) {
+      throw new Error(`No current token available - expected ${ownerName}'s token`);
+    }
 
-  const splitTokenId = new TokenId(crypto.getRandomValues(new Uint8Array(32)));
+    const splitTokenId = new TokenId(crypto.getRandomValues(new Uint8Array(32)));
 
-  // Use the actual asset values from the original token (100 and 200)
-  // to ensure we get past asset validation and reach predicate check
-  const splitAssets: [TokenId, PaymentAssetCollection][] = [
-    [
-      splitTokenId,
-      PaymentAssetCollection.create(
-        new Asset(this.assetId1, 100n),
-        new Asset(this.assetId2, 200n),
-      ),
-    ],
-  ];
+    // Use the actual asset values from the original token (100 and 200)
+    // to ensure we get past asset validation and reach predicate check
+    const splitAssets: [TokenId, PaymentAssetCollection][] = [
+      [splitTokenId, PaymentAssetCollection.create(new Asset(this.assetId1, 100n), new Asset(this.assetId2, 200n))],
+    ];
 
-  try {
-    await TokenSplit.split(tokenToSplit, attacker.predicate, parseSimplePaymentData, splitAssets);
-    this.splitError = null;
-  } catch (e) {
-    this.splitError = e as Error;
-  }
-});
+    try {
+      await TokenSplit.split(tokenToSplit, attacker.predicate, parseSimplePaymentData, splitAssets);
+      this.splitError = null;
+    } catch (e) {
+      this.splitError = e as Error;
+    }
+  },
+);
 
 Then('the split should fail with predicate mismatch', function (this: TokenWorld): void {
   assert.notStrictEqual(this.splitError, null, 'Expected split to fail');
-  assert.ok(this.splitError!.message.includes('Predicate does not match'), `Expected predicate mismatch error but got: ${this.splitError!.message}`);
+  assert.ok(
+    this.splitError!.message.includes('Predicate does not match'),
+    `Expected predicate mismatch error but got: ${this.splitError!.message}`,
+  );
 });
 
-When('{string} tries to transfer the original token to {string}', async function (this: TokenWorld, fromUser: string, toUser: string): Promise<void> {
-  const from = this.users.get(fromUser);
-  const to = this.users.get(toUser);
-  if (!from) {
-    throw new Error(`User ${fromUser} not found in registry`);
-  }
-  if (!to) {
-    throw new Error(`User ${toUser} not found in registry`);
-  }
+When(
+  '{string} tries to transfer the original token to {string}',
+  async function (this: TokenWorld, fromUser: string, toUser: string): Promise<void> {
+    const from = this.users.get(fromUser);
+    const to = this.users.get(toUser);
+    if (!from) {
+      throw new Error(`User ${fromUser} not found in registry`);
+    }
+    if (!to) {
+      throw new Error(`User ${toUser} not found in registry`);
+    }
 
-  try {
-    await TransferTransaction.create(
-      this.burnedToken,
-      from.predicate,
-      await PayToScriptHash.create(to.predicate),
-      crypto.getRandomValues(new Uint8Array(32)),
-      CborSerializer.encodeArray(),
-    );
-    this.transferError = null;
-  } catch (e) {
-    this.transferError = e as Error;
-  }
-});
+    try {
+      await TransferTransaction.create(
+        this.burnedToken,
+        from.predicate,
+        await PayToScriptHash.create(to.predicate),
+        crypto.getRandomValues(new Uint8Array(32)),
+        CborSerializer.encodeArray(),
+      );
+      this.transferError = null;
+    } catch (e) {
+      this.transferError = e as Error;
+    }
+  },
+);
 
 Then('the transfer should fail because the token was burned', function (this: TokenWorld): void {
   assert.notStrictEqual(this.transferError, null, 'Expected transfer to fail');
-  assert.ok(this.transferError!.message.includes('Predicate does not match'), `Expected predicate mismatch error but got: ${this.transferError!.message}`);
+  assert.ok(
+    this.transferError!.message.includes('Predicate does not match'),
+    `Expected predicate mismatch error but got: ${this.transferError!.message}`,
+  );
 });
