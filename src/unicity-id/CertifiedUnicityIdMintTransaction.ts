@@ -1,14 +1,20 @@
 import { UnicityId } from './UnicityId.js';
 import { UnicityIdMintTransaction } from './UnicityIdMintTransaction.js';
+import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { InclusionProof } from '../api/InclusionProof.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { IPredicate } from '../predicate/IPredicate.js';
+import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { Address } from '../transaction/Address.js';
 import { ITransaction } from '../transaction/ITransaction.js';
 import { TokenId } from '../transaction/TokenId.js';
 import { TokenType } from '../transaction/TokenType.js';
+import {
+  InclusionProofVerificationRule,
+  InclusionProofVerificationStatus,
+} from '../transaction/verification/rule/InclusionProofVerificationRule.js';
 import { dedent } from '../util/StringUtils.js';
 
 export class CertifiedUnicityIdMintTransaction implements ITransaction {
@@ -61,6 +67,25 @@ export class CertifiedUnicityIdMintTransaction implements ITransaction {
     );
   }
 
+  public static async fromTransaction(
+    trustBase: RootTrustBase,
+    predicateVerifier: PredicateVerifierService,
+    transaction: UnicityIdMintTransaction,
+    inclusionProof: InclusionProof,
+  ): Promise<CertifiedUnicityIdMintTransaction> {
+    const result = await InclusionProofVerificationRule.verify(
+      trustBase,
+      predicateVerifier,
+      inclusionProof,
+      transaction,
+    );
+    if (result.status !== InclusionProofVerificationStatus.OK) {
+      throw new Error(`Inclusion proof verification failed: ${result.status.toString()}`);
+    }
+
+    return new CertifiedUnicityIdMintTransaction(transaction, inclusionProof);
+  }
+
   public calculateStateHash(): Promise<DataHash> {
     return this.transaction.calculateStateHash();
   }
@@ -75,7 +100,7 @@ export class CertifiedUnicityIdMintTransaction implements ITransaction {
 
   public toString(): string {
     return dedent`
-      CertifiedMintTransaction
+      CertifiedUnicityIdMintTransaction
         ${this.transaction.toString()}
         ${this.inclusionProof.toString()}`;
   }

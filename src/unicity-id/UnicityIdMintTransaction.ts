@@ -17,10 +17,6 @@ import { ITransaction } from '../transaction/ITransaction.js';
 import { MintTransactionState } from '../transaction/MintTransactionState.js';
 import { TokenId } from '../transaction/TokenId.js';
 import { TokenType } from '../transaction/TokenType.js';
-import {
-  InclusionProofVerificationRule,
-  InclusionProofVerificationStatus,
-} from '../transaction/verification/rule/InclusionProofVerificationRule.js';
 import { dedent } from '../util/StringUtils.js';
 
 export class UnicityIdMintTransaction implements ITransaction {
@@ -118,17 +114,12 @@ export class UnicityIdMintTransaction implements ITransaction {
     );
   }
 
-  public async toCertifiedTransaction(
+  public toCertifiedTransaction(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,
     inclusionProof: InclusionProof,
   ): Promise<CertifiedUnicityIdMintTransaction> {
-    const result = await InclusionProofVerificationRule.verify(trustBase, predicateVerifier, inclusionProof, this);
-    if (result.status !== InclusionProofVerificationStatus.OK) {
-      throw new Error(`Inclusion proof verification failed: ${result.status.toString()}`);
-    }
-
-    return new CertifiedUnicityIdMintTransaction(this, inclusionProof);
+    return CertifiedUnicityIdMintTransaction.fromTransaction(trustBase, predicateVerifier, this, inclusionProof);
   }
 
   public toString(): string {

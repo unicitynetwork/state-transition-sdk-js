@@ -88,7 +88,7 @@ export class CertificationData {
   /**
    * Convert the certification data to CBOR bytes.
    *
-   * @returns {Promise<Uint8Array>} CBOR bytes
+   * @returns {Uint8Array} CBOR bytes
    */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(

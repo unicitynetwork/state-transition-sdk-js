@@ -64,7 +64,7 @@ export class UnicityIdToken {
 
   public toString(): string {
     return dedent`
-      Token
+      UnicityIdToken
         ${this.genesis.toString()}
         Transactions: [
           ${this._transactions.map((transaction) => transaction.toString()).join('\n')}

@@ -8,7 +8,7 @@ import { PredicateEngine } from '../PredicateEngine.js';
 import { IPredicateVerifier } from '../verification/IPredicateVerifier.js';
 import { PayToPublicKeyPredicateVerifier } from './verification/PayToPublicKeyPredicateVerifier.js';
 import { UnicityIdPredicateVerifier } from './verification/UnicityIdPredicateVerifier.js';
-import { PredicateVerifierService } from '../verification/PredicateVerifierService.js';
+import type { PredicateVerifierService } from '../verification/PredicateVerifierService.js';
 import { IBuiltInPredicateVerifier } from './verification/IBuiltInPredicateVerifier.js';
 
 export class DefaultBuiltInPredicateVerifier implements IPredicateVerifier {

@@ -26,7 +26,7 @@ export class UnicityId {
   }
 
   public toString(): string {
-    return `@${this.domain ?? ''}/${this.name}`;
+    return `@${this.domain ? `${this.domain}/` : ''}${this.name}`;
   }
 
   public async toTokenId(): Promise<TokenId> {

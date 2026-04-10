@@ -44,7 +44,7 @@ export class TransferTransaction implements ITransaction {
   ): Promise<TransferTransaction> {
     const transaction = token.latestTransaction;
     if (!transaction.recipient.equals(await Address.fromPredicate(owner))) {
-      throw new Error('Predicate does not match pay to script hash.');
+      throw new Error('Predicate does not match address.');
     }
 
     const sourceStateHash = await transaction.calculateStateHash();
