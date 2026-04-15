@@ -5,12 +5,13 @@ import { CertificationData } from '../../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../../src/api/CertificationResponse.js';
 import { SigningService } from '../../../src/crypto/secp256k1/SigningService.js';
 import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
-import { PredicateVerifier } from '../../../src/predicate/verification/PredicateVerifier.js';
+import { PayToPublicKeyPredicateUnlockScript } from '../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
+import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../../src/serialization/HexConverter.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
+import { Address } from '../../../src/transaction/Address.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
-import { PayToScriptHash } from '../../../src/transaction/PayToScriptHash.js';
 import { Token } from '../../../src/transaction/Token.js';
 import { TokenId } from '../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
@@ -20,16 +21,16 @@ import { VerificationStatus } from '../../../src/verification/VerificationStatus
 import trustBaseJson from '../trust-base.json' with { type: 'json' };
 
 async function receiveToken(client: StateTransitionClient, trustBase: RootTrustBase): Promise<string> {
-  const predicateVerifier = PredicateVerifier.create();
+  const predicateVerifier = PredicateVerifierService.create(trustBase);
 
   const ownerPrivateKey = HexConverter.decode(config.ownerPrivateKey);
   const ownerSigningService = new SigningService(ownerPrivateKey);
-  const ownerPredicate = PayToPublicKeyPredicate.create(ownerSigningService);
+  const ownerPredicate = PayToPublicKeyPredicate.fromSigningService(ownerSigningService);
 
   const mintTransaction = await MintTransaction.create(
-    await PayToScriptHash.create(ownerPredicate),
-    new TokenId(crypto.getRandomValues(new Uint8Array(32))),
-    new TokenType(crypto.getRandomValues(new Uint8Array(32))),
+    await Address.fromPredicate(ownerPredicate),
+    TokenId.generate(),
+    TokenType.generate(),
     CborSerializer.encodeTextString('My custom data'),
   );
   const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
@@ -42,7 +43,7 @@ async function receiveToken(client: StateTransitionClient, trustBase: RootTrustB
     await mintTransaction.toCertifiedTransaction(
       trustBase,
       predicateVerifier,
-      await waitInclusionProof(trustBase, predicateVerifier, client, mintTransaction),
+      await waitInclusionProof(client, trustBase, predicateVerifier, mintTransaction),
     ),
   );
 
@@ -53,11 +54,11 @@ it('Token transfer', async () => {
   const aggregatorClient = new AggregatorClient(config.aggregatorUrl);
   const trustBase = RootTrustBase.fromJSON(trustBaseJson);
   const client = new StateTransitionClient(aggregatorClient);
-  const predicateVerifier = PredicateVerifier.create();
+  const predicateVerifier = PredicateVerifierService.create(trustBase);
 
   const ownerPrivateKey = HexConverter.decode(config.ownerPrivateKey);
   const ownerSigningService = new SigningService(ownerPrivateKey);
-  const ownerPredicate = PayToPublicKeyPredicate.create(ownerSigningService);
+  const ownerPredicate = PayToPublicKeyPredicate.fromSigningService(ownerSigningService);
 
   const tokenCBOR = HexConverter.decode(await receiveToken(client, trustBase));
 
@@ -67,7 +68,7 @@ it('Token transfer', async () => {
     throw new Error(`Token verification failed: ${result.status}`);
   }
 
-  const payToScriptHash = PayToScriptHash.fromBytes(HexConverter.decode(config.payToScriptHash));
+  const payToScriptHash = Address.fromBytes(HexConverter.decode(config.payToScriptHash));
   const transferTransaction = await TransferTransaction.create(
     token,
     ownerPredicate,
@@ -76,9 +77,9 @@ it('Token transfer', async () => {
     CborSerializer.encodeTextString('My custom transfer data'),
   );
 
-  const certificationData = await CertificationData.fromTransferTransaction(
+  const certificationData = await CertificationData.fromTransaction(
     transferTransaction,
-    await PayToPublicKeyPredicate.generateUnlockScript(transferTransaction, ownerSigningService),
+    await PayToPublicKeyPredicateUnlockScript.create(transferTransaction, ownerSigningService),
   );
 
   const response = await client.submitCertificationRequest(certificationData);
@@ -93,7 +94,7 @@ it('Token transfer', async () => {
     await transferTransaction.toCertifiedTransaction(
       trustBase,
       predicateVerifier,
-      await waitInclusionProof(trustBase, predicateVerifier, client, transferTransaction),
+      await waitInclusionProof(client, trustBase, predicateVerifier, transferTransaction),
     ),
   );
 

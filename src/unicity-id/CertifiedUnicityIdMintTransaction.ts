@@ -1,6 +1,5 @@
-import { Address } from './Address.js';
-import { ITransaction } from './ITransaction.js';
-import { TransferTransaction } from './TransferTransaction.js';
+import { UnicityId } from './UnicityId.js';
+import { UnicityIdMintTransaction } from './UnicityIdMintTransaction.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { InclusionProof } from '../api/InclusionProof.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
@@ -8,16 +7,19 @@ import { IPredicate } from '../predicate/IPredicate.js';
 import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
-import { dedent } from '../util/StringUtils.js';
-import { VerificationError } from '../verification/VerificationError.js';
+import { Address } from '../transaction/Address.js';
+import { ITransaction } from '../transaction/ITransaction.js';
+import { TokenId } from '../transaction/TokenId.js';
+import { TokenType } from '../transaction/TokenType.js';
 import {
   InclusionProofVerificationRule,
   InclusionProofVerificationStatus,
-} from './verification/rule/InclusionProofVerificationRule.js';
+} from '../transaction/verification/rule/InclusionProofVerificationRule.js';
+import { dedent } from '../util/StringUtils.js';
 
-export class CertifiedTransferTransaction implements ITransaction {
-  private constructor(
-    private readonly transaction: TransferTransaction,
+export class CertifiedUnicityIdMintTransaction implements ITransaction {
+  public constructor(
+    private readonly transaction: UnicityIdMintTransaction,
     public readonly inclusionProof: InclusionProof,
   ) {}
 
@@ -37,21 +39,40 @@ export class CertifiedTransferTransaction implements ITransaction {
     return this.transaction.sourceStateHash;
   }
 
+  public get targetPredicate(): IPredicate {
+    return this.transaction.targetPredicate;
+  }
+
+  public get tokenId(): TokenId {
+    return this.transaction.tokenId;
+  }
+
+  public get tokenType(): TokenType {
+    return this.transaction.tokenType;
+  }
+
+  public get unicityId(): UnicityId {
+    return this.transaction.unicityId;
+  }
+
   public get x(): Uint8Array {
     return this.transaction.x;
   }
 
-  public static fromCBOR(bytes: Uint8Array): CertifiedTransferTransaction {
+  public static async fromCBOR(bytes: Uint8Array): Promise<CertifiedUnicityIdMintTransaction> {
     const data = CborDeserializer.decodeArray(bytes);
-    return new CertifiedTransferTransaction(TransferTransaction.fromCBOR(data[0]), InclusionProof.fromCBOR(data[1]));
+    return new CertifiedUnicityIdMintTransaction(
+      await UnicityIdMintTransaction.fromCBOR(data[0]),
+      InclusionProof.fromCBOR(data[1]),
+    );
   }
 
   public static async fromTransaction(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,
-    transaction: TransferTransaction,
+    transaction: UnicityIdMintTransaction,
     inclusionProof: InclusionProof,
-  ): Promise<CertifiedTransferTransaction> {
+  ): Promise<CertifiedUnicityIdMintTransaction> {
     const result = await InclusionProofVerificationRule.verify(
       trustBase,
       predicateVerifier,
@@ -59,10 +80,10 @@ export class CertifiedTransferTransaction implements ITransaction {
       transaction,
     );
     if (result.status !== InclusionProofVerificationStatus.OK) {
-      throw new VerificationError('Inclusion proof verification failed', result);
+      throw new Error(`Inclusion proof verification failed: ${result.status.toString()}`);
     }
 
-    return new CertifiedTransferTransaction(transaction, inclusionProof);
+    return new CertifiedUnicityIdMintTransaction(transaction, inclusionProof);
   }
 
   public calculateStateHash(): Promise<DataHash> {
@@ -79,7 +100,7 @@ export class CertifiedTransferTransaction implements ITransaction {
 
   public toString(): string {
     return dedent`
-      CertifiedTransferTransaction
+      CertifiedUnicityIdMintTransaction
         ${this.transaction.toString()}
         ${this.inclusionProof.toString()}`;
   }

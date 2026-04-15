@@ -31,8 +31,16 @@ export class SigningService implements ISigningService<Signature> {
     return new Uint8Array(this._publicKey);
   }
 
+  public static generate(): SigningService {
+    return new SigningService(SigningService.generatePrivateKey());
+  }
+
   public static generatePrivateKey(): Uint8Array {
     return secp256k1.utils.randomSecretKey();
+  }
+
+  public static isPublicKeyValid(publicKey: Uint8Array): boolean {
+    return secp256k1.utils.isValidPublicKey(publicKey, true);
   }
 
   public static verifySignatureWithRecoveredPublicKey(hash: DataHash, signature: Signature): Promise<boolean> {

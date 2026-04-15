@@ -1,146 +1,88 @@
+import { mintToken, transferToken } from './TokenUtils.js';
 import { RootTrustBase } from '../../src/api/bft/RootTrustBase.js';
 import { CertificationData } from '../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../src/api/CertificationResponse.js';
 import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
 import { PayToPublicKeyPredicate } from '../../src/predicate/builtin/PayToPublicKeyPredicate.js';
-import { PredicateVerifier } from '../../src/predicate/verification/PredicateVerifier.js';
-import { CborSerializer } from '../../src/serialization/cbor/CborSerializer.js';
+import { PayToPublicKeyPredicateUnlockScript } from '../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
+import { PredicateVerifierService } from '../../src/predicate/verification/PredicateVerifierService.js';
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
-import { MintTransaction } from '../../src/transaction/MintTransaction.js';
-import { PayToScriptHash } from '../../src/transaction/PayToScriptHash.js';
-import { Token } from '../../src/transaction/Token.js';
-import { TokenId } from '../../src/transaction/TokenId.js';
+import { Address } from '../../src/transaction/Address.js';
 import { TokenType } from '../../src/transaction/TokenType.js';
-import { TransferTransaction } from '../../src/transaction/TransferTransaction.js';
+import { UnicityId } from '../../src/unicity-id/UnicityId.js';
+import { UnicityIdMintTransaction } from '../../src/unicity-id/UnicityIdMintTransaction.js';
+import { UnicityIdToken } from '../../src/unicity-id/UnicityIdToken.js';
 import { waitInclusionProof } from '../../src/util/InclusionProofUtils.js';
 import { VerificationStatus } from '../../src/verification/VerificationStatus.js';
 
 export const transitionFlowTest = (client: StateTransitionClient, trustBase: RootTrustBase): void => {
+  const ALICE_SIGNING_SERVICE = SigningService.generate();
+  const BOB_SIGNING_SERVICE = SigningService.generate();
+  const CAROL_SIGNING_SERVICE = SigningService.generate();
+
   describe('Transition', () => {
     it('default successful flow', async () => {
-      const predicateVerifier = PredicateVerifier.create();
+      const predicateVerifier = PredicateVerifierService.create(trustBase);
 
-      const signingService = new SigningService(SigningService.generatePrivateKey());
-      const predicate = PayToPublicKeyPredicate.create(signingService);
+      const unicityIdSigningService = new SigningService(SigningService.generatePrivateKey());
+      const targetPredicate = PayToPublicKeyPredicate.create(ALICE_SIGNING_SERVICE.publicKey);
 
-      const mintTransaction = await MintTransaction.create(
-        await PayToScriptHash.create(predicate),
-        new TokenId(crypto.getRandomValues(new Uint8Array(32))),
-        new TokenType(crypto.getRandomValues(new Uint8Array(32))),
-        CborSerializer.encodeArray(),
+      const unicityId = new UnicityId('testuser', 'unicity-labs/test');
+      const unicityIdMintTransaction = await UnicityIdMintTransaction.create(
+        unicityIdSigningService,
+        await Address.fromPredicate(targetPredicate),
+        unicityId,
+        TokenType.generate(),
+        targetPredicate,
       );
-      let certificationData = await CertificationData.fromMintTransaction(mintTransaction);
 
-      let response = await client.submitCertificationRequest(certificationData);
-      expect(response.status).toEqual(CertificationStatus.SUCCESS);
+      const unicityIdCertificationData = await CertificationData.fromTransaction(
+        unicityIdMintTransaction,
+        await PayToPublicKeyPredicateUnlockScript.create(unicityIdMintTransaction, unicityIdSigningService),
+      );
 
-      let token = await Token.mint(
+      const unicityIdResponse = await client.submitCertificationRequest(unicityIdCertificationData);
+      expect(unicityIdResponse.status).toEqual(CertificationStatus.SUCCESS);
+
+      const aliceUnicityIdToken = await UnicityIdToken.mint(
         trustBase,
         predicateVerifier,
-        await mintTransaction.toCertifiedTransaction(
+        await unicityIdMintTransaction.toCertifiedTransaction(
           trustBase,
           predicateVerifier,
-          await waitInclusionProof(trustBase, predicateVerifier, client, mintTransaction),
+          await waitInclusionProof(client, trustBase, predicateVerifier, unicityIdMintTransaction),
         ),
       );
-
-      const receiverSigningService = new SigningService(SigningService.generatePrivateKey());
-      // Second user will generate his predicate
-      const receiverPredicate = PayToPublicKeyPredicate.create(receiverSigningService);
-      // Create pay to script hash for sender
-      const receiverScriptHash = await PayToScriptHash.create(receiverPredicate);
-      const transferTransaction = await TransferTransaction.create(
-        token,
-        predicate,
-        PayToScriptHash.fromBytes(receiverScriptHash.bytes),
-        crypto.getRandomValues(new Uint8Array(32)),
-        CborSerializer.encodeArray(),
-      );
-
-      certificationData = await CertificationData.fromTransferTransaction(
-        transferTransaction,
-        await PayToPublicKeyPredicate.generateUnlockScript(transferTransaction, signingService),
-      );
-
       await expect(
-        client
-          .submitCertificationRequest(
-            await CertificationData.fromTransferTransaction(
-              transferTransaction,
-              await PayToPublicKeyPredicate.generateUnlockScript(transferTransaction, signingService),
-            ),
-          )
-          .then((response) => response.status),
-      ).resolves.toEqual(CertificationStatus.SUCCESS);
-
-      // Test double spend attempt
-      const doubleSpendTransferTransaction = await TransferTransaction.create(
-        token,
-        predicate,
-        await PayToScriptHash.create(predicate),
-        crypto.getRandomValues(new Uint8Array(32)),
-        CborSerializer.encodeArray(),
-      );
-
-      await expect(
-        client
-          .submitCertificationRequest(
-            await CertificationData.fromTransferTransaction(
-              doubleSpendTransferTransaction,
-              await PayToPublicKeyPredicate.generateUnlockScript(doubleSpendTransferTransaction, signingService),
-            ),
-          )
-          .then((response) => response.status),
-      ).resolves.toEqual(CertificationStatus.SUCCESS);
-
-      await expect(
-        waitInclusionProof(trustBase, predicateVerifier, client, doubleSpendTransferTransaction),
-      ).rejects.toThrow('Invalid inclusion proof status: TRANSACTION_HASH_MISMATCH');
-
-      token = await token.transfer(
-        trustBase,
-        predicateVerifier,
-        await transferTransaction.toCertifiedTransaction(
-          trustBase,
-          predicateVerifier,
-          await waitInclusionProof(trustBase, predicateVerifier, client, transferTransaction),
-        ),
-      );
-
-      await expect(
-        Token.fromCBOR(token.toCBOR()).then((importedToken) =>
-          importedToken.verify(trustBase, predicateVerifier).then((result) => result.status),
-        ),
+        aliceUnicityIdToken.verify(trustBase, predicateVerifier).then((result) => result.status),
       ).resolves.toEqual(VerificationStatus.OK);
 
-      // Return token to initial minter
-      const returnTransferTransaction = await TransferTransaction.create(
-        token,
-        receiverPredicate,
-        await PayToScriptHash.create(predicate),
-        crypto.getRandomValues(new Uint8Array(32)),
-        CborSerializer.encodeArray(),
-      );
-
-      certificationData = await CertificationData.fromTransferTransaction(
-        returnTransferTransaction,
-        await PayToPublicKeyPredicate.generateUnlockScript(returnTransferTransaction, receiverSigningService),
-      );
-
-      response = await client.submitCertificationRequest(certificationData);
-      expect(response.status).toEqual(CertificationStatus.SUCCESS);
-
-      token = await token.transfer(
+      const aliceToken = await mintToken(
+        client,
         trustBase,
         predicateVerifier,
-        await returnTransferTransaction.toCertifiedTransaction(
-          trustBase,
-          predicateVerifier,
-          await waitInclusionProof(trustBase, predicateVerifier, client, returnTransferTransaction),
-        ),
+        await Address.fromPredicate(aliceUnicityIdToken.genesis.targetPredicate),
       );
 
-      await expect(token.verify(trustBase, predicateVerifier).then((result) => result.status)).resolves.toEqual(
+      const bobToken = await transferToken(
+        client,
+        trustBase,
+        predicateVerifier,
+        aliceToken.toCBOR(),
+        await Address.fromPredicate(PayToPublicKeyPredicate.create(BOB_SIGNING_SERVICE.publicKey)),
+        ALICE_SIGNING_SERVICE,
+      );
+
+      const carolToken = await transferToken(
+        client,
+        trustBase,
+        predicateVerifier,
+        bobToken.toCBOR(),
+        await Address.fromPredicate(PayToPublicKeyPredicate.create(CAROL_SIGNING_SERVICE.publicKey)),
+        BOB_SIGNING_SERVICE,
+      );
+
+      await expect(carolToken.verify(trustBase, predicateVerifier).then((result) => result.status)).resolves.toEqual(
         VerificationStatus.OK,
       );
     }, 30000);

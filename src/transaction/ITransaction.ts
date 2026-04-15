@@ -1,4 +1,4 @@
-import { PayToScriptHash } from './PayToScriptHash.js';
+import { Address } from './Address.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { IPredicate } from '../predicate/IPredicate.js';
 
@@ -7,7 +7,7 @@ export interface ITransaction {
 
   readonly lockScript: IPredicate;
 
-  readonly recipient: PayToScriptHash;
+  readonly recipient: Address;
 
   readonly sourceStateHash: DataHash;
 
@@ -15,4 +15,7 @@ export interface ITransaction {
 
   calculateStateHash(): Promise<DataHash>;
   calculateTransactionHash(): Promise<DataHash>;
+
+  toCBOR(): Uint8Array;
+  toString(): string;
 }

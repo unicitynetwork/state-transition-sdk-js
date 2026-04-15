@@ -23,6 +23,10 @@ export class TokenId {
     return new TokenId(CborDeserializer.decodeByteString(bytes));
   }
 
+  public static generate(): TokenId {
+    return new TokenId(crypto.getRandomValues(new Uint8Array(32)));
+  }
+
   public equals(o: unknown): boolean {
     if (this === o) {
       return true;
