@@ -4,8 +4,9 @@ import { Then, When } from '@cucumber/cucumber';
 
 import { CertificationData } from '../../../../src/api/CertificationData.js';
 import { PayToPublicKeyPredicate } from '../../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
+import { PayToPublicKeyPredicateUnlockScript } from '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
 import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
-import { PayToScriptHash } from '../../../../src/transaction/PayToScriptHash.js';
+import { Address } from '../../../../src/transaction/Address.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
 import { waitInclusionProof } from '../../../../src/util/InclusionProofUtils.js';
 import { transferToken } from '../support/TestSetup.js';
@@ -25,14 +26,14 @@ When('Alice tries to submit a transfer of the stale token to Bob', async functio
   this.transferTransaction = await TransferTransaction.create(
     this.token,
     this.alice.predicate,
-    await PayToScriptHash.create(this.bob.predicate),
+    await Address.fromPredicate(this.bob.predicate),
     crypto.getRandomValues(new Uint8Array(32)),
     CborSerializer.encodeArray(),
   );
 
-  const certificationData = await CertificationData.fromTransferTransaction(
+  const certificationData = await CertificationData.fromTransaction(
     this.transferTransaction,
-    await PayToPublicKeyPredicate.generateUnlockScript(this.transferTransaction, this.alice.signingService),
+    await PayToPublicKeyPredicateUnlockScript.create(this.transferTransaction, this.alice.signingService),
   );
 
   const response = await this.setup.client.submitCertificationRequest(certificationData);
@@ -46,10 +47,10 @@ Then(
     await assert.rejects(
       () =>
         waitInclusionProof(
+          this.setup.client,
           this.setup.trustBase,
           this.setup.predicateVerifier,
-          this.setup.client,
-          this.transferTransaction,
+          this.transferTransaction!,
         ),
       (e: Error) => e.message.includes(`Invalid inclusion proof status: ${error}`),
     );

@@ -32,14 +32,11 @@ export class ShardAwareAggregatorClient implements IAggregatorClient {
     }
   }
 
-  public async submitCertificationRequest(
-    certificationData: CertificationData,
-    receipt: boolean = false,
-  ): Promise<CertificationResponse> {
+  public async submitCertificationRequest(certificationData: CertificationData): Promise<CertificationResponse> {
     const stateId = await StateId.fromCertificationData(certificationData);
     const shardId = ShardAwareAggregatorClient.getShardForStateId(stateId, this.shardIdLength);
     const client = this.shardMap.get(shardId)!;
-    return client.submitCertificationRequest(certificationData, receipt);
+    return client.submitCertificationRequest(certificationData);
   }
 
   public async getInclusionProof(stateId: StateId): Promise<InclusionProofResponse> {

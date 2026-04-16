@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { Given, Then, When } from '@cucumber/cucumber';
 
 import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
-import { PayToScriptHash } from '../../../../src/transaction/PayToScriptHash.js';
+import { Address } from '../../../../src/transaction/Address.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
 import { transferToken } from '../support/TestSetup.js';
 import { TokenWorld } from '../support/World.js';
@@ -23,7 +23,7 @@ When("Bob tries to create a transfer of Alice's token", async function (this: To
     await TransferTransaction.create(
       this.token,
       this.bob.predicate,
-      await PayToScriptHash.create(this.bob.predicate),
+      await Address.fromPredicate(this.bob.predicate),
       crypto.getRandomValues(new Uint8Array(32)),
       CborSerializer.encodeArray(),
     );
@@ -37,7 +37,7 @@ When('Alice tries to create a transfer of the token', async function (this: Toke
     await TransferTransaction.create(
       this.transferredToken!,
       this.alice.predicate,
-      await PayToScriptHash.create(this.alice.predicate),
+      await Address.fromPredicate(this.alice.predicate),
       crypto.getRandomValues(new Uint8Array(32)),
       CborSerializer.encodeArray(),
     );

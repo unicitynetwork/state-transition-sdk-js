@@ -5,8 +5,9 @@ import { Then, When } from '@cucumber/cucumber';
 import { CertificationData } from '../../../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../../../src/api/CertificationResponse.js';
 import { PayToPublicKeyPredicate } from '../../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
+import { PayToPublicKeyPredicateUnlockScript } from '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
 import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
-import { PayToScriptHash } from '../../../../src/transaction/PayToScriptHash.js';
+import { Address } from '../../../../src/transaction/Address.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
 import { waitInclusionProof } from '../../../../src/util/InclusionProofUtils.js';
 import { createUser } from '../support/TestSetup.js';
@@ -26,7 +27,7 @@ When(
       await TransferTransaction.create(
         token,
         user.predicate,
-        await PayToScriptHash.create(recipient.predicate),
+        await Address.fromPredicate(recipient.predicate),
         crypto.getRandomValues(new Uint8Array(32)),
         CborSerializer.encodeArray(),
       );
@@ -53,14 +54,14 @@ When(
     const tx = await TransferTransaction.create(
       token,
       user.predicate,
-      await PayToScriptHash.create(recipient.predicate),
+      await Address.fromPredicate(recipient.predicate),
       crypto.getRandomValues(new Uint8Array(32)),
       CborSerializer.encodeArray(),
     );
 
-    const certData = await CertificationData.fromTransferTransaction(
+    const certData = await CertificationData.fromTransaction(
       tx,
-      await PayToPublicKeyPredicate.generateUnlockScript(tx, user.signingService),
+      await PayToPublicKeyPredicateUnlockScript.create(tx, user.signingService),
     );
 
     const response = await this.tree.setup.client.submitCertificationRequest(certData);
@@ -73,9 +74,9 @@ When(
         this.tree.setup.trustBase,
         this.tree.setup.predicateVerifier,
         await waitInclusionProof(
+          this.tree.setup.client,
           this.tree.setup.trustBase,
           this.tree.setup.predicateVerifier,
-          this.tree.setup.client,
           tx,
         ),
       ),
@@ -95,14 +96,14 @@ When(
     this.transferTransaction = await TransferTransaction.create(
       token,
       user.predicate,
-      await PayToScriptHash.create(recipient.predicate),
+      await Address.fromPredicate(recipient.predicate),
       crypto.getRandomValues(new Uint8Array(32)),
       CborSerializer.encodeArray(),
     );
 
-    const certData = await CertificationData.fromTransferTransaction(
+    const certData = await CertificationData.fromTransaction(
       this.transferTransaction,
-      await PayToPublicKeyPredicate.generateUnlockScript(this.transferTransaction, user.signingService),
+      await PayToPublicKeyPredicateUnlockScript.create(this.transferTransaction, user.signingService),
     );
 
     const response = await this.tree.setup.client.submitCertificationRequest(certData);
@@ -121,9 +122,9 @@ Then(/^the inclusion proof rejects with "([^"]+)"$/, async function (this: Token
   await assert.rejects(
     () =>
       waitInclusionProof(
+        this.tree.setup.client,
         this.tree.setup.trustBase,
         this.tree.setup.predicateVerifier,
-        this.tree.setup.client,
         this.transferTransaction!,
       ),
     (e: Error) => e.message.includes(error),

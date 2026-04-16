@@ -9,7 +9,7 @@ import { SplitReason } from '../../../../src/payment/SplitReason.js';
 import { TokenSplit } from '../../../../src/payment/TokenSplit.js';
 import { CborDeserializer } from '../../../../src/serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
-import { PayToScriptHash } from '../../../../src/transaction/PayToScriptHash.js';
+import { Address } from '../../../../src/transaction/Address.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
 import { VerificationStatus } from '../../../../src/verification/VerificationStatus.js';
@@ -110,7 +110,7 @@ Then(
       await TransferTransaction.create(
         this.splitTokens[0],
         this.alice.predicate,
-        await PayToScriptHash.create(this.carol.predicate),
+        await Address.fromPredicate(this.carol.predicate),
         crypto.getRandomValues(new Uint8Array(32)),
         CborSerializer.encodeArray(),
       );
@@ -131,7 +131,7 @@ Then(
       await TransferTransaction.create(
         this.burnedToken,
         this.alice.predicate,
-        await PayToScriptHash.create(this.bob.predicate),
+        await Address.fromPredicate(this.bob.predicate),
         crypto.getRandomValues(new Uint8Array(32)),
         CborSerializer.encodeArray(),
       );
@@ -152,7 +152,7 @@ When('Bob splits his token into 2 sub-parts', async function (this: TokenWorld):
     const data = CborDeserializer.decodeArray(bytes);
     const splitAssets = PaymentAssetCollection.fromCBOR(data[0]);
     const reason = await SplitReason.fromCBOR(data[1]);
-    return { assets: splitAssets, reason, toCBOR: () => Promise.resolve(bytes) };
+    return { assets: splitAssets, reason, encode: () => Promise.resolve(bytes) };
   };
 
   const verifyResult = await TokenSplit.verify(
@@ -202,7 +202,7 @@ Then(
       await TransferTransaction.create(
         this.subSplitTokens[0],
         this.bob.predicate,
-        await PayToScriptHash.create(this.dave.predicate),
+        await Address.fromPredicate(this.dave.predicate),
         crypto.getRandomValues(new Uint8Array(32)),
         CborSerializer.encodeArray(),
       );
@@ -221,7 +221,7 @@ Then('Bob cannot transfer the pre-split token because it was burned', async func
     await TransferTransaction.create(
       this.burnedToken,
       this.bob.predicate,
-      await PayToScriptHash.create(this.carol.predicate),
+      await Address.fromPredicate(this.carol.predicate),
       crypto.getRandomValues(new Uint8Array(32)),
       CborSerializer.encodeArray(),
     );

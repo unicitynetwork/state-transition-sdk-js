@@ -5,7 +5,7 @@ import { Then, When } from '@cucumber/cucumber';
 import { PaymentAssetCollection } from '../../../../src/payment/asset/PaymentAssetCollection.js';
 import { TokenSplit } from '../../../../src/payment/TokenSplit.js';
 import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
-import { PayToScriptHash } from '../../../../src/transaction/PayToScriptHash.js';
+import { Address } from '../../../../src/transaction/Address.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
 import { createUser } from '../support/TestSetup.js';
@@ -25,7 +25,7 @@ When(
       await TransferTransaction.create(
         token,
         user.predicate,
-        await PayToScriptHash.create(recipient.predicate),
+        await Address.fromPredicate(recipient.predicate),
         crypto.getRandomValues(new Uint8Array(32)),
         CborSerializer.encodeArray(),
       );

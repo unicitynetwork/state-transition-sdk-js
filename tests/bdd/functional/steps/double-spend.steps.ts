@@ -5,8 +5,9 @@ import { Then, When } from '@cucumber/cucumber';
 import { CertificationData } from '../../../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../../../src/api/CertificationResponse.js';
 import { PayToPublicKeyPredicate } from '../../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
+import { PayToPublicKeyPredicateUnlockScript } from '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
 import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
-import { PayToScriptHash } from '../../../../src/transaction/PayToScriptHash.js';
+import { Address } from '../../../../src/transaction/Address.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
 import { waitInclusionProof } from '../../../../src/util/InclusionProofUtils.js';
 import { TokenWorld } from '../support/World.js';
@@ -15,14 +16,14 @@ When('Alice submits a valid transfer to Bob', async function (this: TokenWorld):
   this.firstTransferTransaction = await TransferTransaction.create(
     this.token,
     this.alice.predicate,
-    await PayToScriptHash.create(this.bob.predicate),
+    await Address.fromPredicate(this.bob.predicate),
     crypto.getRandomValues(new Uint8Array(32)),
     CborSerializer.encodeArray(),
   );
 
-  const certificationData = await CertificationData.fromTransferTransaction(
+  const certificationData = await CertificationData.fromTransaction(
     this.firstTransferTransaction,
-    await PayToPublicKeyPredicate.generateUnlockScript(this.firstTransferTransaction, this.alice.signingService),
+    await PayToPublicKeyPredicateUnlockScript.create(this.firstTransferTransaction, this.alice.signingService),
   );
 
   this.firstResponse = await this.setup.client.submitCertificationRequest(certificationData);
@@ -32,14 +33,14 @@ When('Alice submits a second transfer of the same token', async function (this: 
   this.secondTransferTransaction = await TransferTransaction.create(
     this.token,
     this.alice.predicate,
-    await PayToScriptHash.create(this.alice.predicate),
+    await Address.fromPredicate(this.alice.predicate),
     crypto.getRandomValues(new Uint8Array(32)),
     CborSerializer.encodeArray(),
   );
 
-  const certificationData = await CertificationData.fromTransferTransaction(
+  const certificationData = await CertificationData.fromTransaction(
     this.secondTransferTransaction,
-    await PayToPublicKeyPredicate.generateUnlockScript(this.secondTransferTransaction, this.alice.signingService),
+    await PayToPublicKeyPredicateUnlockScript.create(this.secondTransferTransaction, this.alice.signingService),
   );
 
   this.secondResponse = await this.setup.client.submitCertificationRequest(certificationData);
@@ -63,9 +64,9 @@ Then(
     await assert.rejects(
       () =>
         waitInclusionProof(
+          this.setup.client,
           this.setup.trustBase,
           this.setup.predicateVerifier,
-          this.setup.client,
           this.secondTransferTransaction,
         ),
       (e: Error) => e.message.includes(`Invalid inclusion proof status: ${error}`),

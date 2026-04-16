@@ -21,3 +21,18 @@ Feature: Token Minting
     Given a user with a signing key
     When the user mints a new token
     Then the token passes verification
+
+  @nametag-standard
+  Scenario Outline: Mint a token addressed to Bob via <method>
+    Given Alice has a signing key
+    And Bob has a signing key
+    And Bob has registered the nametag "@bob" in domain "bdd/test"
+    When Alice mints a new token addressed to Bob via <method>
+    Then the certification response status is "SUCCESS"
+    And the current token verifies
+    And the current token can be spent by Bob
+
+    Examples:
+      | method  |
+      | pubkey  |
+      | nametag |

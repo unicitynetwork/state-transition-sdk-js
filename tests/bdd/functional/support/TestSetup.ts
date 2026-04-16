@@ -16,23 +16,27 @@ import { ISplitPaymentData } from '../../../../src/payment/ISplitPaymentData.js'
 import { SplitReason } from '../../../../src/payment/SplitReason.js';
 import { TokenSplit } from '../../../../src/payment/TokenSplit.js';
 import { PayToPublicKeyPredicate } from '../../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
+import { PayToPublicKeyPredicateUnlockScript } from '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
 import { IPredicate } from '../../../../src/predicate/IPredicate.js';
-import { PredicateVerifier } from '../../../../src/predicate/verification/PredicateVerifier.js';
+import { PredicateVerifierService } from '../../../../src/predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../../../../src/serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
 import { StateTransitionClient } from '../../../../src/StateTransitionClient.js';
+import { Address } from '../../../../src/transaction/Address.js';
 import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
-import { PayToScriptHash } from '../../../../src/transaction/PayToScriptHash.js';
 import { Token } from '../../../../src/transaction/Token.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../../src/transaction/TokenType.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
+import { UnicityId } from '../../../../src/unicity-id/UnicityId.js';
+import { UnicityIdMintTransaction } from '../../../../src/unicity-id/UnicityIdMintTransaction.js';
+import { UnicityIdToken } from '../../../../src/unicity-id/UnicityIdToken.js';
 import { waitInclusionProof } from '../../../../src/util/InclusionProofUtils.js';
 
 export interface ITestSetup {
   readonly aggregatorClient: IAggregatorClient;
   readonly client: StateTransitionClient;
-  readonly predicateVerifier: PredicateVerifier;
+  readonly predicateVerifier: PredicateVerifierService;
   readonly trustBase: RootTrustBase;
 }
 
@@ -44,12 +48,12 @@ export interface IUser {
 export function createTestSetup(): ITestSetup {
   const aggregatorClient = createAggregatorClient();
   const client = new StateTransitionClient(aggregatorClient);
-  const predicateVerifier = PredicateVerifier.create();
   const trustBasePath =
     process.env.TRUST_BASE_PATH ??
     fileURLToPath(new URL('../../../../tests/functional/trust-base.json', import.meta.url));
   const trustBaseJsonString = readFileSync(trustBasePath, 'utf-8');
   const trustBase = RootTrustBase.fromJSON(JSON.parse(trustBaseJsonString));
+  const predicateVerifier = PredicateVerifierService.create(trustBase);
 
   return { aggregatorClient, client, predicateVerifier, trustBase };
 }
@@ -79,22 +83,22 @@ function createAggregatorClient(): IAggregatorClient {
     return new ShardAwareAggregatorClient(shardIdLength, shardMap);
   }
 
-  const url = process.env.AGGREGATOR_URL ?? 'http://192.168.43.106:3000';
+  const url = process.env.AGGREGATOR_URL ?? 'http://localhost:3000';
   console.log(`[TestSetup] Single aggregator mode: ${url}`);
   return new AggregatorClient(url, apiKey);
 }
 
 export function createUser(): IUser {
   const signingService = new SigningService(SigningService.generatePrivateKey());
-  const predicate = PayToPublicKeyPredicate.create(signingService);
+  const predicate = PayToPublicKeyPredicate.fromSigningService(signingService);
   return { predicate, signingService };
 }
 
 export async function mintToken(setup: ITestSetup, user: IUser): Promise<Token> {
   const mintTransaction = await MintTransaction.create(
-    await PayToScriptHash.create(user.predicate),
-    new TokenId(crypto.getRandomValues(new Uint8Array(32))),
-    new TokenType(crypto.getRandomValues(new Uint8Array(32))),
+    await Address.fromPredicate(user.predicate),
+    TokenId.generate(),
+    TokenType.generate(),
     CborSerializer.encodeArray(),
   );
 
@@ -110,7 +114,7 @@ export async function mintToken(setup: ITestSetup, user: IUser): Promise<Token> 
     await mintTransaction.toCertifiedTransaction(
       setup.trustBase,
       setup.predicateVerifier,
-      await waitInclusionProof(setup.trustBase, setup.predicateVerifier, setup.client, mintTransaction),
+      await waitInclusionProof(setup.client, setup.trustBase, setup.predicateVerifier, mintTransaction),
     ),
   );
 }
@@ -121,9 +125,9 @@ export async function mintTokenWithAssets(
   assets: PaymentAssetCollection,
 ): Promise<Token> {
   const mintTransaction = await MintTransaction.create(
-    await PayToScriptHash.create(user.predicate),
-    new TokenId(crypto.getRandomValues(new Uint8Array(32))),
-    new TokenType(crypto.getRandomValues(new Uint8Array(32))),
+    await Address.fromPredicate(user.predicate),
+    TokenId.generate(),
+    TokenType.generate(),
     assets.toCBOR(),
   );
 
@@ -139,7 +143,7 @@ export async function mintTokenWithAssets(
     await mintTransaction.toCertifiedTransaction(
       setup.trustBase,
       setup.predicateVerifier,
-      await waitInclusionProof(setup.trustBase, setup.predicateVerifier, setup.client, mintTransaction),
+      await waitInclusionProof(setup.client, setup.trustBase, setup.predicateVerifier, mintTransaction),
     ),
   );
 }
@@ -154,14 +158,14 @@ export async function transferToken(
   const transferTransaction = await TransferTransaction.create(
     token,
     ownerPredicate,
-    await PayToScriptHash.create(recipientPredicate),
+    await Address.fromPredicate(recipientPredicate),
     crypto.getRandomValues(new Uint8Array(32)),
     CborSerializer.encodeArray(),
   );
 
-  const certificationData = await CertificationData.fromTransferTransaction(
+  const certificationData = await CertificationData.fromTransaction(
     transferTransaction,
-    await PayToPublicKeyPredicate.generateUnlockScript(transferTransaction, ownerSigningService),
+    await PayToPublicKeyPredicateUnlockScript.create(transferTransaction, ownerSigningService),
   );
 
   const response = await setup.client.submitCertificationRequest(certificationData);
@@ -175,7 +179,7 @@ export async function transferToken(
     await transferTransaction.toCertifiedTransaction(
       setup.trustBase,
       setup.predicateVerifier,
-      await waitInclusionProof(setup.trustBase, setup.predicateVerifier, setup.client, transferTransaction),
+      await waitInclusionProof(setup.client, setup.trustBase, setup.predicateVerifier, transferTransaction),
     ),
   );
 }
@@ -191,9 +195,9 @@ export async function splitToken(
   const splitResult = await TokenSplit.split(token, ownerPredicate, parsePaymentData, splitTokenAssets);
 
   // Submit burn transaction
-  const burnCertificationData = await CertificationData.fromTransferTransaction(
+  const burnCertificationData = await CertificationData.fromTransaction(
     splitResult.burn.transaction,
-    await PayToPublicKeyPredicate.generateUnlockScript(splitResult.burn.transaction, ownerSigningService),
+    await PayToPublicKeyPredicateUnlockScript.create(splitResult.burn.transaction, ownerSigningService),
   );
 
   const burnResponse = await setup.client.submitCertificationRequest(burnCertificationData);
@@ -207,7 +211,7 @@ export async function splitToken(
     await splitResult.burn.transaction.toCertifiedTransaction(
       setup.trustBase,
       setup.predicateVerifier,
-      await waitInclusionProof(setup.trustBase, setup.predicateVerifier, setup.client, splitResult.burn.transaction),
+      await waitInclusionProof(setup.client, setup.trustBase, setup.predicateVerifier, splitResult.burn.transaction),
     ),
   );
 
@@ -224,7 +228,7 @@ export async function splitToken(
 
     const splitUser = createUser();
     const mintTransaction = await MintTransaction.create(
-      await PayToScriptHash.create(splitUser.predicate),
+      await Address.fromPredicate(splitUser.predicate),
       tokenId,
       token.type,
       splitPaymentData,
@@ -242,7 +246,7 @@ export async function splitToken(
       await mintTransaction.toCertifiedTransaction(
         setup.trustBase,
         setup.predicateVerifier,
-        await waitInclusionProof(setup.trustBase, setup.predicateVerifier, setup.client, mintTransaction),
+        await waitInclusionProof(setup.client, setup.trustBase, setup.predicateVerifier, mintTransaction),
       ),
     );
 
@@ -268,7 +272,7 @@ export function parseSimplePaymentData(bytes: Uint8Array): Promise<IPaymentData>
   const assets = PaymentAssetCollection.fromCBOR(bytes);
   return Promise.resolve({
     assets,
-    toCBOR: (): Promise<Uint8Array> => Promise.resolve(assets.toCBOR()),
+    encode: (): Promise<Uint8Array> => Promise.resolve(assets.toCBOR()),
   });
 }
 
@@ -277,7 +281,7 @@ export function parseSplitPaymentData(bytes: Uint8Array): Promise<IPaymentData> 
   const assets = PaymentAssetCollection.fromCBOR(data[0]);
   return Promise.resolve({
     assets,
-    toCBOR: (): Promise<Uint8Array> => Promise.resolve(bytes),
+    encode: (): Promise<Uint8Array> => Promise.resolve(bytes),
   });
 }
 
@@ -285,7 +289,7 @@ export async function parseSplitVerificationData(bytes: Uint8Array): Promise<ISp
   const data = CborDeserializer.decodeArray(bytes);
   const assets = PaymentAssetCollection.fromCBOR(data[0]);
   const reason = await SplitReason.fromCBOR(data[1]);
-  return { assets, reason, toCBOR: (): Promise<Uint8Array> => Promise.resolve(bytes) };
+  return { assets, encode: (): Promise<Uint8Array> => Promise.resolve(bytes), reason };
 }
 
 export async function splitTokenToOwner(
@@ -300,9 +304,9 @@ export async function splitTokenToOwner(
   const splitResult = await TokenSplit.split(token, ownerPredicate, parsePaymentData, splitTokenAssets);
 
   // Submit burn transaction
-  const burnCertificationData = await CertificationData.fromTransferTransaction(
+  const burnCertificationData = await CertificationData.fromTransaction(
     splitResult.burn.transaction,
-    await PayToPublicKeyPredicate.generateUnlockScript(splitResult.burn.transaction, ownerSigningService),
+    await PayToPublicKeyPredicateUnlockScript.create(splitResult.burn.transaction, ownerSigningService),
   );
 
   const burnResponse = await setup.client.submitCertificationRequest(burnCertificationData);
@@ -316,7 +320,7 @@ export async function splitTokenToOwner(
     await splitResult.burn.transaction.toCertifiedTransaction(
       setup.trustBase,
       setup.predicateVerifier,
-      await waitInclusionProof(setup.trustBase, setup.predicateVerifier, setup.client, splitResult.burn.transaction),
+      await waitInclusionProof(setup.client, setup.trustBase, setup.predicateVerifier, splitResult.burn.transaction),
     ),
   );
 
@@ -332,7 +336,7 @@ export async function splitTokenToOwner(
     const splitPaymentDataBytes = CborSerializer.encodeArray(assets.toCBOR(), reason.toCBOR());
 
     const mintTransaction = await MintTransaction.create(
-      await PayToScriptHash.create(mintTo.predicate),
+      await Address.fromPredicate(mintTo.predicate),
       tokenId,
       token.type,
       splitPaymentDataBytes,
@@ -350,7 +354,7 @@ export async function splitTokenToOwner(
       await mintTransaction.toCertifiedTransaction(
         setup.trustBase,
         setup.predicateVerifier,
-        await waitInclusionProof(setup.trustBase, setup.predicateVerifier, setup.client, mintTransaction),
+        await waitInclusionProof(setup.client, setup.trustBase, setup.predicateVerifier, mintTransaction),
       ),
     );
 
@@ -358,4 +362,162 @@ export async function splitTokenToOwner(
   }
 
   return { burnedToken, splitTokens };
+}
+
+// -----------------------------------------------------------------------------
+// Nametag / addressing helpers
+// -----------------------------------------------------------------------------
+
+export type AddressingMethod = 'pubkey' | 'nametag';
+
+export async function registerNametag(
+  setup: ITestSetup,
+  user: IUser,
+  name: string,
+  domain: string | null = 'bdd/test',
+): Promise<UnicityIdToken> {
+  const nametagSigningService = new SigningService(SigningService.generatePrivateKey());
+  const unicityId = new UnicityId(name, domain);
+
+  const mintTransaction = await UnicityIdMintTransaction.create(
+    nametagSigningService,
+    await Address.fromPredicate(user.predicate),
+    unicityId,
+    TokenType.generate(),
+    user.predicate,
+  );
+
+  const certificationData = await CertificationData.fromTransaction(
+    mintTransaction,
+    await PayToPublicKeyPredicateUnlockScript.create(mintTransaction, nametagSigningService),
+  );
+
+  const response = await setup.client.submitCertificationRequest(certificationData);
+  if (response.status !== CertificationStatus.SUCCESS) {
+    throw new Error(`Nametag registration failed: ${response.status}`);
+  }
+
+  return UnicityIdToken.mint(
+    setup.trustBase,
+    setup.predicateVerifier,
+    await mintTransaction.toCertifiedTransaction(
+      setup.trustBase,
+      setup.predicateVerifier,
+      await waitInclusionProof(setup.client, setup.trustBase, setup.predicateVerifier, mintTransaction),
+    ),
+  );
+}
+
+export async function resolveNametag(nametagToken: UnicityIdToken): Promise<Address> {
+  return Address.fromPredicate(nametagToken.genesis.targetPredicate);
+}
+
+export async function resolveRecipientAddress(
+  recipient: IUser,
+  method: AddressingMethod,
+  nametagToken: UnicityIdToken | null = null,
+): Promise<Address> {
+  if (method === 'pubkey') {
+    return Address.fromPredicate(recipient.predicate);
+  }
+  if (method === 'nametag') {
+    if (!nametagToken) {
+      throw new Error('addressing via "nametag" requires a registered nametag token');
+    }
+    return resolveNametag(nametagToken);
+  }
+  throw new Error(`Unsupported addressing method: ${method as string}`);
+}
+
+export interface IHop {
+  readonly from: IUser;
+  readonly to: IUser;
+  readonly method: AddressingMethod;
+}
+
+export async function runMixedChain(
+  setup: ITestSetup,
+  hops: IHop[],
+  nametagRegistry: Map<IUser, UnicityIdToken>,
+): Promise<{ finalToken: Token; tokens: Token[] }> {
+  if (hops.length === 0) {
+    throw new Error('runMixedChain requires at least one hop');
+  }
+
+  const firstHop = hops[0];
+  const firstRecipientAddress = await resolveRecipientAddress(
+    firstHop.to,
+    firstHop.method,
+    firstHop.method === 'nametag' ? (nametagRegistry.get(firstHop.to) ?? null) : null,
+  );
+
+  const mintTransaction = await MintTransaction.create(
+    firstRecipientAddress,
+    TokenId.generate(),
+    TokenType.generate(),
+    CborSerializer.encodeArray(),
+  );
+  const mintCert = await CertificationData.fromMintTransaction(mintTransaction);
+  const mintResponse = await setup.client.submitCertificationRequest(mintCert);
+  if (mintResponse.status !== CertificationStatus.SUCCESS) {
+    throw new Error(`Mint certification failed: ${mintResponse.status}`);
+  }
+
+  let currentToken = await Token.mint(
+    setup.trustBase,
+    setup.predicateVerifier,
+    await mintTransaction.toCertifiedTransaction(
+      setup.trustBase,
+      setup.predicateVerifier,
+      await waitInclusionProof(setup.client, setup.trustBase, setup.predicateVerifier, mintTransaction),
+    ),
+  );
+
+  const tokens: Token[] = [currentToken];
+  let currentOwner = firstHop.to;
+
+  for (let i = 1; i < hops.length; i++) {
+    const hop = hops[i];
+    if (hop.from !== currentOwner) {
+      throw new Error(`Hop ${i} must start from previous recipient`);
+    }
+
+    const recipientAddress = await resolveRecipientAddress(
+      hop.to,
+      hop.method,
+      hop.method === 'nametag' ? (nametagRegistry.get(hop.to) ?? null) : null,
+    );
+
+    const transferTransaction = await TransferTransaction.create(
+      currentToken,
+      hop.from.predicate,
+      recipientAddress,
+      crypto.getRandomValues(new Uint8Array(32)),
+      CborSerializer.encodeArray(),
+    );
+
+    const transferCert = await CertificationData.fromTransaction(
+      transferTransaction,
+      await PayToPublicKeyPredicateUnlockScript.create(transferTransaction, hop.from.signingService),
+    );
+
+    const transferResponse = await setup.client.submitCertificationRequest(transferCert);
+    if (transferResponse.status !== CertificationStatus.SUCCESS) {
+      throw new Error(`Transfer certification at hop ${i} failed: ${transferResponse.status}`);
+    }
+
+    currentToken = await currentToken.transfer(
+      setup.trustBase,
+      setup.predicateVerifier,
+      await transferTransaction.toCertifiedTransaction(
+        setup.trustBase,
+        setup.predicateVerifier,
+        await waitInclusionProof(setup.client, setup.trustBase, setup.predicateVerifier, transferTransaction),
+      ),
+    );
+    tokens.push(currentToken);
+    currentOwner = hop.to;
+  }
+
+  return { finalToken: currentToken, tokens };
 }

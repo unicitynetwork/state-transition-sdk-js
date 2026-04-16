@@ -11,3 +11,17 @@ Feature: Full Payment Use Case Journey
     And Alice transfers the first split token to Bob
     Then Bob's received token passes verification
     And each split token passes TokenSplit verification
+
+  @nametag-standard
+  Scenario Outline: Entry payment to a recipient addressed via <method>
+    Given Alice has a signing key
+    And Bob has a signing key
+    And Bob has registered the nametag "@bob" in domain "bdd/test"
+    When Alice mints a new token addressed to Bob via <method>
+    Then the current token verifies
+    And the current token can be spent by Bob
+
+    Examples:
+      | method  |
+      | pubkey  |
+      | nametag |

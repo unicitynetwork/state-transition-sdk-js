@@ -3,8 +3,9 @@ import { When } from '@cucumber/cucumber';
 import { CertificationData } from '../../../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../../../src/api/CertificationResponse.js';
 import { PayToPublicKeyPredicate } from '../../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
+import { PayToPublicKeyPredicateUnlockScript } from '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
 import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
-import { PayToScriptHash } from '../../../../src/transaction/PayToScriptHash.js';
+import { Address } from '../../../../src/transaction/Address.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../../src/transaction/TokenType.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
@@ -13,7 +14,7 @@ import { TokenWorld } from '../support/World.js';
 
 When('the user mints a token with empty transaction data', async function (this: TokenWorld): Promise<void> {
   const mintTransaction = await MintTransaction.create(
-    await PayToScriptHash.create(this.user.predicate),
+    await Address.fromPredicate(this.user.predicate),
     new TokenId(crypto.getRandomValues(new Uint8Array(32))),
     new TokenType(crypto.getRandomValues(new Uint8Array(32))),
     new Uint8Array(0),
@@ -30,7 +31,7 @@ When(
     const size = parseInt(sizeStr, 10) * 1024;
     const data = crypto.getRandomValues(new Uint8Array(size));
     const mintTransaction = await MintTransaction.create(
-      await PayToScriptHash.create(this.user.predicate),
+      await Address.fromPredicate(this.user.predicate),
       new TokenId(crypto.getRandomValues(new Uint8Array(32))),
       new TokenType(crypto.getRandomValues(new Uint8Array(32))),
       data,
@@ -50,14 +51,14 @@ When(
     const transferTransaction = await TransferTransaction.create(
       this.token,
       this.alice.predicate,
-      await PayToScriptHash.create(this.bob.predicate),
+      await Address.fromPredicate(this.bob.predicate),
       crypto.getRandomValues(new Uint8Array(32)),
       data,
     );
 
-    const certificationData = await CertificationData.fromTransferTransaction(
+    const certificationData = await CertificationData.fromTransaction(
       transferTransaction,
-      await PayToPublicKeyPredicate.generateUnlockScript(transferTransaction, this.alice.signingService),
+      await PayToPublicKeyPredicateUnlockScript.create(transferTransaction, this.alice.signingService),
     );
 
     const response = await this.setup.client.submitCertificationRequest(certificationData);
@@ -72,9 +73,9 @@ When(
         this.setup.trustBase,
         this.setup.predicateVerifier,
         await waitInclusionProof(
+          this.setup.client,
           this.setup.trustBase,
           this.setup.predicateVerifier,
-          this.setup.client,
           transferTransaction,
         ),
       ),

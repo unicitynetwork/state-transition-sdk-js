@@ -107,7 +107,7 @@ Then('each split token passes TokenSplit verification', async function (this: To
       const data = CborDeserializer.decodeArray(bytes);
       const splitAssets = PaymentAssetCollection.fromCBOR(data[0]);
       const reason = await SplitReason.fromCBOR(data[1]);
-      return { assets: splitAssets, reason, toCBOR: () => Promise.resolve(bytes) };
+      return { assets: splitAssets, reason, encode: () => Promise.resolve(bytes) };
     };
 
     const result = await TokenSplit.verify(

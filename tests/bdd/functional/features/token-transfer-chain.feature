@@ -51,3 +51,21 @@ Feature: Token Transfer Chain
     Examples:
       | chainLength | expectedTransactions |
       | 2           | 2                    |
+
+  @nametag-standard
+  Scenario Outline: 3-hop transfer chain entered via <method>
+    Given Alice has a signing key
+    And Bob has a signing key
+    And Carol has a signing key
+    And Dave has a signing key
+    And Bob has registered the nametag "@bob" in domain "bdd/test"
+    When Alice mints a new token addressed to Bob via <method>
+    And Bob transfers the token to Carol via pubkey
+    And Carol transfers the token to Dave via pubkey
+    Then the current token verifies
+    And the current token can be spent by Dave
+
+    Examples:
+      | method  |
+      | pubkey  |
+      | nametag |

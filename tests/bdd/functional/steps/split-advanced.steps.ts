@@ -9,7 +9,7 @@ import { SplitReason } from '../../../../src/payment/SplitReason.js';
 import { TokenSplit } from '../../../../src/payment/TokenSplit.js';
 import { CborDeserializer } from '../../../../src/serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
-import { PayToScriptHash } from '../../../../src/transaction/PayToScriptHash.js';
+import { Address } from '../../../../src/transaction/Address.js';
 import { Token } from '../../../../src/transaction/Token.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
@@ -237,12 +237,12 @@ When(
     // Use the parseSplitPaymentData to properly parse the nested split data
     const parseSplitPaymentData = async (
       bytes: Uint8Array,
-    ): Promise<{ assets: PaymentAssetCollection; toCBOR: () => Promise<Uint8Array> }> => {
+    ): Promise<{ assets: PaymentAssetCollection; encode: () => Promise<Uint8Array> }> => {
       const data = CborDeserializer.decodeArray(bytes);
       const assets = PaymentAssetCollection.fromCBOR(data[0]);
       return {
         assets,
-        toCBOR: (): Promise<Uint8Array> => Promise.resolve(bytes),
+        encode: (): Promise<Uint8Array> => Promise.resolve(bytes),
       };
     };
 
@@ -389,7 +389,7 @@ When(
       await TransferTransaction.create(
         this.burnedToken,
         from.predicate,
-        await PayToScriptHash.create(to.predicate),
+        await Address.fromPredicate(to.predicate),
         crypto.getRandomValues(new Uint8Array(32)),
         CborSerializer.encodeArray(),
       );

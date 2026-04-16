@@ -23,3 +23,20 @@ Feature: Token Transfer
     When Alice transfers the token to Bob
     And Bob transfers the token back to Alice
     Then the final token passes verification
+
+  @nametag-standard
+  Scenario Outline: Owner transfers token addressed via <method>
+    Given Alice has a signing key
+    And Bob has a signing key
+    And Alice has registered the nametag "@alice" in domain "bdd/test"
+    And Bob has registered the nametag "@bob" in domain "bdd/test"
+    When Alice mints a new token addressed to Bob via pubkey
+    And Bob transfers the token to Alice via <method>
+    Then the certification response status is "SUCCESS"
+    And the current token verifies
+    And the current token can be spent by Alice
+
+    Examples:
+      | method  |
+      | pubkey  |
+      | nametag |
