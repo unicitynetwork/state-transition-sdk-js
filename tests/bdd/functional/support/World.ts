@@ -2,7 +2,8 @@ import { World, setWorldConstructor, setDefaultTimeout } from '@cucumber/cucumbe
 
 import { ShardLoadRunner } from './ShardLoadRunner.js';
 import { ILoadTestReport, IPreparedOperation } from './ShardLoadTypes.js';
-import { ITestSetup, IUser } from './TestSetup.js';
+import { AddressingMethod, ITestSetup, IUser } from './TestSetup.js';
+import { UnicityIdToken } from '../../../../src/unicity-id/UnicityIdToken.js';
 import { ITokenTree } from './TokenTreeBuilder.js';
 import { CertificationResponse, CertificationStatus } from '../../../../src/api/CertificationResponse.js';
 import { AssetId } from '../../../../src/payment/asset/AssetId.js';
@@ -16,7 +17,7 @@ import { VerificationResult } from '../../../../src/verification/VerificationRes
 import { VerificationStatus } from '../../../../src/verification/VerificationStatus.js';
 
 export const DEFAULT_STEP_TIMEOUT = 30_000;
-export const LOAD_TEST_TIMEOUT = 600_000;
+export const LOAD_TEST_TIMEOUT = 3_600_000;
 export const TREE_BUILD_TIMEOUT = 120_000;
 
 export class TokenWorld extends World {
@@ -64,6 +65,10 @@ export class TokenWorld extends World {
   public user!: IUser;
   public users!: Map<string, IUser>;
   public verificationResult!: VerificationResult<VerificationStatus>;
+
+  public readonly nametags: Map<IUser, UnicityIdToken> = new Map();
+  public readonly namedUsers: Map<string, IUser> = new Map();
+  public addressingMethod: AddressingMethod = 'pubkey';
 }
 
 setWorldConstructor(TokenWorld);

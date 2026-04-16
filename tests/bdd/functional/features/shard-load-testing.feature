@@ -16,7 +16,7 @@ Feature: Shard Load Testing
 
     Examples:
       | batchSize | batchCount |
-      | 100      | 10        |
+      | 1000      | 10        |
 
   @shard-load-independent
   Scenario Outline: Independent batches - <batchSize> ops x <batchCount> batches
@@ -26,7 +26,7 @@ Feature: Shard Load Testing
 
     Examples:
       | batchSize | batchCount |
-      | 100      | 10      |
+      | 1000      | 10      |
 
   @shard-load-pressure
   Scenario Outline: Constant pressure - <concurrency> concurrent x <totalPerShard> total
@@ -36,4 +36,4 @@ Feature: Shard Load Testing
 
     Examples:
       | concurrency | totalPerShard |
-      | 100           | 1000            |
+      | 1000           | 10000            |

@@ -1,8 +1,10 @@
 import { createWriteStream, WriteStream } from 'fs';
+import { availableParallelism } from 'node:os';
 import { performance } from 'node:perf_hooks';
 
 import { ShardAwareAggregatorClient } from './ShardAwareAggregatorClient.js';
 import { ShardBlockMonitor } from './ShardBlockMonitor.js';
+import { ShardLoadMintPool } from './ShardLoadMintPool.js';
 import {
   IBlockRecord,
   ICommitmentValidation,
@@ -20,8 +22,8 @@ import { InclusionProof } from '../../../../src/api/InclusionProof.js';
 import { JsonRpcNetworkError } from '../../../../src/api/json-rpc/JsonRpcNetworkError.js';
 import { StateId } from '../../../../src/api/StateId.js';
 import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
+import { Address } from '../../../../src/transaction/Address.js';
 import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
-import { PayToScriptHash } from '../../../../src/transaction/PayToScriptHash.js';
 import { Token } from '../../../../src/transaction/Token.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../../src/transaction/TokenType.js';
@@ -50,8 +52,16 @@ interface IShardRunningStats {
   totalSum: number;
 }
 
+function getMintPoolSize(shardCount: number): number {
+  if (process.env.LOAD_TEST_MINT_POOL_SIZE) {
+    return parseInt(process.env.LOAD_TEST_MINT_POOL_SIZE, 10);
+  }
+  return Math.min(shardCount, availableParallelism() - 2);
+}
+
 export class ShardLoadRunner {
-  private cachedPayToScriptHash: PayToScriptHash | null = null;
+  private cachedAddress: Address | null = null;
+  private mintPool: ShardLoadMintPool | null = null;
   private readonly setup: ITestSetup;
   private readonly shardUrls: Map<number, string> | null;
   private readonly user: IUser;
@@ -238,6 +248,21 @@ export class ShardLoadRunner {
     );
   }
 
+  public async destroyMintPool(): Promise<void> {
+    if (this.mintPool) {
+      await this.mintPool.destroy();
+      this.mintPool = null;
+    }
+  }
+
+  public async initMintPool(shardCount: number): Promise<void> {
+    const defaultPath = new URL('../../../../tests/functional/trust-base.json', import.meta.url).pathname;
+    const trustBasePath = process.env.TRUST_BASE_PATH ?? defaultPath;
+    const poolSize = getMintPoolSize(shardCount);
+    this.mintPool = await ShardLoadMintPool.create(poolSize, trustBasePath);
+    console.log(`[ShardLoadRunner] Mint worker pool initialized: ${poolSize} threads`);
+  }
+
   public async prepareOperations(
     opsPerShard: number,
     shardIdLength: number,
@@ -250,7 +275,7 @@ export class ShardLoadRunner {
       buckets.set(baseId + i, []);
     }
 
-    const psh = await this.getPayToScriptHash();
+    const recipient = await this.getRecipientAddress();
     const maxAttempts = opsPerShard * shardCount * 5;
     let attempts = 0;
 
@@ -266,7 +291,7 @@ export class ShardLoadRunner {
 
       // Create temporary transaction only to determine shard routing
       const mintTransaction = await MintTransaction.create(
-        psh,
+        recipient,
         new TokenId(tokenIdBytes),
         new TokenType(tokenTypeBytes),
         CborSerializer.encodeArray(),
@@ -533,9 +558,9 @@ export class ShardLoadRunner {
     try {
       // Recreate MintTransaction from seeds
       failedPhase = 'transaction-creation';
-      const psh = await this.getPayToScriptHash();
+      const recipient = await this.getRecipientAddress();
       const mintTransaction = await MintTransaction.create(
-        psh,
+        recipient,
         new TokenId(op.tokenIdBytes),
         new TokenType(op.tokenTypeBytes),
         CborSerializer.encodeArray(),
@@ -561,17 +586,21 @@ export class ShardLoadRunner {
       proofWaitDurationMs = performance.now() - t2;
       proofPollCount = proofResult.pollCount;
 
-      // Phase 3 - Token Creation
+      // Phase 3 - Token Creation (offloaded to worker thread pool when available)
       failedPhase = 'token-creation';
-      await Token.mint(
-        this.setup.trustBase,
-        this.setup.predicateVerifier,
-        await mintTransaction.toCertifiedTransaction(
+      if (this.mintPool) {
+        await this.mintPool.mint(mintTransaction.toCBOR(), proofResult.proof.toCBOR());
+      } else {
+        await Token.mint(
           this.setup.trustBase,
           this.setup.predicateVerifier,
-          proofResult.proof,
-        ),
-      );
+          await mintTransaction.toCertifiedTransaction(
+            this.setup.trustBase,
+            this.setup.predicateVerifier,
+            proofResult.proof,
+          ),
+        );
+      }
 
       return {
         commitDurationMs,
@@ -625,11 +654,11 @@ export class ShardLoadRunner {
     return { blockCsvPath, blockRecords, commitmentValidation };
   }
 
-  private async getPayToScriptHash(): Promise<PayToScriptHash> {
-    if (!this.cachedPayToScriptHash) {
-      this.cachedPayToScriptHash = await PayToScriptHash.create(this.user.predicate);
+  private async getRecipientAddress(): Promise<Address> {
+    if (!this.cachedAddress) {
+      this.cachedAddress = await Address.fromPredicate(this.user.predicate);
     }
-    return this.cachedPayToScriptHash;
+    return this.cachedAddress;
   }
 
   private async runBatch(shardId: number, batchIndex: number, ops: IPreparedOperation[]): Promise<IShardBatchResult> {

@@ -48,6 +48,7 @@ Given(
     const user = createUser();
     const shardUrls = buildShardUrls(this.shardIdLength);
     this.loadTestRunner = new ShardLoadRunner(this.setup, user, shardUrls);
+    await this.loadTestRunner.initMintPool(this.shardCount);
     this.preparedOperations = await this.loadTestRunner.prepareOperations(opsPerShard, this.shardIdLength);
   },
 );
@@ -59,6 +60,7 @@ Given(
     const user = createUser();
     const shardUrls = buildShardUrls(this.shardIdLength);
     this.loadTestRunner = new ShardLoadRunner(this.setup, user, shardUrls);
+    await this.loadTestRunner.initMintPool(this.shardCount);
     const opsPerShard = batchSize * batchCount;
     this.preparedOperations = await this.loadTestRunner.prepareOperations(opsPerShard, this.shardIdLength);
   },
@@ -101,6 +103,7 @@ When(
   },
 );
 
-Then('the shard load report is printed', function (this: TokenWorld): void {
+Then('the shard load report is printed', async function (this: TokenWorld): Promise<void> {
   ShardLoadReporter.printReport(this.loadTestReport);
+  await this.loadTestRunner.destroyMintPool();
 });
