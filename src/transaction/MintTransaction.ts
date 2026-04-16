@@ -1,24 +1,20 @@
+import { Address } from './Address.js';
 import { CertifiedMintTransaction } from './CertifiedMintTransaction.js';
 import { ITransaction } from './ITransaction.js';
 import { MintTransactionState } from './MintTransactionState.js';
-import { PayToScriptHash } from './PayToScriptHash.js';
 import { TokenId } from './TokenId.js';
 import { TokenType } from './TokenType.js';
+import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { InclusionProof } from '../api/InclusionProof.js';
+import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
+import { MintSigningService } from '../crypto/MintSigningService.js';
 import { PayToPublicKeyPredicate } from '../predicate/builtin/PayToPublicKeyPredicate.js';
-import { PredicateVerifier } from '../predicate/verification/PredicateVerifier.js';
+import { IPredicate } from '../predicate/IPredicate.js';
+import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
-import {
-  InclusionProofVerificationRule,
-  InclusionProofVerificationStatus,
-} from './verification/rule/InclusionProofVerificationRule.js';
-import { RootTrustBase } from '../api/bft/RootTrustBase.js';
-import { DataHash } from '../crypto/hash/DataHash.js';
-import { MintSigningService } from '../crypto/MintSigningService.js';
-import { IPredicate } from '../predicate/IPredicate.js';
 import { HexConverter } from '../serialization/HexConverter.js';
 import { dedent } from '../util/StringUtils.js';
 
@@ -26,7 +22,7 @@ export class MintTransaction implements ITransaction {
   private constructor(
     public readonly sourceStateHash: MintTransactionState,
     public readonly lockScript: IPredicate,
-    public readonly recipient: PayToScriptHash,
+    public readonly recipient: Address,
     public readonly tokenId: TokenId,
     public readonly tokenType: TokenType,
     private readonly _data: Uint8Array,
@@ -41,7 +37,7 @@ export class MintTransaction implements ITransaction {
   }
 
   public static async create(
-    recipient: PayToScriptHash,
+    recipient: Address,
     tokenId: TokenId,
     tokenType: TokenType,
     data: Uint8Array,
@@ -51,7 +47,7 @@ export class MintTransaction implements ITransaction {
     const signingService = await MintSigningService.create(tokenId);
     return new MintTransaction(
       await MintTransactionState.create(tokenId),
-      PayToPublicKeyPredicate.create(signingService),
+      PayToPublicKeyPredicate.fromSigningService(signingService),
       recipient,
       tokenId,
       tokenType,
@@ -64,7 +60,7 @@ export class MintTransaction implements ITransaction {
     const aux = CborDeserializer.decodeArray(data[2]);
 
     return MintTransaction.create(
-      PayToScriptHash.fromCBOR(data[0]),
+      Address.fromCBOR(data[0]),
       TokenId.fromCBOR(data[1]),
       TokenType.fromCBOR(aux[0]),
       CborDeserializer.decodeByteString(aux[1]),
@@ -83,15 +79,7 @@ export class MintTransaction implements ITransaction {
   }
 
   public calculateTransactionHash(): Promise<DataHash> {
-    return new DataHasher(HashAlgorithm.SHA256)
-      .update(
-        CborSerializer.encodeArray(
-          this.recipient.toCBOR(),
-          this.tokenId.toCBOR(),
-          CborSerializer.encodeArray(this.tokenType.toCBOR(), CborSerializer.encodeByteString(this._data)),
-        ),
-      )
-      .digest();
+    return new DataHasher(HashAlgorithm.SHA256).update(this.toCBOR()).digest();
   }
 
   public toCBOR(): Uint8Array {
@@ -102,17 +90,12 @@ export class MintTransaction implements ITransaction {
     );
   }
 
-  public async toCertifiedTransaction(
+  public toCertifiedTransaction(
     trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifier,
+    predicateVerifier: PredicateVerifierService,
     inclusionProof: InclusionProof,
   ): Promise<CertifiedMintTransaction> {
-    const result = await InclusionProofVerificationRule.verify(trustBase, predicateVerifier, inclusionProof, this);
-    if (result.status !== InclusionProofVerificationStatus.OK) {
-      throw new Error(`Inclusion proof verification failed: ${result.status.toString()}`);
-    }
-
-    return new CertifiedMintTransaction(this, inclusionProof);
+    return CertifiedMintTransaction.fromTransaction(trustBase, predicateVerifier, this, inclusionProof);
   }
 
   public toString(): string {

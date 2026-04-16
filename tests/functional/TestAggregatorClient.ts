@@ -9,9 +9,9 @@ import { DataHasher } from '../../src/crypto/hash/DataHasher.js';
 import { DataHasherFactory } from '../../src/crypto/hash/DataHasherFactory.js';
 import { HashAlgorithm } from '../../src/crypto/hash/HashAlgorithm.js';
 import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
-import { EncodedPredicate } from '../../src/predicate/EncodedPredicate.js';
-import { PredicateVerifier } from '../../src/predicate/verification/PredicateVerifier.js';
+import { PredicateVerifierService } from '../../src/predicate/verification/PredicateVerifierService.js';
 import { SparseMerkleTree } from '../../src/smt/plain/SparseMerkleTree.js';
+import { VerificationStatus } from '../../src/verification/VerificationStatus.js';
 import { createRootTrustBase } from '../utils/RootTrustBaseFixture.js';
 import { createUnicityCertificate } from '../utils/UnicityCertificateFixture.js';
 
@@ -20,7 +20,7 @@ import { createUnicityCertificate } from '../utils/UnicityCertificateFixture.js'
  */
 export class TestAggregatorClient implements IAggregatorClient {
   public readonly rootTrustBase: RootTrustBase;
-  private readonly predicateVerifier = PredicateVerifier.create();
+  private readonly predicateVerifier: PredicateVerifierService;
   private readonly requests: Map<bigint, CertificationData> = new Map();
 
   private constructor(
@@ -28,6 +28,7 @@ export class TestAggregatorClient implements IAggregatorClient {
     private readonly signingService: SigningService,
   ) {
     this.rootTrustBase = createRootTrustBase(this.signingService.publicKey);
+    this.predicateVerifier = PredicateVerifierService.create(this.rootTrustBase);
   }
 
   /**
@@ -66,11 +67,13 @@ export class TestAggregatorClient implements IAggregatorClient {
     const stateId = await StateId.fromCertificationData(certificationData);
 
     const result = await this.predicateVerifier.verify(
-      EncodedPredicate.fromCBOR(certificationData.lockScript.toCBOR()),
-      certificationData,
+      certificationData.lockScript,
+      certificationData.sourceStateHash,
+      certificationData.transactionHash,
+      certificationData.unlockScript,
     );
 
-    if (!result) {
+    if (result.status !== VerificationStatus.OK) {
       return CertificationResponse.create(CertificationStatus.SIGNATURE_VERIFICATION_FAILED);
     }
 

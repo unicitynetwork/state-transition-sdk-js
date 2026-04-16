@@ -2,6 +2,7 @@ import { CertificationData } from './CertificationData.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
+import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
 import { IPredicate } from '../predicate/IPredicate.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
@@ -47,7 +48,12 @@ export class StateId {
    */
   private static async create(predicate: IPredicate, stateHash: DataHash): Promise<StateId> {
     const hash = await new DataHasher(HashAlgorithm.SHA256)
-      .update(CborSerializer.encodeArray(predicate.toCBOR(), CborSerializer.encodeByteString(stateHash.data)))
+      .update(
+        CborSerializer.encodeArray(
+          EncodedPredicate.fromPredicate(predicate).toCBOR(),
+          CborSerializer.encodeByteString(stateHash.data),
+        ),
+      )
       .digest();
 
     return new StateId(hash);

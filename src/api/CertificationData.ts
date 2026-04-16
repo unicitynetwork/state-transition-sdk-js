@@ -2,14 +2,15 @@ import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { MintSigningService } from '../crypto/MintSigningService.js';
-import { PayToPublicKeyPredicate } from '../predicate/builtin/PayToPublicKeyPredicate.js';
+import { PayToPublicKeyPredicateUnlockScript } from '../predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
 import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
 import { IPredicate } from '../predicate/IPredicate.js';
+import { IUnlockScript } from '../predicate/IUnlockScript.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../serialization/HexConverter.js';
+import { ITransaction } from '../transaction/ITransaction.js';
 import { MintTransaction } from '../transaction/MintTransaction.js';
-import { TransferTransaction } from '../transaction/TransferTransaction.js';
 import { dedent } from '../util/StringUtils.js';
 
 export class CertificationData {
@@ -55,31 +56,24 @@ export class CertificationData {
   public static async fromMintTransaction(transaction: MintTransaction): Promise<CertificationData> {
     const signingService = await MintSigningService.create(transaction.tokenId);
 
-    return CertificationData.create(
-      transaction.lockScript,
-      transaction.sourceStateHash,
-      await transaction.calculateTransactionHash(),
-      await PayToPublicKeyPredicate.generateUnlockScript(transaction, signingService),
+    return CertificationData.fromTransaction(
+      transaction,
+      await PayToPublicKeyPredicateUnlockScript.create(transaction, signingService),
     );
   }
 
-  public static async fromTransferTransaction(
-    transaction: TransferTransaction,
-    unlockScript: Uint8Array,
+  public static async fromTransaction(
+    transaction: ITransaction,
+    unlockScript: IUnlockScript,
   ): Promise<CertificationData> {
-    unlockScript = new Uint8Array(unlockScript);
     const transactionHash = await transaction.calculateTransactionHash();
 
-    return CertificationData.create(transaction.lockScript, transaction.sourceStateHash, transactionHash, unlockScript);
-  }
-
-  private static create(
-    lockScript: IPredicate,
-    sourceStateHash: DataHash,
-    transactionHash: DataHash,
-    unlockScript: Uint8Array,
-  ): CertificationData {
-    return new CertificationData(lockScript, sourceStateHash, transactionHash, unlockScript);
+    return new CertificationData(
+      transaction.lockScript,
+      transaction.sourceStateHash,
+      transactionHash,
+      unlockScript.encode(),
+    );
   }
 
   /**
@@ -98,7 +92,7 @@ export class CertificationData {
    */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
-      this.lockScript.toCBOR(),
+      EncodedPredicate.fromPredicate(this.lockScript).toCBOR(),
       CborSerializer.encodeByteString(this.sourceStateHash.data),
       CborSerializer.encodeByteString(this.transactionHash.data),
       CborSerializer.encodeByteString(this._unlockScript),

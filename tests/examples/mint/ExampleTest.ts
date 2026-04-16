@@ -4,12 +4,12 @@ import { RootTrustBase } from '../../../src/api/bft/RootTrustBase.js';
 import { CertificationData } from '../../../src/api/CertificationData.js';
 import { SigningService } from '../../../src/crypto/secp256k1/SigningService.js';
 import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
-import { PredicateVerifier } from '../../../src/predicate/verification/PredicateVerifier.js';
+import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../../src/serialization/HexConverter.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
+import { Address } from '../../../src/transaction/Address.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
-import { PayToScriptHash } from '../../../src/transaction/PayToScriptHash.js';
 import { Token } from '../../../src/transaction/Token.js';
 import { TokenId } from '../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
@@ -22,16 +22,16 @@ it('Token minting', async () => {
 
   const client = new StateTransitionClient(aggregatorClient);
 
-  const predicateVerifier = PredicateVerifier.create();
+  const predicateVerifier = PredicateVerifierService.create(trustBase);
 
   const ownerPrivateKey = HexConverter.decode(config.ownerPrivateKey);
   const ownerSigningService = new SigningService(ownerPrivateKey);
-  const ownerPredicate = PayToPublicKeyPredicate.create(ownerSigningService);
+  const ownerPredicate = PayToPublicKeyPredicate.fromSigningService(ownerSigningService);
 
   const mintTransaction = await MintTransaction.create(
-    await PayToScriptHash.create(ownerPredicate),
-    new TokenId(crypto.getRandomValues(new Uint8Array(32))),
-    new TokenType(crypto.getRandomValues(new Uint8Array(32))),
+    await Address.fromPredicate(ownerPredicate),
+    TokenId.generate(),
+    TokenType.generate(),
     CborSerializer.encodeTextString('My custom data'),
   );
   const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
@@ -44,7 +44,7 @@ it('Token minting', async () => {
     await mintTransaction.toCertifiedTransaction(
       trustBase,
       predicateVerifier,
-      await waitInclusionProof(trustBase, predicateVerifier, client, mintTransaction),
+      await waitInclusionProof(client, trustBase, predicateVerifier, mintTransaction),
     ),
   );
 

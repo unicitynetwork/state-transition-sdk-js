@@ -5,11 +5,11 @@ import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.j
 export class TestPaymentData implements IPaymentData {
   public constructor(public readonly assets: PaymentAssetCollection) {}
 
-  public static fromCBOR(bytes: Uint8Array): Promise<TestPaymentData> {
+  public static decode(bytes: Uint8Array): Promise<TestPaymentData> {
     return Promise.resolve(new TestPaymentData(PaymentAssetCollection.fromCBOR(bytes)));
   }
 
-  public toCBOR(): Promise<Uint8Array> {
+  public encode(): Promise<Uint8Array> {
     return Promise.resolve(CborSerializer.encodeArray(...this.assets.toArray().map((asset) => asset.toCBOR())));
   }
 }

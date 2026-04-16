@@ -1,12 +1,11 @@
 import { InclusionProofVerificationRule, InclusionProofVerificationStatus } from './InclusionProofVerificationRule.js';
 import { RootTrustBase } from '../../../api/bft/RootTrustBase.js';
-import { PredicateVerifier } from '../../../predicate/verification/PredicateVerifier.js';
+import { PredicateVerifierService } from '../../../predicate/verification/PredicateVerifierService.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
+import { Address } from '../../Address.js';
 import { CertifiedTransferTransaction } from '../../CertifiedTransferTransaction.js';
 import { ITransaction } from '../../ITransaction.js';
-import { PayToScriptHash } from '../../PayToScriptHash.js';
-import { Token } from '../../Token.js';
 
 /**
  * Transfer transaction verification rule.
@@ -14,8 +13,8 @@ import { Token } from '../../Token.js';
 export class CertifiedTransferTransactionVerificationRule {
   public static async verify(
     trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifier,
-    token: Token,
+    predicateVerifier: PredicateVerifierService,
+    latestTransaction: ITransaction,
     transaction: CertifiedTransferTransaction,
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];
@@ -36,8 +35,7 @@ export class CertifiedTransferTransactionVerificationRule {
       );
     }
 
-    const latestTransaction: ITransaction = token.transactions.at(-1) ?? token.genesis;
-    const payToScriptHash = await PayToScriptHash.create(transaction.lockScript);
+    const payToScriptHash = await Address.fromPredicate(transaction.lockScript);
     result = new VerificationResult(
       'RecipientVerificationRule',
       latestTransaction.recipient.equals(payToScriptHash) ? VerificationStatus.OK : VerificationStatus.FAIL,

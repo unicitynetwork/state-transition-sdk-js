@@ -1,31 +1,26 @@
-import { CertifiedMintTransaction } from './CertifiedMintTransaction.js';
-import { CertifiedTransferTransaction } from './CertifiedTransferTransaction.js';
-import { ITransaction } from './ITransaction.js';
-import { TokenId } from './TokenId.js';
-import { TokenType } from './TokenType.js';
+import { CertifiedUnicityIdMintTransaction } from './CertifiedUnicityIdMintTransaction.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
+import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
+import { CertifiedTransferTransaction } from '../transaction/CertifiedTransferTransaction.js';
+import { TokenId } from '../transaction/TokenId.js';
+import { TokenType } from '../transaction/TokenType.js';
+import { CertifiedTransferTransactionVerificationRule } from '../transaction/verification/rule/CertifiedTransferTransactionVerificationRule.js';
+import { CertifiedUnicityIdMintTransactionVerificationRule } from '../transaction/verification/rule/CertifiedUnicityIdMintTransactionVerificationRule.js';
 import { dedent } from '../util/StringUtils.js';
 import { VerificationError } from '../verification/VerificationError.js';
 import { VerificationResult } from '../verification/VerificationResult.js';
 import { VerificationStatus } from '../verification/VerificationStatus.js';
-import { CertifiedMintTransactionVerificationRule } from './verification/rule/CertifiedMintTransactionVerificationRule.js';
-import { CertifiedTransferTransactionVerificationRule } from './verification/rule/CertifiedTransferTransactionVerificationRule.js';
-import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 
-export class Token {
+export class UnicityIdToken {
   private constructor(
-    public readonly genesis: CertifiedMintTransaction,
+    public readonly genesis: CertifiedUnicityIdMintTransaction,
     private readonly _transactions: CertifiedTransferTransaction[] = [],
   ) {}
 
   public get id(): TokenId {
     return this.genesis.tokenId;
-  }
-
-  public get latestTransaction(): ITransaction {
-    return this._transactions.at(-1) ?? this.genesis;
   }
 
   public get transactions(): CertifiedTransferTransaction[] {
@@ -36,12 +31,12 @@ export class Token {
     return this.genesis.tokenType;
   }
 
-  public static async fromCBOR(bytes: Uint8Array): Promise<Token> {
+  public static async fromCBOR(bytes: Uint8Array): Promise<UnicityIdToken> {
     const data = CborDeserializer.decodeArray(bytes);
     const transactions = CborDeserializer.decodeArray(data[1]);
 
-    return new Token(
-      await CertifiedMintTransaction.fromCBOR(data[0]),
+    return new UnicityIdToken(
+      await CertifiedUnicityIdMintTransaction.fromCBOR(data[0]),
       transactions.map((transaction) => CertifiedTransferTransaction.fromCBOR(transaction)),
     );
   }
@@ -49,9 +44,9 @@ export class Token {
   public static async mint(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,
-    genesis: CertifiedMintTransaction,
-  ): Promise<Token> {
-    const token = new Token(genesis);
+    genesis: CertifiedUnicityIdMintTransaction,
+  ): Promise<UnicityIdToken> {
+    const token = new UnicityIdToken(genesis);
     const result = await token.verify(trustBase, predicateVerifier);
     if (result.status !== VerificationStatus.OK) {
       throw new VerificationError('Invalid token genesis', result);
@@ -69,40 +64,45 @@ export class Token {
 
   public toString(): string {
     return dedent`
-      Token
+      UnicityIdToken
         ${this.genesis.toString()}
         Transactions: [
           ${this._transactions.map((transaction) => transaction.toString()).join('\n')}
         ]`;
   }
 
-  public async transfer(
-    trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifierService,
-    transaction: CertifiedTransferTransaction,
-  ): Promise<Token> {
-    const result = await CertifiedTransferTransactionVerificationRule.verify(
-      trustBase,
-      predicateVerifier,
-      this.latestTransaction,
-      transaction,
-    );
-    if (result.status !== VerificationStatus.OK) {
-      throw new VerificationError('Invalid transfer transaction', result);
-    }
-
-    const transactions = this.transactions.slice();
-    transactions.push(transaction);
-
-    return new Token(this.genesis, transactions);
-  }
+  // TODO: Make it updatable.
+  // public async transfer(
+  //   trustBase: RootTrustBase,
+  //   predicateVerifier: PredicateVerifier,
+  //   transaction: CertifiedTransferTransaction,
+  // ): Promise<UnicityIdToken> {
+  //   const result = await CertifiedTransferTransactionVerificationRule.verify(
+  //     trustBase,
+  //     predicateVerifier,
+  //     this._transactions.at(-1) ?? this.genesis,
+  //     transaction,
+  //   );
+  //   if (result.status !== VerificationStatus.OK) {
+  //     throw new VerificationError('Invalid transfer transaction', result);
+  //   }
+  //
+  //   const transactions = this.transactions.slice();
+  //   transactions.push(transaction);
+  //
+  //   return new UnicityIdToken(this.genesis, transactions);
+  // }
 
   public async verify(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];
-    const result = await CertifiedMintTransactionVerificationRule.verify(trustBase, predicateVerifier, this.genesis);
+    const result = await CertifiedUnicityIdMintTransactionVerificationRule.verify(
+      trustBase,
+      predicateVerifier,
+      this.genesis,
+    );
     results.push(result);
     if (result.status !== VerificationStatus.OK) {
       return new VerificationResult('TokenVerification', VerificationStatus.FAIL, '', results);
