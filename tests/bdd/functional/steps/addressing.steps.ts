@@ -13,13 +13,7 @@ import { TokenType } from '../../../../src/transaction/TokenType.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
 import { waitInclusionProof } from '../../../../src/util/InclusionProofUtils.js';
 import { VerificationStatus } from '../../../../src/verification/VerificationStatus.js';
-import {
-  AddressingMethod,
-  IUser,
-  createUser,
-  registerNametag,
-  resolveRecipientAddress,
-} from '../support/TestSetup.js';
+import { AddressingMethod, IUser, createUser, registerNametag, resolveRecipientAddress } from '../support/TestSetup.js';
 import { TokenWorld } from '../support/World.js';
 
 function parseMethod(raw: string): AddressingMethod {
@@ -109,7 +103,12 @@ When(
       await mintTransaction.toCertifiedTransaction(
         this.setup.trustBase,
         this.setup.predicateVerifier,
-        await waitInclusionProof(this.setup.client, this.setup.trustBase, this.setup.predicateVerifier, mintTransaction),
+        await waitInclusionProof(
+          this.setup.client,
+          this.setup.trustBase,
+          this.setup.predicateVerifier,
+          mintTransaction,
+        ),
       ),
     );
   },
@@ -169,29 +168,26 @@ Then(/^the current token verifies$/, async function (this: TokenWorld): Promise<
   assert.strictEqual(result.status, VerificationStatus.OK);
 });
 
-Then(
-  /^the current token can be spent by (\w+)$/,
-  async function (this: TokenWorld, ownerName: string): Promise<void> {
-    const owner = requireNamedUser(this, ownerName);
-    const bystander = createUser();
+Then(/^the current token can be spent by (\w+)$/, async function (this: TokenWorld, ownerName: string): Promise<void> {
+  const owner = requireNamedUser(this, ownerName);
+  const bystander = createUser();
 
-    const transferTransaction = await TransferTransaction.create(
-      this.token,
-      owner.predicate,
-      await resolveRecipientAddress(bystander, 'pubkey'),
-      crypto.getRandomValues(new Uint8Array(32)),
-      CborSerializer.encodeArray(),
-    );
+  const transferTransaction = await TransferTransaction.create(
+    this.token,
+    owner.predicate,
+    await resolveRecipientAddress(bystander, 'pubkey'),
+    crypto.getRandomValues(new Uint8Array(32)),
+    CborSerializer.encodeArray(),
+  );
 
-    const certificationData = await CertificationData.fromTransaction(
-      transferTransaction,
-      await PayToPublicKeyPredicateUnlockScript.create(transferTransaction, owner.signingService),
-    );
+  const certificationData = await CertificationData.fromTransaction(
+    transferTransaction,
+    await PayToPublicKeyPredicateUnlockScript.create(transferTransaction, owner.signingService),
+  );
 
-    const response = await this.setup.client.submitCertificationRequest(certificationData);
-    assert.strictEqual(response.status, CertificationStatus.SUCCESS);
-  },
-);
+  const response = await this.setup.client.submitCertificationRequest(certificationData);
+  assert.strictEqual(response.status, CertificationStatus.SUCCESS);
+});
 
 Then(
   /^the current token's CBOR does not contain the bytes of "@([^"]+)"$/,

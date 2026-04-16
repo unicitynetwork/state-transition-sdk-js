@@ -152,7 +152,7 @@ When('Bob splits his token into 2 sub-parts', async function (this: TokenWorld):
     const data = CborDeserializer.decodeArray(bytes);
     const splitAssets = PaymentAssetCollection.fromCBOR(data[0]);
     const reason = await SplitReason.fromCBOR(data[1]);
-    return { assets: splitAssets, reason, encode: () => Promise.resolve(bytes) };
+    return { assets: splitAssets, encode: () => Promise.resolve(bytes), reason };
   };
 
   const verifyResult = await TokenSplit.verify(

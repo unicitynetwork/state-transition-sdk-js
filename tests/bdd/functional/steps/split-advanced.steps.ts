@@ -1,11 +1,9 @@
 import assert from 'node:assert/strict';
 
-import { DataTable, Given, Then, When } from '@cucumber/cucumber';
+import { Given, Then, When } from '@cucumber/cucumber';
 
 import { Asset } from '../../../../src/payment/asset/Asset.js';
 import { PaymentAssetCollection } from '../../../../src/payment/asset/PaymentAssetCollection.js';
-import { ISplitPaymentData } from '../../../../src/payment/ISplitPaymentData.js';
-import { SplitReason } from '../../../../src/payment/SplitReason.js';
 import { TokenSplit } from '../../../../src/payment/TokenSplit.js';
 import { CborDeserializer } from '../../../../src/serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';

@@ -5,6 +5,7 @@ import { When } from '@cucumber/cucumber';
 import { Asset } from '../../../../src/payment/asset/Asset.js';
 import { AssetId } from '../../../../src/payment/asset/AssetId.js';
 import { PaymentAssetCollection } from '../../../../src/payment/asset/PaymentAssetCollection.js';
+import { Token } from '../../../../src/transaction/Token.js';
 import { UnicityIdToken } from '../../../../src/unicity-id/UnicityIdToken.js';
 import { VerificationStatus } from '../../../../src/verification/VerificationStatus.js';
 import {
@@ -150,7 +151,11 @@ When(
     const { CborSerializer } = await import('../../../../src/serialization/cbor/CborSerializer.js');
     const { waitInclusionProof } = await import('../../../../src/util/InclusionProofUtils.js');
 
-    const deliverChild = async (child: typeof splitTokens[number], to: IUser, method: AddressingMethod) => {
+    const deliverChild = async (
+      child: (typeof splitTokens)[number],
+      to: IUser,
+      method: AddressingMethod,
+    ): Promise<Token> => {
       const recipientAddress = await resolveRecipientAddress(to, method, this.nametags.get(to) ?? null);
       const tx = await TransferTransaction.create(
         child,
@@ -268,8 +273,8 @@ When(
 
     const hops: IHop[] = methods.map((method, i) => ({
       from: participants[i],
-      to: participants[i + 1],
       method,
+      to: participants[i + 1],
     }));
 
     const { finalToken, tokens } = await runMixedChain(this.setup, hops, registry);

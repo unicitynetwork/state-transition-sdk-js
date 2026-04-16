@@ -409,7 +409,7 @@ export async function registerNametag(
 }
 
 export async function resolveNametag(nametagToken: UnicityIdToken): Promise<Address> {
-  return Address.fromPredicate(nametagToken.genesis.targetPredicate);
+  return await Address.fromPredicate(nametagToken.genesis.targetPredicate);
 }
 
 export async function resolveRecipientAddress(
@@ -418,21 +418,21 @@ export async function resolveRecipientAddress(
   nametagToken: UnicityIdToken | null = null,
 ): Promise<Address> {
   if (method === 'pubkey') {
-    return Address.fromPredicate(recipient.predicate);
+    return await Address.fromPredicate(recipient.predicate);
   }
   if (method === 'nametag') {
     if (!nametagToken) {
       throw new Error('addressing via "nametag" requires a registered nametag token');
     }
-    return resolveNametag(nametagToken);
+    return await resolveNametag(nametagToken);
   }
   throw new Error(`Unsupported addressing method: ${method as string}`);
 }
 
 export interface IHop {
   readonly from: IUser;
-  readonly to: IUser;
   readonly method: AddressingMethod;
+  readonly to: IUser;
 }
 
 export async function runMixedChain(

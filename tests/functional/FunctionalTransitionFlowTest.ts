@@ -1,7 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { TestAggregatorClient } from './TestAggregatorClient.js';
 import { AggregatorClient } from '../../src/api/AggregatorClient.js';
 import { RootTrustBase } from '../../src/api/bft/RootTrustBase.js';
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';

@@ -3,7 +3,6 @@ import { World, setWorldConstructor, setDefaultTimeout } from '@cucumber/cucumbe
 import { ShardLoadRunner } from './ShardLoadRunner.js';
 import { ILoadTestReport, IPreparedOperation } from './ShardLoadTypes.js';
 import { AddressingMethod, ITestSetup, IUser } from './TestSetup.js';
-import { UnicityIdToken } from '../../../../src/unicity-id/UnicityIdToken.js';
 import { ITokenTree } from './TokenTreeBuilder.js';
 import { CertificationResponse, CertificationStatus } from '../../../../src/api/CertificationResponse.js';
 import { AssetId } from '../../../../src/payment/asset/AssetId.js';
@@ -13,6 +12,7 @@ import { Token } from '../../../../src/transaction/Token.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../../src/transaction/TokenType.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
+import { UnicityIdToken } from '../../../../src/unicity-id/UnicityIdToken.js';
 import { VerificationResult } from '../../../../src/verification/VerificationResult.js';
 import { VerificationStatus } from '../../../../src/verification/VerificationStatus.js';
 
@@ -21,6 +21,7 @@ export const LOAD_TEST_TIMEOUT = 3_600_000;
 export const TREE_BUILD_TIMEOUT = 120_000;
 
 export class TokenWorld extends World {
+  public addressingMethod: AddressingMethod = 'pubkey';
   public alice!: IUser;
   public assetId1!: AssetId;
   public assetId2!: AssetId;
@@ -45,6 +46,8 @@ export class TokenWorld extends World {
   public mintError: Error | null = null;
   public mintTokenId!: TokenId;
   public mintTokenType!: TokenType;
+  public readonly namedUsers: Map<string, IUser> = new Map();
+  public readonly nametags: Map<IUser, UnicityIdToken> = new Map();
   public originalToken!: Token;
   public preparedOperations!: Map<number, IPreparedOperation[]>;
   public secondMintTransaction!: MintTransaction;
@@ -65,10 +68,6 @@ export class TokenWorld extends World {
   public user!: IUser;
   public users!: Map<string, IUser>;
   public verificationResult!: VerificationResult<VerificationStatus>;
-
-  public readonly nametags: Map<IUser, UnicityIdToken> = new Map();
-  public readonly namedUsers: Map<string, IUser> = new Map();
-  public addressingMethod: AddressingMethod = 'pubkey';
 }
 
 setWorldConstructor(TokenWorld);

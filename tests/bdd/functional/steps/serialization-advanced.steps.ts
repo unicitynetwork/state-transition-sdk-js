@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 
 import { Then, When } from '@cucumber/cucumber';
 
-import { Token } from '../../../../src/transaction/Token.js';
 import { VerificationStatus } from '../../../../src/verification/VerificationStatus.js';
 import { TokenWorld } from '../support/World.js';
 

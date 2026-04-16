@@ -4,11 +4,10 @@ import { Then, When } from '@cucumber/cucumber';
 
 import { CertificationData } from '../../../../src/api/CertificationData.js';
 import { SigningService } from '../../../../src/crypto/secp256k1/SigningService.js';
-import { PayToPublicKeyPredicate } from '../../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
 import { PayToPublicKeyPredicateUnlockScript } from '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
 import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
-import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
 import { Address } from '../../../../src/transaction/Address.js';
+import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../../src/transaction/TokenType.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';

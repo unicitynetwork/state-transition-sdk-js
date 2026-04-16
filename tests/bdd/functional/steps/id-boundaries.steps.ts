@@ -2,8 +2,8 @@ import { When } from '@cucumber/cucumber';
 
 import { CertificationData } from '../../../../src/api/CertificationData.js';
 import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
-import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
 import { Address } from '../../../../src/transaction/Address.js';
+import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../../src/transaction/TokenType.js';
 import { TokenWorld } from '../support/World.js';
