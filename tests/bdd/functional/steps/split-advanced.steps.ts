@@ -25,11 +25,12 @@ import { TokenWorld } from '../support/World.js';
 
 // Extend TokenWorld to include user registry and split token tracking
 declare module '../support/World.js' {
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   interface TokenWorld {
-    users: Map<string, IUser>;
-    userSplitTokens: Map<string, Token[]>;
     currentToken: Token;
     originalToken: Token;
+    userSplitTokens: Map<string, Token[]>;
+    users: Map<string, IUser>;
   }
 }
 
@@ -233,15 +234,15 @@ When(
     ];
 
     // Use the parseSplitPaymentData to properly parse the nested split data
-    const parseSplitPaymentData = async (
+    const parseSplitPaymentData = (
       bytes: Uint8Array,
     ): Promise<{ assets: PaymentAssetCollection; encode: () => Promise<Uint8Array> }> => {
       const data = CborDeserializer.decodeArray(bytes);
       const assets = PaymentAssetCollection.fromCBOR(data[0]);
-      return {
+      return Promise.resolve({
         assets,
         encode: (): Promise<Uint8Array> => Promise.resolve(bytes),
-      };
+      });
     };
 
     const result = await splitTokenToOwner(

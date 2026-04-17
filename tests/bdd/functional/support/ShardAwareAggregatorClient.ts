@@ -32,19 +32,6 @@ export class ShardAwareAggregatorClient implements IAggregatorClient {
     }
   }
 
-  public async submitCertificationRequest(certificationData: CertificationData): Promise<CertificationResponse> {
-    const stateId = await StateId.fromCertificationData(certificationData);
-    const shardId = ShardAwareAggregatorClient.getShardForStateId(stateId, this.shardIdLength);
-    const client = this.shardMap.get(shardId)!;
-    return client.submitCertificationRequest(certificationData);
-  }
-
-  public async getInclusionProof(stateId: StateId): Promise<InclusionProofResponse> {
-    const shardId = ShardAwareAggregatorClient.getShardForStateId(stateId, this.shardIdLength);
-    const client = this.shardMap.get(shardId)!;
-    return client.getInclusionProof(stateId);
-  }
-
   public static getShardForStateId(stateId: StateId, shardIdLength: number): number {
     const imprint = stateId.imprint; // 2-byte algo prefix + 32-byte hash
     const len = imprint.length;
@@ -52,5 +39,18 @@ export class ShardAwareAggregatorClient implements IAggregatorClient {
       ((imprint[len - 4] << 24) | (imprint[len - 3] << 16) | (imprint[len - 2] << 8) | imprint[len - 1]) >>> 0;
     const shardBits = lsb32 & ((1 << shardIdLength) - 1);
     return (1 << shardIdLength) | shardBits;
+  }
+
+  public async getInclusionProof(stateId: StateId): Promise<InclusionProofResponse> {
+    const shardId = ShardAwareAggregatorClient.getShardForStateId(stateId, this.shardIdLength);
+    const client = this.shardMap.get(shardId)!;
+    return await client.getInclusionProof(stateId);
+  }
+
+  public async submitCertificationRequest(certificationData: CertificationData): Promise<CertificationResponse> {
+    const stateId = await StateId.fromCertificationData(certificationData);
+    const shardId = ShardAwareAggregatorClient.getShardForStateId(stateId, this.shardIdLength);
+    const client = this.shardMap.get(shardId)!;
+    return client.submitCertificationRequest(certificationData);
   }
 }
