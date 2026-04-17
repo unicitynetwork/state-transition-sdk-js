@@ -1,4 +1,4 @@
-soFeature: Nametag-addressed split children
+Feature: Nametag-addressed split children
   As a payer who fans out value to several recipients
   I want split children to be addressable by nametag just like plain transfers
   So that the same addressing story applies end-to-end
