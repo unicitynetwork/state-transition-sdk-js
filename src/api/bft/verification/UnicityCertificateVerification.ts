@@ -1,4 +1,3 @@
-import { InputRecordCurrentHashVerificationRule } from './rule/InputRecordCurrentHashVerificationRule.js';
 import { UnicitySealHashMatchesWithRootHashRule } from './rule/UnicitySealHashMatchesWithRootHashRule.js';
 import { UnicitySealQuorumSignaturesVerificationRule } from './rule/UnicitySealQuorumSignaturesVerificationRule.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
@@ -29,13 +28,7 @@ export class UnicityCertificateVerification {
     inclusionProof: InclusionProof,
   ): Promise<UnicityCertificateVerificationResult> {
     const results: VerificationResult<VerificationStatus>[] = [];
-    let result = await InputRecordCurrentHashVerificationRule.verify(inclusionProof);
-    results.push(result);
-    if (result.status !== VerificationStatus.OK) {
-      return UnicityCertificateVerificationResult.fail(results);
-    }
-
-    result = await UnicitySealHashMatchesWithRootHashRule.verify(inclusionProof.unicityCertificate);
+    let result = await UnicitySealHashMatchesWithRootHashRule.verify(inclusionProof.unicityCertificate);
     results.push(result);
     if (result.status !== VerificationStatus.OK) {
       return UnicityCertificateVerificationResult.fail(results);

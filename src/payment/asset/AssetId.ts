@@ -28,7 +28,7 @@ export class AssetId {
    * Converts the AssetId to a bitstring representation.
    */
   public toBitString(): BitString {
-    return new BitString(this._bytes);
+    return BitString.fromBytes(this._bytes);
   }
 
   /** CBOR serialization. */

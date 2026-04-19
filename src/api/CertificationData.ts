@@ -1,5 +1,4 @@
 import { DataHash } from '../crypto/hash/DataHash.js';
-import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { MintSigningService } from '../crypto/MintSigningService.js';
 import { PayToPublicKeyPredicateUnlockScript } from '../predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
@@ -74,15 +73,6 @@ export class CertificationData {
       transactionHash,
       unlockScript.encode(),
     );
-  }
-
-  /**
-   * Calculate the leaf value for this certification data.
-   *
-   * @returns A Promise resolving to the leaf value hash.
-   */
-  public calculateLeafValue(): Promise<DataHash> {
-    return new DataHasher(HashAlgorithm.SHA256).update(this.toCBOR()).digest();
   }
 
   /**

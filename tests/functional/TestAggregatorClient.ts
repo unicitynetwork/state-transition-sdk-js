@@ -2,6 +2,7 @@ import { RootTrustBase } from '../../src/api/bft/RootTrustBase.js';
 import { CertificationData } from '../../src/api/CertificationData.js';
 import { CertificationResponse, CertificationStatus } from '../../src/api/CertificationResponse.js';
 import { IAggregatorClient } from '../../src/api/IAggregatorClient.js';
+import { InclusionCertificate } from '../../src/api/InclusionCertificate.js';
 import { InclusionProof } from '../../src/api/InclusionProof.js';
 import { InclusionProofResponse } from '../../src/api/InclusionProofResponse.js';
 import { StateId } from '../../src/api/StateId.js';
@@ -10,7 +11,8 @@ import { DataHasherFactory } from '../../src/crypto/hash/DataHasherFactory.js';
 import { HashAlgorithm } from '../../src/crypto/hash/HashAlgorithm.js';
 import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
 import { PredicateVerifierService } from '../../src/predicate/verification/PredicateVerifierService.js';
-import { SparseMerkleTree } from '../../src/smt/plain/SparseMerkleTree.js';
+import { SparseMerkleTree } from '../../src/smt/radix/SparseMerkleTree.js';
+import { BitString } from '../../src/util/BitString.js';
 import { VerificationStatus } from '../../src/verification/VerificationStatus.js';
 import { createRootTrustBase } from '../utils/RootTrustBaseFixture.js';
 import { createUnicityCertificate } from '../utils/UnicityCertificateFixture.js';
@@ -46,14 +48,25 @@ export class TestAggregatorClient implements IAggregatorClient {
    * @inheritDoc
    */
   public async getInclusionProof(stateId: StateId): Promise<InclusionProofResponse> {
-    const certificationData = this.requests.get(stateId.toBitString().toBigInt());
     const root = await this.smt.calculateRoot();
+
+    if (!root.has(stateId.data)) {
+      return Promise.resolve(
+        new InclusionProofResponse(
+          1n,
+          new InclusionProof(null, null, await createUnicityCertificate(root.hash, this.signingService)),
+        ),
+      );
+    }
+
+    const certificationData = this.requests.get(BitString.fromBytesReversedLSB(stateId.data).toBigInt());
+
     return Promise.resolve(
       new InclusionProofResponse(
         1n,
         new InclusionProof(
-          root.getPath(stateId.toBitString().toBigInt()),
           certificationData ?? null,
+          InclusionCertificate.create(root, stateId.data),
           await createUnicityCertificate(root.hash, this.signingService),
         ),
       ),
@@ -77,10 +90,10 @@ export class TestAggregatorClient implements IAggregatorClient {
       return CertificationResponse.create(CertificationStatus.SIGNATURE_VERIFICATION_FAILED);
     }
 
-    const path = stateId.toBitString().toBigInt();
+    const path = BitString.fromBytesReversedLSB(stateId.data).toBigInt();
     if (!this.requests.has(path)) {
-      const leafValue = await certificationData.calculateLeafValue();
-      await this.smt.addLeaf(path, leafValue.imprint);
+      const leafValue = certificationData.transactionHash;
+      await this.smt.addLeaf(stateId.data, leafValue.data);
       this.requests.set(path, certificationData);
     }
 
