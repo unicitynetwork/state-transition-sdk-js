@@ -6,7 +6,7 @@ import { HexConverter } from '../serialization/HexConverter.js';
 import { FinalizedBranch } from '../smt/radix/FinalizedBranch.js';
 import { FinalizedLeafBranch } from '../smt/radix/FinalizedLeafBranch.js';
 import { SparseMerkleTreeRootNode } from '../smt/radix/SparseMerkleTreeRootNode.js';
-import { getBitAtDepth } from '../smt/SparseMerkleTreePathUtils.js';
+import { BitString } from '../util/BitString.js';
 import { dedent } from '../util/StringUtils.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 
@@ -24,6 +24,7 @@ export class InclusionCertificate {
 
     const siblings: DataHash[] = [];
     const bitmap = new Uint8Array(InclusionCertificate.BITMAP_SIZE);
+    const keyPath = BitString.fromBytesReversedLSB(key).toBigInt();
 
     while (node != null) {
       if (node instanceof FinalizedLeafBranch) {
@@ -34,7 +35,7 @@ export class InclusionCertificate {
         return new InclusionCertificate(bitmap, siblings);
       }
 
-      const isRight = getBitAtDepth(key, node.depth);
+      const isRight: bigint = (keyPath >> BigInt(node.depth)) & 1n;
 
       const sibling = isRight ? node.left : node.right;
 
@@ -114,9 +115,12 @@ export class InclusionCertificate {
       .update(value)
       .digest();
 
+    const keyPath = BitString.fromBytesReversedLSB(key).toBigInt();
+    const bitmapPath = BitString.fromBytesReversedLSB(this.bitmap).toBigInt();
+
     let position = this.siblings.length;
     for (let depth = InclusionCertificate.MAX_DEPTH; depth >= 0; depth--) {
-      if (getBitAtDepth(this.bitmap, depth) === 0) continue;
+      if (!((bitmapPath >> BigInt(depth)) & 1n)) continue;
 
       position -= 1;
       if (position < 0) return false;
@@ -124,7 +128,7 @@ export class InclusionCertificate {
       const sibling = this.siblings[position];
 
       let left: Uint8Array, right: Uint8Array;
-      if (getBitAtDepth(key, depth) === 1) {
+      if ((keyPath >> BigInt(depth)) & 1n) {
         left = sibling.data;
         right = hash.data;
       } else {

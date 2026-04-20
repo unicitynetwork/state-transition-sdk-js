@@ -1,11 +1,11 @@
 import { FinalizedBranch } from './FinalizedBranch.js';
+import { FinalizedLeafBranch } from './FinalizedLeafBranch.js';
 import { DataHash } from '../../crypto/hash/DataHash.js';
 import { HashAlgorithm } from '../../crypto/hash/HashAlgorithm.js';
 import { IDataHasher } from '../../crypto/hash/IDataHasher.js';
 import { IDataHasherFactory } from '../../crypto/hash/IDataHasherFactory.js';
+import { BitString } from '../../util/BitString.js';
 import { dedent } from '../../util/StringUtils.js';
-import { getBitAtDepth } from '../SparseMerkleTreePathUtils.js';
-import { FinalizedLeafBranch } from './FinalizedLeafBranch.js';
 import { areUint8ArraysEqual } from '../../util/TypedArrayUtils.js';
 
 /**
@@ -57,6 +57,7 @@ export class SparseMerkleTreeRootNode {
   }
 
   public has(key: Uint8Array): boolean {
+    const keyPath = BitString.fromBytesReversedLSB(key).toBigInt();
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     let node: FinalizedBranch | SparseMerkleTreeRootNode | null = this;
     while (node != null) {
@@ -64,7 +65,7 @@ export class SparseMerkleTreeRootNode {
         return areUint8ArraysEqual(node.key, key);
       }
 
-      const isRight = getBitAtDepth(key, node.depth);
+      const isRight: bigint = (keyPath >> BigInt(node.depth)) & 1n;
       node = isRight ? node.right : node.left;
     }
 
