@@ -2,6 +2,7 @@ import { UnicityCertificate } from './bft/UnicityCertificate.js';
 import { CertificationData } from './CertificationData.js';
 import { InclusionCertificate } from './InclusionCertificate.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
+import { CborError } from '../serialization/cbor/CborError.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { dedent } from '../util/StringUtils.js';
 
@@ -9,6 +10,9 @@ import { dedent } from '../util/StringUtils.js';
  * Represents a proof of inclusion or non inclusion in a sparse merkle tree.
  */
 export class InclusionProof {
+  public static readonly CBOR_TAG = 39033n;
+  private static readonly VERSION = 1n;
+
   /**
    * Constructs an InclusionProof instance.
    * @param certificationData Certification data.
@@ -21,20 +25,33 @@ export class InclusionProof {
     public readonly unicityCertificate: UnicityCertificate,
   ) {}
 
+  public get version(): bigint {
+    return InclusionProof.VERSION;
+  }
+
   /**
    * Decodes an InclusionProof from CBOR bytes.
    * @param bytes The CBOR-encoded bytes.
    * @returns An InclusionProof instance.
    */
   public static fromCBOR(bytes: Uint8Array): InclusionProof {
-    const data = CborDeserializer.decodeArray(bytes);
+    const tag = CborDeserializer.decodeTag(bytes);
+    if (tag.tag !== InclusionProof.CBOR_TAG) {
+      throw new CborError(`Invalid CBOR tag for InclusionProof: ${tag.tag}`);
+    }
+
+    const data = CborDeserializer.decodeArray(tag.data);
+    const version = CborDeserializer.decodeUnsignedInteger(data[0]);
+    if (version !== InclusionProof.VERSION) {
+      throw new CborError(`Unsupported InclusionProof version: ${version}`);
+    }
 
     return new InclusionProof(
-      CborDeserializer.decodeNullable(data[0], CertificationData.fromCBOR),
-      CborDeserializer.decodeNullable(data[1], (inclusionCertificate) =>
+      CborDeserializer.decodeNullable(data[1], CertificationData.fromCBOR),
+      CborDeserializer.decodeNullable(data[2], (inclusionCertificate) =>
         InclusionCertificate.decode(CborDeserializer.decodeByteString(inclusionCertificate)),
       ),
-      UnicityCertificate.fromCBOR(data[2]),
+      UnicityCertificate.fromCBOR(data[3]),
     );
   }
 
@@ -43,12 +60,16 @@ export class InclusionProof {
    * @returns The CBOR-encoded bytes.
    */
   public toCBOR(): Uint8Array {
-    return CborSerializer.encodeArray(
-      CborSerializer.encodeNullable(this.certificationData, (certificationData) => certificationData.toCBOR()),
-      CborSerializer.encodeNullable(this.inclusionCertificate, (inclusionCertificate) =>
-        CborSerializer.encodeByteString(inclusionCertificate.encode()),
+    return CborSerializer.encodeTag(
+      InclusionProof.CBOR_TAG,
+      CborSerializer.encodeArray(
+        CborSerializer.encodeUnsignedInteger(this.version),
+        CborSerializer.encodeNullable(this.certificationData, (certificationData) => certificationData.toCBOR()),
+        CborSerializer.encodeNullable(this.inclusionCertificate, (inclusionCertificate) =>
+          CborSerializer.encodeByteString(inclusionCertificate.encode()),
+        ),
+        this.unicityCertificate.toCBOR(),
       ),
-      this.unicityCertificate.toCBOR(),
     );
   }
 
