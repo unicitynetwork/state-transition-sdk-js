@@ -58,7 +58,7 @@ export class CertificationData {
 
     const data = CborDeserializer.decodeArray(tag.data);
     const version = CborDeserializer.decodeUnsignedInteger(data[0]);
-    if (version !== 1n) {
+    if (version !== CertificationData.VERSION) {
       throw new CborError(`Unsupported CertificationData version: ${version}`);
     }
 
