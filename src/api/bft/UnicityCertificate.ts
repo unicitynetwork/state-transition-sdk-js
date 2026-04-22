@@ -67,7 +67,7 @@ export class UnicityCertificate {
     const shardId = shardTreeCertificate.shard;
     const siblingHashes = shardTreeCertificate.siblingHashList;
     for (let i = 0; i < siblingHashes.length; i++) {
-      const isRight = shardId[shardId.length - 1 - Math.floor(i / 8)] === 1;
+      const isRight = shardId[shardId.length - 1 - i] === 1;
       if (isRight) {
         rootHash = await new DataHasher(HashAlgorithm.SHA256).update(siblingHashes[i]).update(rootHash.data).digest();
       } else {
