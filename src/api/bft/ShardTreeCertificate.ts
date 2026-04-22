@@ -2,8 +2,8 @@ import { ShardId } from './ShardId.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { CborError } from '../../serialization/cbor/CborError.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
-import { dedent } from '../../util/StringUtils.js';
 import { HexConverter } from '../../serialization/HexConverter.js';
+import { dedent } from '../../util/StringUtils.js';
 
 /**
  * Shard tree certificate.
