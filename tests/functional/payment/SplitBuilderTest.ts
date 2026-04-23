@@ -15,7 +15,6 @@ import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPub
 import { PayToPublicKeyPredicateUnlockScript } from '../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
 import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
-import { Address } from '../../../src/transaction/Address.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../src/transaction/Token.js';
 import { TokenId } from '../../../src/transaction/TokenId.js';
@@ -41,7 +40,7 @@ describe('SplitBuilder Functional Test', () => {
 
     const paymentData = new TestPaymentData(PaymentAssetCollection.create(...assets));
     const mintTransaction = await MintTransaction.create(
-      await Address.fromPredicate(predicate),
+      predicate,
       TokenId.generate(),
       TokenType.generate(),
       await paymentData.encode(),
@@ -118,7 +117,7 @@ describe('SplitBuilder Functional Test', () => {
       const paymentData = new TestSplitPaymentData(assets, SplitReason.create(token, entry.proofs));
 
       const mintTransaction = await MintTransaction.create(
-        await Address.fromPredicate(predicate),
+        predicate,
         tokenId,
         TokenType.generate(),
         await paymentData.encode(),

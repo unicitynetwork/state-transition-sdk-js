@@ -8,7 +8,6 @@ import { PredicateVerifierService } from '../../../src/predicate/verification/Pr
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../../src/serialization/HexConverter.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
-import { Address } from '../../../src/transaction/Address.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../src/transaction/Token.js';
 import { TokenId } from '../../../src/transaction/TokenId.js';
@@ -29,7 +28,7 @@ it('Token minting', async () => {
   const ownerPredicate = PayToPublicKeyPredicate.fromSigningService(ownerSigningService);
 
   const mintTransaction = await MintTransaction.create(
-    await Address.fromPredicate(ownerPredicate),
+    ownerPredicate,
     TokenId.generate(),
     TokenType.generate(),
     CborSerializer.encodeTextString('My custom data'),

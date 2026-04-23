@@ -15,7 +15,6 @@ import { PredicateVerifierService } from '../../../src/predicate/verification/Pr
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../../src/serialization/HexConverter.js';
 import { SparseMerkleTree } from '../../../src/smt/radix/SparseMerkleTree.js';
-import { Address } from '../../../src/transaction/Address.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { TokenId } from '../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
@@ -40,7 +39,7 @@ describe('InclusionProof', () => {
 
   beforeAll(async () => {
     transaction = await MintTransaction.create(
-      await Address.fromPredicate(PayToPublicKeyPredicate.fromSigningService(signingService)),
+      PayToPublicKeyPredicate.fromSigningService(signingService),
       TokenId.generate(),
       TokenType.generate(),
       new Uint8Array(),
@@ -89,7 +88,7 @@ describe('InclusionProof', () => {
         predicateVerifier,
         new InclusionProof(certificationData, null, unicityCertificate),
         await MintTransaction.create(
-          await Address.fromPredicate(transaction.lockScript),
+          transaction.lockScript,
           TokenId.generate(),
           transaction.tokenType,
           transaction.data,

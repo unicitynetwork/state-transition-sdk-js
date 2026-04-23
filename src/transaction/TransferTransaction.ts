@@ -1,4 +1,3 @@
-import { Address } from './Address.js';
 import { CertifiedTransferTransaction } from './CertifiedTransferTransaction.js';
 import { ITransaction } from './ITransaction.js';
 import { Token } from './Token.js';
@@ -23,7 +22,7 @@ export class TransferTransaction implements ITransaction {
   private constructor(
     public readonly sourceStateHash: DataHash,
     public readonly lockScript: IPredicate,
-    public readonly recipient: Address,
+    public readonly recipient: IPredicate,
     private readonly _x: Uint8Array,
     private readonly _data: Uint8Array,
   ) {
@@ -45,21 +44,15 @@ export class TransferTransaction implements ITransaction {
 
   public static async create(
     token: Token,
-    owner: IPredicate,
-    recipient: Address,
+    recipient: IPredicate,
     x: Uint8Array,
     data: Uint8Array,
   ): Promise<TransferTransaction> {
     const transaction = token.latestTransaction;
-    if (!transaction.recipient.equals(await Address.fromPredicate(owner))) {
-      throw new Error('Predicate does not match address.');
-    }
-
-    const sourceStateHash = await transaction.calculateStateHash();
-    return new TransferTransaction(sourceStateHash, owner, recipient, x, data);
+    return new TransferTransaction(await transaction.calculateStateHash(), transaction.recipient, recipient, x, data);
   }
 
-  public static fromCBOR(bytes: Uint8Array): TransferTransaction {
+  public static fromCBOR(bytes: Uint8Array, token: Token): Promise<TransferTransaction> {
     const tag = CborDeserializer.decodeTag(bytes);
     if (tag.tag !== TransferTransaction.CBOR_TAG) {
       throw new CborError(`Invalid CBOR tag for TransferTransaction: ${tag.tag}`);
@@ -71,12 +64,11 @@ export class TransferTransaction implements ITransaction {
       throw new CborError(`Unsupported TransferTransaction version: ${version}`);
     }
 
-    return new TransferTransaction(
-      new DataHash(HashAlgorithm.SHA256, CborDeserializer.decodeByteString(data[1])),
-      EncodedPredicate.fromCBOR(data[2]),
-      Address.fromCBOR(data[3]),
-      CborDeserializer.decodeByteString(data[4]),
-      CborDeserializer.decodeByteString(data[5]),
+    return TransferTransaction.create(
+      token,
+      EncodedPredicate.fromCBOR(data[1]),
+      CborDeserializer.decodeByteString(data[2]),
+      CborDeserializer.decodeByteString(data[3]),
     );
   }
 
@@ -95,7 +87,7 @@ export class TransferTransaction implements ITransaction {
     return new DataHasher(HashAlgorithm.SHA256)
       .update(
         CborSerializer.encodeArray(
-          this.recipient.toCBOR(),
+          EncodedPredicate.fromPredicate(this.recipient).toCBOR(),
           CborSerializer.encodeByteString(this._x),
           CborSerializer.encodeByteString(this._data),
         ),
@@ -108,9 +100,7 @@ export class TransferTransaction implements ITransaction {
       TransferTransaction.CBOR_TAG,
       CborSerializer.encodeArray(
         CborSerializer.encodeUnsignedInteger(this.version),
-        CborSerializer.encodeByteString(this.sourceStateHash.data),
-        EncodedPredicate.fromPredicate(this.lockScript).toCBOR(),
-        this.recipient.toCBOR(),
+        EncodedPredicate.fromPredicate(this.recipient).toCBOR(),
         CborSerializer.encodeByteString(this._x),
         CborSerializer.encodeByteString(this._data),
       ),

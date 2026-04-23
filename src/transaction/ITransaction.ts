@@ -1,4 +1,3 @@
-import { Address } from './Address.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { IPredicate } from '../predicate/IPredicate.js';
 
@@ -7,7 +6,7 @@ export interface ITransaction {
 
   readonly lockScript: IPredicate;
 
-  readonly recipient: Address;
+  readonly recipient: IPredicate;
 
   readonly sourceStateHash: DataHash;
 

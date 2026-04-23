@@ -12,7 +12,6 @@ import { IPredicate } from '../predicate/IPredicate.js';
 import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
-import { Address } from '../transaction/Address.js';
 import { ITransaction } from '../transaction/ITransaction.js';
 import { MintTransactionState } from '../transaction/MintTransactionState.js';
 import { TokenId } from '../transaction/TokenId.js';
@@ -23,7 +22,7 @@ export class UnicityIdMintTransaction implements ITransaction {
   private constructor(
     public readonly sourceStateHash: MintTransactionState,
     public readonly lockScript: IPredicate,
-    public readonly recipient: Address,
+    public readonly recipient: IPredicate,
     public readonly tokenId: TokenId,
     public readonly tokenType: TokenType,
     public readonly targetPredicate: PayToPublicKeyPredicate,
@@ -40,7 +39,7 @@ export class UnicityIdMintTransaction implements ITransaction {
 
   public static async create(
     signingService: SigningService,
-    recipient: Address,
+    recipient: IPredicate,
     unicityId: UnicityId,
     tokenType: TokenType,
     targetPredicate: PayToPublicKeyPredicate,
@@ -68,7 +67,7 @@ export class UnicityIdMintTransaction implements ITransaction {
     return new UnicityIdMintTransaction(
       await MintTransactionState.create(tokenId),
       EncodedPredicate.fromCBOR(data[0]),
-      Address.fromCBOR(data[1]),
+      EncodedPredicate.fromCBOR(data[1]),
       tokenId,
       TokenType.fromCBOR(aux[0]),
       PayToPublicKeyPredicate.fromPredicate(EncodedPredicate.fromCBOR(aux[1])),
@@ -91,7 +90,7 @@ export class UnicityIdMintTransaction implements ITransaction {
     return new DataHasher(HashAlgorithm.SHA256)
       .update(
         CborSerializer.encodeArray(
-          this.recipient.toCBOR(),
+          EncodedPredicate.fromPredicate(this.recipient).toCBOR(),
           this.tokenId.toCBOR(),
           CborSerializer.encodeArray(
             this.tokenType.toCBOR(),
@@ -105,7 +104,7 @@ export class UnicityIdMintTransaction implements ITransaction {
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
       EncodedPredicate.fromPredicate(this.lockScript).toCBOR(),
-      this.recipient.toCBOR(),
+      EncodedPredicate.fromPredicate(this.recipient).toCBOR(),
       this.unicityId.toCBOR(),
       CborSerializer.encodeArray(
         this.tokenType.toCBOR(),

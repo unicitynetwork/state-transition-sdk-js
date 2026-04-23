@@ -1,4 +1,3 @@
-import { Address } from './Address.js';
 import { ITransaction } from './ITransaction.js';
 import { MintTransaction } from './MintTransaction.js';
 import { TokenId } from './TokenId.js';
@@ -31,7 +30,7 @@ export class CertifiedMintTransaction implements ITransaction {
     return this.transaction.lockScript;
   }
 
-  public get recipient(): Address {
+  public get recipient(): IPredicate {
     return this.transaction.recipient;
   }
 

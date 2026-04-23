@@ -7,7 +7,6 @@ import { PayToPublicKeyPredicate } from '../../src/predicate/builtin/PayToPublic
 import { PayToPublicKeyPredicateUnlockScript } from '../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
 import { PredicateVerifierService } from '../../src/predicate/verification/PredicateVerifierService.js';
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
-import { Address } from '../../src/transaction/Address.js';
 import { TokenType } from '../../src/transaction/TokenType.js';
 import { UnicityId } from '../../src/unicity-id/UnicityId.js';
 import { UnicityIdMintTransaction } from '../../src/unicity-id/UnicityIdMintTransaction.js';
@@ -30,7 +29,7 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
       const unicityId = new UnicityId('testuser', 'unicity-labs/test');
       const unicityIdMintTransaction = await UnicityIdMintTransaction.create(
         unicityIdSigningService,
-        await Address.fromPredicate(targetPredicate),
+        targetPredicate,
         unicityId,
         TokenType.generate(),
         targetPredicate,
@@ -61,7 +60,7 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
         client,
         trustBase,
         predicateVerifier,
-        await Address.fromPredicate(aliceUnicityIdToken.genesis.targetPredicate),
+        aliceUnicityIdToken.genesis.targetPredicate,
       );
 
       const bobToken = await transferToken(
@@ -69,7 +68,7 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
         trustBase,
         predicateVerifier,
         aliceToken.toCBOR(),
-        await Address.fromPredicate(PayToPublicKeyPredicate.create(BOB_SIGNING_SERVICE.publicKey)),
+        PayToPublicKeyPredicate.create(BOB_SIGNING_SERVICE.publicKey),
         ALICE_SIGNING_SERVICE,
       );
 
@@ -78,7 +77,7 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
         trustBase,
         predicateVerifier,
         bobToken.toCBOR(),
-        await Address.fromPredicate(PayToPublicKeyPredicate.create(CAROL_SIGNING_SERVICE.publicKey)),
+        PayToPublicKeyPredicate.create(CAROL_SIGNING_SERVICE.publicKey),
         BOB_SIGNING_SERVICE,
       );
 

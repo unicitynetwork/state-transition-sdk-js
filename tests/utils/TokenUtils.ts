@@ -2,13 +2,12 @@ import { RootTrustBase } from '../../src/api/bft/RootTrustBase.js';
 import { CertificationData } from '../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../src/api/CertificationResponse.js';
 import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
-import { PayToPublicKeyPredicate } from '../../src/predicate/builtin/PayToPublicKeyPredicate.js';
 import { PayToPublicKeyPredicateUnlockScript } from '../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
+import { IPredicate } from '../../src/predicate/IPredicate.js';
 import { IUnlockScript } from '../../src/predicate/IUnlockScript.js';
 import { PredicateVerifierService } from '../../src/predicate/verification/PredicateVerifierService.js';
 import { CborSerializer } from '../../src/serialization/cbor/CborSerializer.js';
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
-import { Address } from '../../src/transaction/Address.js';
 import { MintTransaction } from '../../src/transaction/MintTransaction.js';
 import { Token } from '../../src/transaction/Token.js';
 import { TokenId } from '../../src/transaction/TokenId.js';
@@ -21,7 +20,7 @@ export async function mintToken(
   client: StateTransitionClient,
   trustBase: RootTrustBase,
   predicateVerifier: PredicateVerifierService,
-  recipient: Address,
+  recipient: IPredicate,
   tokenId: TokenId = TokenId.generate(),
   tokenType: TokenType = TokenType.generate(),
   data: Uint8Array = CborSerializer.encodeArray(),
@@ -51,7 +50,7 @@ export async function transferToken(
   trustBase: RootTrustBase,
   predicateVerifier: PredicateVerifierService,
   tokenBytes: Uint8Array,
-  recipient: Address,
+  recipient: IPredicate,
   signingService: SigningService,
 ): Promise<Token> {
   const token = await Token.fromCBOR(tokenBytes);
@@ -63,13 +62,7 @@ export async function transferToken(
 
   const x = crypto.getRandomValues(new Uint8Array(32));
 
-  const transaction = await TransferTransaction.create(
-    token,
-    PayToPublicKeyPredicate.fromSigningService(signingService),
-    recipient,
-    x,
-    CborSerializer.encodeArray(),
-  );
+  const transaction = await TransferTransaction.create(token, recipient, x, CborSerializer.encodeArray());
 
   return transferTokenWithTransaction(
     client,

@@ -6,11 +6,11 @@ import { CertificationStatus } from '../../../src/api/CertificationResponse.js';
 import { SigningService } from '../../../src/crypto/secp256k1/SigningService.js';
 import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
 import { PayToPublicKeyPredicateUnlockScript } from '../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
+import { EncodedPredicate } from '../../../src/predicate/EncodedPredicate.js';
 import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../../src/serialization/HexConverter.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
-import { Address } from '../../../src/transaction/Address.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../src/transaction/Token.js';
 import { TokenId } from '../../../src/transaction/TokenId.js';
@@ -28,7 +28,7 @@ async function receiveToken(client: StateTransitionClient, trustBase: RootTrustB
   const ownerPredicate = PayToPublicKeyPredicate.fromSigningService(ownerSigningService);
 
   const mintTransaction = await MintTransaction.create(
-    await Address.fromPredicate(ownerPredicate),
+    ownerPredicate,
     TokenId.generate(),
     TokenType.generate(),
     CborSerializer.encodeTextString('My custom data'),
@@ -58,7 +58,6 @@ it('Token transfer', async () => {
 
   const ownerPrivateKey = HexConverter.decode(config.ownerPrivateKey);
   const ownerSigningService = new SigningService(ownerPrivateKey);
-  const ownerPredicate = PayToPublicKeyPredicate.fromSigningService(ownerSigningService);
 
   const tokenCBOR = HexConverter.decode(await receiveToken(client, trustBase));
 
@@ -68,11 +67,11 @@ it('Token transfer', async () => {
     throw new Error(`Token verification failed: ${result.status}`);
   }
 
-  const payToScriptHash = Address.fromBytes(HexConverter.decode(config.payToScriptHash));
+  const recipient = EncodedPredicate.fromCBOR(HexConverter.decode(config.address));
+
   const transferTransaction = await TransferTransaction.create(
     token,
-    ownerPredicate,
-    payToScriptHash,
+    recipient,
     crypto.getRandomValues(new Uint8Array(32)),
     CborSerializer.encodeTextString('My custom transfer data'),
   );

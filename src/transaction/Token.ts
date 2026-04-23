@@ -56,11 +56,14 @@ export class Token {
       throw new CborError(`Unsupported Token version: ${version}`);
     }
 
-    const transactions = CborDeserializer.decodeArray(data[2]);
-    return new Token(
-      await CertifiedMintTransaction.fromCBOR(data[1]),
-      transactions.map((transaction) => CertifiedTransferTransaction.fromCBOR(transaction)),
-    );
+    const transactionsBytes = CborDeserializer.decodeArray(data[2]);
+    const genesis = await CertifiedMintTransaction.fromCBOR(data[1]);
+    const transactions: CertifiedTransferTransaction[] = [];
+    for (const transaction of transactionsBytes) {
+      transactions.push(await CertifiedTransferTransaction.fromCBOR(transaction, new Token(genesis, transactions)));
+    }
+
+    return new Token(genesis, transactions);
   }
 
   public static async mint(

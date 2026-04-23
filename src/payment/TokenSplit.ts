@@ -5,6 +5,7 @@ import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { DataHasherFactory } from '../crypto/hash/DataHasherFactory.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
+import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
 import { IPredicate } from '../predicate/IPredicate.js';
 import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
@@ -21,7 +22,6 @@ import { AssetId } from './asset/AssetId.js';
 import { PaymentAssetCollection } from './asset/PaymentAssetCollection.js';
 import { TokenAssetCountMismatchError } from './error/TokenAssetCountMismatchError.js';
 import { BurnPredicate } from '../predicate/builtin/BurnPredicate.js';
-import { Address } from '../transaction/Address.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 import { VerificationResult } from '../verification/VerificationResult.js';
 import { VerificationStatus } from '../verification/VerificationStatus.js';
@@ -136,8 +136,7 @@ export class TokenSplit {
     const burnPredicate = BurnPredicate.create(aggregationRoot.hash.imprint);
     const burnTransaction = await TransferTransaction.create(
       token,
-      ownerPredicate,
-      await Address.fromPredicate(burnPredicate),
+      burnPredicate,
       crypto.getRandomValues(new Uint8Array(32)),
       CborSerializer.encodeNull(),
     );
@@ -255,11 +254,13 @@ export class TokenSplit {
         );
       }
 
-      if (
-        !burntTokenLastTransaction?.recipient.equals(
-          await Address.fromPredicate(BurnPredicate.create(proof.aggregationPath.root.imprint)),
-        )
-      ) {
+      const recipient = burntTokenLastTransaction
+        ? EncodedPredicate.fromPredicate(burntTokenLastTransaction.recipient)
+        : null;
+      const expectedRecipient = EncodedPredicate.fromPredicate(
+        BurnPredicate.create(proof.aggregationPath.root.imprint),
+      );
+      if (!areUint8ArraysEqual(recipient?.toCBOR(), expectedRecipient.toCBOR())) {
         return new VerificationResult(
           'TokenSplitReasonVerificationRule',
           VerificationStatus.FAIL,

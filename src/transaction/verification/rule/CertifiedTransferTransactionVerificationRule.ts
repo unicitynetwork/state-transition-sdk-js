@@ -3,7 +3,6 @@ import { RootTrustBase } from '../../../api/bft/RootTrustBase.js';
 import { PredicateVerifierService } from '../../../predicate/verification/PredicateVerifierService.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
-import { Address } from '../../Address.js';
 import { CertifiedTransferTransaction } from '../../CertifiedTransferTransaction.js';
 import { ITransaction } from '../../ITransaction.js';
 
@@ -31,21 +30,6 @@ export class CertifiedTransferTransactionVerificationRule {
         'CertifiedTransferTransactionVerificationRule',
         VerificationStatus.FAIL,
         `Inclusion proof verification failed: ${result.status?.toString()}`,
-        results,
-      );
-    }
-
-    const payToScriptHash = await Address.fromPredicate(transaction.lockScript);
-    result = new VerificationResult(
-      'RecipientVerificationRule',
-      latestTransaction.recipient.equals(payToScriptHash) ? VerificationStatus.OK : VerificationStatus.FAIL,
-    );
-    results.push(result);
-    if (result.status !== VerificationStatus.OK) {
-      return new VerificationResult(
-        'CertifiedTransferTransactionVerificationRule',
-        VerificationStatus.FAIL,
-        'The transaction owner does not match the previous transaction recipient.',
         results,
       );
     }

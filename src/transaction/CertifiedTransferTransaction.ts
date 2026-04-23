@@ -1,5 +1,5 @@
-import { Address } from './Address.js';
 import { ITransaction } from './ITransaction.js';
+import { Token } from './Token.js';
 import { TransferTransaction } from './TransferTransaction.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { InclusionProof } from '../api/InclusionProof.js';
@@ -29,7 +29,7 @@ export class CertifiedTransferTransaction implements ITransaction {
     return this.transaction.lockScript;
   }
 
-  public get recipient(): Address {
+  public get recipient(): IPredicate {
     return this.transaction.recipient;
   }
 
@@ -41,9 +41,12 @@ export class CertifiedTransferTransaction implements ITransaction {
     return this.transaction.x;
   }
 
-  public static fromCBOR(bytes: Uint8Array): CertifiedTransferTransaction {
+  public static async fromCBOR(bytes: Uint8Array, token: Token): Promise<CertifiedTransferTransaction> {
     const data = CborDeserializer.decodeArray(bytes);
-    return new CertifiedTransferTransaction(TransferTransaction.fromCBOR(data[0]), InclusionProof.fromCBOR(data[1]));
+    return new CertifiedTransferTransaction(
+      await TransferTransaction.fromCBOR(data[0], token),
+      InclusionProof.fromCBOR(data[1]),
+    );
   }
 
   public static async fromTransaction(

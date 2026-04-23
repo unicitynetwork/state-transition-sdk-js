@@ -16,7 +16,6 @@ import { PayToPublicKeyPredicateUnlockScript } from '../../../src/predicate/buil
 import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
 import { HexConverter } from '../../../src/serialization/HexConverter.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
-import { Address } from '../../../src/transaction/Address.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../src/transaction/Token.js';
 import { TokenId } from '../../../src/transaction/TokenId.js';
@@ -46,7 +45,7 @@ it('Token splitting', async () => {
 
   const paymentData = new CustomPaymentData(PaymentAssetCollection.create(...assets), 'my other data');
   const mintTransaction = await MintTransaction.create(
-    await Address.fromPredicate(ownerPredicate),
+    ownerPredicate,
     TokenId.generate(),
     TokenType.generate(),
     await paymentData.encode(),
@@ -106,7 +105,7 @@ it('Token splitting', async () => {
     const splitPaymentData = new CustomSplitPaymentData(assets, SplitReason.create(burntToken, entry.proofs));
 
     const mintTransaction = await MintTransaction.create(
-      await Address.fromPredicate(ownerPredicate),
+      ownerPredicate,
       tokenId,
       TokenType.generate(),
       await splitPaymentData.encode(),
