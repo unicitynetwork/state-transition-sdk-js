@@ -67,24 +67,11 @@ describe('InclusionProof', () => {
       unicityCertificate,
     );
 
-    expect(inclusionProof.toCBOR()).toStrictEqual(
-      CborSerializer.encodeArray(
-        certificationData.toCBOR(),
-        CborSerializer.encodeByteString(inclusionCertificate.encode()),
-        unicityCertificate.toCBOR(),
-      ),
-    );
     expect(InclusionProof.fromCBOR(inclusionProof.toCBOR())).toStrictEqual(inclusionProof);
 
-    expect(
-      InclusionProof.fromCBOR(
-        CborSerializer.encodeArray(
-          CborSerializer.encodeNull(),
-          CborSerializer.encodeByteString(inclusionCertificate.encode()),
-          unicityCertificate.toCBOR(),
-        ),
-      ),
-    ).toStrictEqual(new InclusionProof(null, inclusionCertificate, unicityCertificate));
+    expect(InclusionProof.fromCBOR(new InclusionProof(null, null, unicityCertificate).toCBOR())).toStrictEqual(
+      new InclusionProof(null, null, unicityCertificate),
+    );
   });
 
   it('verifies', async () => {
@@ -109,18 +96,24 @@ describe('InclusionProof', () => {
         ),
       ).then((result) => result.status),
     ).resolves.toEqual(InclusionProofVerificationStatus.INCLUSION_CERTIFICATE_MISSING);
+  });
 
+  it('verification fails with invalid transaction hash', async () => {
     const invalidTransactionHashInclusionProof = new InclusionProof(
       CertificationData.fromCBOR(
-        CborSerializer.encodeArray(
-          EncodedPredicate.fromPredicate(certificationData.lockScript).toCBOR(),
-          CborSerializer.encodeByteString(certificationData.sourceStateHash.data),
-          CborSerializer.encodeByteString(
-            DataHash.fromImprint(
-              HexConverter.decode('00000000000000000000000000000000000000000000000000000000000000000001'),
-            ).data,
+        CborSerializer.encodeTag(
+          CertificationData.CBOR_TAG,
+          CborSerializer.encodeArray(
+            CborSerializer.encodeUnsignedInteger(1n),
+            EncodedPredicate.fromPredicate(certificationData.lockScript).toCBOR(),
+            CborSerializer.encodeByteString(certificationData.sourceStateHash.data),
+            CborSerializer.encodeByteString(
+              DataHash.fromImprint(
+                HexConverter.decode('00000000000000000000000000000000000000000000000000000000000000000001'),
+              ).data,
+            ),
+            CborSerializer.encodeByteString(certificationData.unlockScript),
           ),
-          CborSerializer.encodeByteString(certificationData.unlockScript),
         ),
       ),
       inclusionCertificate,
@@ -136,14 +129,18 @@ describe('InclusionProof', () => {
     ).resolves.toEqual(InclusionProofVerificationStatus.TRANSACTION_HASH_MISMATCH);
   });
 
-  it('verification fails with invalid transaction hash', async () => {
+  it('verification fails with invalid unlock script', async () => {
     const inclusionProof = new InclusionProof(
       CertificationData.fromCBOR(
-        CborSerializer.encodeArray(
-          EncodedPredicate.fromPredicate(certificationData.lockScript).toCBOR(),
-          CborSerializer.encodeByteString(certificationData.sourceStateHash.data),
-          CborSerializer.encodeByteString(certificationData.transactionHash.data),
-          CborSerializer.encodeByteString(new Uint8Array(65)),
+        CborSerializer.encodeTag(
+          CertificationData.CBOR_TAG,
+          CborSerializer.encodeArray(
+            CborSerializer.encodeUnsignedInteger(1n),
+            EncodedPredicate.fromPredicate(certificationData.lockScript).toCBOR(),
+            CborSerializer.encodeByteString(certificationData.sourceStateHash.data),
+            CborSerializer.encodeByteString(certificationData.transactionHash.data),
+            CborSerializer.encodeByteString(new Uint8Array(65)),
+          ),
         ),
       ),
       inclusionCertificate,
