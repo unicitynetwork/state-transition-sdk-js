@@ -11,11 +11,15 @@ import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
 import { IPredicate } from '../predicate/IPredicate.js';
 import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
+import { CborError } from '../serialization/cbor/CborError.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../serialization/HexConverter.js';
 import { dedent } from '../util/StringUtils.js';
 
 export class TransferTransaction implements ITransaction {
+  public static readonly CBOR_TAG = 39045n;
+  private static readonly VERSION = 1n;
+
   private constructor(
     public readonly sourceStateHash: DataHash,
     public readonly lockScript: IPredicate,
@@ -29,6 +33,10 @@ export class TransferTransaction implements ITransaction {
 
   public get data(): Uint8Array {
     return new Uint8Array(this._data);
+  }
+
+  public get version(): bigint {
+    return TransferTransaction.VERSION;
   }
 
   public get x(): Uint8Array {
@@ -52,14 +60,23 @@ export class TransferTransaction implements ITransaction {
   }
 
   public static fromCBOR(bytes: Uint8Array): TransferTransaction {
-    const data = CborDeserializer.decodeArray(bytes);
+    const tag = CborDeserializer.decodeTag(bytes);
+    if (tag.tag !== TransferTransaction.CBOR_TAG) {
+      throw new CborError(`Invalid CBOR tag for TransferTransaction: ${tag.tag}`);
+    }
+
+    const data = CborDeserializer.decodeArray(tag.data);
+    const version = CborDeserializer.decodeUnsignedInteger(data[0]);
+    if (version !== TransferTransaction.VERSION) {
+      throw new CborError(`Unsupported TransferTransaction version: ${version}`);
+    }
 
     return new TransferTransaction(
-      new DataHash(HashAlgorithm.SHA256, CborDeserializer.decodeByteString(data[0])),
-      EncodedPredicate.fromCBOR(data[1]),
-      Address.fromCBOR(data[2]),
-      CborDeserializer.decodeByteString(data[3]),
+      new DataHash(HashAlgorithm.SHA256, CborDeserializer.decodeByteString(data[1])),
+      EncodedPredicate.fromCBOR(data[2]),
+      Address.fromCBOR(data[3]),
       CborDeserializer.decodeByteString(data[4]),
+      CborDeserializer.decodeByteString(data[5]),
     );
   }
 
@@ -87,12 +104,16 @@ export class TransferTransaction implements ITransaction {
   }
 
   public toCBOR(): Uint8Array {
-    return CborSerializer.encodeArray(
-      CborSerializer.encodeByteString(this.sourceStateHash.data),
-      EncodedPredicate.fromPredicate(this.lockScript).toCBOR(),
-      this.recipient.toCBOR(),
-      CborSerializer.encodeByteString(this._x),
-      CborSerializer.encodeByteString(this._data),
+    return CborSerializer.encodeTag(
+      TransferTransaction.CBOR_TAG,
+      CborSerializer.encodeArray(
+        CborSerializer.encodeUnsignedInteger(this.version),
+        CborSerializer.encodeByteString(this.sourceStateHash.data),
+        EncodedPredicate.fromPredicate(this.lockScript).toCBOR(),
+        this.recipient.toCBOR(),
+        CborSerializer.encodeByteString(this._x),
+        CborSerializer.encodeByteString(this._data),
+      ),
     );
   }
 
@@ -107,6 +128,7 @@ export class TransferTransaction implements ITransaction {
   public toString(): string {
     return dedent`
       TransferTransaction
+        Version: ${this.version.toString()}
         Source State Hash: ${this.sourceStateHash.toString()}
         Lock Script: 
           ${this.lockScript.toString()}
