@@ -14,11 +14,15 @@ import { PayToPublicKeyPredicate } from '../predicate/builtin/PayToPublicKeyPred
 import { IPredicate } from '../predicate/IPredicate.js';
 import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
+import { CborError } from '../serialization/cbor/CborError.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../serialization/HexConverter.js';
 import { dedent } from '../util/StringUtils.js';
 
 export class MintTransaction implements ITransaction {
+  public static readonly CBOR_TAG = 39041n;
+  private static readonly VERSION = 1n;
+
   private constructor(
     public readonly sourceStateHash: MintTransactionState,
     public readonly lockScript: IPredicate,
@@ -30,6 +34,10 @@ export class MintTransaction implements ITransaction {
 
   public get data(): Uint8Array {
     return new Uint8Array(this._data);
+  }
+
+  public get version(): bigint {
+    return MintTransaction.VERSION;
   }
 
   public get x(): Uint8Array {
@@ -56,12 +64,21 @@ export class MintTransaction implements ITransaction {
   }
 
   public static fromCBOR(bytes: Uint8Array): Promise<MintTransaction> {
-    const data = CborDeserializer.decodeArray(bytes);
-    const aux = CborDeserializer.decodeArray(data[2]);
+    const tag = CborDeserializer.decodeTag(bytes);
+    if (tag.tag !== MintTransaction.CBOR_TAG) {
+      throw new CborError(`Invalid CBOR tag for MintTransaction: ${tag.tag}`);
+    }
 
+    const data = CborDeserializer.decodeArray(tag.data);
+    const version = CborDeserializer.decodeUnsignedInteger(data[0]);
+    if (version !== MintTransaction.VERSION) {
+      throw new CborError(`Unsupported MintTransaction version: ${version}`);
+    }
+
+    const aux = CborDeserializer.decodeArray(data[3]);
     return MintTransaction.create(
-      Address.fromCBOR(data[0]),
-      TokenId.fromCBOR(data[1]),
+      Address.fromCBOR(data[1]),
+      TokenId.fromCBOR(data[2]),
       TokenType.fromCBOR(aux[0]),
       CborDeserializer.decodeByteString(aux[1]),
     );
@@ -79,14 +96,26 @@ export class MintTransaction implements ITransaction {
   }
 
   public calculateTransactionHash(): Promise<DataHash> {
-    return new DataHasher(HashAlgorithm.SHA256).update(this.toCBOR()).digest();
+    return new DataHasher(HashAlgorithm.SHA256)
+      .update(
+        CborSerializer.encodeArray(
+          this.recipient.toCBOR(),
+          this.tokenId.toCBOR(),
+          CborSerializer.encodeArray(this.tokenType.toCBOR(), CborSerializer.encodeByteString(this._data)),
+        ),
+      )
+      .digest();
   }
 
   public toCBOR(): Uint8Array {
-    return CborSerializer.encodeArray(
-      this.recipient.toCBOR(),
-      this.tokenId.toCBOR(),
-      CborSerializer.encodeArray(this.tokenType.toCBOR(), CborSerializer.encodeByteString(this._data)),
+    return CborSerializer.encodeTag(
+      MintTransaction.CBOR_TAG,
+      CborSerializer.encodeArray(
+        CborSerializer.encodeUnsignedInteger(this.version),
+        this.recipient.toCBOR(),
+        this.tokenId.toCBOR(),
+        CborSerializer.encodeArray(this.tokenType.toCBOR(), CborSerializer.encodeByteString(this._data)),
+      ),
     );
   }
 
@@ -101,7 +130,8 @@ export class MintTransaction implements ITransaction {
   public toString(): string {
     return dedent`
       MintTransaction
-        Lock Script: 
+        Version: ${this.version.toString()}
+        Lock Script:
           ${this.lockScript.toString()}
         Recipient: ${this.recipient.toString()}
         Token ID: ${this.tokenId.toString()}

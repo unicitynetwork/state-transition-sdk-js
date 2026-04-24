@@ -7,6 +7,7 @@ import { DataHasher } from '../../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../../crypto/hash/HashAlgorithm.js';
 import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
+import { CborError } from '../../serialization/cbor/CborError.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../serialization/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
@@ -15,8 +16,10 @@ import { dedent } from '../../util/StringUtils.js';
  * Unicity certificate.
  */
 export class UnicityCertificate {
+  public static readonly CBOR_TAG = 39001n;
+  private static readonly VERSION = 1n;
+
   public constructor(
-    public readonly version: bigint,
     public readonly inputRecord: InputRecord,
     private readonly _technicalRecordHash: Uint8Array | null,
     private readonly _shardConfigurationHash: Uint8Array,
@@ -34,6 +37,10 @@ export class UnicityCertificate {
 
   public get technicalRecordHash(): Uint8Array | null {
     return this._technicalRecordHash ? new Uint8Array(this._technicalRecordHash) : null;
+  }
+
+  public get version(): bigint {
+    return UnicityCertificate.VERSION;
   }
 
   /**
@@ -60,7 +67,7 @@ export class UnicityCertificate {
     const shardId = shardTreeCertificate.shard;
     const siblingHashes = shardTreeCertificate.siblingHashList;
     for (let i = 0; i < siblingHashes.length; i++) {
-      const isRight = shardId[shardId.length - 1 - Math.floor(i / 8)] === 1;
+      const isRight = shardId.getBit(shardId.length - 1 - i);
       if (isRight) {
         rootHash = await new DataHasher(HashAlgorithm.SHA256).update(siblingHashes[i]).update(rootHash.data).digest();
       } else {
@@ -79,10 +86,17 @@ export class UnicityCertificate {
    */
   public static fromCBOR(bytes: Uint8Array): UnicityCertificate {
     const tag = CborDeserializer.decodeTag(bytes);
+    if (tag.tag !== UnicityCertificate.CBOR_TAG) {
+      throw new CborError(`Invalid CBOR tag for UnicityCertificate: ${tag.tag}`);
+    }
+
     const data = CborDeserializer.decodeArray(tag.data);
+    const version = CborDeserializer.decodeUnsignedInteger(data[0]);
+    if (version !== UnicityCertificate.VERSION) {
+      throw new CborError(`Unsupported UnicityCertificate version: ${version}`);
+    }
 
     return new UnicityCertificate(
-      CborDeserializer.decodeUnsignedInteger(data[0]),
       InputRecord.fromCBOR(data[1]),
       CborDeserializer.decodeNullable(data[2], CborDeserializer.decodeByteString),
       CborDeserializer.decodeByteString(data[3]),
@@ -111,7 +125,7 @@ export class UnicityCertificate {
    */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeTag(
-      1007,
+      UnicityCertificate.CBOR_TAG,
       CborSerializer.encodeArray(
         CborSerializer.encodeUnsignedInteger(this.version),
         this.inputRecord.toCBOR(),
