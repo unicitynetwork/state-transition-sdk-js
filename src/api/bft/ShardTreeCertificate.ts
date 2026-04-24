@@ -1,3 +1,4 @@
+import { ShardId } from './ShardId.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { CborError } from '../../serialization/cbor/CborError.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
@@ -12,18 +13,17 @@ export class ShardTreeCertificate {
   private static readonly VERSION = 1n;
 
   public constructor(
-    private readonly _shard: Uint8Array,
+    private readonly _shard: ShardId,
     private readonly _siblingHashList: Uint8Array[],
   ) {
-    this._shard = new Uint8Array(_shard);
     this._siblingHashList = _siblingHashList.map((hash) => new Uint8Array(hash));
   }
 
   /**
    * Get the shard.
    */
-  public get shard(): Uint8Array {
-    return new Uint8Array(this._shard);
+  public get shard(): ShardId {
+    return this._shard;
   }
 
   /**
@@ -56,7 +56,7 @@ export class ShardTreeCertificate {
     }
 
     return new ShardTreeCertificate(
-      CborDeserializer.decodeByteString(data[1]),
+      ShardId.decode(CborDeserializer.decodeByteString(data[1])),
       CborDeserializer.decodeArray(data[2]).map((hash) => CborDeserializer.decodeByteString(hash)),
     );
   }
@@ -71,7 +71,7 @@ export class ShardTreeCertificate {
       ShardTreeCertificate.CBOR_TAG,
       CborSerializer.encodeArray(
         CborSerializer.encodeUnsignedInteger(this.version),
-        CborSerializer.encodeByteString(this.shard),
+        CborSerializer.encodeByteString(this._shard.encode()),
         CborSerializer.encodeArray(...this._siblingHashList.map((hash) => CborSerializer.encodeByteString(hash))),
       ),
     );
@@ -84,7 +84,7 @@ export class ShardTreeCertificate {
   public toString(): string {
     return dedent`
       Shard Tree Certificate
-        Shard: ${HexConverter.encode(this._shard)}
+        Shard: ${this._shard.toString()}
         Sibling Hash List: [
           ${this._siblingHashList.map((hash) => HexConverter.encode(hash)).join('\n')}
         ]`;
