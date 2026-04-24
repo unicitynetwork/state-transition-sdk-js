@@ -1,3 +1,4 @@
+import { ShardIdMatchesStateIdRule } from './ShardIdMatchesStateIdRule.js';
 import { RootTrustBase } from '../../../api/bft/RootTrustBase.js';
 import { UnicityCertificateVerification } from '../../../api/bft/verification/UnicityCertificateVerification.js';
 import { InclusionProof } from '../../../api/InclusionProof.js';
@@ -19,6 +20,7 @@ export enum InclusionProofVerificationStatus {
   NOT_AUTHENTICATED = 'NOT_AUTHENTICATED',
   INCLUSION_CERTIFICATE_MISSING = 'INCLUSION_CERTIFICATE_MISSING',
   PATH_INVALID = 'PATH_INVALID',
+  SHARD_ID_MISMATCH = 'SHARD_ID_MISMATCH',
   OK = 'OK',
 }
 
@@ -62,6 +64,19 @@ export class InclusionProofVerificationRule {
     );
     if (!result) {
       return new VerificationResult('InclusionProofVerificationRule', InclusionProofVerificationStatus.PATH_INVALID);
+    }
+
+    const shardResult = ShardIdMatchesStateIdRule.verify(
+      stateId,
+      inclusionProof.unicityCertificate.shardTreeCertificate,
+    );
+    if (shardResult.status !== VerificationStatus.OK) {
+      return new VerificationResult(
+        'InclusionProofVerificationRule',
+        InclusionProofVerificationStatus.SHARD_ID_MISMATCH,
+        '',
+        [shardResult],
+      );
     }
 
     const unicityCertificateVerificationResult = await UnicityCertificateVerification.verify(trustBase, inclusionProof);

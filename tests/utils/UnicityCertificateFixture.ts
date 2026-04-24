@@ -1,6 +1,7 @@
 import { numberToBytesBE } from '@noble/curves/utils.js';
 
 import { InputRecord } from '../../src/api/bft/InputRecord.js';
+import { ShardId } from '../../src/api/bft/ShardId.js';
 import { ShardTreeCertificate } from '../../src/api/bft/ShardTreeCertificate.js';
 import { UnicityCertificate } from '../../src/api/bft/UnicityCertificate.js';
 import { UnicitySeal } from '../../src/api/bft/UnicitySeal.js';
@@ -18,7 +19,7 @@ export async function createUnicityCertificate(
   const inputRecord = new InputRecord(0n, 0n, null, rootHash.data, new Uint8Array(0), 0n, null, 0n, null);
   const technicalRecordHash = null;
   const shardConfigurationHash = new Uint8Array(32);
-  const shardTreeCertificate = new ShardTreeCertificate(new Uint8Array(0), []);
+  const shardTreeCertificate = new ShardTreeCertificate(ShardId.decode(new Uint8Array([0b10000000])), []);
 
   const shardTreeCertificateRootHash = await UnicityCertificate.calculateShardTreeCertificateRootHash(
     inputRecord,
