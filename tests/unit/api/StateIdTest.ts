@@ -14,7 +14,6 @@ describe('StateId', () => {
         ),
         new TokenId(new Uint8Array(32)),
         new TokenType(new Uint8Array(32)),
-        new Uint8Array(0),
       ),
     );
 

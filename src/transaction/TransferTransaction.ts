@@ -24,14 +24,11 @@ export class TransferTransaction implements ITransaction {
     public readonly lockScript: IPredicate,
     public readonly recipient: IPredicate,
     private readonly _x: Uint8Array,
-    private readonly _data: Uint8Array,
-  ) {
-    this._x = new Uint8Array(_x);
-    this._data = new Uint8Array(_data);
-  }
+    private readonly _data: Uint8Array | null,
+  ) {}
 
-  public get data(): Uint8Array {
-    return new Uint8Array(this._data);
+  public get data(): Uint8Array | null {
+    return this._data ? new Uint8Array(this._data) : null;
   }
 
   public get version(): bigint {
@@ -46,8 +43,11 @@ export class TransferTransaction implements ITransaction {
     token: Token,
     recipient: IPredicate,
     x: Uint8Array,
-    data: Uint8Array,
+    data: Uint8Array | null = null,
   ): Promise<TransferTransaction> {
+    x = new Uint8Array(x);
+    data = data ? new Uint8Array(data) : null;
+
     const transaction = token.latestTransaction;
     return new TransferTransaction(await transaction.calculateStateHash(), transaction.recipient, recipient, x, data);
   }
@@ -68,7 +68,7 @@ export class TransferTransaction implements ITransaction {
       token,
       EncodedPredicate.fromCBOR(data[1]),
       CborDeserializer.decodeByteString(data[2]),
-      CborDeserializer.decodeByteString(data[3]),
+      CborDeserializer.decodeNullable(data[3], CborDeserializer.decodeByteString),
     );
   }
 
@@ -89,7 +89,7 @@ export class TransferTransaction implements ITransaction {
         CborSerializer.encodeArray(
           EncodedPredicate.fromPredicate(this.recipient).toCBOR(),
           CborSerializer.encodeByteString(this._x),
-          CborSerializer.encodeByteString(this._data),
+          CborSerializer.encodeNullable(this._data, CborSerializer.encodeByteString),
         ),
       )
       .digest();
@@ -102,7 +102,7 @@ export class TransferTransaction implements ITransaction {
         CborSerializer.encodeUnsignedInteger(this.version),
         EncodedPredicate.fromPredicate(this.recipient).toCBOR(),
         CborSerializer.encodeByteString(this._x),
-        CborSerializer.encodeByteString(this._data),
+        CborSerializer.encodeNullable(this._data, CborSerializer.encodeByteString),
       ),
     );
   }
@@ -124,6 +124,6 @@ export class TransferTransaction implements ITransaction {
           ${this.lockScript.toString()}
         Recipient: ${this.recipient.toString()}
         X: ${HexConverter.encode(this._x)}
-        Data: ${HexConverter.encode(this._data)}`;
+        Data: ${this._data ? HexConverter.encode(this._data) : 'null'}`;
   }
 }

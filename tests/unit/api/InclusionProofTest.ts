@@ -42,7 +42,6 @@ describe('InclusionProof', () => {
       PayToPublicKeyPredicate.fromSigningService(signingService),
       TokenId.generate(),
       TokenType.generate(),
-      new Uint8Array(),
     );
     const smt = new SparseMerkleTree(new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher));
     const stateId = await StateId.fromTransaction(transaction);
@@ -91,6 +90,7 @@ describe('InclusionProof', () => {
           transaction.lockScript,
           TokenId.generate(),
           transaction.tokenType,
+          null,
           transaction.data,
         ),
       ).then((result) => result.status),

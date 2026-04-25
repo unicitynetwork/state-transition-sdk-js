@@ -29,11 +29,16 @@ export class MintTransaction implements ITransaction {
     public readonly recipient: IPredicate,
     public readonly tokenId: TokenId,
     public readonly tokenType: TokenType,
-    private readonly _data: Uint8Array,
+    private readonly _justification: Uint8Array | null,
+    private readonly _data: Uint8Array | null,
   ) {}
 
-  public get data(): Uint8Array {
-    return new Uint8Array(this._data);
+  public get data(): Uint8Array | null {
+    return this._data ? new Uint8Array(this._data) : null;
+  }
+
+  public get justification(): Uint8Array | null {
+    return this._justification ? new Uint8Array(this._justification) : null;
   }
 
   public get version(): bigint {
@@ -48,9 +53,11 @@ export class MintTransaction implements ITransaction {
     recipient: IPredicate,
     tokenId: TokenId,
     tokenType: TokenType,
-    data: Uint8Array,
+    justification: Uint8Array | null = null,
+    data: Uint8Array | null = null,
   ): Promise<MintTransaction> {
-    data = new Uint8Array(data);
+    justification = justification ? new Uint8Array(justification) : null;
+    data = data ? new Uint8Array(data) : null;
 
     const signingService = await MintSigningService.create(tokenId);
     return new MintTransaction(
@@ -59,6 +66,7 @@ export class MintTransaction implements ITransaction {
       recipient,
       tokenId,
       tokenType,
+      justification,
       data,
     );
   }
@@ -79,7 +87,8 @@ export class MintTransaction implements ITransaction {
       EncodedPredicate.fromCBOR(data[1]),
       TokenId.fromCBOR(data[2]),
       TokenType.fromCBOR(data[3]),
-      CborDeserializer.decodeByteString(data[4]),
+      CborDeserializer.decodeNullable(data[4], CborDeserializer.decodeByteString),
+      CborDeserializer.decodeNullable(data[5], CborDeserializer.decodeByteString),
     );
   }
 
@@ -106,7 +115,8 @@ export class MintTransaction implements ITransaction {
         EncodedPredicate.fromPredicate(this.recipient).toCBOR(),
         this.tokenId.toCBOR(),
         this.tokenType.toCBOR(),
-        CborSerializer.encodeByteString(this._data),
+        CborSerializer.encodeNullable(this._justification, CborSerializer.encodeByteString),
+        CborSerializer.encodeNullable(this._data, CborSerializer.encodeByteString),
       ),
     );
   }
@@ -128,6 +138,7 @@ export class MintTransaction implements ITransaction {
         Recipient: ${this.recipient.toString()}
         Token ID: ${this.tokenId.toString()}
         Token Type: ${this.tokenType.toString()}
-        Data: ${HexConverter.encode(this._data)}`;
+        Mint Justification: ${this._justification ? HexConverter.encode(this._justification) : 'null'}
+        Data: ${this._data ? HexConverter.encode(this._data) : 'null'}`;
   }
 }

@@ -2,7 +2,7 @@ import { DataHash } from '../crypto/hash/DataHash.js';
 import { IPredicate } from '../predicate/IPredicate.js';
 
 export interface ITransaction {
-  readonly data: Uint8Array;
+  readonly data: Uint8Array | null;
 
   readonly lockScript: IPredicate;
 

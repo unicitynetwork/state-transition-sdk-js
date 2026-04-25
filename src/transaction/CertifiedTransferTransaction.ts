@@ -21,7 +21,7 @@ export class CertifiedTransferTransaction implements ITransaction {
     public readonly inclusionProof: InclusionProof,
   ) {}
 
-  public get data(): Uint8Array {
+  public get data(): Uint8Array | null {
     return this.transaction.data;
   }
 

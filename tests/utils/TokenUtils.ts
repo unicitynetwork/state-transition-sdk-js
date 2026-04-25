@@ -6,8 +6,9 @@ import { PayToPublicKeyPredicateUnlockScript } from '../../src/predicate/builtin
 import { IPredicate } from '../../src/predicate/IPredicate.js';
 import { IUnlockScript } from '../../src/predicate/IUnlockScript.js';
 import { PredicateVerifierService } from '../../src/predicate/verification/PredicateVerifierService.js';
-import { CborSerializer } from '../../src/serialization/cbor/CborSerializer.js';
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
+import { IMintJustification } from '../../src/transaction/justification/IMintJustification.js';
+import { MintJustificationVerifierService } from '../../src/transaction/justification/MintJustificationVerifierService.js';
 import { MintTransaction } from '../../src/transaction/MintTransaction.js';
 import { Token } from '../../src/transaction/Token.js';
 import { TokenId } from '../../src/transaction/TokenId.js';
@@ -20,12 +21,14 @@ export async function mintToken(
   client: StateTransitionClient,
   trustBase: RootTrustBase,
   predicateVerifier: PredicateVerifierService,
+  mintJustificationVerifier: MintJustificationVerifierService,
   recipient: IPredicate,
   tokenId: TokenId = TokenId.generate(),
   tokenType: TokenType = TokenType.generate(),
-  data: Uint8Array = CborSerializer.encodeArray(),
+  justification: IMintJustification | null = null,
+  data: Uint8Array | null = null,
 ): Promise<Token> {
-  const transaction = await MintTransaction.create(recipient, tokenId, tokenType, data);
+  const transaction = await MintTransaction.create(recipient, tokenId, tokenType, justification?.toCBOR(), data);
 
   const certificationData = await CertificationData.fromMintTransaction(transaction);
 
@@ -37,6 +40,7 @@ export async function mintToken(
   return Token.mint(
     trustBase,
     predicateVerifier,
+    mintJustificationVerifier,
     await transaction.toCertifiedTransaction(
       trustBase,
       predicateVerifier,
@@ -49,12 +53,13 @@ export async function transferToken(
   client: StateTransitionClient,
   trustBase: RootTrustBase,
   predicateVerifier: PredicateVerifierService,
+  mintJustificationVerifier: MintJustificationVerifierService,
   tokenBytes: Uint8Array,
   recipient: IPredicate,
   signingService: SigningService,
 ): Promise<Token> {
   const token = await Token.fromCBOR(tokenBytes);
-  const result = await token.verify(trustBase, predicateVerifier);
+  const result = await token.verify(trustBase, predicateVerifier, mintJustificationVerifier);
 
   if (result.status !== VerificationStatus.OK) {
     throw new Error(`Token verification failed: ${result.status}`);
@@ -62,7 +67,7 @@ export async function transferToken(
 
   const x = crypto.getRandomValues(new Uint8Array(32));
 
-  const transaction = await TransferTransaction.create(token, recipient, x, CborSerializer.encodeArray());
+  const transaction = await TransferTransaction.create(token, recipient, x);
 
   return transferTokenWithTransaction(
     client,

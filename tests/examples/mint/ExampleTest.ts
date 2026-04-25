@@ -8,6 +8,7 @@ import { PredicateVerifierService } from '../../../src/predicate/verification/Pr
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../../src/serialization/HexConverter.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
+import { MintJustificationVerifierService } from '../../../src/transaction/justification/MintJustificationVerifierService.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../src/transaction/Token.js';
 import { TokenId } from '../../../src/transaction/TokenId.js';
@@ -22,6 +23,7 @@ it('Token minting', async () => {
   const client = new StateTransitionClient(aggregatorClient);
 
   const predicateVerifier = PredicateVerifierService.create(trustBase);
+  const mintJustificationVerifier = new MintJustificationVerifierService();
 
   const ownerPrivateKey = HexConverter.decode(config.ownerPrivateKey);
   const ownerSigningService = new SigningService(ownerPrivateKey);
@@ -31,6 +33,7 @@ it('Token minting', async () => {
     ownerPredicate,
     TokenId.generate(),
     TokenType.generate(),
+    null,
     CborSerializer.encodeTextString('My custom data'),
   );
   const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
@@ -40,6 +43,7 @@ it('Token minting', async () => {
   const token = await Token.mint(
     trustBase,
     predicateVerifier,
+    mintJustificationVerifier,
     await mintTransaction.toCertifiedTransaction(
       trustBase,
       predicateVerifier,

@@ -1,6 +1,7 @@
 import { CertifiedMintTransaction } from './CertifiedMintTransaction.js';
 import { CertifiedTransferTransaction } from './CertifiedTransferTransaction.js';
 import { ITransaction } from './ITransaction.js';
+import { MintJustificationVerifierService } from './justification/MintJustificationVerifierService.js';
 import { TokenId } from './TokenId.js';
 import { TokenType } from './TokenType.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
@@ -59,20 +60,22 @@ export class Token {
     const transactionsBytes = CborDeserializer.decodeArray(data[2]);
     const genesis = await CertifiedMintTransaction.fromCBOR(data[1]);
     const transactions: CertifiedTransferTransaction[] = [];
+    const token = new Token(genesis, transactions);
     for (const transaction of transactionsBytes) {
-      transactions.push(await CertifiedTransferTransaction.fromCBOR(transaction, new Token(genesis, transactions)));
+      transactions.push(await CertifiedTransferTransaction.fromCBOR(transaction, token));
     }
 
-    return new Token(genesis, transactions);
+    return token;
   }
 
   public static async mint(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,
+    mintJustificationVerifier: MintJustificationVerifierService,
     genesis: CertifiedMintTransaction,
   ): Promise<Token> {
     const token = new Token(genesis);
-    const result = await token.verify(trustBase, predicateVerifier);
+    const result = await token.verify(trustBase, predicateVerifier, mintJustificationVerifier);
     if (result.status !== VerificationStatus.OK) {
       throw new VerificationError('Invalid token genesis', result);
     }
@@ -125,9 +128,15 @@ export class Token {
   public async verify(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,
+    mintJustificationVerifier: MintJustificationVerifierService,
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];
-    const result = await CertifiedMintTransactionVerificationRule.verify(trustBase, predicateVerifier, this.genesis);
+    const result = await CertifiedMintTransactionVerificationRule.verify(
+      trustBase,
+      predicateVerifier,
+      mintJustificationVerifier,
+      this.genesis,
+    );
     results.push(result);
     if (result.status !== VerificationStatus.OK) {
       return new VerificationResult('TokenVerification', VerificationStatus.FAIL, '', results);
