@@ -11,7 +11,7 @@ import { PredicateVerifierService } from '../../../src/predicate/verification/Pr
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../../src/serialization/HexConverter.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
-import { MintJustificationVerifierService } from '../../../src/transaction/justification/MintJustificationVerifierService.js';
+import { MintJustificationVerifierService } from '../../../src/transaction/MintJustificationVerifierService.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../src/transaction/Token.js';
 import { TokenId } from '../../../src/transaction/TokenId.js';

@@ -1,9 +1,9 @@
-import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
-import { VerificationResult } from '../../verification/VerificationResult.js';
-import { VerificationStatus } from '../../verification/VerificationStatus.js';
-import { CertifiedMintTransaction } from '../CertifiedMintTransaction.js';
-import { MintTransaction } from '../MintTransaction.js';
+import { CertifiedMintTransaction } from './CertifiedMintTransaction.js';
 import { IMintJustificationVerifier } from './IMintJustificationVerifier.js';
+import { MintTransaction } from './MintTransaction.js';
+import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
+import { VerificationResult } from '../verification/VerificationResult.js';
+import { VerificationStatus } from '../verification/VerificationStatus.js';
 
 export class MintJustificationVerifierService {
   private readonly verifiers: Map<bigint, IMintJustificationVerifier> = new Map();
@@ -28,9 +28,15 @@ export class MintJustificationVerifierService {
     const tag = CborDeserializer.decodeTag(bytes).tag;
     const verifier = this.verifiers.get(tag);
     if (!verifier) {
-      throw new Error(`Unsupported mint justification tag: ${tag}.`);
+      return Promise.resolve(
+        new VerificationResult(
+          'MintJustificationVerifierService',
+          VerificationStatus.FAIL,
+          `Unsupported mint justification tag: ${tag}.`,
+        ),
+      );
     }
 
-    return verifier.verify(transaction);
+    return verifier.verify(transaction, this);
   }
 }

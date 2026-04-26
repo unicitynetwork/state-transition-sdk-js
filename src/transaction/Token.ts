@@ -1,7 +1,7 @@
 import { CertifiedMintTransaction } from './CertifiedMintTransaction.js';
 import { CertifiedTransferTransaction } from './CertifiedTransferTransaction.js';
 import { ITransaction } from './ITransaction.js';
-import { MintJustificationVerifierService } from './justification/MintJustificationVerifierService.js';
+import { MintJustificationVerifierService } from './MintJustificationVerifierService.js';
 import { TokenId } from './TokenId.js';
 import { TokenType } from './TokenType.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';

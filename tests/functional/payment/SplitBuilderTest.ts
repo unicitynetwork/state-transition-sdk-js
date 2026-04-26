@@ -15,7 +15,7 @@ import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPub
 import { PayToPublicKeyPredicateUnlockScript } from '../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
 import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
-import { MintJustificationVerifierService } from '../../../src/transaction/justification/MintJustificationVerifierService.js';
+import { MintJustificationVerifierService } from '../../../src/transaction/MintJustificationVerifierService.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../src/transaction/Token.js';
 import { TokenId } from '../../../src/transaction/TokenId.js';
@@ -32,12 +32,7 @@ describe('SplitBuilder Functional Test', () => {
     const predicateVerifier = PredicateVerifierService.create(trustBase);
     const mintJustificationVerifier = new MintJustificationVerifierService();
     mintJustificationVerifier.register(
-      new SplitMintJustificationVerifier(
-        trustBase,
-        predicateVerifier,
-        mintJustificationVerifier,
-        TestPaymentData.decode,
-      ),
+      new SplitMintJustificationVerifier(trustBase, predicateVerifier, TestPaymentData.decode),
     );
 
     const signingService = new SigningService(SigningService.generatePrivateKey());
@@ -73,13 +68,11 @@ describe('SplitBuilder Functional Test', () => {
     );
 
     await expect(
-      TokenSplit.split(token, predicate, TestPaymentData.decode, [
-        [TokenId.generate(), PaymentAssetCollection.create(assets[0])],
-      ]),
+      TokenSplit.split(token, TestPaymentData.decode, [[TokenId.generate(), PaymentAssetCollection.create(assets[0])]]),
     ).rejects.toThrow(TokenAssetCountMismatchError);
 
     await expect(
-      TokenSplit.split(token, predicate, TestPaymentData.decode, [
+      TokenSplit.split(token, TestPaymentData.decode, [
         [
           TokenId.generate(),
           PaymentAssetCollection.create(
@@ -91,7 +84,7 @@ describe('SplitBuilder Functional Test', () => {
     ).rejects.toThrow(TokenAssetMissingError);
 
     await expect(
-      TokenSplit.split(token, predicate, TestPaymentData.decode, [
+      TokenSplit.split(token, TestPaymentData.decode, [
         [TokenId.generate(), PaymentAssetCollection.create(assets[0], new Asset(assets[1].id, 1500n))],
       ]),
     ).rejects.toThrow(TokenAssetValueMismatchError);
@@ -100,7 +93,7 @@ describe('SplitBuilder Functional Test', () => {
       [TokenId.generate(), PaymentAssetCollection.create(assets[0])],
       [TokenId.generate(), PaymentAssetCollection.create(assets[1])],
     ];
-    const result = await TokenSplit.split(token, predicate, TestPaymentData.decode, splitTokens);
+    const result = await TokenSplit.split(token, TestPaymentData.decode, splitTokens);
 
     certificationData = await CertificationData.fromTransaction(
       result.burn.transaction,

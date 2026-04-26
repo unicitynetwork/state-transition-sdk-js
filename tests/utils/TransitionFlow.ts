@@ -7,7 +7,7 @@ import { PayToPublicKeyPredicate } from '../../src/predicate/builtin/PayToPublic
 import { PayToPublicKeyPredicateUnlockScript } from '../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
 import { PredicateVerifierService } from '../../src/predicate/verification/PredicateVerifierService.js';
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
-import { MintJustificationVerifierService } from '../../src/transaction/justification/MintJustificationVerifierService.js';
+import { MintJustificationVerifierService } from '../../src/transaction/MintJustificationVerifierService.js';
 import { TokenType } from '../../src/transaction/TokenType.js';
 import { UnicityId } from '../../src/unicity-id/UnicityId.js';
 import { UnicityIdMintTransaction } from '../../src/unicity-id/UnicityIdMintTransaction.js';

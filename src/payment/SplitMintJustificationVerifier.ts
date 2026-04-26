@@ -5,8 +5,8 @@ import { BurnPredicate } from '../predicate/builtin/BurnPredicate.js';
 import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
 import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CertifiedMintTransaction } from '../transaction/CertifiedMintTransaction.js';
-import { IMintJustificationVerifier } from '../transaction/justification/IMintJustificationVerifier.js';
-import { MintJustificationVerifierService } from '../transaction/justification/MintJustificationVerifierService.js';
+import { IMintJustificationVerifier } from '../transaction/IMintJustificationVerifier.js';
+import { MintJustificationVerifierService } from '../transaction/MintJustificationVerifierService.js';
 import { MintTransaction } from '../transaction/MintTransaction.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 import { VerificationResult } from '../verification/VerificationResult.js';
@@ -16,7 +16,6 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
   public constructor(
     private readonly trustBase: RootTrustBase,
     private readonly predicateVerifier: PredicateVerifierService,
-    private readonly mintJustificationVerifier: MintJustificationVerifierService,
     private readonly decodePaymentData: (bytes: Uint8Array) => Promise<IPaymentData>,
   ) {}
 
@@ -26,6 +25,7 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
 
   public async verify(
     transaction: MintTransaction | CertifiedMintTransaction,
+    mintJustificationVerifier: MintJustificationVerifierService,
   ): Promise<VerificationResult<VerificationStatus>> {
     const justificationBytes = transaction.justification;
     if (!justificationBytes) {
@@ -53,7 +53,7 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
     const tokenVerificationResult = await justification.token.verify(
       this.trustBase,
       this.predicateVerifier,
-      this.mintJustificationVerifier,
+      mintJustificationVerifier,
     );
     if (tokenVerificationResult.status !== VerificationStatus.OK) {
       return new VerificationResult(
@@ -105,7 +105,7 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
       }
 
       const amount = paymentData.assets.get(proof.assetId)?.value;
-      if (amount === null) {
+      if (amount == null) {
         return new VerificationResult(
           'SplitMintJustificationVerifier',
           VerificationStatus.FAIL,

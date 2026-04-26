@@ -3,7 +3,6 @@ import { IPaymentData } from './IPaymentData.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { DataHasherFactory } from '../crypto/hash/DataHasherFactory.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
-import { IPredicate } from '../predicate/IPredicate.js';
 import { HexConverter } from '../serialization/HexConverter.js';
 import { TokenAssetValueMismatchError } from './error/TokenAssetValueMismatchError.js';
 import { SplitReasonProof } from './SplitReasonProof.js';
@@ -72,14 +71,12 @@ export class TokenSplit {
    * Split old token to new tokens.
    *
    * @param token token to be used for split
-   * @param ownerPredicate
    * @param decodePaymentData
    * @param splitTokens
    * @return token split object for submitting info
    */
   public static async split(
     token: Token,
-    ownerPredicate: IPredicate,
     decodePaymentData: (bytes: Uint8Array) => Promise<IPaymentData>,
     splitTokens: [TokenId, PaymentAssetCollection][],
   ): Promise<ISplit> {
@@ -106,7 +103,7 @@ export class TokenSplit {
       throw new Error('Payment data is missing.');
     }
 
-    const assets = paymentData?.assets;
+    const assets = paymentData.assets;
 
     if (trees.size !== assets.size()) {
       throw new TokenAssetCountMismatchError();

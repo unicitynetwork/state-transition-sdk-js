@@ -16,7 +16,7 @@ import { PayToPublicKeyPredicateUnlockScript } from '../../../src/predicate/buil
 import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
 import { HexConverter } from '../../../src/serialization/HexConverter.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
-import { MintJustificationVerifierService } from '../../../src/transaction/justification/MintJustificationVerifierService.js';
+import { MintJustificationVerifierService } from '../../../src/transaction/MintJustificationVerifierService.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../src/transaction/Token.js';
 import { TokenId } from '../../../src/transaction/TokenId.js';
@@ -33,12 +33,7 @@ it('Token splitting', async () => {
   const predicateVerifier = PredicateVerifierService.create(trustBase);
   const mintJustificationVerifier = new MintJustificationVerifierService();
   mintJustificationVerifier.register(
-    new SplitMintJustificationVerifier(
-      trustBase,
-      predicateVerifier,
-      mintJustificationVerifier,
-      CustomPaymentData.decode,
-    ),
+    new SplitMintJustificationVerifier(trustBase, predicateVerifier, CustomPaymentData.decode),
   );
 
   const ownerPrivateKey = HexConverter.decode(config.ownerPrivateKey);
@@ -83,7 +78,7 @@ it('Token splitting', async () => {
     [TokenId.generate(), PaymentAssetCollection.create(new Asset(new AssetId(textEncoder.encode('USD')), 500n))],
   ];
 
-  const result = await TokenSplit.split(token, ownerPredicate, CustomPaymentData.decode, splitTokens);
+  const result = await TokenSplit.split(token, CustomPaymentData.decode, splitTokens);
 
   response = await client.submitCertificationRequest(
     await CertificationData.fromTransaction(
