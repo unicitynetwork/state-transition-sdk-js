@@ -40,6 +40,7 @@ export class TokenWorld extends World {
   public currentToken!: Token;
   public dave!: IUser;
   public daveToken!: Token;
+  public dupResponseStatus?: CertificationStatus;
   public finalToken!: Token;
   public firstResponse!: CertificationResponse;
   public firstTransferTransaction!: TransferTransaction;
@@ -97,6 +98,7 @@ export class TokenWorld extends World {
     decoded?: import('../../../../src/api/StateId.js').StateId;
   };
   public statusStash?: { mutatedProof?: import('../../../../src/api/InclusionProof.js').InclusionProof };
+  public stressMintedTokens?: Token[];
   public subSplitTokens!: Token[];
   public token!: Token;
   public tokens!: PaymentAssetCollection;
