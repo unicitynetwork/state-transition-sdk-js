@@ -64,6 +64,13 @@ export class TokenWorld extends World {
   public readonly nametags: Map<IUser, UnicityIdToken> = new Map();
   public originalToken!: Token;
   public preparedOperations!: Map<number, IPreparedOperation[]>;
+  public routingShardSeen?: Set<number>;
+  public routingStash?: {
+    pickedShard?: number;
+    rejectionError?: Error;
+    stateId?: import('../../../../src/api/StateId.js').StateId;
+    wrongShardResponseStatus?: string;
+  };
   public secondMintTransaction!: MintTransaction;
   public secondResponse!: CertificationResponse;
   public secondTransferTransaction!: TransferTransaction;
@@ -84,6 +91,11 @@ export class TokenWorld extends World {
   };
   public splitError: Error | null = null;
   public splitTokens!: Token[];
+  public stateIdEncodingStash?: {
+    bytes: Uint8Array;
+    decodeError?: Error;
+    decoded?: import('../../../../src/api/StateId.js').StateId;
+  };
   public statusStash?: { mutatedProof?: import('../../../../src/api/InclusionProof.js').InclusionProof };
   public subSplitTokens!: Token[];
   public token!: Token;
