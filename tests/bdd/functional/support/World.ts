@@ -84,6 +84,7 @@ export class TokenWorld extends World {
   };
   public splitError: Error | null = null;
   public splitTokens!: Token[];
+  public statusStash?: { mutatedProof?: import('../../../../src/api/InclusionProof.js').InclusionProof };
   public subSplitTokens!: Token[];
   public token!: Token;
   public tokens!: PaymentAssetCollection;
