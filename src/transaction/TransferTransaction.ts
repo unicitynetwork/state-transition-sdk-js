@@ -12,7 +12,7 @@ import { PredicateVerifierService } from '../predicate/verification/PredicateVer
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborError } from '../serialization/cbor/CborError.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
-import { HexConverter } from '../serialization/HexConverter.js';
+import { HexConverter } from '../util/HexConverter.js';
 import { dedent } from '../util/StringUtils.js';
 
 export class TransferTransaction implements ITransaction {
@@ -23,7 +23,7 @@ export class TransferTransaction implements ITransaction {
     public readonly sourceStateHash: DataHash,
     public readonly lockScript: IPredicate,
     public readonly recipient: IPredicate,
-    private readonly _x: Uint8Array,
+    private readonly _nonce: Uint8Array,
     private readonly _data: Uint8Array | null,
   ) {}
 
@@ -31,12 +31,12 @@ export class TransferTransaction implements ITransaction {
     return this._data ? new Uint8Array(this._data) : null;
   }
 
-  public get version(): bigint {
-    return TransferTransaction.VERSION;
+  public get nonce(): Uint8Array {
+    return new Uint8Array(this._nonce);
   }
 
-  public get x(): Uint8Array {
-    return new Uint8Array(this._x);
+  public get version(): bigint {
+    return TransferTransaction.VERSION;
   }
 
   public static async create(
@@ -77,22 +77,14 @@ export class TransferTransaction implements ITransaction {
       .update(
         CborSerializer.encodeArray(
           CborSerializer.encodeByteString(this.sourceStateHash.imprint),
-          CborSerializer.encodeByteString(this._x),
+          CborSerializer.encodeByteString(this._nonce),
         ),
       )
       .digest();
   }
 
   public calculateTransactionHash(): Promise<DataHash> {
-    return new DataHasher(HashAlgorithm.SHA256)
-      .update(
-        CborSerializer.encodeArray(
-          EncodedPredicate.fromPredicate(this.recipient).toCBOR(),
-          CborSerializer.encodeByteString(this._x),
-          CborSerializer.encodeNullable(this._data, CborSerializer.encodeByteString),
-        ),
-      )
-      .digest();
+    return new DataHasher(HashAlgorithm.SHA256).update(this.toCBOR()).digest();
   }
 
   public toCBOR(): Uint8Array {
@@ -101,7 +93,7 @@ export class TransferTransaction implements ITransaction {
       CborSerializer.encodeArray(
         CborSerializer.encodeUnsignedInteger(this.version),
         EncodedPredicate.fromPredicate(this.recipient).toCBOR(),
-        CborSerializer.encodeByteString(this._x),
+        CborSerializer.encodeByteString(this._nonce),
         CborSerializer.encodeNullable(this._data, CborSerializer.encodeByteString),
       ),
     );
@@ -123,7 +115,7 @@ export class TransferTransaction implements ITransaction {
         Lock Script: 
           ${this.lockScript.toString()}
         Recipient: ${this.recipient.toString()}
-        X: ${HexConverter.encode(this._x)}
+        X: ${HexConverter.encode(this._nonce)}
         Data: ${this._data ? HexConverter.encode(this._data) : 'null'}`;
   }
 }

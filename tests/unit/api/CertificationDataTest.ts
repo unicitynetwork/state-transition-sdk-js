@@ -1,10 +1,10 @@
 import { CertificationData } from '../../../src/api/CertificationData.js';
 import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
 import { EncodedPredicate } from '../../../src/predicate/EncodedPredicate.js';
-import { HexConverter } from '../../../src/serialization/HexConverter.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { TokenId } from '../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
+import { HexConverter } from '../../../src/util/HexConverter.js';
 
 describe('CertificationData', () => {
   it('should encode and decode to exactly same object', async () => {

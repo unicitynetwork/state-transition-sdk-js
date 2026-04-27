@@ -1,5 +1,5 @@
 import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
-import { HexConverter } from '../../serialization/HexConverter.js';
+import { HexConverter } from '../../util/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
 
 /**

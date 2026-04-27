@@ -1,8 +1,8 @@
 import { FinalizedLeafBranch } from './FinalizedLeafBranch.js';
 import { IDataHasher } from '../../crypto/hash/IDataHasher.js';
 import { IDataHasherFactory } from '../../crypto/hash/IDataHasherFactory.js';
-import { BigintConverter } from '../../serialization/BigintConverter.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
+import { BigintConverter } from '../../util/BigintConverter.js';
 
 export class PendingLeafBranch {
   public constructor(

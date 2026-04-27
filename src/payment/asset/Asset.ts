@@ -1,7 +1,7 @@
 import { AssetId } from './AssetId.js';
-import { BigintConverter } from '../../serialization/BigintConverter.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
+import { BigintConverter } from '../../util/BigintConverter.js';
 
 export class Asset {
   public constructor(

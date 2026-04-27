@@ -30,6 +30,10 @@ export class CertifiedUnicityIdMintTransaction implements ITransaction {
     return this.transaction.lockScript;
   }
 
+  public get nonce(): Uint8Array {
+    return this.transaction.nonce;
+  }
+
   public get recipient(): IPredicate {
     return this.transaction.recipient;
   }
@@ -52,10 +56,6 @@ export class CertifiedUnicityIdMintTransaction implements ITransaction {
 
   public get unicityId(): UnicityId {
     return this.transaction.unicityId;
-  }
-
-  public get x(): Uint8Array {
-    return this.transaction.x;
   }
 
   public static async fromCBOR(bytes: Uint8Array): Promise<CertifiedUnicityIdMintTransaction> {

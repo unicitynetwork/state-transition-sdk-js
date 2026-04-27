@@ -8,6 +8,7 @@ import { CertifiedMintTransaction } from '../transaction/CertifiedMintTransactio
 import { IMintJustificationVerifier } from '../transaction/IMintJustificationVerifier.js';
 import { MintJustificationVerifierService } from '../transaction/MintJustificationVerifierService.js';
 import { MintTransaction } from '../transaction/MintTransaction.js';
+import { HexConverter } from '../util/HexConverter.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 import { VerificationResult } from '../verification/VerificationResult.js';
 import { VerificationStatus } from '../verification/VerificationStatus.js';
@@ -73,6 +74,7 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
       );
     }
 
+    const validatedAssets = new Set<string>();
     const burntTokenLastTransaction = justification.token.transactions.at(-1);
     for (const proof of justification.proofs) {
       const aggregationPathResult = await proof.aggregationPath.verify(proof.assetId.toBitString().toBigInt());
@@ -137,6 +139,17 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
           [],
         );
       }
+
+      validatedAssets.add(HexConverter.encode(proof.assetId.bytes));
+    }
+
+    if (validatedAssets.size !== justification.proofs.length) {
+      return new VerificationResult(
+        'SplitMintJustificationVerifier',
+        VerificationStatus.FAIL,
+        'Some assets proofs are missing from the token.',
+        [],
+      );
     }
 
     return new VerificationResult('SplitMintJustificationVerifier', VerificationStatus.OK);

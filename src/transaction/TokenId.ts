@@ -1,7 +1,7 @@
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
-import { HexConverter } from '../serialization/HexConverter.js';
 import { BitString } from '../util/BitString.js';
+import { HexConverter } from '../util/HexConverter.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 
 /**

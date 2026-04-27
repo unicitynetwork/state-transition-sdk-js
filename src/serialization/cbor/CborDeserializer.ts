@@ -2,7 +2,7 @@ import { CborError } from './CborError.js';
 import { CborMapEntry } from './CborMapEntry.js';
 import { CborReader } from './CborReader.js';
 import { MajorType } from './MajorType.js';
-import { HexConverter } from '../HexConverter.js';
+import { HexConverter } from '../../util/HexConverter.js';
 
 export class CborDeserializer {
   public static decodeArray(data: Uint8Array): Uint8Array[] {

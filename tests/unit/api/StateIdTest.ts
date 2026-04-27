@@ -1,9 +1,9 @@
 import { StateId } from '../../../src/api/StateId.js';
 import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
-import { HexConverter } from '../../../src/serialization/HexConverter.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { TokenId } from '../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
+import { HexConverter } from '../../../src/util/HexConverter.js';
 
 describe('StateId', () => {
   it('should encode and decode to exactly same object', async () => {

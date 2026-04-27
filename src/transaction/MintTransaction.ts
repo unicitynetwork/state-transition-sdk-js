@@ -16,7 +16,7 @@ import { PredicateVerifierService } from '../predicate/verification/PredicateVer
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborError } from '../serialization/cbor/CborError.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
-import { HexConverter } from '../serialization/HexConverter.js';
+import { HexConverter } from '../util/HexConverter.js';
 import { dedent } from '../util/StringUtils.js';
 
 export class MintTransaction implements ITransaction {
@@ -41,12 +41,12 @@ export class MintTransaction implements ITransaction {
     return this._justification ? new Uint8Array(this._justification) : null;
   }
 
-  public get version(): bigint {
-    return MintTransaction.VERSION;
+  public get nonce(): Uint8Array {
+    return new Uint8Array(this.tokenId.bytes);
   }
 
-  public get x(): Uint8Array {
-    return new Uint8Array(this.tokenId.bytes);
+  public get version(): bigint {
+    return MintTransaction.VERSION;
   }
 
   public static async create(
@@ -97,7 +97,7 @@ export class MintTransaction implements ITransaction {
       .update(
         CborSerializer.encodeArray(
           CborSerializer.encodeByteString(this.sourceStateHash.imprint),
-          CborSerializer.encodeByteString(this.x),
+          CborSerializer.encodeByteString(this.nonce),
         ),
       )
       .digest();

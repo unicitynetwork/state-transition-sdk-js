@@ -3,7 +3,7 @@ import { IPaymentData } from './IPaymentData.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { DataHasherFactory } from '../crypto/hash/DataHasherFactory.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
-import { HexConverter } from '../serialization/HexConverter.js';
+import { HexConverter } from '../util/HexConverter.js';
 import { TokenAssetValueMismatchError } from './error/TokenAssetValueMismatchError.js';
 import { SplitReasonProof } from './SplitReasonProof.js';
 import { SparseMerkleTree } from '../smt/plain/SparseMerkleTree.js';

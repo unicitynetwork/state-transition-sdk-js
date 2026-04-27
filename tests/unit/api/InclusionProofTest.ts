@@ -13,7 +13,6 @@ import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPub
 import { EncodedPredicate } from '../../../src/predicate/EncodedPredicate.js';
 import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
-import { HexConverter } from '../../../src/serialization/HexConverter.js';
 import { SparseMerkleTree } from '../../../src/smt/radix/SparseMerkleTree.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { TokenId } from '../../../src/transaction/TokenId.js';
@@ -22,6 +21,7 @@ import {
   InclusionProofVerificationRule,
   InclusionProofVerificationStatus,
 } from '../../../src/transaction/verification/rule/InclusionProofVerificationRule.js';
+import { HexConverter } from '../../../src/util/HexConverter.js';
 import { createRootTrustBase } from '../../utils/RootTrustBaseFixture.js';
 import { createUnicityCertificate } from '../../utils/UnicityCertificateFixture.js';
 

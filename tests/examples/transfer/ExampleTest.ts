@@ -9,7 +9,6 @@ import { PayToPublicKeyPredicateUnlockScript } from '../../../src/predicate/buil
 import { EncodedPredicate } from '../../../src/predicate/EncodedPredicate.js';
 import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
-import { HexConverter } from '../../../src/serialization/HexConverter.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
 import { MintJustificationVerifierService } from '../../../src/transaction/MintJustificationVerifierService.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
@@ -17,6 +16,7 @@ import { Token } from '../../../src/transaction/Token.js';
 import { TokenId } from '../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
 import { TransferTransaction } from '../../../src/transaction/TransferTransaction.js';
+import { HexConverter } from '../../../src/util/HexConverter.js';
 import { waitInclusionProof } from '../../../src/util/InclusionProofUtils.js';
 import { VerificationStatus } from '../../../src/verification/VerificationStatus.js';
 import trustBaseJson from '../trust-base.json' with { type: 'json' };

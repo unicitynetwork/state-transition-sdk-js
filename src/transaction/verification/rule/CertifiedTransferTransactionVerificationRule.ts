@@ -17,7 +17,7 @@ export class CertifiedTransferTransactionVerificationRule {
     transaction: CertifiedTransferTransaction,
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];
-    let result: VerificationResult<unknown> = await InclusionProofVerificationRule.verify(
+    const result: VerificationResult<unknown> = await InclusionProofVerificationRule.verify(
       trustBase,
       predicateVerifier,
       transaction.inclusionProof,
@@ -30,22 +30,6 @@ export class CertifiedTransferTransactionVerificationRule {
         'CertifiedTransferTransactionVerificationRule',
         VerificationStatus.FAIL,
         `Inclusion proof verification failed: ${result.status?.toString()}`,
-        results,
-      );
-    }
-
-    result = new VerificationResult(
-      'SourceStateHashVerificationRule',
-      await latestTransaction
-        .calculateStateHash()
-        .then((hash) => (hash.equals(transaction.sourceStateHash) ? VerificationStatus.OK : VerificationStatus.FAIL)),
-    );
-    results.push(result);
-    if (result.status !== VerificationStatus.OK) {
-      return new VerificationResult(
-        'CertifiedTransferTransactionVerificationRule',
-        VerificationStatus.FAIL,
-        'The transaction source state hash does not match the previous transaction state.',
         results,
       );
     }

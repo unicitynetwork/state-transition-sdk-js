@@ -6,8 +6,8 @@ import { PayToPublicKeyPredicateUnlockScript } from '../../src/predicate/builtin
 import { IPredicate } from '../../src/predicate/IPredicate.js';
 import { IUnlockScript } from '../../src/predicate/IUnlockScript.js';
 import { PredicateVerifierService } from '../../src/predicate/verification/PredicateVerifierService.js';
+import { ICborSerializable } from '../../src/serialization/cbor/ICborSerializable.js';
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
-import { IMintJustification } from '../../src/transaction/IMintJustification.js';
 import { MintJustificationVerifierService } from '../../src/transaction/MintJustificationVerifierService.js';
 import { MintTransaction } from '../../src/transaction/MintTransaction.js';
 import { Token } from '../../src/transaction/Token.js';
@@ -25,7 +25,7 @@ export async function mintToken(
   recipient: IPredicate,
   tokenId: TokenId = TokenId.generate(),
   tokenType: TokenType = TokenType.generate(),
-  justification: IMintJustification | null = null,
+  justification: ICborSerializable | null = null,
   data: Uint8Array | null = null,
 ): Promise<Token> {
   const transaction = await MintTransaction.create(recipient, tokenId, tokenType, justification?.toCBOR(), data);

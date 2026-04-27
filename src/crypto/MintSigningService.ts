@@ -1,5 +1,5 @@
-import { HexConverter } from '../serialization/HexConverter.js';
 import { TokenId } from '../transaction/TokenId.js';
+import { HexConverter } from '../util/HexConverter.js';
 import { DataHasher } from './hash/DataHasher.js';
 import { HashAlgorithm } from './hash/HashAlgorithm.js';
 import { SigningService } from './secp256k1/SigningService.js';

@@ -2,7 +2,7 @@ import { Asset } from './Asset.js';
 import { AssetId } from './AssetId.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
-import { HexConverter } from '../../serialization/HexConverter.js';
+import { HexConverter } from '../../util/HexConverter.js';
 
 export class PaymentAssetCollection {
   private constructor(private readonly _assets: Map<string, Asset>) {}

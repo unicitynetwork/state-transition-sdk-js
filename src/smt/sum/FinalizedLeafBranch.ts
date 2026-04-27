@@ -1,5 +1,5 @@
 import { DataHash } from '../../crypto/hash/DataHash.js';
-import { HexConverter } from '../../serialization/HexConverter.js';
+import { HexConverter } from '../../util/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
 
 export class FinalizedLeafBranch {

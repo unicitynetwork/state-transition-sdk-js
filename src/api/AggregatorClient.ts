@@ -5,7 +5,7 @@ import { IAggregatorClient } from './IAggregatorClient.js';
 import { InclusionProofResponse } from './InclusionProofResponse.js';
 import { JsonRpcHttpTransport } from './json-rpc/JsonRpcHttpTransport.js';
 import { StateId } from './StateId.js';
-import { HexConverter } from '../serialization/HexConverter.js';
+import { HexConverter } from '../util/HexConverter.js';
 
 /**
  * Client implementation for communicating with an aggregator via JSON-RPC.

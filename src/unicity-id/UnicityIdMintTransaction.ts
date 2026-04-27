@@ -19,6 +19,9 @@ import { TokenType } from '../transaction/TokenType.js';
 import { dedent } from '../util/StringUtils.js';
 
 export class UnicityIdMintTransaction implements ITransaction {
+  public static readonly CBOR_TAG = 39041n;
+  private static readonly VERSION = 1n;
+
   private constructor(
     public readonly sourceStateHash: MintTransactionState,
     public readonly lockScript: IPredicate,
@@ -33,8 +36,12 @@ export class UnicityIdMintTransaction implements ITransaction {
     return EncodedPredicate.fromPredicate(this.targetPredicate).toCBOR();
   }
 
-  public get x(): Uint8Array {
+  public get nonce(): Uint8Array {
     return new Uint8Array(this.tokenId.bytes);
+  }
+
+  public get version(): bigint {
+    return UnicityIdMintTransaction.VERSION;
   }
 
   public static async create(
@@ -80,34 +87,25 @@ export class UnicityIdMintTransaction implements ITransaction {
       .update(
         CborSerializer.encodeArray(
           CborSerializer.encodeByteString(this.sourceStateHash.imprint),
-          CborSerializer.encodeByteString(this.x),
+          CborSerializer.encodeByteString(this.nonce),
         ),
       )
       .digest();
   }
 
   public calculateTransactionHash(): Promise<DataHash> {
-    return new DataHasher(HashAlgorithm.SHA256)
-      .update(
-        CborSerializer.encodeArray(
-          EncodedPredicate.fromPredicate(this.recipient).toCBOR(),
-          this.tokenId.toCBOR(),
-          CborSerializer.encodeArray(
-            this.tokenType.toCBOR(),
-            EncodedPredicate.fromPredicate(this.targetPredicate).toCBOR(),
-          ),
-        ),
-      )
-      .digest();
+    return new DataHasher(HashAlgorithm.SHA256).update(this.toCBOR()).digest();
   }
 
   public toCBOR(): Uint8Array {
-    return CborSerializer.encodeArray(
-      EncodedPredicate.fromPredicate(this.lockScript).toCBOR(),
-      EncodedPredicate.fromPredicate(this.recipient).toCBOR(),
-      this.unicityId.toCBOR(),
+    return CborSerializer.encodeTag(
+      UnicityIdMintTransaction.CBOR_TAG,
       CborSerializer.encodeArray(
+        CborSerializer.encodeUnsignedInteger(this.version),
+        EncodedPredicate.fromPredicate(this.recipient).toCBOR(),
+        this.tokenId.toCBOR(),
         this.tokenType.toCBOR(),
+        CborSerializer.encodeNull(),
         EncodedPredicate.fromPredicate(this.targetPredicate).toCBOR(),
       ),
     );

@@ -34,6 +34,10 @@ export class CertifiedMintTransaction implements ITransaction {
     return this.transaction.lockScript;
   }
 
+  public get nonce(): Uint8Array {
+    return this.transaction.nonce;
+  }
+
   public get recipient(): IPredicate {
     return this.transaction.recipient;
   }
@@ -48,10 +52,6 @@ export class CertifiedMintTransaction implements ITransaction {
 
   public get tokenType(): TokenType {
     return this.transaction.tokenType;
-  }
-
-  public get x(): Uint8Array {
-    return this.transaction.x;
   }
 
   public static async fromCBOR(bytes: Uint8Array): Promise<CertifiedMintTransaction> {

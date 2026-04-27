@@ -1,6 +1,6 @@
 import { HashAlgorithm } from './HashAlgorithm.js';
 import { HashError } from './HashError.js';
-import { HexConverter } from '../../serialization/HexConverter.js';
+import { HexConverter } from '../../util/HexConverter.js';
 import { areUint8ArraysEqual } from '../../util/TypedArrayUtils.js';
 
 export class DataHash {

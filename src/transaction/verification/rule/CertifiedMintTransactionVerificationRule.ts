@@ -38,17 +38,6 @@ export class CertifiedMintTransactionVerificationRule {
       );
     }
 
-    result = await mintJustificationVerifier.verify(genesis);
-    results.push(result);
-    if (result.status !== VerificationStatus.OK) {
-      return new VerificationResult(
-        'CertifiedMintTransactionVerificationRule',
-        VerificationStatus.FAIL,
-        'Invalid mint justification',
-        results,
-      );
-    }
-
     result = await InclusionProofVerificationRule.verify(trustBase, predicateVerifier, genesis.inclusionProof, genesis);
     results.push(result);
     if (result.status !== InclusionProofVerificationStatus.OK) {
@@ -56,6 +45,17 @@ export class CertifiedMintTransactionVerificationRule {
         'CertifiedMintTransactionVerificationRule',
         VerificationStatus.FAIL,
         `Inclusion proof verification failed: ${result.status?.toString()}`,
+        results,
+      );
+    }
+
+    result = await mintJustificationVerifier.verify(genesis);
+    results.push(result);
+    if (result.status !== VerificationStatus.OK) {
+      return new VerificationResult(
+        'CertifiedMintTransactionVerificationRule',
+        VerificationStatus.FAIL,
+        'Invalid mint justification',
         results,
       );
     }
