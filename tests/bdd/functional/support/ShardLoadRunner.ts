@@ -266,6 +266,7 @@ export class ShardLoadRunner {
   public async prepareOperations(
     opsPerShard: number,
     shardIdLength: number,
+    routingMode: 'lsb' | 'msb' = 'lsb',
   ): Promise<Map<number, IPreparedOperation[]>> {
     const shardCount = 1 << shardIdLength;
     const baseId = 1 << shardIdLength;
@@ -298,7 +299,7 @@ export class ShardLoadRunner {
       );
       const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
       const stateId = await StateId.fromCertificationData(certificationData);
-      const shardId = ShardAwareAggregatorClient.getShardForStateId(stateId, shardIdLength);
+      const shardId = ShardAwareAggregatorClient.getShardForStateId(stateId, shardIdLength, routingMode);
 
       const bucket = buckets.get(shardId)!;
       if (bucket.length < opsPerShard) {

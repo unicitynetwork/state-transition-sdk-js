@@ -38,7 +38,14 @@ Given('the aggregator is set up', function (this: TokenWorld): void {
 Given('the shard topology is discovered', function (this: TokenWorld): void {
   this.shardIdLength = parseInt(process.env.SHARD_ID_LENGTH ?? '1', 10);
   this.shardCount = 1 << this.shardIdLength;
-  console.log(`[ShardLoad] Topology: shardIdLength=${this.shardIdLength}, shardCount=${this.shardCount}`);
+  const routingMode = (process.env.SHARD_ROUTING_MODE ?? 'lsb').toLowerCase();
+  if (routingMode !== 'lsb' && routingMode !== 'msb') {
+    throw new Error(`Invalid SHARD_ROUTING_MODE='${process.env.SHARD_ROUTING_MODE}'. Expected 'lsb' or 'msb'.`);
+  }
+  this.shardRoutingMode = routingMode;
+  console.log(
+    `[ShardLoad] Topology: shardIdLength=${this.shardIdLength}, shardCount=${this.shardCount}, routing=${this.shardRoutingMode}`,
+  );
 });
 
 Given(
@@ -49,7 +56,11 @@ Given(
     const shardUrls = buildShardUrls(this.shardIdLength);
     this.loadTestRunner = new ShardLoadRunner(this.setup, user, shardUrls);
     await this.loadTestRunner.initMintPool(this.shardCount);
-    this.preparedOperations = await this.loadTestRunner.prepareOperations(opsPerShard, this.shardIdLength);
+    this.preparedOperations = await this.loadTestRunner.prepareOperations(
+      opsPerShard,
+      this.shardIdLength,
+      this.shardRoutingMode,
+    );
   },
 );
 
@@ -62,7 +73,11 @@ Given(
     this.loadTestRunner = new ShardLoadRunner(this.setup, user, shardUrls);
     await this.loadTestRunner.initMintPool(this.shardCount);
     const opsPerShard = batchSize * batchCount;
-    this.preparedOperations = await this.loadTestRunner.prepareOperations(opsPerShard, this.shardIdLength);
+    this.preparedOperations = await this.loadTestRunner.prepareOperations(
+      opsPerShard,
+      this.shardIdLength,
+      this.shardRoutingMode,
+    );
   },
 );
 

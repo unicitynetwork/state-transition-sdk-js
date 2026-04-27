@@ -32,6 +32,9 @@ export class TokenWorld extends World {
   public carol!: IUser;
   public carolToken!: Token;
   public cborData!: Uint8Array;
+  public cborEnvelopeStash?: { bytes: Uint8Array; thrownError?: Error };
+  public cborRoundtripFirst?: Uint8Array;
+  public cborRoundtripSecond?: Uint8Array;
   public certificationStatus!: CertificationStatus;
   public certificationStatusTree: CertificationStatus | null = null;
   public currentToken!: Token;
@@ -41,6 +44,17 @@ export class TokenWorld extends World {
   public firstResponse!: CertificationResponse;
   public firstTransferTransaction!: TransferTransaction;
   public importedToken!: Token;
+  public inclusionCertStash?: {
+    bitmap?: Uint8Array;
+    bytes?: Uint8Array;
+    cert?: import('../../../../src/api/InclusionCertificate.js').InclusionCertificate;
+    decodeError?: Error;
+    leafKey?: Uint8Array;
+    leafValue?: import('../../../../src/crypto/hash/DataHash.js').DataHash;
+    rootHash?: import('../../../../src/crypto/hash/DataHash.js').DataHash;
+    siblingCount?: number;
+    verifyResult?: boolean;
+  };
   public loadTestReport!: ILoadTestReport;
   public loadTestRunner!: ShardLoadRunner;
   public mintError: Error | null = null;
@@ -56,6 +70,18 @@ export class TokenWorld extends World {
   public setup!: ITestSetup;
   public shardCount!: number;
   public shardIdLength!: number;
+  public shardIdStash?: {
+    bytes: Uint8Array;
+    data?: Uint8Array;
+    decodeError?: Error;
+    decoded?: import('../../../../src/api/bft/ShardId.js').ShardId;
+  };
+  public shardRoutingMode: 'lsb' | 'msb' = 'lsb';
+  public shardRuleStash?: {
+    ruleStatus?: string;
+    shardIdEncoded?: Uint8Array;
+    stateId?: import('../../../../src/api/StateId.js').StateId;
+  };
   public splitError: Error | null = null;
   public splitTokens!: Token[];
   public subSplitTokens!: Token[];

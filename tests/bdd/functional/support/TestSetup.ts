@@ -61,6 +61,10 @@ export function createTestSetup(): ITestSetup {
 function createAggregatorClient(): IAggregatorClient {
   const apiKey = process.env.AGGREGATOR_API_KEY ?? null;
   const shardIdLength = parseInt(process.env.SHARD_ID_LENGTH ?? '1', 10);
+  const routingMode = (process.env.SHARD_ROUTING_MODE ?? 'lsb').toLowerCase() as 'lsb' | 'msb';
+  if (routingMode !== 'lsb' && routingMode !== 'msb') {
+    throw new Error(`Invalid SHARD_ROUTING_MODE='${process.env.SHARD_ROUTING_MODE}'. Expected 'lsb' or 'msb'.`);
+  }
   const firstShardId = 1 << shardIdLength;
 
   if (process.env[`SHARD_${firstShardId}_URL`]) {
@@ -79,8 +83,10 @@ function createAggregatorClient(): IAggregatorClient {
       shardMap.set(shardId, new AggregatorClient(url, apiKey));
     }
 
-    console.log(`[TestSetup] Shard mode: shardIdLength=${shardIdLength}, shards=${[...shardMap.keys()].join(',')}`);
-    return new ShardAwareAggregatorClient(shardIdLength, shardMap);
+    console.log(
+      `[TestSetup] Shard mode: shardIdLength=${shardIdLength}, routing=${routingMode}, shards=${[...shardMap.keys()].join(',')}`,
+    );
+    return new ShardAwareAggregatorClient(shardIdLength, shardMap, routingMode);
   }
 
   const url = process.env.AGGREGATOR_URL ?? 'http://localhost:3000';

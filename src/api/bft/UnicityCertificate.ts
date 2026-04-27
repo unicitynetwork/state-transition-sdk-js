@@ -68,11 +68,12 @@ export class UnicityCertificate {
     const siblingHashes = shardTreeCertificate.siblingHashList;
     for (let i = 0; i < siblingHashes.length; i++) {
       const isRight = shardId.getBit(shardId.length - 1 - i);
-      if (isRight) {
-        rootHash = await new DataHasher(HashAlgorithm.SHA256).update(siblingHashes[i]).update(rootHash.data).digest();
-      } else {
-        rootHash = await new DataHasher(HashAlgorithm.SHA256).update(rootHash.data).update(siblingHashes[i]).digest();
-      }
+      const left = isRight ? siblingHashes[i] : rootHash.data;
+      const right = isRight ? rootHash.data : siblingHashes[i];
+      rootHash = await new DataHasher(HashAlgorithm.SHA256)
+        .update(CborSerializer.encodeByteString(left))
+        .update(CborSerializer.encodeByteString(right))
+        .digest();
     }
 
     return rootHash;
