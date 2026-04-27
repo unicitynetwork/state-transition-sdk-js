@@ -24,8 +24,10 @@ Feature: bft-shard MSB routing
     When the same certification request is sent directly to shard 2
     Then the aggregator rejects the request with a shard-related error
 
-  # T4-31: Use Case — under correct routing the suite mints to both shards
-  Scenario: A round of 4 mints under MSB routing reaches both shards
+  # T4-31: Use Case — under correct routing the suite mints to both shards.
+  # 16 mints chosen so the probability of landing all on one shard is ~0.003%
+  # (P(all same) = 2 * (1/2)^16) — vanishingly small and avoids a flaky failure.
+  Scenario: A round of 16 mints under MSB routing reaches both shards
     Given a mock aggregator client is set up
-    When 4 tokens are minted in a row
+    When 16 tokens are minted in a row
     Then the per-shard submission count for both shards is greater than 0

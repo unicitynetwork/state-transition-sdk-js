@@ -112,19 +112,23 @@ Then('the aggregator rejects the request with a shard-related error', function (
   );
 });
 
-When('{int} tokens are minted in a row', async function (this: TokenWorld, count: number): Promise<void> {
-  const { createUser, mintToken } = await import('../support/TestSetup.js');
-  if (!this.alice) {
-    this.alice = createUser();
-  }
-  this.routingShardSeen = new Set<number>();
-  for (let i = 0; i < count; i++) {
-    const token = await mintToken(this.setup, this.alice);
-    const sid = await StateId.fromTransaction(token.genesis.transaction);
-    const shardId = ShardAwareAggregatorClient.getShardForStateId(sid, 1, 'msb');
-    this.routingShardSeen.add(shardId);
-  }
-});
+When(
+  '{int} tokens are minted in a row',
+  { timeout: 600_000 },
+  async function (this: TokenWorld, count: number): Promise<void> {
+    const { createUser, mintToken } = await import('../support/TestSetup.js');
+    if (!this.alice) {
+      this.alice = createUser();
+    }
+    this.routingShardSeen = new Set<number>();
+    for (let i = 0; i < count; i++) {
+      const token = await mintToken(this.setup, this.alice);
+      const sid = await StateId.fromTransaction(token.genesis.transaction);
+      const shardId = ShardAwareAggregatorClient.getShardForStateId(sid, 1, 'msb');
+      this.routingShardSeen.add(shardId);
+    }
+  },
+);
 
 Then('the per-shard submission count for both shards is greater than 0', function (this: TokenWorld): void {
   const seen = this.routingShardSeen;
