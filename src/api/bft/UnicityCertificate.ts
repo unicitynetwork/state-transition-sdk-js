@@ -69,9 +69,15 @@ export class UnicityCertificate {
     for (let i = 0; i < siblingHashes.length; i++) {
       const isRight = shardId.getBit(shardId.length - 1 - i);
       if (isRight) {
-        rootHash = await new DataHasher(HashAlgorithm.SHA256).update(siblingHashes[i]).update(rootHash.data).digest();
+        rootHash = await new DataHasher(HashAlgorithm.SHA256)
+          .update(CborSerializer.encodeByteString(siblingHashes[i]))
+          .update(CborSerializer.encodeByteString(rootHash.data))
+          .digest();
       } else {
-        rootHash = await new DataHasher(HashAlgorithm.SHA256).update(rootHash.data).update(siblingHashes[i]).digest();
+        rootHash = await new DataHasher(HashAlgorithm.SHA256)
+          .update(CborSerializer.encodeByteString(rootHash.data))
+          .update(CborSerializer.encodeByteString(siblingHashes[i]))
+          .digest();
       }
     }
 

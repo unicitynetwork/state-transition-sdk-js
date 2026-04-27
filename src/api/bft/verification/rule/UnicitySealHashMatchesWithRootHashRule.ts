@@ -23,18 +23,13 @@ export class UnicitySealHashMatchesWithRootHashRule {
     const unicityTreeCertificate = unicityCertificate.unicityTreeCertificate;
     const key = numberToBytesBE(unicityTreeCertificate.partitionIdentifier, 4);
 
+    const unicityTreeHash = await new DataHasher(HashAlgorithm.SHA256)
+      .update(CborSerializer.encodeByteString(shardTreeCertificateRootHash.data))
+      .digest();
     let result = await new DataHasher(HashAlgorithm.SHA256)
       .update(CborSerializer.encodeByteString(new Uint8Array([0x01]))) // LEAF
       .update(CborSerializer.encodeByteString(key))
-      .update(
-        CborSerializer.encodeByteString(
-          (
-            await new DataHasher(HashAlgorithm.SHA256)
-              .update(CborSerializer.encodeByteString(shardTreeCertificateRootHash.data))
-              .digest()
-          ).data,
-        ),
-      )
+      .update(CborSerializer.encodeByteString(unicityTreeHash.data))
       .digest();
 
     for (const step of unicityTreeCertificate.steps) {
