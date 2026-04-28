@@ -42,14 +42,20 @@ export class TransferTransaction implements ITransaction {
   public static async create(
     token: Token,
     recipient: IPredicate,
-    x: Uint8Array,
+    nonce: Uint8Array,
     data: Uint8Array | null = null,
   ): Promise<TransferTransaction> {
-    x = new Uint8Array(x);
+    nonce = new Uint8Array(nonce);
     data = data ? new Uint8Array(data) : null;
 
     const transaction = token.latestTransaction;
-    return new TransferTransaction(await transaction.calculateStateHash(), transaction.recipient, recipient, x, data);
+    return new TransferTransaction(
+      await transaction.calculateStateHash(),
+      transaction.recipient,
+      recipient,
+      nonce,
+      data,
+    );
   }
 
   public static fromCBOR(bytes: Uint8Array, token: Token): Promise<TransferTransaction> {
@@ -115,7 +121,7 @@ export class TransferTransaction implements ITransaction {
         Lock Script: 
           ${this.lockScript.toString()}
         Recipient: ${this.recipient.toString()}
-        X: ${HexConverter.encode(this._nonce)}
+        Nonce: ${HexConverter.encode(this._nonce)}
         Data: ${this._data ? HexConverter.encode(this._data) : 'null'}`;
   }
 }

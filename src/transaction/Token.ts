@@ -109,12 +109,7 @@ export class Token {
     predicateVerifier: PredicateVerifierService,
     transaction: CertifiedTransferTransaction,
   ): Promise<Token> {
-    const result = await CertifiedTransferTransactionVerificationRule.verify(
-      trustBase,
-      predicateVerifier,
-      this.latestTransaction,
-      transaction,
-    );
+    const result = await CertifiedTransferTransactionVerificationRule.verify(trustBase, predicateVerifier, transaction);
     if (result.status !== VerificationStatus.OK) {
       throw new VerificationError('Invalid transfer transaction', result);
     }
@@ -148,7 +143,6 @@ export class Token {
       const result = await CertifiedTransferTransactionVerificationRule.verify(
         trustBase,
         predicateVerifier,
-        i === 0 ? this.genesis : this._transactions[i - 1],
         transaction,
       );
       transferResults.push(result);

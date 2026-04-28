@@ -4,7 +4,6 @@ import { PredicateVerifierService } from '../../../predicate/verification/Predic
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
 import { CertifiedTransferTransaction } from '../../CertifiedTransferTransaction.js';
-import { ITransaction } from '../../ITransaction.js';
 
 /**
  * Transfer transaction verification rule.
@@ -13,7 +12,6 @@ export class CertifiedTransferTransactionVerificationRule {
   public static async verify(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,
-    latestTransaction: ITransaction,
     transaction: CertifiedTransferTransaction,
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];
