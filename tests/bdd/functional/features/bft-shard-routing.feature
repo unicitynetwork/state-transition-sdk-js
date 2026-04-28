@@ -4,30 +4,35 @@ Feature: bft-shard MSB routing
   I want the test-side ShardAwareAggregatorClient to mimic the future routing service
   So that we can run the full BDD suite against bft-shard topologies before that service exists
 
-  # T4-29: Decision Table — MSB routing maps top-bit-0 to shard0 and top-bit-1 to shard1
-  Scenario Outline: MSB routing of a <topBit>-bit-prefix StateID picks shard <expectedShardId>
+  # T4-29: Decision Table — MSB routing extracts the top SHARD_ID_LENGTH bits of the StateID
+  # and ORs them with (1 << SHARD_ID_LENGTH) to produce the picked shard ID. Topology-agnostic:
+  # works for any SHARD_ID_LENGTH (2 shards / 4 shards / 8 shards / ...).
+  Scenario Outline: MSB routing of a StateID with first byte "<firstByteHex>" picks the shard whose prefix matches the StateID
     Given a synthetic StateID whose first byte is "<firstByteHex>"
-    When ShardAwareAggregatorClient.getShardForStateId runs in "msb" mode with shardIdLength 1
-    Then the picked shard is <expectedShardId>
+    When ShardAwareAggregatorClient.getShardForStateId runs in msb mode against the configured topology
+    Then the picked shard's prefix matches the StateID's top SHARD_ID_LENGTH bits
 
     Examples:
-      | topBit | firstByteHex | expectedShardId |
-      | 0      | 0x00         | 2               |
-      | 0      | 0x7F         | 2               |
-      | 1      | 0x80         | 3               |
-      | 1      | 0xFF         | 3               |
+      | firstByteHex |
+      | 0x00         |
+      | 0x40         |
+      | 0x80         |
+      | 0xC0         |
+      | 0xFF         |
 
-  # T4-30: Risk-Based — submitting to the wrong shard is rejected by the aggregator's ValidateShardID
-  Scenario: Submitting a top-bit-1 StateID to shard0 is rejected with a shard-mismatch error
+  # T4-30: Risk-Based — submitting to the wrong shard is rejected by the aggregator's ValidateShardID.
+  # Topology-agnostic: mint a token, ask the helper which shard owns it, then resubmit to any
+  # other configured shard.
+  Scenario: Submitting a finalised certification to a different shard is rejected
     Given a mock aggregator client is set up
-    And a freshly minted token whose StateID would route to shard 3
-    When the same certification request is sent directly to shard 2
-    Then the aggregator rejects the request with a shard-related error
+    And a freshly minted token routed to its correct shard
+    When the same certification request is sent directly to a different shard
+    Then the aggregator rejects the request
 
-  # T4-31: Use Case — under correct routing the suite mints to both shards.
-  # 16 mints chosen so the probability of landing all on one shard is ~0.003%
-  # (P(all same) = 2 * (1/2)^16) — vanishingly small and avoids a flaky failure.
-  Scenario: A round of 16 mints under MSB routing reaches both shards
+  # T4-31: Use Case — under correct routing, mints land on every configured shard.
+  # 8 * shardCount mints — enough that P(missing any single shard) is < 0.05% even for 4 shards
+  # (each shard has 0.95% chance of being skipped under uniform random routing).
+  Scenario: Mints under MSB routing reach every configured shard
     Given a mock aggregator client is set up
-    When 16 tokens are minted in a row
-    Then the per-shard submission count for both shards is greater than 0
+    When enough tokens are minted to cover every configured shard
+    Then the per-shard submission count covers every configured shard
