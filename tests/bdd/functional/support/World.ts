@@ -65,6 +65,10 @@ export class TokenWorld extends World {
   public readonly nametags: Map<IUser, UnicityIdToken> = new Map();
   public originalToken!: Token;
   public preparedOperations!: Map<number, IPreparedOperation[]>;
+  public routingPinStash?: {
+    pickedShard?: number;
+    stateId?: import('../../../../src/api/StateId.js').StateId;
+  };
   public routingShardSeen?: Set<number>;
   public routingStash?: {
     pickedShard?: number;
