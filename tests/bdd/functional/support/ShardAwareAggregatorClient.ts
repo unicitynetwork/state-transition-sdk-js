@@ -53,16 +53,17 @@ export class ShardAwareAggregatorClient implements IAggregatorClient {
       return 1;
     }
 
+    const data = stateId.data;
+
     if (routingMode === 'msb') {
-      const data = stateId.data;
+      // MSB mode: read top bits of byte 0 first, then byte 1, etc.
       let shardBits = 0;
       let consumed = 0;
       let byteIdx = 0;
       while (consumed < shardIdLength) {
         const remaining = shardIdLength - consumed;
         const take = Math.min(8, remaining);
-        const byteVal = data[byteIdx];
-        const top = byteVal >>> (8 - take);
+        const top = data[byteIdx] >>> (8 - take);
         shardBits = (shardBits << take) | top;
         consumed += take;
         byteIdx += 1;
@@ -70,11 +71,15 @@ export class ShardAwareAggregatorClient implements IAggregatorClient {
       return (1 << shardIdLength) | shardBits;
     }
 
-    const imprint = stateId.imprint;
-    const len = imprint.length;
-    const lsb32 =
-      ((imprint[len - 4] << 24) | (imprint[len - 3] << 16) | (imprint[len - 2] << 8) | imprint[len - 1]) >>> 0;
-    const shardBits = lsb32 & ((1 << shardIdLength) - 1);
+    // LSB mode: bit-by-bit, LSB-first across bytes starting at byte 0.
+    // Byte-for-byte mirror of aggregator-go's pkg/api/shard_match.go
+    // MatchesShardPrefix:
+    //   actual := (keyBytes[d/8] >> (uint(d) % 8)) & 1
+    let shardBits = 0;
+    for (let d = 0; d < shardIdLength; d++) {
+      const bit = (data[d >>> 3] >>> (d & 7)) & 1;
+      shardBits |= bit << d;
+    }
     return (1 << shardIdLength) | shardBits;
   }
 
