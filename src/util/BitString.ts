@@ -1,4 +1,3 @@
-import { StateId } from '../api/StateId.js';
 import { BigintConverter } from '../serialization/BigintConverter.js';
 import { HexConverter } from '../serialization/HexConverter.js';
 
@@ -8,21 +7,46 @@ export class BitString {
    */
   private readonly value: bigint;
 
-  /**
-   * Creates a BitString from a Uint8Array.
-   * @param {Uint8Array} data - The input data to convert into a BitString.
-   */
-  public constructor(data: Uint8Array) {
+  private constructor(data: Uint8Array) {
     this.value = BigInt(`0x01${HexConverter.encode(data)}`);
   }
 
   /**
-   * Creates a BitString from a StateId.
-   * @param {StateId} stateId
-   * @return {BitString} A BitString instance
+   * Creates a BitString from raw bytes with no bit reordering.
+   * Bigint bit 0 is the LSB of the last byte.
    */
-  public static fromStateId(stateId: StateId): BitString {
-    return new BitString(stateId.imprint);
+  public static fromBytes(data: Uint8Array): BitString {
+    return new BitString(new Uint8Array(data));
+  }
+
+  /**
+   * Creates a BitString for LSB-first tree routing with reversed byte order.
+   * Bigint bit 0 = bit 0 (LSB) of data[0], matching getBitAtDepth LSB convention.
+   */
+  public static fromBytesReversedLSB(data: Uint8Array): BitString {
+    return new BitString(new Uint8Array(data).reverse());
+  }
+
+  /**
+   * Creates a BitString for MSB-first tree routing with reversed byte order.
+   * Bigint bit 0 = bit 7 (MSB) of data[0], matching getBitAtDepth MSB convention.
+   */
+  public static fromBytesReversedMSB(data: Uint8Array): BitString {
+    return new BitString(
+      new Uint8Array(data)
+        .map(
+          (b) =>
+            ((b & 0x80) >> 7) |
+            ((b & 0x40) >> 5) |
+            ((b & 0x20) >> 3) |
+            ((b & 0x10) >> 1) |
+            ((b & 0x08) << 1) |
+            ((b & 0x04) << 3) |
+            ((b & 0x02) << 5) |
+            ((b & 0x01) << 7),
+        )
+        .reverse(),
+    );
   }
 
   /**

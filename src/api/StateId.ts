@@ -8,7 +8,6 @@ import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../serialization/HexConverter.js';
 import { ITransaction } from '../transaction/ITransaction.js';
-import { BitString } from '../util/BitString.js';
 
 /**
  * Represents a unique state identifier derived from a public key and state hash.
@@ -61,14 +60,6 @@ export class StateId {
 
   public equals(id: StateId): boolean {
     return this.hash.equals(id.hash);
-  }
-
-  /**
-   * Converts the StateId to a BitString.
-   * @return The BitString representation of the StateId.
-   */
-  public toBitString(): BitString {
-    return BitString.fromStateId(this);
   }
 
   public toCBOR(): Uint8Array {

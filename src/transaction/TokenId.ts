@@ -43,7 +43,7 @@ export class TokenId {
    * Converts the TokenId to a bitstring representation.
    */
   public toBitString(): BitString {
-    return new BitString(this._bytes);
+    return BitString.fromBytes(this._bytes);
   }
 
   /** CBOR serialisation. */

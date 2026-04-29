@@ -42,8 +42,8 @@ export class DataHash {
     return new DataHash(HashAlgorithm.fromId(algorithm), imprint.subarray(2));
   }
 
-  public equals(hash: DataHash): boolean {
-    return areUint8ArraysEqual(this._imprint, hash._imprint);
+  public equals(hash?: DataHash): boolean {
+    return areUint8ArraysEqual(this._imprint, hash?._imprint);
   }
 
   public toString(): string {

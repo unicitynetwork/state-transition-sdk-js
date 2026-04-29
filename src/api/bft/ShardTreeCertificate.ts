@@ -1,4 +1,6 @@
+import { ShardId } from './ShardId.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
+import { CborError } from '../../serialization/cbor/CborError.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../serialization/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
@@ -7,19 +9,21 @@ import { dedent } from '../../util/StringUtils.js';
  * Shard tree certificate.
  */
 export class ShardTreeCertificate {
+  public static readonly CBOR_TAG = 39003n;
+  private static readonly VERSION = 1n;
+
   public constructor(
-    private readonly _shard: Uint8Array,
+    private readonly _shard: ShardId,
     private readonly _siblingHashList: Uint8Array[],
   ) {
-    this._shard = new Uint8Array(_shard);
     this._siblingHashList = _siblingHashList.map((hash) => new Uint8Array(hash));
   }
 
   /**
    * Get the shard.
    */
-  public get shard(): Uint8Array {
-    return new Uint8Array(this._shard);
+  public get shard(): ShardId {
+    return this._shard;
   }
 
   /**
@@ -29,6 +33,10 @@ export class ShardTreeCertificate {
     return this._siblingHashList.map((hash) => new Uint8Array(hash));
   }
 
+  public get version(): bigint {
+    return ShardTreeCertificate.VERSION;
+  }
+
   /**
    * Create shard tree certificate from CBOR bytes.
    *
@@ -36,11 +44,20 @@ export class ShardTreeCertificate {
    * @return shard tree certificate
    */
   public static fromCBOR(bytes: Uint8Array): ShardTreeCertificate {
-    const data = CborDeserializer.decodeArray(bytes);
+    const tag = CborDeserializer.decodeTag(bytes);
+    if (tag.tag !== ShardTreeCertificate.CBOR_TAG) {
+      throw new CborError(`Invalid CBOR tag for ShardTreeCertificate: ${tag.tag}`);
+    }
+
+    const data = CborDeserializer.decodeArray(tag.data);
+    const version = CborDeserializer.decodeUnsignedInteger(data[0]);
+    if (version !== ShardTreeCertificate.VERSION) {
+      throw new CborError(`Unsupported ShardTreeCertificate version: ${version}`);
+    }
 
     return new ShardTreeCertificate(
-      CborDeserializer.decodeByteString(data[0]),
-      CborDeserializer.decodeArray(data[1]).map((hash) => CborDeserializer.decodeByteString(hash)),
+      ShardId.decode(CborDeserializer.decodeByteString(data[1])),
+      CborDeserializer.decodeArray(data[2]).map((hash) => CborDeserializer.decodeByteString(hash)),
     );
   }
 
@@ -50,9 +67,13 @@ export class ShardTreeCertificate {
    * @return CBOR bytes
    */
   public toCBOR(): Uint8Array {
-    return CborSerializer.encodeArray(
-      CborSerializer.encodeByteString(this.shard),
-      CborSerializer.encodeArray(...this._siblingHashList.map((hash) => CborSerializer.encodeByteString(hash))),
+    return CborSerializer.encodeTag(
+      ShardTreeCertificate.CBOR_TAG,
+      CborSerializer.encodeArray(
+        CborSerializer.encodeUnsignedInteger(this.version),
+        CborSerializer.encodeByteString(this._shard.encode()),
+        CborSerializer.encodeArray(...this._siblingHashList.map((hash) => CborSerializer.encodeByteString(hash))),
+      ),
     );
   }
 
@@ -63,7 +84,7 @@ export class ShardTreeCertificate {
   public toString(): string {
     return dedent`
       Shard Tree Certificate
-        Shard: ${HexConverter.encode(this._shard)}
+        Shard: ${this._shard.toString()}
         Sibling Hash List: [
           ${this._siblingHashList.map((hash) => HexConverter.encode(hash)).join('\n')}
         ]`;

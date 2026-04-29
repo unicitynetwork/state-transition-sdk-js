@@ -6,6 +6,9 @@ import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
  * Certification request object sent by the client to the aggregator.
  */
 export class CertificationRequest {
+  public static readonly CBOR_TAG = 39030n;
+  private static readonly VERSION = 1n;
+
   /**
    * Constructs a CertificationRequest instance.
    * @param {StateId} stateId Unique state identifier.
@@ -15,6 +18,10 @@ export class CertificationRequest {
     public readonly stateId: StateId,
     public readonly certificationData: CertificationData,
   ) {}
+
+  public get version(): bigint {
+    return CertificationRequest.VERSION;
+  }
 
   /**
    * Create a new CertificationRequest instance.
@@ -32,10 +39,14 @@ export class CertificationRequest {
    * @returns CBOR bytes
    */
   public toCBOR(): Uint8Array {
-    return CborSerializer.encodeArray(
-      this.stateId.toCBOR(),
-      this.certificationData.toCBOR(),
-      CborSerializer.encodeUnsignedInteger(0),
+    return CborSerializer.encodeTag(
+      CertificationRequest.CBOR_TAG,
+      CborSerializer.encodeArray(
+        CborSerializer.encodeUnsignedInteger(this.version),
+        this.stateId.toCBOR(),
+        this.certificationData.toCBOR(),
+        CborSerializer.encodeUnsignedInteger(0),
+      ),
     );
   }
 }

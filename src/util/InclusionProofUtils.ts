@@ -53,7 +53,7 @@ export async function waitInclusionProof(
       switch (verificationStatus.status) {
         case InclusionProofVerificationStatus.OK:
           return inclusionProof;
-        case InclusionProofVerificationStatus.PATH_NOT_INCLUDED:
+        case InclusionProofVerificationStatus.INCLUSION_CERTIFICATE_MISSING:
           break;
         default:
           throw new Error(`Invalid inclusion proof status: ${verificationStatus.status}`);
