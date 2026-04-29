@@ -23,7 +23,7 @@ export class TransferTransaction implements ITransaction {
     public readonly sourceStateHash: DataHash,
     public readonly lockScript: IPredicate,
     public readonly recipient: IPredicate,
-    private readonly _nonce: Uint8Array,
+    private readonly _stateMask: Uint8Array,
     private readonly _data: Uint8Array | null,
   ) {}
 
@@ -31,8 +31,8 @@ export class TransferTransaction implements ITransaction {
     return this._data ? new Uint8Array(this._data) : null;
   }
 
-  public get nonce(): Uint8Array {
-    return new Uint8Array(this._nonce);
+  public get stateMask(): Uint8Array {
+    return new Uint8Array(this._stateMask);
   }
 
   public get version(): bigint {
@@ -42,10 +42,10 @@ export class TransferTransaction implements ITransaction {
   public static async create(
     token: Token,
     recipient: IPredicate,
-    nonce: Uint8Array,
+    stateMask: Uint8Array,
     data: Uint8Array | null = null,
   ): Promise<TransferTransaction> {
-    nonce = new Uint8Array(nonce);
+    stateMask = new Uint8Array(stateMask);
     data = data ? new Uint8Array(data) : null;
 
     const transaction = token.latestTransaction;
@@ -53,7 +53,7 @@ export class TransferTransaction implements ITransaction {
       await transaction.calculateStateHash(),
       transaction.recipient,
       recipient,
-      nonce,
+      stateMask,
       data,
     );
   }
@@ -83,7 +83,7 @@ export class TransferTransaction implements ITransaction {
       .update(
         CborSerializer.encodeArray(
           CborSerializer.encodeByteString(this.sourceStateHash.imprint),
-          CborSerializer.encodeByteString(this._nonce),
+          CborSerializer.encodeByteString(this._stateMask),
         ),
       )
       .digest();
@@ -99,7 +99,7 @@ export class TransferTransaction implements ITransaction {
       CborSerializer.encodeArray(
         CborSerializer.encodeUnsignedInteger(this.version),
         EncodedPredicate.fromPredicate(this.recipient).toCBOR(),
-        CborSerializer.encodeByteString(this._nonce),
+        CborSerializer.encodeByteString(this._stateMask),
         CborSerializer.encodeNullable(this._data, CborSerializer.encodeByteString),
       ),
     );
@@ -121,7 +121,7 @@ export class TransferTransaction implements ITransaction {
         Lock Script: 
           ${this.lockScript.toString()}
         Recipient: ${this.recipient.toString()}
-        Nonce: ${HexConverter.encode(this._nonce)}
+        StateMask: ${HexConverter.encode(this._stateMask)}
         Data: ${this._data ? HexConverter.encode(this._data) : 'null'}`;
   }
 }

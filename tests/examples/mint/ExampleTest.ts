@@ -7,11 +7,11 @@ import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPub
 import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
-import { MintJustificationVerifierService } from '../../../src/transaction/MintJustificationVerifierService.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../src/transaction/Token.js';
 import { TokenId } from '../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
+import { MintJustificationVerifierService } from '../../../src/transaction/verification/MintJustificationVerifierService.js';
 import { HexConverter } from '../../../src/util/HexConverter.js';
 import { waitInclusionProof } from '../../../src/util/InclusionProofUtils.js';
 import trustBaseJson from '../trust-base.json' with { type: 'json' };

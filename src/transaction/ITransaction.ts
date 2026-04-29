@@ -6,11 +6,11 @@ export interface ITransaction {
 
   readonly lockScript: IPredicate;
 
-  readonly nonce: Uint8Array;
-
   readonly recipient: IPredicate;
 
   readonly sourceStateHash: DataHash;
+
+  readonly stateMask: Uint8Array;
 
   calculateStateHash(): Promise<DataHash>;
   calculateTransactionHash(): Promise<DataHash>;

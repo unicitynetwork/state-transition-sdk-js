@@ -8,12 +8,12 @@ import { IUnlockScript } from '../../src/predicate/IUnlockScript.js';
 import { PredicateVerifierService } from '../../src/predicate/verification/PredicateVerifierService.js';
 import { ICborSerializable } from '../../src/serialization/cbor/ICborSerializable.js';
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
-import { MintJustificationVerifierService } from '../../src/transaction/MintJustificationVerifierService.js';
 import { MintTransaction } from '../../src/transaction/MintTransaction.js';
 import { Token } from '../../src/transaction/Token.js';
 import { TokenId } from '../../src/transaction/TokenId.js';
 import { TokenType } from '../../src/transaction/TokenType.js';
 import { TransferTransaction } from '../../src/transaction/TransferTransaction.js';
+import { MintJustificationVerifierService } from '../../src/transaction/verification/MintJustificationVerifierService.js';
 import { waitInclusionProof } from '../../src/util/InclusionProofUtils.js';
 import { VerificationStatus } from '../../src/verification/VerificationStatus.js';
 
@@ -65,9 +65,9 @@ export async function transferToken(
     throw new Error(`Token verification failed: ${result.status}`);
   }
 
-  const x = crypto.getRandomValues(new Uint8Array(32));
+  const stateMask = crypto.getRandomValues(new Uint8Array(32));
 
-  const transaction = await TransferTransaction.create(token, recipient, x);
+  const transaction = await TransferTransaction.create(token, recipient, stateMask);
 
   return transferTokenWithTransaction(
     client,

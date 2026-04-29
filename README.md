@@ -78,7 +78,7 @@ Token {
       transaction: TransferTransaction {
         version: number,
         recipient: IPredicate,
-        nonce: Uint8Array,
+        stateMask: Uint8Array,
         data: Uint8Array | null
       },
       inclusionProof: InclusionProof

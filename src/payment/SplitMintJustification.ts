@@ -1,4 +1,4 @@
-import { SplitReasonProof } from './SplitReasonProof.js';
+import { SplitAssetProof } from './SplitAssetProof.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborError } from '../serialization/cbor/CborError.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
@@ -9,16 +9,16 @@ export class SplitMintJustification {
 
   private constructor(
     public readonly token: Token,
-    private readonly _proofs: SplitReasonProof[],
+    private readonly _proofs: SplitAssetProof[],
   ) {
     this._proofs = _proofs.slice();
   }
 
-  public get proofs(): SplitReasonProof[] {
+  public get proofs(): SplitAssetProof[] {
     return this._proofs.slice();
   }
 
-  public static create(token: Token, proofs: SplitReasonProof[]): SplitMintJustification {
+  public static create(token: Token, proofs: SplitAssetProof[]): SplitMintJustification {
     if (proofs.length === 0) {
       throw new Error('proofs cannot be empty.');
     }
@@ -36,7 +36,7 @@ export class SplitMintJustification {
 
     return new SplitMintJustification(
       await Token.fromCBOR(data[0]),
-      CborDeserializer.decodeArray(data[1]).map((proof) => SplitReasonProof.fromCBOR(proof)),
+      CborDeserializer.decodeArray(data[1]).map((proof) => SplitAssetProof.fromCBOR(proof)),
     );
   }
 

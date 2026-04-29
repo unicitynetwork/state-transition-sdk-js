@@ -7,7 +7,7 @@ import { PredicateVerifierService } from '../../../predicate/verification/Predic
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
 import { CertifiedMintTransaction } from '../../CertifiedMintTransaction.js';
-import { MintJustificationVerifierService } from '../../MintJustificationVerifierService.js';
+import { MintJustificationVerifierService } from '../MintJustificationVerifierService.js';
 
 /**
  * Genesis verification rule.

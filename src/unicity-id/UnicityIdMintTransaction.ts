@@ -36,7 +36,7 @@ export class UnicityIdMintTransaction implements ITransaction {
     return EncodedPredicate.fromPredicate(this.targetPredicate).toCBOR();
   }
 
-  public get nonce(): Uint8Array {
+  public get stateMask(): Uint8Array {
     return new Uint8Array(this.tokenId.bytes);
   }
 
@@ -87,7 +87,7 @@ export class UnicityIdMintTransaction implements ITransaction {
       .update(
         CborSerializer.encodeArray(
           CborSerializer.encodeByteString(this.sourceStateHash.imprint),
-          CborSerializer.encodeByteString(this.nonce),
+          CborSerializer.encodeByteString(this.stateMask),
         ),
       )
       .digest();

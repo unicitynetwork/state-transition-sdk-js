@@ -5,7 +5,7 @@ import { DataHasherFactory } from '../crypto/hash/DataHasherFactory.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { HexConverter } from '../util/HexConverter.js';
 import { TokenAssetValueMismatchError } from './error/TokenAssetValueMismatchError.js';
-import { SplitReasonProof } from './SplitReasonProof.js';
+import { SplitAssetProof } from './SplitAssetProof.js';
 import { SparseMerkleTree } from '../smt/plain/SparseMerkleTree.js';
 import { SparseMerkleSumTree } from '../smt/sum/SparseMerkleSumTree.js';
 import { SparseMerkleSumTreeRootNode } from '../smt/sum/SparseMerkleSumTreeRootNode.js';
@@ -20,16 +20,16 @@ import { BurnPredicate } from '../predicate/builtin/BurnPredicate.js';
 class ProofMapEntry {
   private constructor(
     public readonly tokenId: TokenId,
-    private readonly _proofs: SplitReasonProof[],
+    private readonly _proofs: SplitAssetProof[],
   ) {
     this._proofs = _proofs.slice();
   }
 
-  public get proofs(): SplitReasonProof[] {
+  public get proofs(): SplitAssetProof[] {
     return this._proofs.slice();
   }
 
-  public static create(tokenId: TokenId, proofs: SplitReasonProof[]): ProofMapEntry {
+  public static create(tokenId: TokenId, proofs: SplitAssetProof[]): ProofMapEntry {
     return new ProofMapEntry(tokenId, proofs);
   }
 }
@@ -37,7 +37,7 @@ class ProofMapEntry {
 class ProofMap {
   private constructor(private readonly _proofs: Map<string, ProofMapEntry>) {}
 
-  public static create(data: [TokenId, SplitReasonProof[]][]): ProofMap {
+  public static create(data: [TokenId, SplitAssetProof[]][]): ProofMap {
     return new ProofMap(
       new Map(
         data.map(([tokenId, proofs]) => [HexConverter.encode(tokenId.bytes), ProofMapEntry.create(tokenId, proofs)]),
@@ -134,14 +134,14 @@ export class TokenSplit {
       crypto.getRandomValues(new Uint8Array(32)),
     );
 
-    const proofs: [TokenId, SplitReasonProof[]][] = [];
+    const proofs: [TokenId, SplitAssetProof[]][] = [];
     for (const [tokenId, assets] of splitTokens) {
       proofs.push([
         tokenId,
         assets
           .toArray()
           .map((asset) =>
-            SplitReasonProof.create(
+            SplitAssetProof.create(
               asset.id,
               aggregationRoot.getPath(asset.id.toBitString().toBigInt()),
               assetTreeRoots.get(HexConverter.encode(asset.id.bytes))!.getPath(tokenId.toBitString().toBigInt()),

@@ -41,7 +41,7 @@ export class MintTransaction implements ITransaction {
     return this._justification ? new Uint8Array(this._justification) : null;
   }
 
-  public get nonce(): Uint8Array {
+  public get stateMask(): Uint8Array {
     return new Uint8Array(this.tokenId.bytes);
   }
 
@@ -97,7 +97,7 @@ export class MintTransaction implements ITransaction {
       .update(
         CborSerializer.encodeArray(
           CborSerializer.encodeByteString(this.sourceStateHash.imprint),
-          CborSerializer.encodeByteString(this.nonce),
+          CborSerializer.encodeByteString(this.stateMask),
         ),
       )
       .digest();

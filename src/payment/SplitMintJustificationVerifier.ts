@@ -5,9 +5,8 @@ import { BurnPredicate } from '../predicate/builtin/BurnPredicate.js';
 import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
 import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CertifiedMintTransaction } from '../transaction/CertifiedMintTransaction.js';
-import { IMintJustificationVerifier } from '../transaction/IMintJustificationVerifier.js';
-import { MintJustificationVerifierService } from '../transaction/MintJustificationVerifierService.js';
-import { MintTransaction } from '../transaction/MintTransaction.js';
+import { IMintJustificationVerifier } from '../transaction/verification/IMintJustificationVerifier.js';
+import { MintJustificationVerifierService } from '../transaction/verification/MintJustificationVerifierService.js';
 import { HexConverter } from '../util/HexConverter.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 import { VerificationResult } from '../verification/VerificationResult.js';
@@ -25,7 +24,7 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
   }
 
   public async verify(
-    transaction: MintTransaction | CertifiedMintTransaction,
+    transaction: CertifiedMintTransaction,
     mintJustificationVerifier: MintJustificationVerifierService,
   ): Promise<VerificationResult<VerificationStatus>> {
     const justificationBytes = transaction.justification;
@@ -76,6 +75,7 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
 
     const validatedAssets = new Set<string>();
     const burntTokenLastTransaction = justification.token.transactions.at(-1);
+    const root = justification.proofs.at(0)?.aggregationPath.root;
     for (const proof of justification.proofs) {
       const aggregationPathResult = await proof.aggregationPath.verify(proof.assetId.toBitString().toBigInt());
       if (!aggregationPathResult.isSuccessful) {
@@ -94,6 +94,14 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
           VerificationStatus.FAIL,
           `Asset tree path verification failed for token: ${transaction.tokenId.toString()}`,
           [],
+        );
+      }
+
+      if (!proof.aggregationPath.root.equals(root)) {
+        return new VerificationResult(
+          'TokenSplitReasonVerificationRule',
+          VerificationStatus.FAIL,
+          'Current proof is not derived from the same asset tree as other proofs.',
         );
       }
 
@@ -143,7 +151,7 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
       validatedAssets.add(HexConverter.encode(proof.assetId.bytes));
     }
 
-    if (validatedAssets.size !== justification.proofs.length) {
+    if (validatedAssets.size !== paymentData.assets.size()) {
       return new VerificationResult(
         'SplitMintJustificationVerifier',
         VerificationStatus.FAIL,

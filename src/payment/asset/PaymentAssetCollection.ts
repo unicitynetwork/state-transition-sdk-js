@@ -20,7 +20,6 @@ export class PaymentAssetCollection {
     return new PaymentAssetCollection(assets);
   }
 
-  // TODO: decode and encode?
   public static fromCBOR(bytes: Uint8Array): PaymentAssetCollection {
     const data = CborDeserializer.decodeArray(bytes);
 

@@ -1,20 +1,20 @@
 import { CertifiedMintTransaction } from './CertifiedMintTransaction.js';
 import { CertifiedTransferTransaction } from './CertifiedTransferTransaction.js';
 import { ITransaction } from './ITransaction.js';
-import { MintJustificationVerifierService } from './MintJustificationVerifierService.js';
 import { TokenId } from './TokenId.js';
 import { TokenType } from './TokenType.js';
+import { MintJustificationVerifierService } from './verification/MintJustificationVerifierService.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborError } from '../serialization/cbor/CborError.js';
+import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { dedent } from '../util/StringUtils.js';
 import { VerificationError } from '../verification/VerificationError.js';
 import { VerificationResult } from '../verification/VerificationResult.js';
 import { VerificationStatus } from '../verification/VerificationStatus.js';
 import { CertifiedMintTransactionVerificationRule } from './verification/rule/CertifiedMintTransactionVerificationRule.js';
 import { CertifiedTransferTransactionVerificationRule } from './verification/rule/CertifiedTransferTransactionVerificationRule.js';
-import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 
 export class Token {
   public static readonly CBOR_TAG = 39040n;

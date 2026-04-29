@@ -29,16 +29,16 @@ export class CertifiedTransferTransaction implements ITransaction {
     return this.transaction.lockScript;
   }
 
-  public get nonce(): Uint8Array {
-    return this.transaction.nonce;
-  }
-
   public get recipient(): IPredicate {
     return this.transaction.recipient;
   }
 
   public get sourceStateHash(): DataHash {
     return this.transaction.sourceStateHash;
+  }
+
+  public get stateMask(): Uint8Array {
+    return this.transaction.stateMask;
   }
 
   public static async fromCBOR(bytes: Uint8Array, token: Token): Promise<CertifiedTransferTransaction> {
