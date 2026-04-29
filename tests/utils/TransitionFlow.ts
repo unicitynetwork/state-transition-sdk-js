@@ -30,7 +30,7 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
 
       const unicityId = new UnicityId('testuser', 'unicity-labs/test');
       const unicityIdMintTransaction = await UnicityIdMintTransaction.create(
-        unicityIdSigningService,
+        PayToPublicKeyPredicate.fromSigningService(unicityIdSigningService),
         targetPredicate,
         unicityId,
         TokenType.generate(),

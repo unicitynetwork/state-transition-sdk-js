@@ -5,12 +5,12 @@ import { InclusionProof } from '../api/InclusionProof.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
-import { SigningService } from '../crypto/secp256k1/SigningService.js';
 import { PayToPublicKeyPredicate } from '../predicate/builtin/PayToPublicKeyPredicate.js';
 import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
 import { IPredicate } from '../predicate/IPredicate.js';
 import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
+import { CborError } from '../serialization/cbor/CborError.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { ITransaction } from '../transaction/ITransaction.js';
 import { MintTransactionState } from '../transaction/MintTransactionState.js';
@@ -24,7 +24,7 @@ export class UnicityIdMintTransaction implements ITransaction {
 
   private constructor(
     public readonly sourceStateHash: MintTransactionState,
-    public readonly lockScript: IPredicate,
+    public readonly lockScript: PayToPublicKeyPredicate,
     public readonly recipient: IPredicate,
     public readonly tokenId: TokenId,
     public readonly tokenType: TokenType,
@@ -45,7 +45,7 @@ export class UnicityIdMintTransaction implements ITransaction {
   }
 
   public static async create(
-    signingService: SigningService,
+    lockScript: PayToPublicKeyPredicate,
     recipient: IPredicate,
     unicityId: UnicityId,
     tokenType: TokenType,
@@ -55,7 +55,7 @@ export class UnicityIdMintTransaction implements ITransaction {
 
     return new UnicityIdMintTransaction(
       await MintTransactionState.create(tokenId),
-      PayToPublicKeyPredicate.fromSigningService(signingService),
+      lockScript,
       recipient,
       tokenId,
       tokenType,
@@ -64,21 +64,24 @@ export class UnicityIdMintTransaction implements ITransaction {
     );
   }
 
-  public static async fromCBOR(bytes: Uint8Array): Promise<UnicityIdMintTransaction> {
-    const data = CborDeserializer.decodeArray(bytes);
-    const aux = CborDeserializer.decodeArray(data[3]);
+  public static fromCBOR(bytes: Uint8Array): Promise<UnicityIdMintTransaction> {
+    const tag = CborDeserializer.decodeTag(bytes);
+    if (tag.tag !== UnicityIdMintTransaction.CBOR_TAG) {
+      throw new CborError(`Invalid CBOR tag for UnicityIdMintTransaction: ${tag.tag}`);
+    }
 
-    const unicityId = UnicityId.fromCBOR(data[2]);
-    const tokenId = await unicityId.toTokenId();
+    const data = CborDeserializer.decodeArray(tag.data);
+    const version = CborDeserializer.decodeUnsignedInteger(data[0]);
+    if (version !== UnicityIdMintTransaction.VERSION) {
+      throw new CborError(`Unsupported UnicityIdMintTransaction version: ${version}`);
+    }
 
-    return new UnicityIdMintTransaction(
-      await MintTransactionState.create(tokenId),
-      EncodedPredicate.fromCBOR(data[0]),
-      EncodedPredicate.fromCBOR(data[1]),
-      tokenId,
-      TokenType.fromCBOR(aux[0]),
-      PayToPublicKeyPredicate.fromPredicate(EncodedPredicate.fromCBOR(aux[1])),
-      unicityId,
+    return UnicityIdMintTransaction.create(
+      PayToPublicKeyPredicate.fromPredicate(EncodedPredicate.fromCBOR(data[1])),
+      EncodedPredicate.fromCBOR(data[2]),
+      UnicityId.fromCBOR(data[3]),
+      TokenType.fromCBOR(data[4]),
+      PayToPublicKeyPredicate.fromPredicate(EncodedPredicate.fromCBOR(data[5])),
     );
   }
 
@@ -102,10 +105,10 @@ export class UnicityIdMintTransaction implements ITransaction {
       UnicityIdMintTransaction.CBOR_TAG,
       CborSerializer.encodeArray(
         CborSerializer.encodeUnsignedInteger(this.version),
+        EncodedPredicate.fromPredicate(this.lockScript).toCBOR(),
         EncodedPredicate.fromPredicate(this.recipient).toCBOR(),
-        this.tokenId.toCBOR(),
+        this.unicityId.toCBOR(),
         this.tokenType.toCBOR(),
-        CborSerializer.encodeNull(),
         EncodedPredicate.fromPredicate(this.targetPredicate).toCBOR(),
       ),
     );
@@ -122,12 +125,13 @@ export class UnicityIdMintTransaction implements ITransaction {
   public toString(): string {
     return dedent`
       UnicityIdMintTransaction
-        Lock Script: 
+        Version: ${this.version.toString()}
+        Lock Script:
           ${this.lockScript.toString()}
         Recipient: ${this.recipient.toString()}
         Token ID: ${this.tokenId.toString()}
         Token Type: ${this.tokenType.toString()}
-        Unicity ID: 
+        Unicity ID:
           ${this.unicityId.toString()}
         Target Predicate:
           ${this.targetPredicate.toString()}`;
