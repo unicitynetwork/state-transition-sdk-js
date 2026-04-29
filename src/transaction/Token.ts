@@ -6,6 +6,7 @@ import { TokenType } from './TokenType.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
+import { CborError } from '../serialization/cbor/CborError.js';
 import { dedent } from '../util/StringUtils.js';
 import { VerificationError } from '../verification/VerificationError.js';
 import { VerificationResult } from '../verification/VerificationResult.js';
@@ -15,6 +16,9 @@ import { CertifiedTransferTransactionVerificationRule } from './verification/rul
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 
 export class Token {
+  public static readonly CBOR_TAG = 39040n;
+  private static readonly VERSION = 1n;
+
   private constructor(
     public readonly genesis: CertifiedMintTransaction,
     private readonly _transactions: CertifiedTransferTransaction[] = [],
@@ -36,12 +40,25 @@ export class Token {
     return this.genesis.tokenType;
   }
 
-  public static async fromCBOR(bytes: Uint8Array): Promise<Token> {
-    const data = CborDeserializer.decodeArray(bytes);
-    const transactions = CborDeserializer.decodeArray(data[1]);
+  public get version(): bigint {
+    return Token.VERSION;
+  }
 
+  public static async fromCBOR(bytes: Uint8Array): Promise<Token> {
+    const tag = CborDeserializer.decodeTag(bytes);
+    if (tag.tag !== Token.CBOR_TAG) {
+      throw new CborError(`Invalid CBOR tag for Token: ${tag.tag}`);
+    }
+
+    const data = CborDeserializer.decodeArray(tag.data);
+    const version = CborDeserializer.decodeUnsignedInteger(data[0]);
+    if (version !== Token.VERSION) {
+      throw new CborError(`Unsupported Token version: ${version}`);
+    }
+
+    const transactions = CborDeserializer.decodeArray(data[2]);
     return new Token(
-      await CertifiedMintTransaction.fromCBOR(data[0]),
+      await CertifiedMintTransaction.fromCBOR(data[1]),
       transactions.map((transaction) => CertifiedTransferTransaction.fromCBOR(transaction)),
     );
   }
@@ -61,15 +78,20 @@ export class Token {
   }
 
   public toCBOR(): Uint8Array {
-    return CborSerializer.encodeArray(
-      this.genesis.toCBOR(),
-      CborSerializer.encodeArray(...this._transactions.map((transaction) => transaction.toCBOR())),
+    return CborSerializer.encodeTag(
+      Token.CBOR_TAG,
+      CborSerializer.encodeArray(
+        CborSerializer.encodeUnsignedInteger(this.version),
+        this.genesis.toCBOR(),
+        CborSerializer.encodeArray(...this._transactions.map((transaction) => transaction.toCBOR())),
+      ),
     );
   }
 
   public toString(): string {
     return dedent`
       Token
+        Version: ${this.version.toString()}
         ${this.genesis.toString()}
         Transactions: [
           ${this._transactions.map((transaction) => transaction.toString()).join('\n')}

@@ -8,6 +8,8 @@ import { dedent } from '../util/StringUtils.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 
 export class EncodedPredicate implements IPredicate {
+  public static readonly CBOR_TAG = 39032n;
+
   private constructor(
     public readonly engine: PredicateEngine,
     private readonly _code: Uint8Array,
@@ -33,7 +35,12 @@ export class EncodedPredicate implements IPredicate {
   }
 
   public static fromCBOR(bytes: Uint8Array): EncodedPredicate {
-    const data = CborDeserializer.decodeArray(bytes);
+    const tag = CborDeserializer.decodeTag(bytes);
+    if (tag.tag !== EncodedPredicate.CBOR_TAG) {
+      throw new CborError(`Invalid CBOR tag for Predicate: ${tag.tag}`);
+    }
+
+    const data = CborDeserializer.decodeArray(tag.data);
     const engine = CborDeserializer.decodeUnsignedInteger(data[0]);
     if (engine > BigInt(Number.MAX_SAFE_INTEGER) || !PredicateEngine[Number(engine)]) {
       throw new CborError('Invalid predicate engine.');
@@ -59,10 +66,13 @@ export class EncodedPredicate implements IPredicate {
   }
 
   public toCBOR(): Uint8Array {
-    return CborSerializer.encodeArray(
-      CborSerializer.encodeUnsignedInteger(this.engine),
-      CborSerializer.encodeByteString(this._code),
-      CborSerializer.encodeByteString(this._params),
+    return CborSerializer.encodeTag(
+      EncodedPredicate.CBOR_TAG,
+      CborSerializer.encodeArray(
+        CborSerializer.encodeUnsignedInteger(this.engine),
+        CborSerializer.encodeByteString(this._code),
+        CborSerializer.encodeByteString(this._params),
+      ),
     );
   }
 

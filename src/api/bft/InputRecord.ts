@@ -1,4 +1,5 @@
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
+import { CborError } from '../../serialization/cbor/CborError.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../serialization/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
@@ -7,8 +8,10 @@ import { dedent } from '../../util/StringUtils.js';
  * Input record for UnicityCertificate.
  */
 export class InputRecord {
+  public static readonly CBOR_TAG = 39002n;
+  private static readonly VERSION = 1n;
+
   public constructor(
-    public readonly version: bigint,
     public readonly roundNumber: bigint,
     public readonly epoch: bigint,
     private readonly _previousHash: Uint8Array | null,
@@ -61,6 +64,10 @@ export class InputRecord {
     return new Uint8Array(this._summaryValue);
   }
 
+  public get version(): bigint {
+    return InputRecord.VERSION;
+  }
+
   /**
    * Create InputRecord from CBOR bytes.
    *
@@ -69,10 +76,16 @@ export class InputRecord {
    */
   public static fromCBOR(bytes: Uint8Array): InputRecord {
     const tag = CborDeserializer.decodeTag(bytes);
+    if (tag.tag !== InputRecord.CBOR_TAG) {
+      throw new CborError(`Invalid CBOR tag for InputRecord: ${tag.tag}`);
+    }
     const data = CborDeserializer.decodeArray(tag.data);
+    const version = CborDeserializer.decodeUnsignedInteger(data[0]);
+    if (version !== InputRecord.VERSION) {
+      throw new CborError(`Unsupported InputRecord version: ${version}`);
+    }
 
     return new InputRecord(
-      CborDeserializer.decodeUnsignedInteger(data[0]),
       CborDeserializer.decodeUnsignedInteger(data[1]),
       CborDeserializer.decodeUnsignedInteger(data[2]),
       CborDeserializer.decodeNullable(data[3], CborDeserializer.decodeByteString),
@@ -92,7 +105,7 @@ export class InputRecord {
    */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeTag(
-      1008,
+      InputRecord.CBOR_TAG,
       CborSerializer.encodeArray(
         CborSerializer.encodeUnsignedInteger(this.version),
         CborSerializer.encodeUnsignedInteger(this.roundNumber),

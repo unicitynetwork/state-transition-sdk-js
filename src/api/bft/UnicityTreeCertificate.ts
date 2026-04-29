@@ -1,4 +1,5 @@
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
+import { CborError } from '../../serialization/cbor/CborError.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../serialization/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
@@ -61,8 +62,10 @@ class HashStep {
  * Unicity tree certificate.
  */
 export class UnicityTreeCertificate {
+  public static readonly CBOR_TAG = 39004n;
+  private static readonly VERSION = 1n;
+
   public constructor(
-    public readonly version: bigint,
     public readonly partitionIdentifier: bigint,
     private readonly _steps: HashStep[],
   ) {
@@ -76,6 +79,10 @@ export class UnicityTreeCertificate {
     return this._steps.slice();
   }
 
+  public get version(): bigint {
+    return UnicityTreeCertificate.VERSION;
+  }
+
   /**
    * Create certificate from CBOR bytes.
    *
@@ -84,10 +91,17 @@ export class UnicityTreeCertificate {
    */
   public static fromCBOR(bytes: Uint8Array): UnicityTreeCertificate {
     const tag = CborDeserializer.decodeTag(bytes);
+    if (tag.tag !== UnicityTreeCertificate.CBOR_TAG) {
+      throw new CborError(`Invalid CBOR tag for UnicityTreeCertificate: ${tag.tag}`);
+    }
+
     const data = CborDeserializer.decodeArray(tag.data);
+    const version = CborDeserializer.decodeUnsignedInteger(data[0]);
+    if (version !== UnicityTreeCertificate.VERSION) {
+      throw new CborError(`Unsupported UnicityTreeCertificate version: ${version}`);
+    }
 
     return new UnicityTreeCertificate(
-      CborDeserializer.decodeUnsignedInteger(data[0]),
       CborDeserializer.decodeUnsignedInteger(data[1]),
       CborDeserializer.decodeArray(data[2]).map((step) => HashStep.fromCBOR(step)),
     );
@@ -100,7 +114,7 @@ export class UnicityTreeCertificate {
    */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeTag(
-      1014,
+      UnicityTreeCertificate.CBOR_TAG,
       CborSerializer.encodeArray(
         CborSerializer.encodeUnsignedInteger(this.version),
         CborSerializer.encodeUnsignedInteger(this.partitionIdentifier),

@@ -1,8 +1,10 @@
+import { ShardIdMatchesStateIdRule } from './ShardIdMatchesStateIdRule.js';
 import { RootTrustBase } from '../../../api/bft/RootTrustBase.js';
 import { UnicityCertificateVerification } from '../../../api/bft/verification/UnicityCertificateVerification.js';
 import { InclusionProof } from '../../../api/InclusionProof.js';
 import { StateId } from '../../../api/StateId.js';
 import { DataHash } from '../../../crypto/hash/DataHash.js';
+import { HashAlgorithm } from '../../../crypto/hash/HashAlgorithm.js';
 import { PredicateVerifierService } from '../../../predicate/verification/PredicateVerifierService.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
@@ -13,12 +15,12 @@ import { ITransaction } from '../../ITransaction.js';
  */
 export enum InclusionProofVerificationStatus {
   INVALID_TRUSTBASE = 'INVALID_TRUSTBASE',
-  LEAF_VALUE_MISMATCH = 'LEAF_VALUE_MISMATCH',
   MISSING_CERTIFICATION_DATA = 'MISSING_CERTIFICATION_DATA',
   TRANSACTION_HASH_MISMATCH = 'TRANSACTION_HASH_MISMATCH',
   NOT_AUTHENTICATED = 'NOT_AUTHENTICATED',
-  PATH_NOT_INCLUDED = 'PATH_NOT_INCLUDED',
+  INCLUSION_CERTIFICATE_MISSING = 'INCLUSION_CERTIFICATE_MISSING',
   PATH_INVALID = 'PATH_INVALID',
+  SHARD_ID_MISMATCH = 'SHARD_ID_MISMATCH',
   OK = 'OK',
 }
 
@@ -32,27 +34,10 @@ export class InclusionProofVerificationRule {
     inclusionProof: InclusionProof,
     transaction: ITransaction,
   ): Promise<VerificationResult<InclusionProofVerificationStatus>> {
-    const unicityCertificateVerificationResult = await UnicityCertificateVerification.verify(trustBase, inclusionProof);
-
-    if (unicityCertificateVerificationResult.status !== VerificationStatus.OK) {
+    if (!inclusionProof.inclusionCertificate) {
       return new VerificationResult(
         'InclusionProofVerificationRule',
-        InclusionProofVerificationStatus.INVALID_TRUSTBASE,
-        '',
-        [unicityCertificateVerificationResult],
-      );
-    }
-
-    const stateId = await StateId.fromTransaction(transaction);
-    const result = await inclusionProof.merkleTreePath.verify(stateId.toBitString().toBigInt());
-    if (!result.isPathValid) {
-      return new VerificationResult('InclusionProofVerificationRule', InclusionProofVerificationStatus.PATH_INVALID);
-    }
-
-    if (!result.isPathIncluded) {
-      return new VerificationResult(
-        'InclusionProofVerificationRule',
-        InclusionProofVerificationStatus.PATH_NOT_INCLUDED,
+        InclusionProofVerificationStatus.INCLUSION_CERTIFICATE_MISSING,
       );
     }
 
@@ -71,6 +56,40 @@ export class InclusionProofVerificationRule {
       );
     }
 
+    const stateId = await StateId.fromTransaction(transaction);
+    const result = await inclusionProof.inclusionCertificate.verify(
+      stateId,
+      certificationData.transactionHash,
+      new DataHash(HashAlgorithm.SHA256, inclusionProof.unicityCertificate.inputRecord.hash),
+    );
+    if (!result) {
+      return new VerificationResult('InclusionProofVerificationRule', InclusionProofVerificationStatus.PATH_INVALID);
+    }
+
+    const shardResult = ShardIdMatchesStateIdRule.verify(
+      stateId,
+      inclusionProof.unicityCertificate.shardTreeCertificate,
+    );
+    if (shardResult.status !== VerificationStatus.OK) {
+      return new VerificationResult(
+        'InclusionProofVerificationRule',
+        InclusionProofVerificationStatus.SHARD_ID_MISMATCH,
+        '',
+        [shardResult],
+      );
+    }
+
+    const unicityCertificateVerificationResult = await UnicityCertificateVerification.verify(trustBase, inclusionProof);
+
+    if (unicityCertificateVerificationResult.status !== VerificationStatus.OK) {
+      return new VerificationResult(
+        'InclusionProofVerificationRule',
+        InclusionProofVerificationStatus.INVALID_TRUSTBASE,
+        '',
+        [unicityCertificateVerificationResult],
+      );
+    }
+
     const predicateVerificationResult = await predicateVerifierFactory.verify(
       certificationData.lockScript,
       certificationData.sourceStateHash,
@@ -83,15 +102,6 @@ export class InclusionProofVerificationRule {
         InclusionProofVerificationStatus.NOT_AUTHENTICATED,
         '',
         [predicateVerificationResult],
-      );
-    }
-
-    const leafValue = await certificationData.calculateLeafValue();
-    const pathValue = inclusionProof.merkleTreePath.steps.at(0)?.data;
-    if (!pathValue || !leafValue.equals(DataHash.fromImprint(pathValue))) {
-      return new VerificationResult(
-        'InclusionProofVerificationRule',
-        InclusionProofVerificationStatus.LEAF_VALUE_MISMATCH,
       );
     }
 

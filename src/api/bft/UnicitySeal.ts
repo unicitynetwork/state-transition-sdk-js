@@ -3,6 +3,7 @@ import { DataHasher } from '../../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../../crypto/hash/HashAlgorithm.js';
 import { SigningService } from '../../crypto/secp256k1/SigningService.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
+import { CborError } from '../../serialization/cbor/CborError.js';
 import { CborMap } from '../../serialization/cbor/CborMap.js';
 import { CborMapEntry } from '../../serialization/cbor/CborMapEntry.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
@@ -13,8 +14,10 @@ import { dedent } from '../../util/StringUtils.js';
  * UnicitySeal represents a seal in the Unicity BFT system, containing metadata and signatures.
  */
 export class UnicitySeal {
+  public static readonly CBOR_TAG = 39005n;
+  private static readonly VERSION = 1n;
+
   private constructor(
-    public readonly version: bigint,
     public readonly networkId: bigint,
     public readonly rootChainRoundNumber: bigint,
     public readonly epoch: bigint,
@@ -38,8 +41,11 @@ export class UnicitySeal {
       : null;
   }
 
+  public get version(): bigint {
+    return UnicitySeal.VERSION;
+  }
+
   public static async create(
-    version: bigint,
     networkId: bigint,
     rootChainRoundNumber: bigint,
     epoch: bigint,
@@ -48,21 +54,11 @@ export class UnicitySeal {
     _hash: Uint8Array,
     signers: Map<string, SigningService>,
   ): Promise<UnicitySeal> {
-    const seal = new UnicitySeal(
-      version,
-      networkId,
-      rootChainRoundNumber,
-      epoch,
-      timestamp,
-      _previousHash,
-      _hash,
-      null,
-    );
+    const seal = new UnicitySeal(networkId, rootChainRoundNumber, epoch, timestamp, _previousHash, _hash, null);
 
     const hash = await seal.calculateHash();
 
     return new UnicitySeal(
-      seal.version,
       seal.networkId,
       seal.rootChainRoundNumber,
       seal.epoch,
@@ -87,10 +83,17 @@ export class UnicitySeal {
    */
   public static fromCBOR(bytes: Uint8Array): UnicitySeal {
     const tag = CborDeserializer.decodeTag(bytes);
+    if (tag.tag !== UnicitySeal.CBOR_TAG) {
+      throw new CborError(`Invalid CBOR tag for UnicitySeal: ${tag.tag}`);
+    }
+
     const data = CborDeserializer.decodeArray(tag.data);
+    const version = CborDeserializer.decodeUnsignedInteger(data[0]);
+    if (version !== UnicitySeal.VERSION) {
+      throw new CborError(`Unsupported UnicitySeal version: ${version}`);
+    }
 
     return new UnicitySeal(
-      CborDeserializer.decodeUnsignedInteger(data[0]),
       CborDeserializer.decodeUnsignedInteger(data[1]),
       CborDeserializer.decodeUnsignedInteger(data[2]),
       CborDeserializer.decodeUnsignedInteger(data[3]),
@@ -110,7 +113,6 @@ export class UnicitySeal {
     return new DataHasher(HashAlgorithm.SHA256)
       .update(
         new UnicitySeal(
-          this.version,
           this.networkId,
           this.rootChainRoundNumber,
           this.epoch,
@@ -130,7 +132,7 @@ export class UnicitySeal {
    */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeTag(
-      1001,
+      UnicitySeal.CBOR_TAG,
       CborSerializer.encodeArray(
         CborSerializer.encodeUnsignedInteger(this.version),
         CborSerializer.encodeUnsignedInteger(this.networkId),
