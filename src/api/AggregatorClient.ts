@@ -57,10 +57,15 @@ export class AggregatorClient implements IAggregatorClient {
   public async submitCertificationRequest(certificationData: CertificationData): Promise<CertificationResponse> {
     const request = await CertificationRequest.create(certificationData);
 
+    const headers = new Headers([['X-State-ID', request.stateId.toString()]]);
+    if (this.key) {
+      headers.set('X-API-Key', this.key);
+    }
+
     const response = await this.transport.request(
       'certification_request',
       HexConverter.encode(request.toCBOR()),
-      this.key ? new Headers([['X-API-Key', this.key]]) : undefined,
+      headers,
     );
 
     return CertificationResponse.fromJSON(response);
