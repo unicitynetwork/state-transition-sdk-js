@@ -26,7 +26,11 @@ Then('every minted token passes verification', async function (this: TokenWorld)
   const tokens = this.stressMintedTokens ?? [];
   assert.ok(tokens.length > 0, 'no minted tokens to verify');
   for (const token of tokens) {
-    const result = await token.verify(this.setup.trustBase, this.setup.predicateVerifier);
+    const result = await token.verify(
+      this.setup.trustBase,
+      this.setup.predicateVerifier,
+      this.setup.mintJustificationVerifier,
+    );
     assert.equal(result.status, 'OK', `token ${token.id.toString()} failed verification: ${result.status}`);
   }
 });

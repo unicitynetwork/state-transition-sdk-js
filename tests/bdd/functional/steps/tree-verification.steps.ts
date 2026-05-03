@@ -2,27 +2,29 @@ import assert from 'node:assert/strict';
 
 import { Then, When } from '@cucumber/cucumber';
 
-import { TokenSplit } from '../../../../src/payment/TokenSplit.js';
 import { Token } from '../../../../src/transaction/Token.js';
 import { VerificationStatus } from '../../../../src/verification/VerificationStatus.js';
-import { parseSplitVerificationData } from '../support/TestSetup.js';
 import { TokenWorld } from '../support/World.js';
 
 Then(/^"(.+)" passes verification$/, async function (this: TokenWorld, tokenName: string): Promise<void> {
   const token = this.tree.tokensByName.get(tokenName)!;
   assert.ok(token !== undefined);
-  const result = await token.verify(this.tree.setup.trustBase, this.tree.setup.predicateVerifier);
+  const result = await token.verify(
+    this.tree.setup.trustBase,
+    this.tree.setup.predicateVerifier,
+    this.tree.setup.mintJustificationVerifier,
+  );
   assert.strictEqual(result.status, VerificationStatus.OK);
 });
 
 Then(/^"(.+)" passes split verification$/, async function (this: TokenWorld, tokenName: string): Promise<void> {
   const token = this.tree.tokensByName.get(tokenName)!;
   assert.ok(token !== undefined);
-  const result = await TokenSplit.verify(
-    token,
-    parseSplitVerificationData,
+  // Post-PR #112: split verification flows through MintJustificationVerifierService.
+  const result = await token.verify(
     this.tree.setup.trustBase,
     this.tree.setup.predicateVerifier,
+    this.tree.setup.mintJustificationVerifier,
   );
   assert.strictEqual(result.status, VerificationStatus.OK);
 });

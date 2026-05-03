@@ -3,7 +3,7 @@ import { strict as assert } from 'assert';
 import { Given, Then, When } from '@cucumber/cucumber';
 
 import { ShardId } from '../../../../src/api/bft/ShardId.js';
-import { HexConverter } from '../../../../src/serialization/HexConverter.js';
+import { HexConverter } from '../../../../src/util/HexConverter.js';
 import { TokenWorld } from '../support/World.js';
 
 interface IShardIdStash {

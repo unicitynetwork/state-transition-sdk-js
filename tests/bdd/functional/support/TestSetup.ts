@@ -12,22 +12,21 @@ import { Asset } from '../../../../src/payment/asset/Asset.js';
 import { AssetId } from '../../../../src/payment/asset/AssetId.js';
 import { PaymentAssetCollection } from '../../../../src/payment/asset/PaymentAssetCollection.js';
 import { IPaymentData } from '../../../../src/payment/IPaymentData.js';
-import { ISplitPaymentData } from '../../../../src/payment/ISplitPaymentData.js';
-import { SplitReason } from '../../../../src/payment/SplitReason.js';
+import { SplitMintJustification } from '../../../../src/payment/SplitMintJustification.js';
+import { SplitMintJustificationVerifier } from '../../../../src/payment/SplitMintJustificationVerifier.js';
 import { TokenSplit } from '../../../../src/payment/TokenSplit.js';
 import { PayToPublicKeyPredicate } from '../../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
 import { PayToPublicKeyPredicateUnlockScript } from '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
 import { IPredicate } from '../../../../src/predicate/IPredicate.js';
 import { PredicateVerifierService } from '../../../../src/predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../../../../src/serialization/cbor/CborDeserializer.js';
-import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
 import { StateTransitionClient } from '../../../../src/StateTransitionClient.js';
-import { Address } from '../../../../src/transaction/Address.js';
 import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../../src/transaction/Token.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../../src/transaction/TokenType.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
+import { MintJustificationVerifierService } from '../../../../src/transaction/verification/MintJustificationVerifierService.js';
 import { UnicityId } from '../../../../src/unicity-id/UnicityId.js';
 import { UnicityIdMintTransaction } from '../../../../src/unicity-id/UnicityIdMintTransaction.js';
 import { UnicityIdToken } from '../../../../src/unicity-id/UnicityIdToken.js';
@@ -36,6 +35,7 @@ import { waitInclusionProof } from '../../../../src/util/InclusionProofUtils.js'
 export interface ITestSetup {
   readonly aggregatorClient: IAggregatorClient;
   readonly client: StateTransitionClient;
+  readonly mintJustificationVerifier: MintJustificationVerifierService;
   readonly predicateVerifier: PredicateVerifierService;
   readonly trustBase: RootTrustBase;
 }
@@ -54,8 +54,11 @@ export function createTestSetup(): ITestSetup {
   const trustBaseJsonString = readFileSync(trustBasePath, 'utf-8');
   const trustBase = RootTrustBase.fromJSON(JSON.parse(trustBaseJsonString));
   const predicateVerifier = PredicateVerifierService.create(trustBase);
+  const mintJustificationVerifier = new MintJustificationVerifierService().register(
+    new SplitMintJustificationVerifier(trustBase, predicateVerifier, parseSplitVerificationData),
+  );
 
-  return { aggregatorClient, client, predicateVerifier, trustBase };
+  return { aggregatorClient, client, mintJustificationVerifier, predicateVerifier, trustBase };
 }
 
 function createAggregatorClient(): IAggregatorClient {
@@ -101,12 +104,7 @@ export function createUser(): IUser {
 }
 
 export async function mintToken(setup: ITestSetup, user: IUser): Promise<Token> {
-  const mintTransaction = await MintTransaction.create(
-    await Address.fromPredicate(user.predicate),
-    TokenId.generate(),
-    TokenType.generate(),
-    CborSerializer.encodeArray(),
-  );
+  const mintTransaction = await MintTransaction.create(user.predicate, TokenId.generate(), TokenType.generate());
 
   const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
   const response = await setup.client.submitCertificationRequest(certificationData);
@@ -117,6 +115,7 @@ export async function mintToken(setup: ITestSetup, user: IUser): Promise<Token> 
   return Token.mint(
     setup.trustBase,
     setup.predicateVerifier,
+    setup.mintJustificationVerifier,
     await mintTransaction.toCertifiedTransaction(
       setup.trustBase,
       setup.predicateVerifier,
@@ -131,9 +130,10 @@ export async function mintTokenWithAssets(
   assets: PaymentAssetCollection,
 ): Promise<Token> {
   const mintTransaction = await MintTransaction.create(
-    await Address.fromPredicate(user.predicate),
+    user.predicate,
     TokenId.generate(),
     TokenType.generate(),
+    null,
     assets.toCBOR(),
   );
 
@@ -146,6 +146,7 @@ export async function mintTokenWithAssets(
   return Token.mint(
     setup.trustBase,
     setup.predicateVerifier,
+    setup.mintJustificationVerifier,
     await mintTransaction.toCertifiedTransaction(
       setup.trustBase,
       setup.predicateVerifier,
@@ -157,16 +158,14 @@ export async function mintTokenWithAssets(
 export async function transferToken(
   setup: ITestSetup,
   token: Token,
-  ownerPredicate: IPredicate,
+  _ownerPredicate: IPredicate,
   ownerSigningService: SigningService,
   recipientPredicate: IPredicate,
 ): Promise<Token> {
   const transferTransaction = await TransferTransaction.create(
     token,
-    ownerPredicate,
-    await Address.fromPredicate(recipientPredicate),
+    recipientPredicate,
     crypto.getRandomValues(new Uint8Array(32)),
-    CborSerializer.encodeArray(),
   );
 
   const certificationData = await CertificationData.fromTransaction(
@@ -198,7 +197,7 @@ export async function splitToken(
   splitTokenAssets: [TokenId, PaymentAssetCollection][],
   parsePaymentData: (bytes: Uint8Array) => Promise<IPaymentData>,
 ): Promise<{ burnedToken: Token; splitTokens: Token[] }> {
-  const splitResult = await TokenSplit.split(token, ownerPredicate, parsePaymentData, splitTokenAssets);
+  const splitResult = await TokenSplit.split(token, parsePaymentData, splitTokenAssets);
 
   // Submit burn transaction
   const burnCertificationData = await CertificationData.fromTransaction(
@@ -229,15 +228,14 @@ export async function splitToken(
       throw new Error(`Proofs not found for token ${tokenId.toString()}`);
     }
 
-    const reason = SplitReason.create(burnedToken, proofEntry.proofs);
-    const splitPaymentData = CborSerializer.encodeArray(assets.toCBOR(), reason.toCBOR());
-
+    const justification = SplitMintJustification.create(burnedToken, proofEntry.proofs);
     const splitUser = createUser();
     const mintTransaction = await MintTransaction.create(
-      await Address.fromPredicate(splitUser.predicate),
+      splitUser.predicate,
       tokenId,
       token.type,
-      splitPaymentData,
+      justification.toCBOR(),
+      assets.toCBOR(),
     );
 
     const certData = await CertificationData.fromMintTransaction(mintTransaction);
@@ -249,6 +247,7 @@ export async function splitToken(
     const newSplitToken = await Token.mint(
       setup.trustBase,
       setup.predicateVerifier,
+      setup.mintJustificationVerifier,
       await mintTransaction.toCertifiedTransaction(
         setup.trustBase,
         setup.predicateVerifier,
@@ -291,11 +290,12 @@ export function parseSplitPaymentData(bytes: Uint8Array): Promise<IPaymentData> 
   });
 }
 
-export async function parseSplitVerificationData(bytes: Uint8Array): Promise<ISplitPaymentData> {
-  const data = CborDeserializer.decodeArray(bytes);
-  const assets = PaymentAssetCollection.fromCBOR(data[0]);
-  const reason = await SplitReason.fromCBOR(data[1]);
-  return { assets, encode: (): Promise<Uint8Array> => Promise.resolve(bytes), reason };
+export function parseSplitVerificationData(bytes: Uint8Array): Promise<IPaymentData> {
+  const assets = PaymentAssetCollection.fromCBOR(bytes);
+  return Promise.resolve({
+    assets,
+    encode: (): Promise<Uint8Array> => Promise.resolve(bytes),
+  });
 }
 
 export async function splitTokenToOwner(
@@ -307,7 +307,7 @@ export async function splitTokenToOwner(
   parsePaymentData: (bytes: Uint8Array) => Promise<IPaymentData>,
   mintTo: IUser,
 ): Promise<{ burnedToken: Token; splitTokens: Token[] }> {
-  const splitResult = await TokenSplit.split(token, ownerPredicate, parsePaymentData, splitTokenAssets);
+  const splitResult = await TokenSplit.split(token, parsePaymentData, splitTokenAssets);
 
   // Submit burn transaction
   const burnCertificationData = await CertificationData.fromTransaction(
@@ -338,14 +338,13 @@ export async function splitTokenToOwner(
       throw new Error(`Proofs not found for token ${tokenId.toString()}`);
     }
 
-    const reason = SplitReason.create(burnedToken, proofEntry.proofs);
-    const splitPaymentDataBytes = CborSerializer.encodeArray(assets.toCBOR(), reason.toCBOR());
-
+    const justification = SplitMintJustification.create(burnedToken, proofEntry.proofs);
     const mintTransaction = await MintTransaction.create(
-      await Address.fromPredicate(mintTo.predicate),
+      mintTo.predicate,
       tokenId,
       token.type,
-      splitPaymentDataBytes,
+      justification.toCBOR(),
+      assets.toCBOR(),
     );
 
     const certData = await CertificationData.fromMintTransaction(mintTransaction);
@@ -357,6 +356,7 @@ export async function splitTokenToOwner(
     const newSplitToken = await Token.mint(
       setup.trustBase,
       setup.predicateVerifier,
+      setup.mintJustificationVerifier,
       await mintTransaction.toCertifiedTransaction(
         setup.trustBase,
         setup.predicateVerifier,
@@ -386,8 +386,8 @@ export async function registerNametag(
   const unicityId = new UnicityId(name, domain);
 
   const mintTransaction = await UnicityIdMintTransaction.create(
-    nametagSigningService,
-    await Address.fromPredicate(user.predicate),
+    PayToPublicKeyPredicate.fromSigningService(nametagSigningService),
+    user.predicate,
     unicityId,
     TokenType.generate(),
     user.predicate,
@@ -414,23 +414,23 @@ export async function registerNametag(
   );
 }
 
-export async function resolveNametag(nametagToken: UnicityIdToken): Promise<Address> {
-  return await Address.fromPredicate(nametagToken.genesis.targetPredicate);
+export function resolveNametag(nametagToken: UnicityIdToken): IPredicate {
+  return nametagToken.genesis.targetPredicate;
 }
 
-export async function resolveRecipientAddress(
+export function resolveRecipientPredicate(
   recipient: IUser,
   method: AddressingMethod,
   nametagToken: UnicityIdToken | null = null,
-): Promise<Address> {
+): IPredicate {
   if (method === 'pubkey') {
-    return await Address.fromPredicate(recipient.predicate);
+    return recipient.predicate;
   }
   if (method === 'nametag') {
     if (!nametagToken) {
       throw new Error('addressing via "nametag" requires a registered nametag token');
     }
-    return await resolveNametag(nametagToken);
+    return resolveNametag(nametagToken);
   }
   throw new Error(`Unsupported addressing method: ${method as string}`);
 }
@@ -451,18 +451,13 @@ export async function runMixedChain(
   }
 
   const firstHop = hops[0];
-  const firstRecipientAddress = await resolveRecipientAddress(
+  const firstRecipient = resolveRecipientPredicate(
     firstHop.to,
     firstHop.method,
     firstHop.method === 'nametag' ? (nametagRegistry.get(firstHop.to) ?? null) : null,
   );
 
-  const mintTransaction = await MintTransaction.create(
-    firstRecipientAddress,
-    TokenId.generate(),
-    TokenType.generate(),
-    CborSerializer.encodeArray(),
-  );
+  const mintTransaction = await MintTransaction.create(firstRecipient, TokenId.generate(), TokenType.generate());
   const mintCert = await CertificationData.fromMintTransaction(mintTransaction);
   const mintResponse = await setup.client.submitCertificationRequest(mintCert);
   if (mintResponse.status !== CertificationStatus.SUCCESS) {
@@ -472,6 +467,7 @@ export async function runMixedChain(
   let currentToken = await Token.mint(
     setup.trustBase,
     setup.predicateVerifier,
+    setup.mintJustificationVerifier,
     await mintTransaction.toCertifiedTransaction(
       setup.trustBase,
       setup.predicateVerifier,
@@ -488,7 +484,7 @@ export async function runMixedChain(
       throw new Error(`Hop ${i} must start from previous recipient`);
     }
 
-    const recipientAddress = await resolveRecipientAddress(
+    const recipientPredicate = resolveRecipientPredicate(
       hop.to,
       hop.method,
       hop.method === 'nametag' ? (nametagRegistry.get(hop.to) ?? null) : null,
@@ -496,10 +492,8 @@ export async function runMixedChain(
 
     const transferTransaction = await TransferTransaction.create(
       currentToken,
-      hop.from.predicate,
-      recipientAddress,
+      recipientPredicate,
       crypto.getRandomValues(new Uint8Array(32)),
-      CborSerializer.encodeArray(),
     );
 
     const transferCert = await CertificationData.fromTransaction(

@@ -24,6 +24,10 @@ Then('the imported token has the same type as the original', function (this: Tok
 
 Then('the imported token passes verification', async function (this: TokenWorld): Promise<void> {
   const setup = this.tree?.setup ?? this.setup;
-  const result = await this.importedToken.verify(setup.trustBase, setup.predicateVerifier);
+  const result = await this.importedToken.verify(
+    setup.trustBase,
+    setup.predicateVerifier,
+    setup.mintJustificationVerifier,
+  );
   assert.strictEqual(result.status, VerificationStatus.OK);
 });

@@ -5,8 +5,6 @@ import { Then, When } from '@cucumber/cucumber';
 import { CertificationData } from '../../../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../../../src/api/CertificationResponse.js';
 import { PayToPublicKeyPredicateUnlockScript } from '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
-import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
-import { Address } from '../../../../src/transaction/Address.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
 import { waitInclusionProof } from '../../../../src/util/InclusionProofUtils.js';
 import { TokenWorld } from '../support/World.js';
@@ -14,10 +12,8 @@ import { TokenWorld } from '../support/World.js';
 When('Alice submits a valid transfer to Bob', async function (this: TokenWorld): Promise<void> {
   this.firstTransferTransaction = await TransferTransaction.create(
     this.token,
-    this.alice.predicate,
-    await Address.fromPredicate(this.bob.predicate),
+    this.bob.predicate,
     crypto.getRandomValues(new Uint8Array(32)),
-    CborSerializer.encodeArray(),
   );
 
   const certificationData = await CertificationData.fromTransaction(
@@ -32,9 +28,7 @@ When('Alice submits a second transfer of the same token', async function (this: 
   this.secondTransferTransaction = await TransferTransaction.create(
     this.token,
     this.alice.predicate,
-    await Address.fromPredicate(this.alice.predicate),
     crypto.getRandomValues(new Uint8Array(32)),
-    CborSerializer.encodeArray(),
   );
 
   const certificationData = await CertificationData.fromTransaction(

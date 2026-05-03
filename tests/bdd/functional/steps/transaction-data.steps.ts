@@ -3,7 +3,6 @@ import { When } from '@cucumber/cucumber';
 import { CertificationData } from '../../../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../../../src/api/CertificationResponse.js';
 import { PayToPublicKeyPredicateUnlockScript } from '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
-import { Address } from '../../../../src/transaction/Address.js';
 import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../../src/transaction/TokenType.js';
@@ -13,7 +12,7 @@ import { TokenWorld } from '../support/World.js';
 
 When('the user mints a token with empty transaction data', async function (this: TokenWorld): Promise<void> {
   const mintTransaction = await MintTransaction.create(
-    await Address.fromPredicate(this.user.predicate),
+    this.user.predicate,
     new TokenId(crypto.getRandomValues(new Uint8Array(32))),
     new TokenType(crypto.getRandomValues(new Uint8Array(32))),
     new Uint8Array(0),
@@ -30,7 +29,7 @@ When(
     const size = parseInt(sizeStr, 10) * 1024;
     const data = crypto.getRandomValues(new Uint8Array(size));
     const mintTransaction = await MintTransaction.create(
-      await Address.fromPredicate(this.user.predicate),
+      this.user.predicate,
       new TokenId(crypto.getRandomValues(new Uint8Array(32))),
       new TokenType(crypto.getRandomValues(new Uint8Array(32))),
       data,
@@ -49,8 +48,7 @@ When(
     const data = crypto.getRandomValues(new Uint8Array(size));
     const transferTransaction = await TransferTransaction.create(
       this.token,
-      this.alice.predicate,
-      await Address.fromPredicate(this.bob.predicate),
+      this.bob.predicate,
       crypto.getRandomValues(new Uint8Array(32)),
       data,
     );

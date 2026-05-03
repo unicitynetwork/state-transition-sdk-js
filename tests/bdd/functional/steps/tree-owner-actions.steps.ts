@@ -5,8 +5,6 @@ import { Then, When } from '@cucumber/cucumber';
 import { CertificationData } from '../../../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../../../src/api/CertificationResponse.js';
 import { PayToPublicKeyPredicateUnlockScript } from '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
-import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
-import { Address } from '../../../../src/transaction/Address.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
 import { waitInclusionProof } from '../../../../src/util/InclusionProofUtils.js';
 import { createUser } from '../support/TestSetup.js';
@@ -23,13 +21,7 @@ When(
     this.transferError = null;
 
     try {
-      await TransferTransaction.create(
-        token,
-        user.predicate,
-        await Address.fromPredicate(recipient.predicate),
-        crypto.getRandomValues(new Uint8Array(32)),
-        CborSerializer.encodeArray(),
-      );
+      await TransferTransaction.create(token, recipient.predicate, crypto.getRandomValues(new Uint8Array(32)));
     } catch (e) {
       this.transferError = e as Error;
     }
@@ -50,13 +42,7 @@ When(
     assert.ok(token !== undefined);
     assert.ok(recipient !== undefined);
 
-    const tx = await TransferTransaction.create(
-      token,
-      user.predicate,
-      await Address.fromPredicate(recipient.predicate),
-      crypto.getRandomValues(new Uint8Array(32)),
-      CborSerializer.encodeArray(),
-    );
+    const tx = await TransferTransaction.create(token, recipient.predicate, crypto.getRandomValues(new Uint8Array(32)));
 
     const certData = await CertificationData.fromTransaction(
       tx,
@@ -94,10 +80,8 @@ When(
 
     this.transferTransaction = await TransferTransaction.create(
       token,
-      user.predicate,
-      await Address.fromPredicate(recipient.predicate),
+      recipient.predicate,
       crypto.getRandomValues(new Uint8Array(32)),
-      CborSerializer.encodeArray(),
     );
 
     const certData = await CertificationData.fromTransaction(

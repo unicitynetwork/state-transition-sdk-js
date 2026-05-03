@@ -50,7 +50,7 @@ When(
     }
 
     try {
-      await TokenSplit.split(this.token, this.alice.predicate, parseSimplePaymentData, splitTokenAssets);
+      await TokenSplit.split(this.token, parseSimplePaymentData, splitTokenAssets);
     } catch (e) {
       this.splitError = e as Error;
     }

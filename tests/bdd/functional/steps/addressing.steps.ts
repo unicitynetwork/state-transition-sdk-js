@@ -5,7 +5,6 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import { CertificationData } from '../../../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../../../src/api/CertificationResponse.js';
 import { PayToPublicKeyPredicateUnlockScript } from '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
-import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
 import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../../src/transaction/Token.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
@@ -13,7 +12,13 @@ import { TokenType } from '../../../../src/transaction/TokenType.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
 import { waitInclusionProof } from '../../../../src/util/InclusionProofUtils.js';
 import { VerificationStatus } from '../../../../src/verification/VerificationStatus.js';
-import { AddressingMethod, IUser, createUser, registerNametag, resolveRecipientAddress } from '../support/TestSetup.js';
+import {
+  AddressingMethod,
+  IUser,
+  createUser,
+  registerNametag,
+  resolveRecipientPredicate,
+} from '../support/TestSetup.js';
 import { TokenWorld } from '../support/World.js';
 
 function parseMethod(raw: string): AddressingMethod {
@@ -77,7 +82,7 @@ When(
     const method = parseMethod(methodRaw);
     const sender = requireNamedUser(this, senderName);
     const recipient = requireNamedUser(this, recipientName);
-    const recipientAddress = await resolveRecipientAddress(
+    const recipientPredicate = resolveRecipientPredicate(
       recipient,
       method,
       method === 'nametag' ? (this.nametags.get(recipient) ?? null) : null,
@@ -86,12 +91,7 @@ When(
     this.addressingMethod = method;
     this.user = sender;
 
-    const mintTransaction = await MintTransaction.create(
-      recipientAddress,
-      TokenId.generate(),
-      TokenType.generate(),
-      CborSerializer.encodeArray(),
-    );
+    const mintTransaction = await MintTransaction.create(recipientPredicate, TokenId.generate(), TokenType.generate());
 
     const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
     const response = await this.setup.client.submitCertificationRequest(certificationData);
@@ -100,6 +100,7 @@ When(
     this.token = await Token.mint(
       this.setup.trustBase,
       this.setup.predicateVerifier,
+      this.setup.mintJustificationVerifier,
       await mintTransaction.toCertifiedTransaction(
         this.setup.trustBase,
         this.setup.predicateVerifier,
@@ -122,7 +123,7 @@ When(
     const method = parseMethod(methodRaw);
     const sender = requireNamedUser(this, senderName);
     const recipient = requireNamedUser(this, recipientName);
-    const recipientAddress = await resolveRecipientAddress(
+    const recipientPredicate = resolveRecipientPredicate(
       recipient,
       method,
       method === 'nametag' ? (this.nametags.get(recipient) ?? null) : null,
@@ -130,10 +131,8 @@ When(
 
     const transferTransaction = await TransferTransaction.create(
       this.token,
-      sender.predicate,
-      recipientAddress,
+      recipientPredicate,
       crypto.getRandomValues(new Uint8Array(32)),
-      CborSerializer.encodeArray(),
     );
 
     const certificationData = await CertificationData.fromTransaction(
@@ -164,7 +163,11 @@ When(
 // --- Then: assertions about the current token --------------------------------
 
 Then(/^the current token verifies$/, async function (this: TokenWorld): Promise<void> {
-  const result = await this.token.verify(this.setup.trustBase, this.setup.predicateVerifier);
+  const result = await this.token.verify(
+    this.setup.trustBase,
+    this.setup.predicateVerifier,
+    this.setup.mintJustificationVerifier,
+  );
   assert.strictEqual(result.status, VerificationStatus.OK);
 });
 
@@ -174,10 +177,8 @@ Then(/^the current token can be spent by (\w+)$/, async function (this: TokenWor
 
   const transferTransaction = await TransferTransaction.create(
     this.token,
-    owner.predicate,
-    await resolveRecipientAddress(bystander, 'pubkey'),
+    resolveRecipientPredicate(bystander, 'pubkey'),
     crypto.getRandomValues(new Uint8Array(32)),
-    CborSerializer.encodeArray(),
   );
 
   const certificationData = await CertificationData.fromTransaction(

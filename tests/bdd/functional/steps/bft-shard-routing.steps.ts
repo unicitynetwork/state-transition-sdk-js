@@ -73,7 +73,7 @@ Given('a freshly minted token routed to its correct shard', async function (this
     this.alice = createUser();
   }
   this.token = await mintToken(this.setup, this.alice);
-  const sid = await StateId.fromTransaction(this.token.genesis.transaction);
+  const sid = await StateId.fromTransaction(this.token.genesis);
   const correctShardId = ShardAwareAggregatorClient.getShardForStateId(sid, envShardIdLength(), 'msb');
   getStash(this).stateId = sid;
   getStash(this).pickedShard = correctShardId;
@@ -136,7 +136,7 @@ When(
     this.routingShardSeen = new Set<number>();
     for (let i = 0; i < totalMints; i++) {
       const token = await mintToken(this.setup, this.alice);
-      const sid = await StateId.fromTransaction(token.genesis.transaction);
+      const sid = await StateId.fromTransaction(token.genesis);
       const shardId = ShardAwareAggregatorClient.getShardForStateId(sid, envShardIdLength(), 'msb');
       this.routingShardSeen.add(shardId);
     }

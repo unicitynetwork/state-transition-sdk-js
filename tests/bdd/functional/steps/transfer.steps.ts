@@ -37,11 +37,19 @@ Then('the token is finalized', function (this: TokenWorld): void {
 Then('the transferred token passes verification', async function (this: TokenWorld): Promise<void> {
   const setup = this.tree?.setup ?? this.setup;
   assert.ok(this.transferredToken !== null);
-  const result = await this.transferredToken.verify(setup.trustBase, setup.predicateVerifier);
+  const result = await this.transferredToken.verify(
+    setup.trustBase,
+    setup.predicateVerifier,
+    setup.mintJustificationVerifier,
+  );
   assert.strictEqual(result.status, VerificationStatus.OK);
 });
 
 Then('the final token passes verification', async function (this: TokenWorld): Promise<void> {
-  const result = await this.finalToken.verify(this.setup.trustBase, this.setup.predicateVerifier);
+  const result = await this.finalToken.verify(
+    this.setup.trustBase,
+    this.setup.predicateVerifier,
+    this.setup.mintJustificationVerifier,
+  );
   assert.strictEqual(result.status, VerificationStatus.OK);
 });

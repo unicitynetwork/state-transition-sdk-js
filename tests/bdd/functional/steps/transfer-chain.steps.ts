@@ -74,7 +74,11 @@ Then(
 
 Then('the token should pass verification', async function (this: TokenWorld): Promise<void> {
   const token = this.currentToken ?? this.token;
-  const result = await token.verify(this.setup.trustBase, this.setup.predicateVerifier);
+  const result = await token.verify(
+    this.setup.trustBase,
+    this.setup.predicateVerifier,
+    this.setup.mintJustificationVerifier,
+  );
   assert.strictEqual(result.status, VerificationStatus.OK);
 });
 
@@ -95,6 +99,10 @@ Then('{string} should own the token', async function (this: TokenWorld, userName
   }
   // Verify token is valid (owner verification is implicit in transfer success)
   const token = this.currentToken ?? this.token;
-  const result = await token.verify(this.setup.trustBase, this.setup.predicateVerifier);
+  const result = await token.verify(
+    this.setup.trustBase,
+    this.setup.predicateVerifier,
+    this.setup.mintJustificationVerifier,
+  );
   assert.strictEqual(result.status, VerificationStatus.OK);
 });

@@ -21,8 +21,7 @@ import { CertificationStatus } from '../../../../src/api/CertificationResponse.j
 import { InclusionProof } from '../../../../src/api/InclusionProof.js';
 import { JsonRpcNetworkError } from '../../../../src/api/json-rpc/JsonRpcNetworkError.js';
 import { StateId } from '../../../../src/api/StateId.js';
-import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
-import { Address } from '../../../../src/transaction/Address.js';
+import { IPredicate } from '../../../../src/predicate/IPredicate.js';
 import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../../src/transaction/Token.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
@@ -60,7 +59,7 @@ function getMintPoolSize(shardCount: number): number {
 }
 
 export class ShardLoadRunner {
-  private cachedAddress: Address | null = null;
+  private cachedAddress: IPredicate | null = null;
   private mintPool: ShardLoadMintPool | null = null;
   private readonly setup: ITestSetup;
   private readonly shardUrls: Map<number, string> | null;
@@ -276,7 +275,7 @@ export class ShardLoadRunner {
       buckets.set(baseId + i, []);
     }
 
-    const recipient = await this.getRecipientAddress();
+    const recipient = this.getRecipientAddress();
     const maxAttempts = opsPerShard * shardCount * 5;
     let attempts = 0;
 
@@ -295,7 +294,6 @@ export class ShardLoadRunner {
         recipient,
         new TokenId(tokenIdBytes),
         new TokenType(tokenTypeBytes),
-        CborSerializer.encodeArray(),
       );
       const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
       const stateId = await StateId.fromCertificationData(certificationData);
@@ -559,12 +557,11 @@ export class ShardLoadRunner {
     try {
       // Recreate MintTransaction from seeds
       failedPhase = 'transaction-creation';
-      const recipient = await this.getRecipientAddress();
+      const recipient = this.getRecipientAddress();
       const mintTransaction = await MintTransaction.create(
         recipient,
         new TokenId(op.tokenIdBytes),
         new TokenType(op.tokenTypeBytes),
-        CborSerializer.encodeArray(),
       );
       const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
       const stateIdObj = await StateId.fromCertificationData(certificationData);
@@ -595,6 +592,7 @@ export class ShardLoadRunner {
         await Token.mint(
           this.setup.trustBase,
           this.setup.predicateVerifier,
+          this.setup.mintJustificationVerifier,
           await mintTransaction.toCertifiedTransaction(
             this.setup.trustBase,
             this.setup.predicateVerifier,
@@ -655,9 +653,9 @@ export class ShardLoadRunner {
     return { blockCsvPath, blockRecords, commitmentValidation };
   }
 
-  private async getRecipientAddress(): Promise<Address> {
+  private getRecipientAddress(): IPredicate {
     if (!this.cachedAddress) {
-      this.cachedAddress = await Address.fromPredicate(this.user.predicate);
+      this.cachedAddress = this.user.predicate;
     }
     return this.cachedAddress;
   }
@@ -722,7 +720,7 @@ export class ShardLoadRunner {
         switch (verificationStatus.status) {
           case InclusionProofVerificationStatus.OK:
             return { pollCount, proof: inclusionProof };
-          case InclusionProofVerificationStatus.PATH_NOT_INCLUDED:
+          case InclusionProofVerificationStatus.PATH_INVALID:
             break;
           default:
             throw new Error(`Invalid inclusion proof status: ${verificationStatus.status}`);

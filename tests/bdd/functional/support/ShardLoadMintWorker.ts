@@ -6,6 +6,7 @@ import { InclusionProof } from '../../../../src/api/InclusionProof.js';
 import { PredicateVerifierService } from '../../../../src/predicate/verification/PredicateVerifierService.js';
 import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../../src/transaction/Token.js';
+import { MintJustificationVerifierService } from '../../../../src/transaction/verification/MintJustificationVerifierService.js';
 
 interface IInitMessage {
   readonly trustBasePath: string;
@@ -23,6 +24,7 @@ type WorkerMessage = IInitMessage | IMintMessage;
 
 let trustBase: RootTrustBase;
 let predicateVerifier: PredicateVerifierService;
+const mintJustificationVerifier = new MintJustificationVerifierService();
 
 async function handleMessage(msg: WorkerMessage): Promise<void> {
   try {
@@ -42,7 +44,7 @@ async function handleMessage(msg: WorkerMessage): Promise<void> {
           predicateVerifier,
           inclusionProof,
         );
-        await Token.mint(trustBase, predicateVerifier, certifiedTransaction);
+        await Token.mint(trustBase, predicateVerifier, mintJustificationVerifier, certifiedTransaction);
         parentPort!.postMessage({ id: msg.id, success: true, type: 'mint-result' });
         break;
       }

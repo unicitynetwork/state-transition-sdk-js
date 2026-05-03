@@ -14,7 +14,7 @@ When(
     const tokenId2 = new TokenId(crypto.getRandomValues(new Uint8Array(32)));
 
     try {
-      await TokenSplit.split(this.token, this.alice.predicate, parseSimplePaymentData, [
+      await TokenSplit.split(this.token, parseSimplePaymentData, [
         [tokenId1, createPaymentAssets(createAsset(this.assetId1, 60n), createAsset(this.assetId2, 120n))],
         [tokenId2, createPaymentAssets(createAsset(this.assetId1, 50n), createAsset(this.assetId2, 100n))],
       ]);
@@ -31,7 +31,7 @@ When(
     const tokenId2 = new TokenId(crypto.getRandomValues(new Uint8Array(32)));
 
     try {
-      await TokenSplit.split(this.token, this.alice.predicate, parseSimplePaymentData, [
+      await TokenSplit.split(this.token, parseSimplePaymentData, [
         [tokenId1, createPaymentAssets(createAsset(this.assetId1, 30n), createAsset(this.assetId2, 60n))],
         [tokenId2, createPaymentAssets(createAsset(this.assetId1, 30n), createAsset(this.assetId2, 60n))],
       ]);
@@ -48,7 +48,7 @@ When(
     const tokenId2 = new TokenId(crypto.getRandomValues(new Uint8Array(32)));
 
     try {
-      await TokenSplit.split(this.token, this.alice.predicate, parseSimplePaymentData, [
+      await TokenSplit.split(this.token, parseSimplePaymentData, [
         [tokenId1, createPaymentAssets(createAsset(this.assetId1, 1n), createAsset(this.assetId2, 1n))],
         [tokenId2, createPaymentAssets(createAsset(this.assetId1, 99n), createAsset(this.assetId2, 199n))],
       ]);

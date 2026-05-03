@@ -4,8 +4,6 @@ import { Then, When } from '@cucumber/cucumber';
 
 import { PaymentAssetCollection } from '../../../../src/payment/asset/PaymentAssetCollection.js';
 import { TokenSplit } from '../../../../src/payment/TokenSplit.js';
-import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
-import { Address } from '../../../../src/transaction/Address.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
 import { createUser } from '../support/TestSetup.js';
@@ -22,13 +20,7 @@ When(
     this.transferError = null;
 
     try {
-      await TransferTransaction.create(
-        token,
-        user.predicate,
-        await Address.fromPredicate(recipient.predicate),
-        crypto.getRandomValues(new Uint8Array(32)),
-        CborSerializer.encodeArray(),
-      );
+      await TransferTransaction.create(token, recipient.predicate, crypto.getRandomValues(new Uint8Array(32)));
     } catch (e) {
       this.transferError = e as Error;
     }
@@ -57,7 +49,7 @@ When(
     const splitAssets: [TokenId, PaymentAssetCollection][] = [[splitTokenId, assets]];
 
     try {
-      await TokenSplit.split(token, user.predicate, parser, splitAssets);
+      await TokenSplit.split(token, parser, splitAssets);
     } catch (e) {
       this.splitError = e as Error;
     }

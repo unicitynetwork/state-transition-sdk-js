@@ -6,8 +6,8 @@ import { ShardId } from '../../../../src/api/bft/ShardId.js';
 import { ShardTreeCertificate } from '../../../../src/api/bft/ShardTreeCertificate.js';
 import { StateId } from '../../../../src/api/StateId.js';
 import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
-import { HexConverter } from '../../../../src/serialization/HexConverter.js';
 import { ShardIdMatchesStateIdRule } from '../../../../src/transaction/verification/rule/ShardIdMatchesStateIdRule.js';
+import { HexConverter } from '../../../../src/util/HexConverter.js';
 import { TokenWorld } from '../support/World.js';
 
 interface IShardRuleStash {

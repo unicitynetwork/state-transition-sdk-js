@@ -6,8 +6,6 @@ import { Asset } from '../../../../src/payment/asset/Asset.js';
 import { PaymentAssetCollection } from '../../../../src/payment/asset/PaymentAssetCollection.js';
 import { TokenSplit } from '../../../../src/payment/TokenSplit.js';
 import { CborDeserializer } from '../../../../src/serialization/cbor/CborDeserializer.js';
-import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
-import { Address } from '../../../../src/transaction/Address.js';
 import { Token } from '../../../../src/transaction/Token.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
@@ -270,7 +268,11 @@ Then(
 
     const tokenIndex = splitIndex - 1;
     const token = this.splitTokens[tokenIndex];
-    const result = await token.verify(this.setup.trustBase, this.setup.predicateVerifier);
+    const result = await token.verify(
+      this.setup.trustBase,
+      this.setup.predicateVerifier,
+      this.setup.mintJustificationVerifier,
+    );
     assert.strictEqual(result.status, VerificationStatus.OK);
   },
 );
@@ -284,21 +286,33 @@ Then(
     }
 
     const token = this.transferredToken ?? this.currentToken;
-    const result = await token.verify(this.setup.trustBase, this.setup.predicateVerifier);
+    const result = await token.verify(
+      this.setup.trustBase,
+      this.setup.predicateVerifier,
+      this.setup.mintJustificationVerifier,
+    );
     assert.strictEqual(result.status, VerificationStatus.OK);
   },
 );
 
 Then('both split tokens should pass verification', async function (this: TokenWorld): Promise<void> {
   for (const token of this.splitTokens) {
-    const result = await token.verify(this.setup.trustBase, this.setup.predicateVerifier);
+    const result = await token.verify(
+      this.setup.trustBase,
+      this.setup.predicateVerifier,
+      this.setup.mintJustificationVerifier,
+    );
     assert.strictEqual(result.status, VerificationStatus.OK);
   }
 });
 
 Then('the transferred split token should pass verification', async function (this: TokenWorld): Promise<void> {
   const token = this.transferredToken ?? this.currentToken;
-  const result = await token.verify(this.setup.trustBase, this.setup.predicateVerifier);
+  const result = await token.verify(
+    this.setup.trustBase,
+    this.setup.predicateVerifier,
+    this.setup.mintJustificationVerifier,
+  );
   assert.strictEqual(result.status, VerificationStatus.OK);
 });
 
@@ -308,7 +322,11 @@ Then('{int} sub-split tokens should be created', function (this: TokenWorld, exp
 
 Then('each sub-split token should pass verification', async function (this: TokenWorld): Promise<void> {
   for (const token of this.subSplitTokens) {
-    const result = await token.verify(this.setup.trustBase, this.setup.predicateVerifier);
+    const result = await token.verify(
+      this.setup.trustBase,
+      this.setup.predicateVerifier,
+      this.setup.mintJustificationVerifier,
+    );
     assert.strictEqual(result.status, VerificationStatus.OK);
   }
 });
@@ -325,7 +343,11 @@ Then('the imported split token should have the same ID', function (this: TokenWo
 });
 
 Then('the imported split token should pass verification', async function (this: TokenWorld): Promise<void> {
-  const result = await this.importedToken.verify(this.setup.trustBase, this.setup.predicateVerifier);
+  const result = await this.importedToken.verify(
+    this.setup.trustBase,
+    this.setup.predicateVerifier,
+    this.setup.mintJustificationVerifier,
+  );
   assert.strictEqual(result.status, VerificationStatus.OK);
 });
 
@@ -356,7 +378,7 @@ When(
     ];
 
     try {
-      await TokenSplit.split(tokenToSplit, attacker.predicate, parseSimplePaymentData, splitAssets);
+      await TokenSplit.split(tokenToSplit, parseSimplePaymentData, splitAssets);
       this.splitError = null;
     } catch (e) {
       this.splitError = e as Error;
@@ -385,13 +407,7 @@ When(
     }
 
     try {
-      await TransferTransaction.create(
-        this.burnedToken,
-        from.predicate,
-        await Address.fromPredicate(to.predicate),
-        crypto.getRandomValues(new Uint8Array(32)),
-        CborSerializer.encodeArray(),
-      );
+      await TransferTransaction.create(this.burnedToken, to.predicate, crypto.getRandomValues(new Uint8Array(32)));
       this.transferError = null;
     } catch (e) {
       this.transferError = e as Error;

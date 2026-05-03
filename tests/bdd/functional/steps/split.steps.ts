@@ -7,10 +7,7 @@ import { PaymentAssetCollection } from '../../../../src/payment/asset/PaymentAss
 import { TokenAssetCountMismatchError } from '../../../../src/payment/error/TokenAssetCountMismatchError.js';
 import { TokenAssetMissingError } from '../../../../src/payment/error/TokenAssetMissingError.js';
 import { TokenAssetValueMismatchError } from '../../../../src/payment/error/TokenAssetValueMismatchError.js';
-import { ISplitPaymentData } from '../../../../src/payment/ISplitPaymentData.js';
-import { SplitReason } from '../../../../src/payment/SplitReason.js';
 import { TokenSplit } from '../../../../src/payment/TokenSplit.js';
-import { CborDeserializer } from '../../../../src/serialization/cbor/CborDeserializer.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
 import { VerificationStatus } from '../../../../src/verification/VerificationStatus.js';
 import {
@@ -59,7 +56,7 @@ When('Alice tries to split with only 1 asset instead of 2', async function (this
   ];
 
   try {
-    await TokenSplit.split(this.token, this.alice.predicate, parseSimplePaymentData, splitAssets);
+    await TokenSplit.split(this.token, parseSimplePaymentData, splitAssets);
   } catch (e) {
     this.splitError = e as Error;
   }
@@ -73,7 +70,7 @@ When('Alice tries to split with a wrong asset ID', async function (this: TokenWo
   ];
 
   try {
-    await TokenSplit.split(this.token, this.alice.predicate, parseSimplePaymentData, splitAssets);
+    await TokenSplit.split(this.token, parseSimplePaymentData, splitAssets);
   } catch (e) {
     this.splitError = e as Error;
   }
@@ -86,7 +83,7 @@ When('Alice tries to split with incorrect asset values', async function (this: T
   ];
 
   try {
-    await TokenSplit.split(this.token, this.alice.predicate, parseSimplePaymentData, splitAssets);
+    await TokenSplit.split(this.token, parseSimplePaymentData, splitAssets);
   } catch (e) {
     this.splitError = e as Error;
   }
@@ -102,19 +99,15 @@ Then('2 split tokens are minted', function (this: TokenWorld): void {
 });
 
 Then('each split token passes TokenSplit verification', async function (this: TokenWorld): Promise<void> {
+  // Post-PR #112: split-mint justification verification is performed automatically
+  // by the SplitMintJustificationVerifier registered in MintJustificationVerifierService.
+  // If we got here with split tokens in hand, Token.mint already ran the verifier.
+  // Assert the verifier-registered Token.verify path returns OK to make the contract explicit.
   for (const splitTok of this.splitTokens) {
-    const parseSplitPaymentData = async (bytes: Uint8Array): Promise<ISplitPaymentData> => {
-      const data = CborDeserializer.decodeArray(bytes);
-      const splitAssets = PaymentAssetCollection.fromCBOR(data[0]);
-      const reason = await SplitReason.fromCBOR(data[1]);
-      return { assets: splitAssets, encode: () => Promise.resolve(bytes), reason };
-    };
-
-    const result = await TokenSplit.verify(
-      splitTok,
-      parseSplitPaymentData,
+    const result = await splitTok.verify(
       this.setup.trustBase,
       this.setup.predicateVerifier,
+      this.setup.mintJustificationVerifier,
     );
     assert.strictEqual(result.status, VerificationStatus.OK);
   }

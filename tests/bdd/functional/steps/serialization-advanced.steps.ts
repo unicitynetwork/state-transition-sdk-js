@@ -23,6 +23,10 @@ Then(
 );
 
 Then('the imported token should pass verification', async function (this: TokenWorld): Promise<void> {
-  const result = await this.importedToken.verify(this.setup.trustBase, this.setup.predicateVerifier);
+  const result = await this.importedToken.verify(
+    this.setup.trustBase,
+    this.setup.predicateVerifier,
+    this.setup.mintJustificationVerifier,
+  );
   assert.strictEqual(result.status, VerificationStatus.OK);
 });

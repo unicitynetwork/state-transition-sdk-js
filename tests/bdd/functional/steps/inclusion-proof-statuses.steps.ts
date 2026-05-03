@@ -110,7 +110,7 @@ When(
   "the UC's shardTreeCertificate is replaced with a non-matching prefix",
   async function (this: TokenWorld): Promise<void> {
     const original = getOriginalProof(this);
-    const txn = this.token.genesis.transaction;
+    const txn = this.token.genesis;
     const { StateId } = await import('../../../../src/api/StateId.js');
     const stateId = await StateId.fromTransaction(txn);
     getStash(this).mutatedProof = replaceShardWithMismatch(original, stateId.data[0]);
@@ -158,7 +158,7 @@ Then(
       this.setup.trustBase,
       this.setup.predicateVerifier,
       stash.mutatedProof,
-      this.token.genesis.transaction,
+      this.token.genesis,
     );
     assert.equal(
       result.status,

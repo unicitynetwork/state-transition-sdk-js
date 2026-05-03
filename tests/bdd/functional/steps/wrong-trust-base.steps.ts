@@ -4,7 +4,7 @@ import { Then } from '@cucumber/cucumber';
 
 import { RootTrustBase } from '../../../../src/api/bft/RootTrustBase.js';
 import { SigningService } from '../../../../src/crypto/secp256k1/SigningService.js';
-import { HexConverter } from '../../../../src/serialization/HexConverter.js';
+import { HexConverter } from '../../../../src/util/HexConverter.js';
 import { VerificationStatus } from '../../../../src/verification/VerificationStatus.js';
 import { TokenWorld } from '../support/World.js';
 
@@ -23,6 +23,10 @@ Then('the token fails verification against a different trust base', async functi
     version: '0',
   });
 
-  const result = await this.token.verify(wrongTrustBase, this.setup.predicateVerifier);
+  const result = await this.token.verify(
+    wrongTrustBase,
+    this.setup.predicateVerifier,
+    this.setup.mintJustificationVerifier,
+  );
   assert.strictEqual(result.status, VerificationStatus.FAIL);
 });

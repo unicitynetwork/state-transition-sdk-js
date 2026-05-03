@@ -17,7 +17,7 @@ import {
   parseSimplePaymentData,
   parseSplitVerificationData,
   registerNametag,
-  resolveRecipientAddress,
+  resolveRecipientPredicate,
   runMixedChain,
   splitTokenToOwner,
 } from '../support/TestSetup.js';
@@ -74,7 +74,7 @@ When(
     );
 
     const child1 = splitTokens[0];
-    const recipientAddress = await resolveRecipientAddress(bob, method, bobNametag);
+    const recipientAddress = resolveRecipientPredicate(bob, method, bobNametag);
 
     // Transfer child 1 from Alice to Bob via <method>
     const { TransferTransaction } = await import('../../../../src/transaction/TransferTransaction.js');
@@ -83,15 +83,12 @@ When(
     const { PayToPublicKeyPredicateUnlockScript } = await import(
       '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js'
     );
-    const { CborSerializer } = await import('../../../../src/serialization/cbor/CborSerializer.js');
     const { waitInclusionProof } = await import('../../../../src/util/InclusionProofUtils.js');
 
     const transferTx = await TransferTransaction.create(
       child1,
-      alice.predicate,
       recipientAddress,
       crypto.getRandomValues(new Uint8Array(32)),
-      CborSerializer.encodeArray(),
     );
     const cert = await CertificationData.fromTransaction(
       transferTx,
@@ -148,7 +145,6 @@ When(
     const { PayToPublicKeyPredicateUnlockScript } = await import(
       '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js'
     );
-    const { CborSerializer } = await import('../../../../src/serialization/cbor/CborSerializer.js');
     const { waitInclusionProof } = await import('../../../../src/util/InclusionProofUtils.js');
 
     const deliverChild = async (
@@ -156,14 +152,8 @@ When(
       to: IUser,
       method: AddressingMethod,
     ): Promise<Token> => {
-      const recipientAddress = await resolveRecipientAddress(to, method, this.nametags.get(to) ?? null);
-      const tx = await TransferTransaction.create(
-        child,
-        alice.predicate,
-        recipientAddress,
-        crypto.getRandomValues(new Uint8Array(32)),
-        CborSerializer.encodeArray(),
-      );
+      const recipientAddress = resolveRecipientPredicate(to, method, this.nametags.get(to) ?? null);
+      const tx = await TransferTransaction.create(child, recipientAddress, crypto.getRandomValues(new Uint8Array(32)));
       const cert = await CertificationData.fromTransaction(
         tx,
         await PayToPublicKeyPredicateUnlockScript.create(tx, alice.signingService),
@@ -202,7 +192,7 @@ When(
     // Split-child data is CBOR-array [assetsCBOR, reasonCBOR]; take the first entry.
     const { PaymentAssetCollection: PAC } = await import('../../../../src/payment/asset/PaymentAssetCollection.js');
     const { CborDeserializer } = await import('../../../../src/serialization/cbor/CborDeserializer.js');
-    const splitPayload = CborDeserializer.decodeArray(bobToken.genesis.data);
+    const splitPayload = CborDeserializer.decodeArray(bobToken.genesis.data ?? new Uint8Array());
     const bobAssets = PAC.fromCBOR(splitPayload[0]);
     const single = bobAssets.toArray()[0];
     const halfA = new Asset(single.id, single.value / 2n);
@@ -223,7 +213,7 @@ When(
       bob,
     );
 
-    const recipientAddress = await resolveRecipientAddress(carol, method, this.nametags.get(carol) ?? null);
+    const recipientAddress = resolveRecipientPredicate(carol, method, this.nametags.get(carol) ?? null);
 
     const { TransferTransaction } = await import('../../../../src/transaction/TransferTransaction.js');
     const { CertificationData } = await import('../../../../src/api/CertificationData.js');
@@ -231,15 +221,12 @@ When(
     const { PayToPublicKeyPredicateUnlockScript } = await import(
       '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js'
     );
-    const { CborSerializer } = await import('../../../../src/serialization/cbor/CborSerializer.js');
     const { waitInclusionProof } = await import('../../../../src/util/InclusionProofUtils.js');
 
     const tx = await TransferTransaction.create(
       grandchildren[0],
-      bob.predicate,
       recipientAddress,
       crypto.getRandomValues(new Uint8Array(32)),
-      CborSerializer.encodeArray(),
     );
     const cert = await CertificationData.fromTransaction(
       tx,
@@ -283,7 +270,11 @@ When(
     // Retain the chain for downstream assertions
     (this as unknown as { chainTokens: typeof tokens }).chainTokens = tokens;
 
-    const result = await finalToken.verify(this.setup.trustBase, this.setup.predicateVerifier);
+    const result = await finalToken.verify(
+      this.setup.trustBase,
+      this.setup.predicateVerifier,
+      this.setup.mintJustificationVerifier,
+    );
     assert.strictEqual(result.status, VerificationStatus.OK);
   },
 );

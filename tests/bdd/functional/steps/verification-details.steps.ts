@@ -6,12 +6,20 @@ import { VerificationStatus } from '../../../../src/verification/VerificationSta
 import { TokenWorld } from '../support/World.js';
 
 When('the token is verified against the trust base', async function (this: TokenWorld): Promise<void> {
-  this.verificationResult = await this.token.verify(this.setup.trustBase, this.setup.predicateVerifier);
+  this.verificationResult = await this.token.verify(
+    this.setup.trustBase,
+    this.setup.predicateVerifier,
+    this.setup.mintJustificationVerifier,
+  );
 });
 
 When('the transferred token is verified against the trust base', async function (this: TokenWorld): Promise<void> {
   assert.ok(this.transferredToken !== null);
-  this.verificationResult = await this.transferredToken.verify(this.setup.trustBase, this.setup.predicateVerifier);
+  this.verificationResult = await this.transferredToken.verify(
+    this.setup.trustBase,
+    this.setup.predicateVerifier,
+    this.setup.mintJustificationVerifier,
+  );
 });
 
 Then(

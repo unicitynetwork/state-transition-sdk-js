@@ -4,8 +4,6 @@ import { Then, When } from '@cucumber/cucumber';
 
 import { CertificationData } from '../../../../src/api/CertificationData.js';
 import { PayToPublicKeyPredicateUnlockScript } from '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
-import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
-import { Address } from '../../../../src/transaction/Address.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
 import { waitInclusionProof } from '../../../../src/util/InclusionProofUtils.js';
 import { transferToken } from '../support/TestSetup.js';
@@ -24,10 +22,8 @@ When('Alice transfers the token to herself', async function (this: TokenWorld): 
 When('Alice tries to submit a transfer of the stale token to Bob', async function (this: TokenWorld): Promise<void> {
   this.transferTransaction = await TransferTransaction.create(
     this.token,
-    this.alice.predicate,
-    await Address.fromPredicate(this.bob.predicate),
+    this.bob.predicate,
     crypto.getRandomValues(new Uint8Array(32)),
-    CborSerializer.encodeArray(),
   );
 
   const certificationData = await CertificationData.fromTransaction(

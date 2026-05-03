@@ -5,8 +5,6 @@ import { Then, When } from '@cucumber/cucumber';
 import { CertificationData } from '../../../../src/api/CertificationData.js';
 import { SigningService } from '../../../../src/crypto/secp256k1/SigningService.js';
 import { PayToPublicKeyPredicateUnlockScript } from '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
-import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
-import { Address } from '../../../../src/transaction/Address.js';
 import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../../src/transaction/TokenType.js';
@@ -17,10 +15,9 @@ import { TokenWorld } from '../support/World.js';
 When('the user submits a mint request for a specific token ID', async function (this: TokenWorld): Promise<void> {
   this.mintTokenId = new TokenId(crypto.getRandomValues(new Uint8Array(32)));
   const mintTransaction = await MintTransaction.create(
-    await Address.fromPredicate(this.user.predicate),
+    this.user.predicate,
     this.mintTokenId,
     new TokenType(crypto.getRandomValues(new Uint8Array(32))),
-    CborSerializer.encodeArray(),
   );
 
   const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
@@ -30,10 +27,9 @@ When('the user submits a mint request for a specific token ID', async function (
 When('the user submits a second mint request for the same token ID', async function (this: TokenWorld): Promise<void> {
   // Same TokenId → same state ID, but different TokenType → different transaction hash
   const mintTransaction = await MintTransaction.create(
-    await Address.fromPredicate(this.user.predicate),
+    this.user.predicate,
     this.mintTokenId,
     new TokenType(crypto.getRandomValues(new Uint8Array(32))),
-    CborSerializer.encodeArray(),
   );
 
   this.secondMintTransaction = mintTransaction;
@@ -60,10 +56,8 @@ Then(
 When('Alice creates a transfer to Bob signed with the wrong key', async function (this: TokenWorld): Promise<void> {
   const transferTransaction = await TransferTransaction.create(
     this.token,
-    this.alice.predicate,
-    await Address.fromPredicate(this.bob.predicate),
+    this.bob.predicate,
     crypto.getRandomValues(new Uint8Array(32)),
-    CborSerializer.encodeArray(),
   );
 
   const wrongSigningService = new SigningService(SigningService.generatePrivateKey());
