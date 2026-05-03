@@ -3,9 +3,7 @@ import { RootTrustBase } from '../../../api/bft/RootTrustBase.js';
 import { PredicateVerifierService } from '../../../predicate/verification/PredicateVerifierService.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
-import { Address } from '../../Address.js';
 import { CertifiedTransferTransaction } from '../../CertifiedTransferTransaction.js';
-import { ITransaction } from '../../ITransaction.js';
 
 /**
  * Transfer transaction verification rule.
@@ -14,11 +12,10 @@ export class CertifiedTransferTransactionVerificationRule {
   public static async verify(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,
-    latestTransaction: ITransaction,
     transaction: CertifiedTransferTransaction,
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];
-    let result: VerificationResult<unknown> = await InclusionProofVerificationRule.verify(
+    const result: VerificationResult<unknown> = await InclusionProofVerificationRule.verify(
       trustBase,
       predicateVerifier,
       transaction.inclusionProof,
@@ -31,37 +28,6 @@ export class CertifiedTransferTransactionVerificationRule {
         'CertifiedTransferTransactionVerificationRule',
         VerificationStatus.FAIL,
         `Inclusion proof verification failed: ${result.status?.toString()}`,
-        results,
-      );
-    }
-
-    const payToScriptHash = await Address.fromPredicate(transaction.lockScript);
-    result = new VerificationResult(
-      'RecipientVerificationRule',
-      latestTransaction.recipient.equals(payToScriptHash) ? VerificationStatus.OK : VerificationStatus.FAIL,
-    );
-    results.push(result);
-    if (result.status !== VerificationStatus.OK) {
-      return new VerificationResult(
-        'CertifiedTransferTransactionVerificationRule',
-        VerificationStatus.FAIL,
-        'The transaction owner does not match the previous transaction recipient.',
-        results,
-      );
-    }
-
-    result = new VerificationResult(
-      'SourceStateHashVerificationRule',
-      await latestTransaction
-        .calculateStateHash()
-        .then((hash) => (hash.equals(transaction.sourceStateHash) ? VerificationStatus.OK : VerificationStatus.FAIL)),
-    );
-    results.push(result);
-    if (result.status !== VerificationStatus.OK) {
-      return new VerificationResult(
-        'CertifiedTransferTransactionVerificationRule',
-        VerificationStatus.FAIL,
-        'The transaction source state hash does not match the previous transaction state.',
         results,
       );
     }

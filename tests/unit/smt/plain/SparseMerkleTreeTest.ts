@@ -2,11 +2,11 @@ import { DataHash } from '../../../../src/crypto/hash/DataHash.js';
 import { DataHasherFactory } from '../../../../src/crypto/hash/DataHasherFactory.js';
 import { HashAlgorithm } from '../../../../src/crypto/hash/HashAlgorithm.js';
 import { NodeDataHasher } from '../../../../src/crypto/hash/NodeDataHasher.js';
-import { HexConverter } from '../../../../src/serialization/HexConverter.js';
 import { FinalizedLeafBranch } from '../../../../src/smt/plain/FinalizedLeafBranch.js';
 import { FinalizedNodeBranch } from '../../../../src/smt/plain/FinalizedNodeBranch.js';
 import { PendingLeafBranch } from '../../../../src/smt/plain/PendingLeafBranch.js';
 import { SparseMerkleTree } from '../../../../src/smt/plain/SparseMerkleTree.js';
+import { HexConverter } from '../../../../src/util/HexConverter.js';
 
 describe('Sparse Merkle Tree tests', function () {
   const leavesSparse = [0b110010000n, 0b100000000n, 0b100010000n, 0b110000000n, 0b101100000n, 0b100010100n];

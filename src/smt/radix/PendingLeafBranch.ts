@@ -1,7 +1,7 @@
 import { FinalizedLeafBranch } from './FinalizedLeafBranch.js';
 import { IDataHasher } from '../../crypto/hash/IDataHasher.js';
 import { IDataHasherFactory } from '../../crypto/hash/IDataHasherFactory.js';
-import { HexConverter } from '../../serialization/HexConverter.js';
+import { HexConverter } from '../../util/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
 
 export class PendingLeafBranch {

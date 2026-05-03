@@ -1,5 +1,5 @@
-import { BigintConverter } from '../serialization/BigintConverter.js';
-import { HexConverter } from '../serialization/HexConverter.js';
+import { BigintConverter } from './BigintConverter.js';
+import { HexConverter } from './HexConverter.js';
 
 export class BitString {
   /**

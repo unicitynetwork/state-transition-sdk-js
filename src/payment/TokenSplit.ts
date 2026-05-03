@@ -1,16 +1,11 @@
 import { TokenAssetMissingError } from './error/TokenAssetMissingError.js';
 import { IPaymentData } from './IPaymentData.js';
-import { ISplitPaymentData } from './ISplitPaymentData.js';
-import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { DataHasherFactory } from '../crypto/hash/DataHasherFactory.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
-import { IPredicate } from '../predicate/IPredicate.js';
-import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
-import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
-import { HexConverter } from '../serialization/HexConverter.js';
+import { HexConverter } from '../util/HexConverter.js';
 import { TokenAssetValueMismatchError } from './error/TokenAssetValueMismatchError.js';
-import { SplitReasonProof } from './SplitReasonProof.js';
+import { SplitAssetProof } from './SplitAssetProof.js';
 import { SparseMerkleTree } from '../smt/plain/SparseMerkleTree.js';
 import { SparseMerkleSumTree } from '../smt/sum/SparseMerkleSumTree.js';
 import { SparseMerkleSumTreeRootNode } from '../smt/sum/SparseMerkleSumTreeRootNode.js';
@@ -21,24 +16,20 @@ import { AssetId } from './asset/AssetId.js';
 import { PaymentAssetCollection } from './asset/PaymentAssetCollection.js';
 import { TokenAssetCountMismatchError } from './error/TokenAssetCountMismatchError.js';
 import { BurnPredicate } from '../predicate/builtin/BurnPredicate.js';
-import { Address } from '../transaction/Address.js';
-import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
-import { VerificationResult } from '../verification/VerificationResult.js';
-import { VerificationStatus } from '../verification/VerificationStatus.js';
 
 class ProofMapEntry {
   private constructor(
     public readonly tokenId: TokenId,
-    private readonly _proofs: SplitReasonProof[],
+    private readonly _proofs: SplitAssetProof[],
   ) {
     this._proofs = _proofs.slice();
   }
 
-  public get proofs(): SplitReasonProof[] {
+  public get proofs(): SplitAssetProof[] {
     return this._proofs.slice();
   }
 
-  public static create(tokenId: TokenId, proofs: SplitReasonProof[]): ProofMapEntry {
+  public static create(tokenId: TokenId, proofs: SplitAssetProof[]): ProofMapEntry {
     return new ProofMapEntry(tokenId, proofs);
   }
 }
@@ -46,7 +37,7 @@ class ProofMapEntry {
 class ProofMap {
   private constructor(private readonly _proofs: Map<string, ProofMapEntry>) {}
 
-  public static create(data: [TokenId, SplitReasonProof[]][]): ProofMap {
+  public static create(data: [TokenId, SplitAssetProof[]][]): ProofMap {
     return new ProofMap(
       new Map(
         data.map(([tokenId, proofs]) => [HexConverter.encode(tokenId.bytes), ProofMapEntry.create(tokenId, proofs)]),
@@ -80,14 +71,12 @@ export class TokenSplit {
    * Split old token to new tokens.
    *
    * @param token token to be used for split
-   * @param ownerPredicate
    * @param decodePaymentData
    * @param splitTokens
    * @return token split object for submitting info
    */
   public static async split(
     token: Token,
-    ownerPredicate: IPredicate,
     decodePaymentData: (bytes: Uint8Array) => Promise<IPaymentData>,
     splitTokens: [TokenId, PaymentAssetCollection][],
   ): Promise<ISplit> {
@@ -108,7 +97,12 @@ export class TokenSplit {
     }
 
     // Parse this from user object
-    const paymentData = await decodePaymentData(token.genesis.data);
+    const paymentDataBytes = token.genesis.data;
+    const paymentData = paymentDataBytes ? await decodePaymentData(paymentDataBytes) : null;
+    if (paymentData == null) {
+      throw new Error('Payment data is missing.');
+    }
+
     const assets = paymentData.assets;
 
     if (trees.size !== assets.size()) {
@@ -136,20 +130,18 @@ export class TokenSplit {
     const burnPredicate = BurnPredicate.create(aggregationRoot.hash.imprint);
     const burnTransaction = await TransferTransaction.create(
       token,
-      ownerPredicate,
-      await Address.fromPredicate(burnPredicate),
+      burnPredicate,
       crypto.getRandomValues(new Uint8Array(32)),
-      CborSerializer.encodeNull(),
     );
 
-    const proofs: [TokenId, SplitReasonProof[]][] = [];
+    const proofs: [TokenId, SplitAssetProof[]][] = [];
     for (const [tokenId, assets] of splitTokens) {
       proofs.push([
         tokenId,
         assets
           .toArray()
           .map((asset) =>
-            SplitReasonProof.create(
+            SplitAssetProof.create(
               asset.id,
               aggregationRoot.getPath(asset.id.toBitString().toBigInt()),
               assetTreeRoots.get(HexConverter.encode(asset.id.bytes))!.getPath(tokenId.toBitString().toBigInt()),
@@ -165,110 +157,5 @@ export class TokenSplit {
       },
       proofs: ProofMap.create(proofs),
     };
-  }
-
-  public static async verify(
-    token: Token,
-    parsePaymentData: (bytes: Uint8Array) => Promise<ISplitPaymentData>,
-    trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifierService,
-  ): Promise<VerificationResult<VerificationStatus>> {
-    // TODO: Check initial token also or that should be done by client beforehand?
-
-    const data = await parsePaymentData(token.genesis.data);
-
-    if (data.assets == null) {
-      return new VerificationResult(
-        'TokenSplitReasonVerificationRule',
-        VerificationStatus.FAIL,
-        'Assets data is missing.',
-        [],
-      );
-    }
-
-    const verificationResult = await data.reason.token.verify(trustBase, predicateVerifier);
-    if (verificationResult.status !== VerificationStatus.OK) {
-      return new VerificationResult(
-        'TokenSplitReasonVerificationRule',
-        VerificationStatus.FAIL,
-        'Burn token verification failed.',
-        [verificationResult],
-      );
-    }
-
-    if (data.assets.size() !== data.reason.proofs.length) {
-      return new VerificationResult(
-        'TokenSplitReasonVerificationRule',
-        VerificationStatus.FAIL,
-        'Total amount of assets differ in token and proofs.',
-        [],
-      );
-    }
-
-    const burntTokenLastTransaction = data.reason.token.transactions.at(-1);
-    for (const proof of data.reason.proofs) {
-      const aggregationPathResult = await proof.aggregationPath.verify(proof.assetId.toBitString().toBigInt());
-      if (!aggregationPathResult.isSuccessful) {
-        return new VerificationResult(
-          'TokenSplitReasonVerificationRule',
-          VerificationStatus.FAIL,
-          `Aggregation path verification failed for asset: ${proof.assetId.toString()}`,
-          [],
-        );
-      }
-
-      const assetTreePathResult = await proof.assetTreePath.verify(token.id.toBitString().toBigInt());
-      if (!assetTreePathResult.isSuccessful) {
-        return new VerificationResult(
-          'TokenSplitReasonVerificationRule',
-          VerificationStatus.FAIL,
-          `Asset tree path verification failed for token: ${token.id.toString()}`,
-          [],
-        );
-      }
-
-      if (!areUint8ArraysEqual(proof.assetTreePath.root.imprint, proof.aggregationPath.steps.at(0)?.data)) {
-        return new VerificationResult(
-          'TokenSplitReasonVerificationRule',
-          VerificationStatus.FAIL,
-          'Asset tree root does not match aggregation path leaf.',
-          [],
-        );
-      }
-
-      const amount = data.assets.get(proof.assetId)?.value;
-      if (amount === null) {
-        return new VerificationResult(
-          'TokenSplitReasonVerificationRule',
-          VerificationStatus.FAIL,
-          `Asset id ${proof.assetId.toString()} not found in asset data.`,
-          [],
-        );
-      }
-
-      if (proof.assetTreePath.steps.at(0)?.value !== amount) {
-        return new VerificationResult(
-          'TokenSplitReasonVerificationRule',
-          VerificationStatus.FAIL,
-          `Asset amount for asset id ${proof.assetId.toString()} does not match asset tree leaf.`,
-          [],
-        );
-      }
-
-      if (
-        !burntTokenLastTransaction?.recipient.equals(
-          await Address.fromPredicate(BurnPredicate.create(proof.aggregationPath.root.imprint)),
-        )
-      ) {
-        return new VerificationResult(
-          'TokenSplitReasonVerificationRule',
-          VerificationStatus.FAIL,
-          `Aggregation path root does not match burn predicate.`,
-          [],
-        );
-      }
-    }
-
-    return new VerificationResult('TokenSplitReasonVerificationRule', VerificationStatus.OK);
   }
 }

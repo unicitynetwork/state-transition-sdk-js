@@ -91,8 +91,8 @@ export class InclusionProofVerificationRule {
     }
 
     const predicateVerificationResult = await predicateVerifierFactory.verify(
-      certificationData.lockScript,
-      certificationData.sourceStateHash,
+      transaction.lockScript,
+      transaction.sourceStateHash,
       certificationData.transactionHash,
       certificationData.unlockScript,
     );

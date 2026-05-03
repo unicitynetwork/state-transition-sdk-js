@@ -9,7 +9,7 @@ import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { CborError } from '../../serialization/cbor/CborError.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
-import { HexConverter } from '../../serialization/HexConverter.js';
+import { HexConverter } from '../../util/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
 
 /**
@@ -68,12 +68,17 @@ export class UnicityCertificate {
     const siblingHashes = shardTreeCertificate.siblingHashList;
     for (let i = 0; i < siblingHashes.length; i++) {
       const isRight = shardId.getBit(shardId.length - 1 - i);
-      const left = isRight ? siblingHashes[i] : rootHash.data;
-      const right = isRight ? rootHash.data : siblingHashes[i];
-      rootHash = await new DataHasher(HashAlgorithm.SHA256)
-        .update(CborSerializer.encodeByteString(left))
-        .update(CborSerializer.encodeByteString(right))
-        .digest();
+      if (isRight) {
+        rootHash = await new DataHasher(HashAlgorithm.SHA256)
+          .update(CborSerializer.encodeByteString(siblingHashes[i]))
+          .update(CborSerializer.encodeByteString(rootHash.data))
+          .digest();
+      } else {
+        rootHash = await new DataHasher(HashAlgorithm.SHA256)
+          .update(CborSerializer.encodeByteString(rootHash.data))
+          .update(CborSerializer.encodeByteString(siblingHashes[i]))
+          .digest();
+      }
     }
 
     return rootHash;
@@ -91,7 +96,7 @@ export class UnicityCertificate {
       throw new CborError(`Invalid CBOR tag for UnicityCertificate: ${tag.tag}`);
     }
 
-    const data = CborDeserializer.decodeArray(tag.data);
+    const data = CborDeserializer.decodeArray(tag.data, 7);
     const version = CborDeserializer.decodeUnsignedInteger(data[0]);
     if (version !== UnicityCertificate.VERSION) {
       throw new CborError(`Unsupported UnicityCertificate version: ${version}`);

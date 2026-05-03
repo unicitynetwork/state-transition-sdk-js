@@ -1,6 +1,5 @@
 import config from './config.json' with { type: 'json' };
 import { CustomPaymentData } from './CustomPaymentData.js';
-import { CustomSplitPaymentData } from './CustomSplitPaymentData.js';
 import { AggregatorClient } from '../../../src/api/AggregatorClient.js';
 import { RootTrustBase } from '../../../src/api/bft/RootTrustBase.js';
 import { CertificationData } from '../../../src/api/CertificationData.js';
@@ -9,20 +8,20 @@ import { SigningService } from '../../../src/crypto/secp256k1/SigningService.js'
 import { Asset } from '../../../src/payment/asset/Asset.js';
 import { AssetId } from '../../../src/payment/asset/AssetId.js';
 import { PaymentAssetCollection } from '../../../src/payment/asset/PaymentAssetCollection.js';
-import { SplitReason } from '../../../src/payment/SplitReason.js';
+import { SplitMintJustification } from '../../../src/payment/SplitMintJustification.js';
+import { SplitMintJustificationVerifier } from '../../../src/payment/SplitMintJustificationVerifier.js';
 import { TokenSplit } from '../../../src/payment/TokenSplit.js';
 import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
 import { PayToPublicKeyPredicateUnlockScript } from '../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
 import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
-import { HexConverter } from '../../../src/serialization/HexConverter.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
-import { Address } from '../../../src/transaction/Address.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../src/transaction/Token.js';
 import { TokenId } from '../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
+import { MintJustificationVerifierService } from '../../../src/transaction/verification/MintJustificationVerifierService.js';
+import { HexConverter } from '../../../src/util/HexConverter.js';
 import { waitInclusionProof } from '../../../src/util/InclusionProofUtils.js';
-import { VerificationStatus } from '../../../src/verification/VerificationStatus.js';
 import trustBaseJson from '../trust-base.json' with { type: 'json' };
 
 it('Token splitting', async () => {
@@ -32,6 +31,10 @@ it('Token splitting', async () => {
   const client = new StateTransitionClient(aggregatorClient);
 
   const predicateVerifier = PredicateVerifierService.create(trustBase);
+  const mintJustificationVerifier = new MintJustificationVerifierService();
+  mintJustificationVerifier.register(
+    new SplitMintJustificationVerifier(trustBase, predicateVerifier, CustomPaymentData.decode),
+  );
 
   const ownerPrivateKey = HexConverter.decode(config.ownerPrivateKey);
   const ownerSigningService = new SigningService(ownerPrivateKey);
@@ -46,9 +49,10 @@ it('Token splitting', async () => {
 
   const paymentData = new CustomPaymentData(PaymentAssetCollection.create(...assets), 'my other data');
   const mintTransaction = await MintTransaction.create(
-    await Address.fromPredicate(ownerPredicate),
+    ownerPredicate,
     TokenId.generate(),
     TokenType.generate(),
+    null,
     await paymentData.encode(),
   );
 
@@ -60,6 +64,7 @@ it('Token splitting', async () => {
   const token = await Token.mint(
     trustBase,
     predicateVerifier,
+    mintJustificationVerifier,
     await mintTransaction.toCertifiedTransaction(
       trustBase,
       predicateVerifier,
@@ -73,7 +78,7 @@ it('Token splitting', async () => {
     [TokenId.generate(), PaymentAssetCollection.create(new Asset(new AssetId(textEncoder.encode('USD')), 500n))],
   ];
 
-  const result = await TokenSplit.split(token, ownerPredicate, CustomPaymentData.decode, splitTokens);
+  const result = await TokenSplit.split(token, CustomPaymentData.decode, splitTokens);
 
   response = await client.submitCertificationRequest(
     await CertificationData.fromTransaction(
@@ -103,12 +108,13 @@ it('Token splitting', async () => {
       throw new Error('Missing split reason proof for token.');
     }
 
-    const splitPaymentData = new CustomSplitPaymentData(assets, SplitReason.create(burntToken, entry.proofs));
+    const splitPaymentData = new CustomPaymentData(assets, 'split token');
 
     const mintTransaction = await MintTransaction.create(
-      await Address.fromPredicate(ownerPredicate),
+      ownerPredicate,
       tokenId,
       TokenType.generate(),
+      SplitMintJustification.create(burntToken, entry.proofs).toCBOR(),
       await splitPaymentData.encode(),
     );
 
@@ -122,23 +128,13 @@ it('Token splitting', async () => {
     const splitToken = await Token.mint(
       trustBase,
       predicateVerifier,
+      mintJustificationVerifier,
       await mintTransaction.toCertifiedTransaction(
         trustBase,
         predicateVerifier,
         await waitInclusionProof(client, trustBase, predicateVerifier, mintTransaction),
       ),
     );
-
-    const splitResult = await TokenSplit.verify(
-      await Token.fromCBOR(splitToken.toCBOR()),
-      CustomSplitPaymentData.decode,
-      trustBase,
-      predicateVerifier,
-    );
-
-    if (splitResult.status !== VerificationStatus.OK) {
-      throw new Error(`Split token verification failed: ${splitResult.status}`);
-    }
 
     console.log(`Token[${i++}]: `, HexConverter.encode(splitToken.toCBOR()), '\n');
   }

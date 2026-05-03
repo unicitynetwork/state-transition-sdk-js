@@ -11,7 +11,7 @@ export class UnicityId {
   ) {}
 
   public static fromCBOR(bytes: Uint8Array): UnicityId {
-    const data = CborDeserializer.decodeArray(bytes);
+    const data = CborDeserializer.decodeArray(bytes, 2);
     return new UnicityId(
       CborDeserializer.decodeTextString(data[0]),
       CborDeserializer.decodeNullable(data[1], CborDeserializer.decodeTextString),

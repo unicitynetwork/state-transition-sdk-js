@@ -13,9 +13,7 @@ import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPub
 import { EncodedPredicate } from '../../../src/predicate/EncodedPredicate.js';
 import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
-import { HexConverter } from '../../../src/serialization/HexConverter.js';
 import { SparseMerkleTree } from '../../../src/smt/radix/SparseMerkleTree.js';
-import { Address } from '../../../src/transaction/Address.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { TokenId } from '../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
@@ -23,6 +21,7 @@ import {
   InclusionProofVerificationRule,
   InclusionProofVerificationStatus,
 } from '../../../src/transaction/verification/rule/InclusionProofVerificationRule.js';
+import { HexConverter } from '../../../src/util/HexConverter.js';
 import { createRootTrustBase } from '../../utils/RootTrustBaseFixture.js';
 import { createUnicityCertificate } from '../../utils/UnicityCertificateFixture.js';
 
@@ -40,10 +39,9 @@ describe('InclusionProof', () => {
 
   beforeAll(async () => {
     transaction = await MintTransaction.create(
-      await Address.fromPredicate(PayToPublicKeyPredicate.fromSigningService(signingService)),
+      PayToPublicKeyPredicate.fromSigningService(signingService),
       TokenId.generate(),
       TokenType.generate(),
-      new Uint8Array(),
     );
     const smt = new SparseMerkleTree(new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher));
     const stateId = await StateId.fromTransaction(transaction);
@@ -89,9 +87,10 @@ describe('InclusionProof', () => {
         predicateVerifier,
         new InclusionProof(certificationData, null, unicityCertificate),
         await MintTransaction.create(
-          await Address.fromPredicate(transaction.lockScript),
+          transaction.lockScript,
           TokenId.generate(),
           transaction.tokenType,
+          null,
           transaction.data,
         ),
       ).then((result) => result.status),

@@ -4,7 +4,7 @@ import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { SparseMerkleTreePath } from '../smt/plain/SparseMerkleTreePath.js';
 import { SparseMerkleSumTreePath } from '../smt/sum/SparseMerkleSumTreePath.js';
 
-export class SplitReasonProof {
+export class SplitAssetProof {
   private constructor(
     public readonly assetId: AssetId,
     public readonly aggregationPath: SparseMerkleTreePath,
@@ -15,8 +15,8 @@ export class SplitReasonProof {
     assetId: AssetId,
     aggregationPath: SparseMerkleTreePath,
     assetTreePath: SparseMerkleSumTreePath,
-  ): SplitReasonProof {
-    return new SplitReasonProof(assetId, aggregationPath, assetTreePath);
+  ): SplitAssetProof {
+    return new SplitAssetProof(assetId, aggregationPath, assetTreePath);
   }
 
   /**
@@ -25,10 +25,10 @@ export class SplitReasonProof {
    * @param bytes CBOR bytes
    * @return split mint reason proof
    */
-  public static fromCBOR(bytes: Uint8Array): SplitReasonProof {
-    const data = CborDeserializer.decodeArray(bytes);
+  public static fromCBOR(bytes: Uint8Array): SplitAssetProof {
+    const data = CborDeserializer.decodeArray(bytes, 3);
 
-    return new SplitReasonProof(
+    return new SplitAssetProof(
       AssetId.fromCBOR(data[0]),
       SparseMerkleTreePath.fromCBOR(data[1]),
       SparseMerkleSumTreePath.fromCBOR(data[2]),

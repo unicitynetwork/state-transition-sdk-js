@@ -2,11 +2,11 @@ import { StateId } from './StateId.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
-import { HexConverter } from '../serialization/HexConverter.js';
 import { FinalizedBranch } from '../smt/radix/FinalizedBranch.js';
 import { FinalizedLeafBranch } from '../smt/radix/FinalizedLeafBranch.js';
 import { SparseMerkleTreeRootNode } from '../smt/radix/SparseMerkleTreeRootNode.js';
 import { BitString } from '../util/BitString.js';
+import { HexConverter } from '../util/HexConverter.js';
 import { dedent } from '../util/StringUtils.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 
@@ -76,7 +76,7 @@ export class InclusionCertificate {
     }
 
     const siblings: DataHash[] = [];
-    for (let i = this.BITMAP_SIZE; i < bytes.length; i += HashAlgorithm.SHA256.length) {
+    for (let i = InclusionCertificate.BITMAP_SIZE; i < bytes.length; i += HashAlgorithm.SHA256.length) {
       siblings.push(new DataHash(HashAlgorithm.SHA256, bytes.slice(i, i + HashAlgorithm.SHA256.length)));
     }
 

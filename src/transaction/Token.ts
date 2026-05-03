@@ -3,17 +3,18 @@ import { CertifiedTransferTransaction } from './CertifiedTransferTransaction.js'
 import { ITransaction } from './ITransaction.js';
 import { TokenId } from './TokenId.js';
 import { TokenType } from './TokenType.js';
+import { MintJustificationVerifierService } from './verification/MintJustificationVerifierService.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborError } from '../serialization/cbor/CborError.js';
+import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { dedent } from '../util/StringUtils.js';
 import { VerificationError } from '../verification/VerificationError.js';
 import { VerificationResult } from '../verification/VerificationResult.js';
 import { VerificationStatus } from '../verification/VerificationStatus.js';
 import { CertifiedMintTransactionVerificationRule } from './verification/rule/CertifiedMintTransactionVerificationRule.js';
 import { CertifiedTransferTransactionVerificationRule } from './verification/rule/CertifiedTransferTransactionVerificationRule.js';
-import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 
 export class Token {
   public static readonly CBOR_TAG = 39040n;
@@ -50,26 +51,31 @@ export class Token {
       throw new CborError(`Invalid CBOR tag for Token: ${tag.tag}`);
     }
 
-    const data = CborDeserializer.decodeArray(tag.data);
+    const data = CborDeserializer.decodeArray(tag.data, 3);
     const version = CborDeserializer.decodeUnsignedInteger(data[0]);
     if (version !== Token.VERSION) {
       throw new CborError(`Unsupported Token version: ${version}`);
     }
 
-    const transactions = CborDeserializer.decodeArray(data[2]);
-    return new Token(
-      await CertifiedMintTransaction.fromCBOR(data[1]),
-      transactions.map((transaction) => CertifiedTransferTransaction.fromCBOR(transaction)),
-    );
+    const transactionsBytes = CborDeserializer.decodeArray(data[2]);
+    const genesis = await CertifiedMintTransaction.fromCBOR(data[1]);
+    const transactions: CertifiedTransferTransaction[] = [];
+    const token = new Token(genesis, transactions);
+    for (const transaction of transactionsBytes) {
+      transactions.push(await CertifiedTransferTransaction.fromCBOR(transaction, token));
+    }
+
+    return token;
   }
 
   public static async mint(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,
+    mintJustificationVerifier: MintJustificationVerifierService,
     genesis: CertifiedMintTransaction,
   ): Promise<Token> {
     const token = new Token(genesis);
-    const result = await token.verify(trustBase, predicateVerifier);
+    const result = await token.verify(trustBase, predicateVerifier, mintJustificationVerifier);
     if (result.status !== VerificationStatus.OK) {
       throw new VerificationError('Invalid token genesis', result);
     }
@@ -103,12 +109,7 @@ export class Token {
     predicateVerifier: PredicateVerifierService,
     transaction: CertifiedTransferTransaction,
   ): Promise<Token> {
-    const result = await CertifiedTransferTransactionVerificationRule.verify(
-      trustBase,
-      predicateVerifier,
-      this.latestTransaction,
-      transaction,
-    );
+    const result = await CertifiedTransferTransactionVerificationRule.verify(trustBase, predicateVerifier, transaction);
     if (result.status !== VerificationStatus.OK) {
       console.log(result.toString());
       throw new VerificationError('Invalid transfer transaction', result);
@@ -123,9 +124,15 @@ export class Token {
   public async verify(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,
+    mintJustificationVerifier: MintJustificationVerifierService,
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];
-    const result = await CertifiedMintTransactionVerificationRule.verify(trustBase, predicateVerifier, this.genesis);
+    const result = await CertifiedMintTransactionVerificationRule.verify(
+      trustBase,
+      predicateVerifier,
+      mintJustificationVerifier,
+      this.genesis,
+    );
     results.push(result);
     if (result.status !== VerificationStatus.OK) {
       return new VerificationResult('TokenVerification', VerificationStatus.FAIL, '', results);
@@ -137,7 +144,6 @@ export class Token {
       const result = await CertifiedTransferTransactionVerificationRule.verify(
         trustBase,
         predicateVerifier,
-        i === 0 ? this.genesis : this._transactions[i - 1],
         transaction,
       );
       transferResults.push(result);

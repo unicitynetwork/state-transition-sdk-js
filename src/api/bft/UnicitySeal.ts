@@ -7,7 +7,7 @@ import { CborError } from '../../serialization/cbor/CborError.js';
 import { CborMap } from '../../serialization/cbor/CborMap.js';
 import { CborMapEntry } from '../../serialization/cbor/CborMapEntry.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
-import { HexConverter } from '../../serialization/HexConverter.js';
+import { HexConverter } from '../../util/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
 
 /**
@@ -87,7 +87,7 @@ export class UnicitySeal {
       throw new CborError(`Invalid CBOR tag for UnicitySeal: ${tag.tag}`);
     }
 
-    const data = CborDeserializer.decodeArray(tag.data);
+    const data = CborDeserializer.decodeArray(tag.data, 8);
     const version = CborDeserializer.decodeUnsignedInteger(data[0]);
     if (version !== UnicitySeal.VERSION) {
       throw new CborError(`Unsupported UnicitySeal version: ${version}`);

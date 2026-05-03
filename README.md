@@ -46,8 +46,8 @@ Recipient knows some info about token, like token type for generating address.
 
 ```text
 A[Start] 
-A --> B[Recipient Generates Address]
-B --> C[Recipient Shares Address with Sender]
+A --> B[Recipient Generates Predicate]
+B --> C[Recipient Shares Predicate with Sender]
 C --> D[Sender Creates Transaction]
 D --> E[Sender Submits Transaction]
 E --> F[Sender Retrieves Inclusion Proof]
@@ -65,23 +65,21 @@ I --> J[End]
 Token {
   genesis: CertifiedMintTransaction {
     transaction: MintTransaction {
-      sourceStateHash: MintTransactionState,
-      lockScript: IPredicate,
-      recipient: PayToScriptHash,
+      recipient: IPredicate,
       tokenId: TokenId,
       tokenType: TokenType,
-      data: Uint8Array
+      justification: Uint8Array | null
+      data: Uint8Array | null
     },
     inclusionProof: InclusionProof
   },
   transactions: [
     CertifiedTransferTransaction {
       transaction: TransferTransaction {
-        sourceStateHash: DataHash,
-        lockScript: IPredicate,
-        recipient: PayToScriptHash,
-        x: Uint8Array,
-        data: Uint8Array
+        version: number,
+        recipient: IPredicate,
+        stateMask: Uint8Array,
+        data: Uint8Array | null
       },
       inclusionProof: InclusionProof
     },

@@ -2,7 +2,7 @@ import { ShardId } from './ShardId.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { CborError } from '../../serialization/cbor/CborError.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
-import { HexConverter } from '../../serialization/HexConverter.js';
+import { HexConverter } from '../../util/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
 
 /**
@@ -49,7 +49,7 @@ export class ShardTreeCertificate {
       throw new CborError(`Invalid CBOR tag for ShardTreeCertificate: ${tag.tag}`);
     }
 
-    const data = CborDeserializer.decodeArray(tag.data);
+    const data = CborDeserializer.decodeArray(tag.data, 3);
     const version = CborDeserializer.decodeUnsignedInteger(data[0]);
     if (version !== ShardTreeCertificate.VERSION) {
       throw new CborError(`Unsupported ShardTreeCertificate version: ${version}`);

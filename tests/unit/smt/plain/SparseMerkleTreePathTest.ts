@@ -1,9 +1,9 @@
 import { DataHash } from '../../../../src/crypto/hash/DataHash.js';
-import { BigintConverter } from '../../../../src/serialization/BigintConverter.js';
 import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
-import { HexConverter } from '../../../../src/serialization/HexConverter.js';
 import { SparseMerkleTreePath } from '../../../../src/smt/plain/SparseMerkleTreePath.js';
 import { SparseMerkleTreePathStep } from '../../../../src/smt/plain/SparseMerkleTreePathStep.js';
+import { BigintConverter } from '../../../../src/util/BigintConverter.js';
+import { HexConverter } from '../../../../src/util/HexConverter.js';
 
 describe('SparseMerkleTreePath', () => {
   it('should encode and decode to exactly same object', () => {
