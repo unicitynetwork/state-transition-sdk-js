@@ -14,7 +14,7 @@ export class Asset {
   }
 
   public static fromCBOR(bytes: Uint8Array): Asset {
-    const data = CborDeserializer.decodeArray(bytes);
+    const data = CborDeserializer.decodeArray(bytes, 2);
 
     return new Asset(AssetId.fromCBOR(data[0]), BigintConverter.decode(CborDeserializer.decodeByteString(data[1])));
   }

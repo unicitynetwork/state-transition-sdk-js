@@ -64,7 +64,7 @@ export class TransferTransaction implements ITransaction {
       throw new CborError(`Invalid CBOR tag for TransferTransaction: ${tag.tag}`);
     }
 
-    const data = CborDeserializer.decodeArray(tag.data);
+    const data = CborDeserializer.decodeArray(tag.data, 4);
     const version = CborDeserializer.decodeUnsignedInteger(data[0]);
     if (version !== TransferTransaction.VERSION) {
       throw new CborError(`Unsupported TransferTransaction version: ${version}`);

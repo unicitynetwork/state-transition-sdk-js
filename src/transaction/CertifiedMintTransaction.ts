@@ -55,7 +55,7 @@ export class CertifiedMintTransaction implements ITransaction {
   }
 
   public static async fromCBOR(bytes: Uint8Array): Promise<CertifiedMintTransaction> {
-    const data = CborDeserializer.decodeArray(bytes);
+    const data = CborDeserializer.decodeArray(bytes, 2);
     return new CertifiedMintTransaction(await MintTransaction.fromCBOR(data[0]), InclusionProof.fromCBOR(data[1]));
   }
 

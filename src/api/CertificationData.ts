@@ -56,7 +56,7 @@ export class CertificationData {
       throw new CborError(`Invalid CBOR tag for CertificationData: ${tag.tag}`);
     }
 
-    const data = CborDeserializer.decodeArray(tag.data);
+    const data = CborDeserializer.decodeArray(tag.data, 5);
     const version = CborDeserializer.decodeUnsignedInteger(data[0]);
     if (version !== CertificationData.VERSION) {
       throw new CborError(`Unsupported CertificationData version: ${version}`);

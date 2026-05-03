@@ -59,7 +59,7 @@ export class CertifiedUnicityIdMintTransaction implements ITransaction {
   }
 
   public static async fromCBOR(bytes: Uint8Array): Promise<CertifiedUnicityIdMintTransaction> {
-    const data = CborDeserializer.decodeArray(bytes);
+    const data = CborDeserializer.decodeArray(bytes, 2);
     return new CertifiedUnicityIdMintTransaction(
       await UnicityIdMintTransaction.fromCBOR(data[0]),
       InclusionProof.fromCBOR(data[1]),

@@ -26,7 +26,7 @@ export class InclusionProofResponse {
    * @return inclusion proof response
    */
   public static fromCBOR(bytes: Uint8Array): InclusionProofResponse {
-    const data = CborDeserializer.decodeArray(bytes);
+    const data = CborDeserializer.decodeArray(bytes, 2);
     return new InclusionProofResponse(
       CborDeserializer.decodeUnsignedInteger(data[0]),
       InclusionProof.fromCBOR(data[1]),

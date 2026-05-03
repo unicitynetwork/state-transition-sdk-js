@@ -16,7 +16,7 @@ export class SparseMerkleTreePath {
   ) {}
 
   public static fromCBOR(bytes: Uint8Array): SparseMerkleTreePath {
-    const data = CborDeserializer.decodeArray(bytes);
+    const data = CborDeserializer.decodeArray(bytes, 2);
     const steps = CborDeserializer.decodeArray(data[1]);
 
     return new SparseMerkleTreePath(

@@ -51,7 +51,7 @@ export class Token {
       throw new CborError(`Invalid CBOR tag for Token: ${tag.tag}`);
     }
 
-    const data = CborDeserializer.decodeArray(tag.data);
+    const data = CborDeserializer.decodeArray(tag.data, 3);
     const version = CborDeserializer.decodeUnsignedInteger(data[0]);
     if (version !== Token.VERSION) {
       throw new CborError(`Unsupported Token version: ${version}`);

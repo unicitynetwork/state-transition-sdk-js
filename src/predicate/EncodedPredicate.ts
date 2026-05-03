@@ -40,7 +40,7 @@ export class EncodedPredicate implements IPredicate {
       throw new CborError(`Invalid CBOR tag for Predicate: ${tag.tag}`);
     }
 
-    const data = CborDeserializer.decodeArray(tag.data);
+    const data = CborDeserializer.decodeArray(tag.data, 3);
     const engine = CborDeserializer.decodeUnsignedInteger(data[0]);
     if (engine > BigInt(Number.MAX_SAFE_INTEGER) || !PredicateEngine[Number(engine)]) {
       throw new CborError('Invalid predicate engine.');

@@ -23,7 +23,7 @@ export class UnicityIdToken {
   }
 
   public static async fromCBOR(bytes: Uint8Array): Promise<UnicityIdToken> {
-    const data = CborDeserializer.decodeArray(bytes);
+    const data = CborDeserializer.decodeArray(bytes, 1);
 
     return new UnicityIdToken(await CertifiedUnicityIdMintTransaction.fromCBOR(data[0]));
   }

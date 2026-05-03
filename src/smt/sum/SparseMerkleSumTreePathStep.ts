@@ -31,7 +31,7 @@ export class SparseMerkleSumTreePathStep {
   }
 
   public static fromCBOR(bytes: Uint8Array): SparseMerkleSumTreePathStep {
-    const data = CborDeserializer.decodeArray(bytes);
+    const data = CborDeserializer.decodeArray(bytes, 3);
 
     return new SparseMerkleSumTreePathStep(
       BigintConverter.decode(CborDeserializer.decodeByteString(data[0])),

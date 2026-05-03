@@ -26,7 +26,7 @@ export class SplitAssetProof {
    * @return split mint reason proof
    */
   public static fromCBOR(bytes: Uint8Array): SplitAssetProof {
-    const data = CborDeserializer.decodeArray(bytes);
+    const data = CborDeserializer.decodeArray(bytes, 3);
 
     return new SplitAssetProof(
       AssetId.fromCBOR(data[0]),

@@ -79,7 +79,7 @@ export class InputRecord {
     if (tag.tag !== InputRecord.CBOR_TAG) {
       throw new CborError(`Invalid CBOR tag for InputRecord: ${tag.tag}`);
     }
-    const data = CborDeserializer.decodeArray(tag.data);
+    const data = CborDeserializer.decodeArray(tag.data, 10);
     const version = CborDeserializer.decodeUnsignedInteger(data[0]);
     if (version !== InputRecord.VERSION) {
       throw new CborError(`Unsupported InputRecord version: ${version}`);

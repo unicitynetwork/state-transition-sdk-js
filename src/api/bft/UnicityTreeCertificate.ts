@@ -29,7 +29,7 @@ class HashStep {
    * @return hash step
    */
   public static fromCBOR(bytes: Uint8Array): HashStep {
-    const data = CborDeserializer.decodeArray(bytes);
+    const data = CborDeserializer.decodeArray(bytes, 2);
 
     return new HashStep(CborDeserializer.decodeUnsignedInteger(data[0]), CborDeserializer.decodeByteString(data[1]));
   }
@@ -95,7 +95,7 @@ export class UnicityTreeCertificate {
       throw new CborError(`Invalid CBOR tag for UnicityTreeCertificate: ${tag.tag}`);
     }
 
-    const data = CborDeserializer.decodeArray(tag.data);
+    const data = CborDeserializer.decodeArray(tag.data, 3);
     const version = CborDeserializer.decodeUnsignedInteger(data[0]);
     if (version !== UnicityTreeCertificate.VERSION) {
       throw new CborError(`Unsupported UnicityTreeCertificate version: ${version}`);

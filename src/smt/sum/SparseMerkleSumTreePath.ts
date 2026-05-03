@@ -23,7 +23,7 @@ export class SparseMerkleSumTreePath {
   ) {}
 
   public static fromCBOR(bytes: Uint8Array): SparseMerkleSumTreePath {
-    const data = CborDeserializer.decodeArray(bytes);
+    const data = CborDeserializer.decodeArray(bytes, 2);
     const steps = CborDeserializer.decodeArray(data[1]);
 
     return new SparseMerkleSumTreePath(

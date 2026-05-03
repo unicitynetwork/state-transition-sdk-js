@@ -70,7 +70,7 @@ export class UnicityIdMintTransaction implements ITransaction {
       throw new CborError(`Invalid CBOR tag for UnicityIdMintTransaction: ${tag.tag}`);
     }
 
-    const data = CborDeserializer.decodeArray(tag.data);
+    const data = CborDeserializer.decodeArray(tag.data, 6);
     const version = CborDeserializer.decodeUnsignedInteger(data[0]);
     if (version !== UnicityIdMintTransaction.VERSION) {
       throw new CborError(`Unsupported UnicityIdMintTransaction version: ${version}`);

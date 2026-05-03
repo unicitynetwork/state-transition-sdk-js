@@ -19,7 +19,7 @@ export class SparseMerkleTreePathStep {
   }
 
   public static fromCBOR(bytes: Uint8Array): SparseMerkleTreePathStep {
-    const data = CborDeserializer.decodeArray(bytes);
+    const data = CborDeserializer.decodeArray(bytes, 2);
 
     return new SparseMerkleTreePathStep(
       BigintConverter.decode(CborDeserializer.decodeByteString(data[0])),

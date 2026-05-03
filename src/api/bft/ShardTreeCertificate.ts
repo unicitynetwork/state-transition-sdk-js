@@ -49,7 +49,7 @@ export class ShardTreeCertificate {
       throw new CborError(`Invalid CBOR tag for ShardTreeCertificate: ${tag.tag}`);
     }
 
-    const data = CborDeserializer.decodeArray(tag.data);
+    const data = CborDeserializer.decodeArray(tag.data, 3);
     const version = CborDeserializer.decodeUnsignedInteger(data[0]);
     if (version !== ShardTreeCertificate.VERSION) {
       throw new CborError(`Unsupported ShardTreeCertificate version: ${version}`);

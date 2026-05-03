@@ -96,7 +96,7 @@ export class UnicityCertificate {
       throw new CborError(`Invalid CBOR tag for UnicityCertificate: ${tag.tag}`);
     }
 
-    const data = CborDeserializer.decodeArray(tag.data);
+    const data = CborDeserializer.decodeArray(tag.data, 7);
     const version = CborDeserializer.decodeUnsignedInteger(data[0]);
     if (version !== UnicityCertificate.VERSION) {
       throw new CborError(`Unsupported UnicityCertificate version: ${version}`);

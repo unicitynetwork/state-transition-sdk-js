@@ -32,7 +32,7 @@ export class SplitMintJustification {
       throw new CborError(`Invalid CBOR tag for SplitMintJustification: ${tag.tag}`);
     }
 
-    const data = CborDeserializer.decodeArray(tag.data);
+    const data = CborDeserializer.decodeArray(tag.data, 2);
 
     return new SplitMintJustification(
       await Token.fromCBOR(data[0]),

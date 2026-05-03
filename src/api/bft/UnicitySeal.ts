@@ -87,7 +87,7 @@ export class UnicitySeal {
       throw new CborError(`Invalid CBOR tag for UnicitySeal: ${tag.tag}`);
     }
 
-    const data = CborDeserializer.decodeArray(tag.data);
+    const data = CborDeserializer.decodeArray(tag.data, 8);
     const version = CborDeserializer.decodeUnsignedInteger(data[0]);
     if (version !== UnicitySeal.VERSION) {
       throw new CborError(`Unsupported UnicitySeal version: ${version}`);

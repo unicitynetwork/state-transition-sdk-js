@@ -42,7 +42,7 @@ export class CertifiedTransferTransaction implements ITransaction {
   }
 
   public static async fromCBOR(bytes: Uint8Array, token: Token): Promise<CertifiedTransferTransaction> {
-    const data = CborDeserializer.decodeArray(bytes);
+    const data = CborDeserializer.decodeArray(bytes, 2);
     return new CertifiedTransferTransaction(
       await TransferTransaction.fromCBOR(data[0], token),
       InclusionProof.fromCBOR(data[1]),
