@@ -21,8 +21,8 @@ export class TransferTransaction implements ITransaction {
 
   private constructor(
     public readonly sourceStateHash: DataHash,
-    public readonly lockScript: IPredicate,
-    public readonly recipient: IPredicate,
+    public readonly lockScript: EncodedPredicate,
+    public readonly recipient: EncodedPredicate,
     private readonly _stateMask: Uint8Array,
     private readonly _data: Uint8Array | null,
   ) {}
@@ -52,7 +52,7 @@ export class TransferTransaction implements ITransaction {
     return new TransferTransaction(
       await transaction.calculateStateHash(),
       transaction.recipient,
-      recipient,
+      EncodedPredicate.fromPredicate(recipient),
       stateMask,
       data,
     );

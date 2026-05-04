@@ -1,5 +1,5 @@
 import { CertificationData } from '../../../src/api/CertificationData.js';
-import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
+import { SignaturePredicate } from '../../../src/predicate/builtin/SignaturePredicate.js';
 import { EncodedPredicate } from '../../../src/predicate/EncodedPredicate.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { TokenId } from '../../../src/transaction/TokenId.js';
@@ -10,7 +10,7 @@ describe('CertificationData', () => {
   it('should encode and decode to exactly same object', async () => {
     const certificationData = await CertificationData.fromMintTransaction(
       await MintTransaction.create(
-        PayToPublicKeyPredicate.create(
+        SignaturePredicate.create(
           HexConverter.decode('02ce9f22e51333c97a8fb1f807a229ece3a8765a16af5fc1a13e30834be3280026'),
         ),
         new TokenId(new Uint8Array(32)),

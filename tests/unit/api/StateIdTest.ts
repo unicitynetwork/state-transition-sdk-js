@@ -1,5 +1,5 @@
 import { StateId } from '../../../src/api/StateId.js';
-import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
+import { SignaturePredicate } from '../../../src/predicate/builtin/SignaturePredicate.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { TokenId } from '../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
@@ -9,7 +9,7 @@ describe('StateId', () => {
   it('should encode and decode to exactly same object', async () => {
     const stateId = await StateId.fromTransaction(
       await MintTransaction.create(
-        PayToPublicKeyPredicate.create(
+        SignaturePredicate.create(
           HexConverter.decode('02ce9f22e51333c97a8fb1f807a229ece3a8765a16af5fc1a13e30834be3280026'),
         ),
         new TokenId(new Uint8Array(32)),

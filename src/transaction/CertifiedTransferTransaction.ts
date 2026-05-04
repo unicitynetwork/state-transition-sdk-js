@@ -4,7 +4,7 @@ import { TransferTransaction } from './TransferTransaction.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { InclusionProof } from '../api/InclusionProof.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
-import { IPredicate } from '../predicate/IPredicate.js';
+import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
 import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
@@ -25,11 +25,11 @@ export class CertifiedTransferTransaction implements ITransaction {
     return this.transaction.data;
   }
 
-  public get lockScript(): IPredicate {
+  public get lockScript(): EncodedPredicate {
     return this.transaction.lockScript;
   }
 
-  public get recipient(): IPredicate {
+  public get recipient(): EncodedPredicate {
     return this.transaction.recipient;
   }
 

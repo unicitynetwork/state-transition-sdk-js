@@ -11,8 +11,8 @@ import { PaymentAssetCollection } from '../../../src/payment/asset/PaymentAssetC
 import { SplitMintJustification } from '../../../src/payment/SplitMintJustification.js';
 import { SplitMintJustificationVerifier } from '../../../src/payment/SplitMintJustificationVerifier.js';
 import { TokenSplit } from '../../../src/payment/TokenSplit.js';
-import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
 import { PayToPublicKeyPredicateUnlockScript } from '../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
+import { SignaturePredicate } from '../../../src/predicate/builtin/SignaturePredicate.js';
 import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
@@ -38,7 +38,7 @@ it('Token splitting', async () => {
 
   const ownerPrivateKey = HexConverter.decode(config.ownerPrivateKey);
   const ownerSigningService = new SigningService(ownerPrivateKey);
-  const ownerPredicate = PayToPublicKeyPredicate.fromSigningService(ownerSigningService);
+  const ownerPredicate = SignaturePredicate.fromSigningService(ownerSigningService);
 
   const textEncoder = new TextEncoder();
 

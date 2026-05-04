@@ -3,9 +3,9 @@ import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../util/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
-import { IPredicate } from '../IPredicate.js';
 import { PredicateEngine } from '../PredicateEngine.js';
 import { IBuiltInPredicate } from './IBuiltInPredicate.js';
+import { EncodedPredicate } from '../EncodedPredicate.js';
 
 export class BurnPredicate implements IBuiltInPredicate {
   private constructor(private readonly _reason: Uint8Array) {
@@ -28,7 +28,7 @@ export class BurnPredicate implements IBuiltInPredicate {
     return new BurnPredicate(reason);
   }
 
-  public static fromPredicate(predicate: IPredicate): BurnPredicate {
+  public static fromPredicate(predicate: EncodedPredicate): BurnPredicate {
     if (predicate.engine !== PredicateEngine.BUILT_IN) {
       throw new Error(`Predicate engine must be ${PredicateEngine.BUILT_IN}.`);
     }

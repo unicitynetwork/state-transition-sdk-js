@@ -3,9 +3,9 @@ import { DataHash } from '../../crypto/hash/DataHash.js';
 import { VerificationResult } from '../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../verification/VerificationStatus.js';
 import { DefaultBuiltInPredicateVerifier } from '../builtin/DefaultBuiltInPredicateVerifier.js';
-import { IPredicate } from '../IPredicate.js';
 import { PredicateEngine } from '../PredicateEngine.js';
 import { IPredicateVerifier } from './IPredicateVerifier.js';
+import { EncodedPredicate } from '../EncodedPredicate.js';
 
 export class PredicateVerifierService {
   private readonly verifiers: Map<PredicateEngine, IPredicateVerifier> = new Map();
@@ -30,7 +30,7 @@ export class PredicateVerifierService {
   }
 
   public verify(
-    predicate: IPredicate,
+    predicate: EncodedPredicate,
     sourceStateHash: DataHash,
     transactionHash: DataHash,
     unlockScript: Uint8Array,

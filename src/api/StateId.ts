@@ -3,7 +3,6 @@ import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
-import { IPredicate } from '../predicate/IPredicate.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { ITransaction } from '../transaction/ITransaction.js';
@@ -41,7 +40,7 @@ export class StateId {
    * @param stateHash state hash.
    * @returns A Promise resolving to a StateId instance.
    */
-  private static async create(predicate: IPredicate, stateHash: DataHash): Promise<StateId> {
+  private static async create(predicate: EncodedPredicate, stateHash: DataHash): Promise<StateId> {
     const hash = await new DataHasher(HashAlgorithm.SHA256)
       .update(
         CborSerializer.encodeArray(

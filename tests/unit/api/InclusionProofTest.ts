@@ -9,7 +9,7 @@ import { DataHasherFactory } from '../../../src/crypto/hash/DataHasherFactory.js
 import { HashAlgorithm } from '../../../src/crypto/hash/HashAlgorithm.js';
 import { NodeDataHasher } from '../../../src/crypto/hash/NodeDataHasher.js';
 import { SigningService } from '../../../src/crypto/secp256k1/SigningService.js';
-import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
+import { SignaturePredicate } from '../../../src/predicate/builtin/SignaturePredicate.js';
 import { EncodedPredicate } from '../../../src/predicate/EncodedPredicate.js';
 import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
@@ -39,7 +39,7 @@ describe('InclusionProof', () => {
 
   beforeAll(async () => {
     transaction = await MintTransaction.create(
-      PayToPublicKeyPredicate.fromSigningService(signingService),
+      SignaturePredicate.fromSigningService(signingService),
       TokenId.generate(),
       TokenType.generate(),
     );

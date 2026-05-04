@@ -3,7 +3,6 @@ import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { MintSigningService } from '../crypto/MintSigningService.js';
 import { PayToPublicKeyPredicateUnlockScript } from '../predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
 import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
-import { IPredicate } from '../predicate/IPredicate.js';
 import { IUnlockScript } from '../predicate/IUnlockScript.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborError } from '../serialization/cbor/CborError.js';
@@ -25,7 +24,7 @@ export class CertificationData {
    * @param {Uint8Array} _unlockScript Unlock script bytes
    */
   private constructor(
-    public readonly lockScript: IPredicate,
+    public readonly lockScript: EncodedPredicate,
     public readonly sourceStateHash: DataHash,
     public readonly transactionHash: DataHash,
     private readonly _unlockScript: Uint8Array,
@@ -103,7 +102,7 @@ export class CertificationData {
       CertificationData.CBOR_TAG,
       CborSerializer.encodeArray(
         CborSerializer.encodeUnsignedInteger(this.version),
-        EncodedPredicate.fromPredicate(this.lockScript).toCBOR(),
+        this.lockScript.toCBOR(),
         CborSerializer.encodeByteString(this.sourceStateHash.data),
         CborSerializer.encodeByteString(this.transactionHash.data),
         CborSerializer.encodeByteString(this._unlockScript),

@@ -1,7 +1,7 @@
 import { InclusionProofVerificationRule, InclusionProofVerificationStatus } from './InclusionProofVerificationRule.js';
 import { RootTrustBase } from '../../../api/bft/RootTrustBase.js';
 import { MintSigningService } from '../../../crypto/MintSigningService.js';
-import { PayToPublicKeyPredicate } from '../../../predicate/builtin/PayToPublicKeyPredicate.js';
+import { SignaturePredicate } from '../../../predicate/builtin/SignaturePredicate.js';
 import { EncodedPredicate } from '../../../predicate/EncodedPredicate.js';
 import { PredicateVerifierService } from '../../../predicate/verification/PredicateVerifierService.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
@@ -23,7 +23,7 @@ export class CertifiedMintTransactionVerificationRule {
 
     const signingService = await MintSigningService.create(genesis.tokenId);
     let result: VerificationResult<unknown> = EncodedPredicate.equals(
-      PayToPublicKeyPredicate.fromSigningService(signingService),
+      SignaturePredicate.fromSigningService(signingService),
       genesis.inclusionProof.certificationData?.lockScript,
     )
       ? new VerificationResult('IsLockScriptValidVerificationRule', VerificationStatus.OK)

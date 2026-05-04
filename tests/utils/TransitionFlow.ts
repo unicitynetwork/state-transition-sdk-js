@@ -3,8 +3,8 @@ import { RootTrustBase } from '../../src/api/bft/RootTrustBase.js';
 import { CertificationData } from '../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../src/api/CertificationResponse.js';
 import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
-import { PayToPublicKeyPredicate } from '../../src/predicate/builtin/PayToPublicKeyPredicate.js';
 import { PayToPublicKeyPredicateUnlockScript } from '../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
+import { SignaturePredicate } from '../../src/predicate/builtin/SignaturePredicate.js';
 import { PredicateVerifierService } from '../../src/predicate/verification/PredicateVerifierService.js';
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
 import { TokenType } from '../../src/transaction/TokenType.js';
@@ -26,11 +26,11 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
       const mintJustificationVerifier = new MintJustificationVerifierService();
 
       const unicityIdSigningService = new SigningService(SigningService.generatePrivateKey());
-      const targetPredicate = PayToPublicKeyPredicate.create(ALICE_SIGNING_SERVICE.publicKey);
+      const targetPredicate = SignaturePredicate.create(ALICE_SIGNING_SERVICE.publicKey);
 
       const unicityId = new UnicityId('testuser', 'unicity-labs/test');
       const unicityIdMintTransaction = await UnicityIdMintTransaction.create(
-        PayToPublicKeyPredicate.fromSigningService(unicityIdSigningService),
+        SignaturePredicate.fromSigningService(unicityIdSigningService),
         targetPredicate,
         unicityId,
         TokenType.generate(),
@@ -72,7 +72,7 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
         predicateVerifier,
         mintJustificationVerifier,
         aliceToken.toCBOR(),
-        PayToPublicKeyPredicate.create(BOB_SIGNING_SERVICE.publicKey),
+        SignaturePredicate.create(BOB_SIGNING_SERVICE.publicKey),
         ALICE_SIGNING_SERVICE,
       );
 
@@ -82,7 +82,7 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
         predicateVerifier,
         mintJustificationVerifier,
         bobToken.toCBOR(),
-        PayToPublicKeyPredicate.create(CAROL_SIGNING_SERVICE.publicKey),
+        SignaturePredicate.create(CAROL_SIGNING_SERVICE.publicKey),
         BOB_SIGNING_SERVICE,
       );
 

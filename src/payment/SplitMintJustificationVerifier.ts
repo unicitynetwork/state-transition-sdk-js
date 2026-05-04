@@ -77,6 +77,16 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
     const burntTokenLastTransaction = justification.token.transactions.at(-1);
     const root = justification.proofs.at(0)?.aggregationPath.root;
     for (const proof of justification.proofs) {
+      const assetIdKey = HexConverter.encode(proof.assetId.bytes);
+      if (validatedAssets.has(assetIdKey)) {
+        return new VerificationResult(
+          'SplitMintJustificationVerifier',
+          VerificationStatus.FAIL,
+          `Duplicate split proof for asset id ${proof.assetId.toString()}.`,
+          [],
+        );
+      }
+
       const aggregationPathResult = await proof.aggregationPath.verify(proof.assetId.toBitString().toBigInt());
       if (!aggregationPathResult.isSuccessful) {
         return new VerificationResult(
@@ -99,7 +109,7 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
 
       if (!proof.aggregationPath.root.equals(root)) {
         return new VerificationResult(
-          'TokenSplitReasonVerificationRule',
+          'SplitMintJustificationVerifier',
           VerificationStatus.FAIL,
           'Current proof is not derived from the same asset tree as other proofs.',
         );
@@ -148,14 +158,14 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
         );
       }
 
-      validatedAssets.add(HexConverter.encode(proof.assetId.bytes));
+      validatedAssets.add(assetIdKey);
     }
 
     if (validatedAssets.size !== paymentData.assets.size()) {
       return new VerificationResult(
         'SplitMintJustificationVerifier',
         VerificationStatus.FAIL,
-        'Some assets proofs are missing from the token.',
+        'Some asset proofs are missing from the token.',
         [],
       );
     }

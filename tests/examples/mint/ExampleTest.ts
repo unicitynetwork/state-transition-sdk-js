@@ -3,7 +3,7 @@ import { AggregatorClient } from '../../../src/api/AggregatorClient.js';
 import { RootTrustBase } from '../../../src/api/bft/RootTrustBase.js';
 import { CertificationData } from '../../../src/api/CertificationData.js';
 import { SigningService } from '../../../src/crypto/secp256k1/SigningService.js';
-import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
+import { SignaturePredicate } from '../../../src/predicate/builtin/SignaturePredicate.js';
 import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
@@ -27,7 +27,7 @@ it('Token minting', async () => {
 
   const ownerPrivateKey = HexConverter.decode(config.ownerPrivateKey);
   const ownerSigningService = new SigningService(ownerPrivateKey);
-  const ownerPredicate = PayToPublicKeyPredicate.fromSigningService(ownerSigningService);
+  const ownerPredicate = SignaturePredicate.fromSigningService(ownerSigningService);
 
   const mintTransaction = await MintTransaction.create(
     ownerPredicate,

@@ -16,6 +16,8 @@ export class CertifiedUnicityIdMintTransactionVerificationRule {
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];
 
+    // TODO: Verify that minting transaction input signing service is the same as the one used to mint the token.
+
     const result = await InclusionProofVerificationRule.verify(
       trustBase,
       predicateVerifier,
