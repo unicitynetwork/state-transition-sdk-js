@@ -29,7 +29,7 @@ describe('SplitBuilder Functional Test', () => {
     const aggregatorClient = TestAggregatorClient.create();
     const trustBase = aggregatorClient.rootTrustBase;
     const client = new StateTransitionClient(aggregatorClient);
-    const predicateVerifier = PredicateVerifierService.create(trustBase);
+    const predicateVerifier = PredicateVerifierService.create();
     const mintJustificationVerifier = new MintJustificationVerifierService();
     mintJustificationVerifier.register(
       new SplitMintJustificationVerifier(trustBase, predicateVerifier, TestPaymentData.decode),

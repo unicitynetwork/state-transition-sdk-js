@@ -22,7 +22,7 @@ import { VerificationStatus } from '../../../src/verification/VerificationStatus
 import trustBaseJson from '../trust-base.json' with { type: 'json' };
 
 async function receiveToken(client: StateTransitionClient, trustBase: RootTrustBase): Promise<string> {
-  const predicateVerifier = PredicateVerifierService.create(trustBase);
+  const predicateVerifier = PredicateVerifierService.create();
   const mintJustificationVerifier = new MintJustificationVerifierService();
 
   const ownerPrivateKey = HexConverter.decode(config.ownerPrivateKey);
@@ -58,7 +58,7 @@ it('Token transfer', async () => {
   const aggregatorClient = new AggregatorClient(config.aggregatorUrl);
   const trustBase = RootTrustBase.fromJSON(trustBaseJson);
   const client = new StateTransitionClient(aggregatorClient);
-  const predicateVerifier = PredicateVerifierService.create(trustBase);
+  const predicateVerifier = PredicateVerifierService.create();
   const mintJustificationVerifier = new MintJustificationVerifierService();
 
   const ownerPrivateKey = HexConverter.decode(config.ownerPrivateKey);

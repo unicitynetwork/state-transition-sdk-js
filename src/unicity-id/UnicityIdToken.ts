@@ -1,5 +1,6 @@
 import { CertifiedUnicityIdMintTransaction } from './CertifiedUnicityIdMintTransaction.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
+import { SignaturePredicate } from '../predicate/builtin/SignaturePredicate.js';
 import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
@@ -34,7 +35,8 @@ export class UnicityIdToken {
     genesis: CertifiedUnicityIdMintTransaction,
   ): Promise<UnicityIdToken> {
     const token = new UnicityIdToken(genesis);
-    const result = await token.verify(trustBase, predicateVerifier);
+    const issuerPublicKey = SignaturePredicate.fromPredicate(genesis.lockScript).publicKey;
+    const result = await token.verify(trustBase, predicateVerifier, issuerPublicKey);
     if (result.status !== VerificationStatus.OK) {
       throw new VerificationError('Invalid token genesis', result);
     }
@@ -55,12 +57,14 @@ export class UnicityIdToken {
   public async verify(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,
+    issuerPublicKey: Uint8Array,
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];
     const result = await CertifiedUnicityIdMintTransactionVerificationRule.verify(
       trustBase,
       predicateVerifier,
       this.genesis,
+      issuerPublicKey,
     );
     results.push(result);
     if (result.status !== VerificationStatus.OK) {

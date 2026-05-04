@@ -30,7 +30,7 @@ it('Token splitting', async () => {
 
   const client = new StateTransitionClient(aggregatorClient);
 
-  const predicateVerifier = PredicateVerifierService.create(trustBase);
+  const predicateVerifier = PredicateVerifierService.create();
   const mintJustificationVerifier = new MintJustificationVerifierService();
   mintJustificationVerifier.register(
     new SplitMintJustificationVerifier(trustBase, predicateVerifier, CustomPaymentData.decode),

@@ -1,4 +1,3 @@
-import { RootTrustBase } from '../../api/bft/RootTrustBase.js';
 import { DataHash } from '../../crypto/hash/DataHash.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { VerificationResult } from '../../verification/VerificationResult.js';
@@ -6,10 +5,8 @@ import { VerificationStatus } from '../../verification/VerificationStatus.js';
 import { EncodedPredicate } from '../EncodedPredicate.js';
 import { PredicateEngine } from '../PredicateEngine.js';
 import { IPredicateVerifier } from '../verification/IPredicateVerifier.js';
-import { SignaturePredicateVerifier } from './verification/SignaturePredicateVerifier.js';
-import { UnicityIdPredicateVerifier } from './verification/UnicityIdPredicateVerifier.js';
-import type { PredicateVerifierService } from '../verification/PredicateVerifierService.js';
 import { IBuiltInPredicateVerifier } from './verification/IBuiltInPredicateVerifier.js';
+import { SignaturePredicateVerifier } from './verification/SignaturePredicateVerifier.js';
 
 export class DefaultBuiltInPredicateVerifier implements IPredicateVerifier {
   public readonly engine: PredicateEngine = PredicateEngine.BUILT_IN;
@@ -30,11 +27,8 @@ export class DefaultBuiltInPredicateVerifier implements IPredicateVerifier {
     this.verifiers = result;
   }
 
-  public static create(verifier: PredicateVerifierService, trustBase: RootTrustBase): DefaultBuiltInPredicateVerifier {
-    return new DefaultBuiltInPredicateVerifier([
-      new SignaturePredicateVerifier(),
-      new UnicityIdPredicateVerifier(verifier, trustBase),
-    ]);
+  public static create(): DefaultBuiltInPredicateVerifier {
+    return new DefaultBuiltInPredicateVerifier([new SignaturePredicateVerifier()]);
   }
 
   public verify(

@@ -13,6 +13,7 @@ export class UnicityIdPredicateVerifier implements IBuiltInPredicateVerifier {
   public constructor(
     private readonly verifier: PredicateVerifierService,
     private readonly trustBase: RootTrustBase,
+    private readonly issuerPublicKey: Uint8Array,
   ) {}
 
   public get type(): BuiltInPredicateType {
@@ -33,7 +34,7 @@ export class UnicityIdPredicateVerifier implements IBuiltInPredicateVerifier {
       return new VerificationResult('UnicityIdPredicateVerifier', VerificationStatus.FAIL, 'Token ID mismatch.');
     }
 
-    let result = await decodedUnlockScript.token.verify(this.trustBase, this.verifier);
+    let result = await decodedUnlockScript.token.verify(this.trustBase, this.verifier, this.issuerPublicKey);
     if (result.status !== VerificationStatus.OK) {
       return new VerificationResult(
         'UnicityIdPredicateVerifier',

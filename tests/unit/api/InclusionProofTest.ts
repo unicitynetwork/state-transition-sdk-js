@@ -55,7 +55,7 @@ describe('InclusionProof', () => {
 
     unicityCertificate = await createUnicityCertificate(root.hash, signingService);
     trustBase = createRootTrustBase(signingService.publicKey);
-    predicateVerifier = PredicateVerifierService.create(trustBase);
+    predicateVerifier = PredicateVerifierService.create();
   });
 
   it('should encode and decode cbor', () => {

@@ -30,7 +30,7 @@ export class TestAggregatorClient implements IAggregatorClient {
     private readonly signingService: SigningService,
   ) {
     this.rootTrustBase = createRootTrustBase(this.signingService.publicKey);
-    this.predicateVerifier = PredicateVerifierService.create(this.rootTrustBase);
+    this.predicateVerifier = PredicateVerifierService.create();
   }
 
   /**

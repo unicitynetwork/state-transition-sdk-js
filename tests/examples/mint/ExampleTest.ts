@@ -22,7 +22,7 @@ it('Token minting', async () => {
 
   const client = new StateTransitionClient(aggregatorClient);
 
-  const predicateVerifier = PredicateVerifierService.create(trustBase);
+  const predicateVerifier = PredicateVerifierService.create();
   const mintJustificationVerifier = new MintJustificationVerifierService();
 
   const ownerPrivateKey = HexConverter.decode(config.ownerPrivateKey);

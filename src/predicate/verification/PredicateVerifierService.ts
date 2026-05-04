@@ -1,4 +1,3 @@
-import { RootTrustBase } from '../../api/bft/RootTrustBase.js';
 import { DataHash } from '../../crypto/hash/DataHash.js';
 import { VerificationResult } from '../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../verification/VerificationStatus.js';
@@ -12,9 +11,9 @@ export class PredicateVerifierService {
 
   private constructor() {}
 
-  public static create(trustBase: RootTrustBase): PredicateVerifierService {
+  public static create(): PredicateVerifierService {
     const verifier = new PredicateVerifierService();
-    verifier.addVerifier(DefaultBuiltInPredicateVerifier.create(verifier, trustBase));
+    verifier.addVerifier(DefaultBuiltInPredicateVerifier.create());
 
     return verifier;
   }

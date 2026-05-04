@@ -22,10 +22,10 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
 
   describe('Transition', () => {
     it('default successful flow', async () => {
-      const predicateVerifier = PredicateVerifierService.create(trustBase);
+      const unicityIdSigningService = new SigningService(SigningService.generatePrivateKey());
+      const predicateVerifier = PredicateVerifierService.create();
       const mintJustificationVerifier = new MintJustificationVerifierService();
 
-      const unicityIdSigningService = new SigningService(SigningService.generatePrivateKey());
       const targetPredicate = SignaturePredicate.create(ALICE_SIGNING_SERVICE.publicKey);
 
       const unicityId = new UnicityId('testuser', 'unicity-labs/test');
@@ -55,7 +55,9 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
         ),
       );
       await expect(
-        aliceUnicityIdToken.verify(trustBase, predicateVerifier).then((result) => result.status),
+        aliceUnicityIdToken
+          .verify(trustBase, predicateVerifier, unicityIdSigningService.publicKey)
+          .then((result) => result.status),
       ).resolves.toEqual(VerificationStatus.OK);
 
       const aliceToken = await mintToken(
