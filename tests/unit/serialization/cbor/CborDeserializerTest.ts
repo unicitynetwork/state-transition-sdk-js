@@ -1,6 +1,6 @@
 import { CborDeserializer } from '../../../../src/serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
-import { HexConverter } from '../../../../src/serialization/HexConverter.js';
+import { HexConverter } from '../../../../src/util/HexConverter.js';
 
 describe('CborSerializer', () => {
   it('should deserialize boolean', () => {

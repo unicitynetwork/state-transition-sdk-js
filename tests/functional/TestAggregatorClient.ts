@@ -48,9 +48,10 @@ export class TestAggregatorClient implements IAggregatorClient {
    * @inheritDoc
    */
   public async getInclusionProof(stateId: StateId): Promise<InclusionProofResponse> {
+    const path = BitString.fromBytesReversedLSB(stateId.data).toBigInt();
     const root = await this.smt.calculateRoot();
 
-    if (!root.has(stateId.data)) {
+    if (!this.requests.has(path)) {
       return Promise.resolve(
         new InclusionProofResponse(
           1n,
@@ -59,7 +60,7 @@ export class TestAggregatorClient implements IAggregatorClient {
       );
     }
 
-    const certificationData = this.requests.get(BitString.fromBytesReversedLSB(stateId.data).toBigInt());
+    const certificationData = this.requests.get(path);
 
     return Promise.resolve(
       new InclusionProofResponse(

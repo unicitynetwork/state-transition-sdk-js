@@ -1,4 +1,3 @@
-import { Address } from './Address.js';
 import { ITransaction } from './ITransaction.js';
 import { MintTransaction } from './MintTransaction.js';
 import { TokenId } from './TokenId.js';
@@ -23,20 +22,28 @@ export class CertifiedMintTransaction implements ITransaction {
     public readonly inclusionProof: InclusionProof,
   ) {}
 
-  public get data(): Uint8Array {
+  public get data(): Uint8Array | null {
     return this.transaction.data;
+  }
+
+  public get justification(): Uint8Array | null {
+    return this.transaction.justification;
   }
 
   public get lockScript(): IPredicate {
     return this.transaction.lockScript;
   }
 
-  public get recipient(): Address {
+  public get recipient(): IPredicate {
     return this.transaction.recipient;
   }
 
   public get sourceStateHash(): DataHash {
     return this.transaction.sourceStateHash;
+  }
+
+  public get stateMask(): Uint8Array {
+    return this.transaction.stateMask;
   }
 
   public get tokenId(): TokenId {
@@ -47,12 +54,8 @@ export class CertifiedMintTransaction implements ITransaction {
     return this.transaction.tokenType;
   }
 
-  public get x(): Uint8Array {
-    return this.transaction.x;
-  }
-
   public static async fromCBOR(bytes: Uint8Array): Promise<CertifiedMintTransaction> {
-    const data = CborDeserializer.decodeArray(bytes);
+    const data = CborDeserializer.decodeArray(bytes, 2);
     return new CertifiedMintTransaction(await MintTransaction.fromCBOR(data[0]), InclusionProof.fromCBOR(data[1]));
   }
 

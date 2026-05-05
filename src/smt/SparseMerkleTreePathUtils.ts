@@ -17,11 +17,6 @@ export function calculateCommonPath(path1: bigint, path2: bigint): CommonPath {
 export function getBitAtDepth(data: Uint8Array, depth: number): number {
   depth = Number(depth);
   const byteIndex = Math.floor(depth / 8);
-  // TODO: How do we order? MSB or LSB?
-  // MSB
-  //const bitInByte = 7 - (depth % 8);
-
-  // LSB
   const bitInByte = depth % 8;
   return (data[byteIndex] >> bitInByte) & 1;
 }

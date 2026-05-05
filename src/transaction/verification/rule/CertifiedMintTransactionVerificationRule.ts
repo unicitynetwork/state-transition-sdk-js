@@ -7,6 +7,7 @@ import { PredicateVerifierService } from '../../../predicate/verification/Predic
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
 import { CertifiedMintTransaction } from '../../CertifiedMintTransaction.js';
+import { MintJustificationVerifierService } from '../MintJustificationVerifierService.js';
 
 /**
  * Genesis verification rule.
@@ -15,6 +16,7 @@ export class CertifiedMintTransactionVerificationRule {
   public static async verify(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,
+    mintJustificationVerifier: MintJustificationVerifierService,
     genesis: CertifiedMintTransaction,
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];
@@ -43,6 +45,17 @@ export class CertifiedMintTransactionVerificationRule {
         'CertifiedMintTransactionVerificationRule',
         VerificationStatus.FAIL,
         `Inclusion proof verification failed: ${result.status?.toString()}`,
+        results,
+      );
+    }
+
+    result = await mintJustificationVerifier.verify(genesis);
+    results.push(result);
+    if (result.status !== VerificationStatus.OK) {
+      return new VerificationResult(
+        'CertifiedMintTransactionVerificationRule',
+        VerificationStatus.FAIL,
+        'Invalid mint justification',
         results,
       );
     }

@@ -7,7 +7,6 @@ import { IPredicate } from '../predicate/IPredicate.js';
 import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
-import { Address } from '../transaction/Address.js';
 import { ITransaction } from '../transaction/ITransaction.js';
 import { TokenId } from '../transaction/TokenId.js';
 import { TokenType } from '../transaction/TokenType.js';
@@ -31,12 +30,16 @@ export class CertifiedUnicityIdMintTransaction implements ITransaction {
     return this.transaction.lockScript;
   }
 
-  public get recipient(): Address {
+  public get recipient(): IPredicate {
     return this.transaction.recipient;
   }
 
   public get sourceStateHash(): DataHash {
     return this.transaction.sourceStateHash;
+  }
+
+  public get stateMask(): Uint8Array {
+    return this.transaction.stateMask;
   }
 
   public get targetPredicate(): IPredicate {
@@ -55,12 +58,8 @@ export class CertifiedUnicityIdMintTransaction implements ITransaction {
     return this.transaction.unicityId;
   }
 
-  public get x(): Uint8Array {
-    return this.transaction.x;
-  }
-
   public static async fromCBOR(bytes: Uint8Array): Promise<CertifiedUnicityIdMintTransaction> {
-    const data = CborDeserializer.decodeArray(bytes);
+    const data = CborDeserializer.decodeArray(bytes, 2);
     return new CertifiedUnicityIdMintTransaction(
       await UnicityIdMintTransaction.fromCBOR(data[0]),
       InclusionProof.fromCBOR(data[1]),

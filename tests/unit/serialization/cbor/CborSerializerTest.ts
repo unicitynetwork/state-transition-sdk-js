@@ -1,7 +1,7 @@
 import { CborMap } from '../../../../src/serialization/cbor/CborMap.js';
 import { CborMapEntry } from '../../../../src/serialization/cbor/CborMapEntry.js';
 import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
-import { HexConverter } from '../../../../src/serialization/HexConverter.js';
+import { HexConverter } from '../../../../src/util/HexConverter.js';
 
 describe('CborSerializer', () => {
   it('should serialize boolean', () => {

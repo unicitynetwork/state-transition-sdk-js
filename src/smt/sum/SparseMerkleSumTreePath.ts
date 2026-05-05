@@ -4,10 +4,10 @@ import { ISparseMerkleSumTreePathStepJson, SparseMerkleSumTreePathStep } from '.
 import { DataHash } from '../../crypto/hash/DataHash.js';
 import { DataHasher } from '../../crypto/hash/DataHasher.js';
 import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
-import { BigintConverter } from '../../serialization/BigintConverter.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
-import { HexConverter } from '../../serialization/HexConverter.js';
+import { BigintConverter } from '../../util/BigintConverter.js';
+import { HexConverter } from '../../util/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
 import { PathVerificationResult } from '../PathVerificationResult.js';
 
@@ -23,7 +23,7 @@ export class SparseMerkleSumTreePath {
   ) {}
 
   public static fromCBOR(bytes: Uint8Array): SparseMerkleSumTreePath {
-    const data = CborDeserializer.decodeArray(bytes);
+    const data = CborDeserializer.decodeArray(bytes, 2);
     const steps = CborDeserializer.decodeArray(data[1]);
 
     return new SparseMerkleSumTreePath(

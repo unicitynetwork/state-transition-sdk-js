@@ -40,7 +40,7 @@ export class InclusionProof {
       throw new CborError(`Invalid CBOR tag for InclusionProof: ${tag.tag}`);
     }
 
-    const data = CborDeserializer.decodeArray(tag.data);
+    const data = CborDeserializer.decodeArray(tag.data, 4);
     const version = CborDeserializer.decodeUnsignedInteger(data[0]);
     if (version !== InclusionProof.VERSION) {
       throw new CborError(`Unsupported InclusionProof version: ${version}`);

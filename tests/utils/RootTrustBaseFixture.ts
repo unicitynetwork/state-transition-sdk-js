@@ -1,5 +1,5 @@
 import { RootTrustBase } from '../../src/api/bft/RootTrustBase.js';
-import { HexConverter } from '../../src/serialization/HexConverter.js';
+import { HexConverter } from '../../src/util/HexConverter.js';
 
 export function createRootTrustBase(publicKey: Uint8Array): RootTrustBase {
   return RootTrustBase.fromJSON({

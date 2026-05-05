@@ -3,7 +3,7 @@ import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
-import { HexConverter } from '../serialization/HexConverter.js';
+import { HexConverter } from '../util/HexConverter.js';
 
 /**
  * Token mint state.

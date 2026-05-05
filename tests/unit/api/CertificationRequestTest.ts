@@ -1,7 +1,7 @@
 import { CertificationData } from '../../../src/api/CertificationData.js';
 import { CertificationRequest } from '../../../src/api/CertificationRequest.js';
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
-import { HexConverter } from '../../../src/serialization/HexConverter.js';
+import { HexConverter } from '../../../src/util/HexConverter.js';
 
 describe('CertificationRequest', () => {
   it('should encode object to expected CBOR bytes', async () => {

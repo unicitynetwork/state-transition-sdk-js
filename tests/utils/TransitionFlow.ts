@@ -7,8 +7,8 @@ import { PayToPublicKeyPredicate } from '../../src/predicate/builtin/PayToPublic
 import { PayToPublicKeyPredicateUnlockScript } from '../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
 import { PredicateVerifierService } from '../../src/predicate/verification/PredicateVerifierService.js';
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
-import { Address } from '../../src/transaction/Address.js';
 import { TokenType } from '../../src/transaction/TokenType.js';
+import { MintJustificationVerifierService } from '../../src/transaction/verification/MintJustificationVerifierService.js';
 import { UnicityId } from '../../src/unicity-id/UnicityId.js';
 import { UnicityIdMintTransaction } from '../../src/unicity-id/UnicityIdMintTransaction.js';
 import { UnicityIdToken } from '../../src/unicity-id/UnicityIdToken.js';
@@ -23,14 +23,15 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
   describe('Transition', () => {
     it('default successful flow', async () => {
       const predicateVerifier = PredicateVerifierService.create(trustBase);
+      const mintJustificationVerifier = new MintJustificationVerifierService();
 
       const unicityIdSigningService = new SigningService(SigningService.generatePrivateKey());
       const targetPredicate = PayToPublicKeyPredicate.create(ALICE_SIGNING_SERVICE.publicKey);
 
       const unicityId = new UnicityId('testuser', 'unicity-labs/test');
       const unicityIdMintTransaction = await UnicityIdMintTransaction.create(
-        unicityIdSigningService,
-        await Address.fromPredicate(targetPredicate),
+        PayToPublicKeyPredicate.fromSigningService(unicityIdSigningService),
+        targetPredicate,
         unicityId,
         TokenType.generate(),
         targetPredicate,
@@ -61,15 +62,17 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
         client,
         trustBase,
         predicateVerifier,
-        await Address.fromPredicate(aliceUnicityIdToken.genesis.targetPredicate),
+        mintJustificationVerifier,
+        aliceUnicityIdToken.genesis.targetPredicate,
       );
 
       const bobToken = await transferToken(
         client,
         trustBase,
         predicateVerifier,
+        mintJustificationVerifier,
         aliceToken.toCBOR(),
-        await Address.fromPredicate(PayToPublicKeyPredicate.create(BOB_SIGNING_SERVICE.publicKey)),
+        PayToPublicKeyPredicate.create(BOB_SIGNING_SERVICE.publicKey),
         ALICE_SIGNING_SERVICE,
       );
 
@@ -77,14 +80,15 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
         client,
         trustBase,
         predicateVerifier,
+        mintJustificationVerifier,
         bobToken.toCBOR(),
-        await Address.fromPredicate(PayToPublicKeyPredicate.create(CAROL_SIGNING_SERVICE.publicKey)),
+        PayToPublicKeyPredicate.create(CAROL_SIGNING_SERVICE.publicKey),
         BOB_SIGNING_SERVICE,
       );
 
-      await expect(carolToken.verify(trustBase, predicateVerifier).then((result) => result.status)).resolves.toEqual(
-        VerificationStatus.OK,
-      );
+      await expect(
+        carolToken.verify(trustBase, predicateVerifier, mintJustificationVerifier).then((result) => result.status),
+      ).resolves.toEqual(VerificationStatus.OK);
     }, 30000);
   });
 };

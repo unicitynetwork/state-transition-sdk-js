@@ -1,7 +1,7 @@
 import { DataHash } from '../../../../src/crypto/hash/DataHash.js';
-import { HexConverter } from '../../../../src/serialization/HexConverter.js';
 import { SparseMerkleSumTreePath } from '../../../../src/smt/sum/SparseMerkleSumTreePath.js';
 import { SparseMerkleSumTreePathStep } from '../../../../src/smt/sum/SparseMerkleSumTreePathStep.js';
+import { HexConverter } from '../../../../src/util/HexConverter.js';
 
 describe('SparseMerkleTreePath', () => {
   it('should encode and decode to exactly same object', () => {

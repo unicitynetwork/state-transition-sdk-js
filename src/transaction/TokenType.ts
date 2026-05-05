@@ -1,6 +1,6 @@
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
-import { HexConverter } from '../serialization/HexConverter.js';
+import { HexConverter } from '../util/HexConverter.js';
 
 /** Unique identifier describing the type/category of a token. */
 export class TokenType {

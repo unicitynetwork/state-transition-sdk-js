@@ -4,9 +4,9 @@ import { PathVerificationResult } from '../PathVerificationResult.js';
 import { SparseMerkleTreePathStep } from './SparseMerkleTreePathStep.js';
 import { DataHash } from '../../crypto/hash/DataHash.js';
 import { DataHasher } from '../../crypto/hash/DataHasher.js';
-import { BigintConverter } from '../../serialization/BigintConverter.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
+import { BigintConverter } from '../../util/BigintConverter.js';
 import { dedent } from '../../util/StringUtils.js';
 
 export class SparseMerkleTreePath {
@@ -16,7 +16,7 @@ export class SparseMerkleTreePath {
   ) {}
 
   public static fromCBOR(bytes: Uint8Array): SparseMerkleTreePath {
-    const data = CborDeserializer.decodeArray(bytes);
+    const data = CborDeserializer.decodeArray(bytes, 2);
     const steps = CborDeserializer.decodeArray(data[1]);
 
     return new SparseMerkleTreePath(

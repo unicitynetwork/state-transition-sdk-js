@@ -1,7 +1,7 @@
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { CborError } from '../../serialization/cbor/CborError.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
-import { HexConverter } from '../../serialization/HexConverter.js';
+import { HexConverter } from '../../util/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
 
 /**
@@ -79,7 +79,7 @@ export class InputRecord {
     if (tag.tag !== InputRecord.CBOR_TAG) {
       throw new CborError(`Invalid CBOR tag for InputRecord: ${tag.tag}`);
     }
-    const data = CborDeserializer.decodeArray(tag.data);
+    const data = CborDeserializer.decodeArray(tag.data, 10);
     const version = CborDeserializer.decodeUnsignedInteger(data[0]);
     if (version !== InputRecord.VERSION) {
       throw new CborError(`Unsupported InputRecord version: ${version}`);

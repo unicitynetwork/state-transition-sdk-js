@@ -6,8 +6,8 @@ import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
 import { IPredicate } from '../predicate/IPredicate.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
-import { HexConverter } from '../serialization/HexConverter.js';
 import { ITransaction } from '../transaction/ITransaction.js';
+import { HexConverter } from '../util/HexConverter.js';
 
 /**
  * Represents a unique state identifier derived from a public key and state hash.
@@ -17,10 +17,6 @@ export class StateId {
 
   public get data(): Uint8Array {
     return this.hash.data;
-  }
-
-  public get imprint(): Uint8Array {
-    return this.hash.imprint;
   }
 
   public static fromCBOR(bytes: Uint8Array): StateId {

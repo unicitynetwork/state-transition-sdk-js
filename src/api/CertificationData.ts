@@ -8,9 +8,9 @@ import { IUnlockScript } from '../predicate/IUnlockScript.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborError } from '../serialization/cbor/CborError.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
-import { HexConverter } from '../serialization/HexConverter.js';
 import { ITransaction } from '../transaction/ITransaction.js';
 import { MintTransaction } from '../transaction/MintTransaction.js';
+import { HexConverter } from '../util/HexConverter.js';
 import { dedent } from '../util/StringUtils.js';
 
 export class CertificationData {
@@ -56,7 +56,7 @@ export class CertificationData {
       throw new CborError(`Invalid CBOR tag for CertificationData: ${tag.tag}`);
     }
 
-    const data = CborDeserializer.decodeArray(tag.data);
+    const data = CborDeserializer.decodeArray(tag.data, 5);
     const version = CborDeserializer.decodeUnsignedInteger(data[0]);
     if (version !== CertificationData.VERSION) {
       throw new CborError(`Unsupported CertificationData version: ${version}`);

@@ -1,8 +1,8 @@
 import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
-import { BigintConverter } from '../../serialization/BigintConverter.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
-import { HexConverter } from '../../serialization/HexConverter.js';
+import { BigintConverter } from '../../util/BigintConverter.js';
+import { HexConverter } from '../../util/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
 
 export interface ISparseMerkleSumTreePathStepJson {
@@ -31,7 +31,7 @@ export class SparseMerkleSumTreePathStep {
   }
 
   public static fromCBOR(bytes: Uint8Array): SparseMerkleSumTreePathStep {
-    const data = CborDeserializer.decodeArray(bytes);
+    const data = CborDeserializer.decodeArray(bytes, 3);
 
     return new SparseMerkleSumTreePathStep(
       BigintConverter.decode(CborDeserializer.decodeByteString(data[0])),
