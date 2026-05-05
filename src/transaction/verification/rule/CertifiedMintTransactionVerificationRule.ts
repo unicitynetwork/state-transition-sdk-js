@@ -22,8 +22,9 @@ export class CertifiedMintTransactionVerificationRule {
     const results: VerificationResult<unknown>[] = [];
 
     const signingService = await MintSigningService.create(genesis.tokenId);
+    const expectedLockScript = EncodedPredicate.fromPredicate(SignaturePredicate.fromSigningService(signingService));
     let result: VerificationResult<unknown> = EncodedPredicate.equals(
-      SignaturePredicate.fromSigningService(signingService),
+      expectedLockScript,
       genesis.inclusionProof.certificationData?.lockScript,
     )
       ? new VerificationResult('IsLockScriptValidVerificationRule', VerificationStatus.OK)

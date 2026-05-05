@@ -98,7 +98,7 @@ export class TransferTransaction implements ITransaction {
       TransferTransaction.CBOR_TAG,
       CborSerializer.encodeArray(
         CborSerializer.encodeUnsignedInteger(this.version),
-        EncodedPredicate.fromPredicate(this.recipient).toCBOR(),
+        this.recipient.toCBOR(),
         CborSerializer.encodeByteString(this._stateMask),
         CborSerializer.encodeNullable(this._data, CborSerializer.encodeByteString),
       ),

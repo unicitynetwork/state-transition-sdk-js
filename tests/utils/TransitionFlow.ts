@@ -3,8 +3,8 @@ import { RootTrustBase } from '../../src/api/bft/RootTrustBase.js';
 import { CertificationData } from '../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../src/api/CertificationResponse.js';
 import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
-import { PayToPublicKeyPredicateUnlockScript } from '../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
 import { SignaturePredicate } from '../../src/predicate/builtin/SignaturePredicate.js';
+import { SignaturePredicateUnlockScript } from '../../src/predicate/builtin/SignaturePredicateUnlockScript.js';
 import { PredicateVerifierService } from '../../src/predicate/verification/PredicateVerifierService.js';
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
 import { TokenType } from '../../src/transaction/TokenType.js';
@@ -39,7 +39,7 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
 
       const unicityIdCertificationData = await CertificationData.fromTransaction(
         unicityIdMintTransaction,
-        await PayToPublicKeyPredicateUnlockScript.create(unicityIdMintTransaction, unicityIdSigningService),
+        await SignaturePredicateUnlockScript.create(unicityIdMintTransaction, unicityIdSigningService),
       );
 
       const unicityIdResponse = await client.submitCertificationRequest(unicityIdCertificationData);

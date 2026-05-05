@@ -1,7 +1,7 @@
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { MintSigningService } from '../crypto/MintSigningService.js';
-import { PayToPublicKeyPredicateUnlockScript } from '../predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
+import { SignaturePredicateUnlockScript } from '../predicate/builtin/SignaturePredicateUnlockScript.js';
 import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
 import { IUnlockScript } from '../predicate/IUnlockScript.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
@@ -74,7 +74,7 @@ export class CertificationData {
 
     return CertificationData.fromTransaction(
       transaction,
-      await PayToPublicKeyPredicateUnlockScript.create(transaction, signingService),
+      await SignaturePredicateUnlockScript.create(transaction, signingService),
     );
   }
 

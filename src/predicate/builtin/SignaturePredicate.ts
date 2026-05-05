@@ -59,7 +59,7 @@ export class SignaturePredicate implements IBuiltInPredicate {
 
   public toString(): string {
     return dedent`
-      PayToPublicKeyPredicate
+      SignaturePredicate
         Public Key: ${HexConverter.encode(this._publicKey)}`;
   }
 }

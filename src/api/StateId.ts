@@ -42,12 +42,7 @@ export class StateId {
    */
   private static async create(predicate: EncodedPredicate, stateHash: DataHash): Promise<StateId> {
     const hash = await new DataHasher(HashAlgorithm.SHA256)
-      .update(
-        CborSerializer.encodeArray(
-          EncodedPredicate.fromPredicate(predicate).toCBOR(),
-          CborSerializer.encodeByteString(stateHash.data),
-        ),
-      )
+      .update(CborSerializer.encodeArray(predicate.toCBOR(), CborSerializer.encodeByteString(stateHash.data)))
       .digest();
 
     return new StateId(hash);

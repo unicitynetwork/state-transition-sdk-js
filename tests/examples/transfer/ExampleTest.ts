@@ -4,8 +4,8 @@ import { RootTrustBase } from '../../../src/api/bft/RootTrustBase.js';
 import { CertificationData } from '../../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../../src/api/CertificationResponse.js';
 import { SigningService } from '../../../src/crypto/secp256k1/SigningService.js';
-import { PayToPublicKeyPredicateUnlockScript } from '../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
 import { SignaturePredicate } from '../../../src/predicate/builtin/SignaturePredicate.js';
+import { SignaturePredicateUnlockScript } from '../../../src/predicate/builtin/SignaturePredicateUnlockScript.js';
 import { EncodedPredicate } from '../../../src/predicate/EncodedPredicate.js';
 import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
@@ -83,7 +83,7 @@ it('Token transfer', async () => {
 
   const certificationData = await CertificationData.fromTransaction(
     transferTransaction,
-    await PayToPublicKeyPredicateUnlockScript.create(transferTransaction, ownerSigningService),
+    await SignaturePredicateUnlockScript.create(transferTransaction, ownerSigningService),
   );
 
   const response = await client.submitCertificationRequest(certificationData);

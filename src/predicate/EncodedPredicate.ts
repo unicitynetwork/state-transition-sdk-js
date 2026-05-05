@@ -19,7 +19,7 @@ export class EncodedPredicate implements IPredicate {
     this._params = new Uint8Array(_params);
   }
 
-  public static equals(a: IPredicate | null | undefined, b: IPredicate | null | undefined): boolean {
+  public static equals(a: EncodedPredicate | null | undefined, b: EncodedPredicate | null | undefined): boolean {
     if (a == null || b == null) {
       return a == null && b == null;
     }

@@ -112,7 +112,7 @@ export class MintTransaction implements ITransaction {
       MintTransaction.CBOR_TAG,
       CborSerializer.encodeArray(
         CborSerializer.encodeUnsignedInteger(this.version),
-        EncodedPredicate.fromPredicate(this.recipient).toCBOR(),
+        this.recipient.toCBOR(),
         this.tokenId.toCBOR(),
         this.tokenType.toCBOR(),
         CborSerializer.encodeNullable(this._justification, CborSerializer.encodeByteString),

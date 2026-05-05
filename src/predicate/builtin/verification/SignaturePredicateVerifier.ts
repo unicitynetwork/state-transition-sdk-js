@@ -37,12 +37,12 @@ export class SignaturePredicateVerifier implements IBuiltInPredicateVerifier {
 
     if (!result) {
       return new VerificationResult(
-        'PayToPublicKeyPredicateVerifier',
+        'SignaturePredicateVerifier',
         VerificationStatus.FAIL,
         'Signature verification failed.',
       );
     }
 
-    return new VerificationResult('PayToPublicKeyPredicateVerifier', VerificationStatus.OK);
+    return new VerificationResult('SignaturePredicateVerifier', VerificationStatus.OK);
   }
 }

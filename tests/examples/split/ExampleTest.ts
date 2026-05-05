@@ -11,8 +11,8 @@ import { PaymentAssetCollection } from '../../../src/payment/asset/PaymentAssetC
 import { SplitMintJustification } from '../../../src/payment/SplitMintJustification.js';
 import { SplitMintJustificationVerifier } from '../../../src/payment/SplitMintJustificationVerifier.js';
 import { TokenSplit } from '../../../src/payment/TokenSplit.js';
-import { PayToPublicKeyPredicateUnlockScript } from '../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
 import { SignaturePredicate } from '../../../src/predicate/builtin/SignaturePredicate.js';
+import { SignaturePredicateUnlockScript } from '../../../src/predicate/builtin/SignaturePredicateUnlockScript.js';
 import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
@@ -83,7 +83,7 @@ it('Token splitting', async () => {
   response = await client.submitCertificationRequest(
     await CertificationData.fromTransaction(
       result.burn.transaction,
-      await PayToPublicKeyPredicateUnlockScript.create(result.burn.transaction, ownerSigningService),
+      await SignaturePredicateUnlockScript.create(result.burn.transaction, ownerSigningService),
     ),
   );
 

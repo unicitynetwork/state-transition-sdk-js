@@ -143,9 +143,7 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
         );
       }
 
-      const recipient = burntTokenLastTransaction
-        ? EncodedPredicate.fromPredicate(burntTokenLastTransaction.recipient)
-        : null;
+      const recipient = burntTokenLastTransaction ? burntTokenLastTransaction.recipient : null;
       const expectedRecipient = EncodedPredicate.fromPredicate(
         BurnPredicate.create(proof.aggregationPath.root.imprint),
       );

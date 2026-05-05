@@ -105,8 +105,8 @@ export class UnicityIdMintTransaction implements ITransaction {
       UnicityIdMintTransaction.CBOR_TAG,
       CborSerializer.encodeArray(
         CborSerializer.encodeUnsignedInteger(this.version),
-        EncodedPredicate.fromPredicate(this.lockScript).toCBOR(),
-        EncodedPredicate.fromPredicate(this.recipient).toCBOR(),
+        this.lockScript.toCBOR(),
+        this.recipient.toCBOR(),
         this.unicityId.toCBOR(),
         this.tokenType.toCBOR(),
         EncodedPredicate.fromPredicate(this.targetPredicate).toCBOR(),
