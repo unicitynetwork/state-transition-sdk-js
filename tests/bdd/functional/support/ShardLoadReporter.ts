@@ -8,6 +8,32 @@ import {
 } from './ShardLoadTypes.js';
 
 export class ShardLoadReporter {
+  /**
+   * Live progress line printed after each batch in synchronized / independent batch modes.
+   * Format: `[Batch i/N] shard=X ok=A fail=B dur=Dms commit=Cms proof=Pms (cum X/Y Z%)`
+   */
+  public static printBatchProgress(
+    batch: IShardBatchResult,
+    batchCount: number,
+    cumulativeOk: number,
+    cumulativeTotal: number,
+  ): void {
+    const ok = batch.results.filter((r) => r.success).length;
+    const fail = batch.results.length - ok;
+    const successes = batch.results.filter((r) => r.success);
+    const avgCommit =
+      successes.length > 0 ? successes.reduce((s, r) => s + r.commitDurationMs, 0) / successes.length : 0;
+    const avgProof =
+      successes.length > 0 ? successes.reduce((s, r) => s + r.proofWaitDurationMs, 0) / successes.length : 0;
+    const cumPct = cumulativeTotal > 0 ? ((cumulativeOk * 100) / cumulativeTotal).toFixed(1) : '0.0';
+
+    console.log(
+      `[Batch ${batch.batchIndex + 1}/${batchCount}] shard=${batch.shardId} ok=${ok} fail=${fail} ` +
+        `dur=${batch.durationMs.toFixed(0)}ms commit=${avgCommit.toFixed(0)}ms proof=${avgProof.toFixed(0)}ms ` +
+        `(cum ${cumulativeOk}/${cumulativeTotal} ${cumPct}%)`,
+    );
+  }
+
   public static printReport(report: ILoadTestReport): void {
     const line = '='.repeat(60);
     console.log(`\n${line}`);
@@ -233,21 +259,44 @@ export class ShardLoadReporter {
       return aMs - bMs;
     });
 
-    console.log('\nTime Distribution (1s buckets):');
-    const widths = [7, ...sortedLabels.map(() => 8)];
-    const header = ShardLoadReporter.padColumns(['Shard', ...sortedLabels], widths);
+    // When the bucket count is small, the original wide layout (one row per shard, one
+    // column per bucket) is readable. With many buckets it scrolls off the side. Above the
+    // threshold, transpose: rows are buckets, columns are shards. This always fits whatever
+    // the bucket count, since the shard count is small.
+    const sortedShards = [...summaries.entries()].sort((a, b) => a[0] - b[0]);
+    const HORIZONTAL_THRESHOLD = 12;
+    if (sortedLabels.length <= HORIZONTAL_THRESHOLD) {
+      console.log('\nTime Distribution (1s buckets):');
+      const widths = [7, ...sortedLabels.map(() => 8)];
+      const header = ShardLoadReporter.padColumns(['Shard', ...sortedLabels], widths);
+      console.log(header);
+      console.log('-'.repeat(header.length));
+
+      for (const [, summary] of sortedShards) {
+        const bucketMap = new Map(summary.timeDistribution.map((b) => [b.label, b.count]));
+        console.log(
+          ShardLoadReporter.padColumns(
+            [String(summary.shardId), ...sortedLabels.map((label) => String(bucketMap.get(label) ?? 0))],
+            widths,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Vertical layout for wide bucket sets.
+    console.log('\nTime Distribution (1s buckets, transposed):');
+    const widths = [9, ...sortedShards.map(() => 8), 8];
+    const header = ShardLoadReporter.padColumns(['Bucket', ...sortedShards.map(([id]) => `S${id}`), 'Total'], widths);
     console.log(header);
     console.log('-'.repeat(header.length));
 
-    const sorted = [...summaries.entries()].sort((a, b) => a[0] - b[0]);
-    for (const [, summary] of sorted) {
-      const bucketMap = new Map(summary.timeDistribution.map((b) => [b.label, b.count]));
-      console.log(
-        ShardLoadReporter.padColumns(
-          [String(summary.shardId), ...sortedLabels.map((label) => String(bucketMap.get(label) ?? 0))],
-          widths,
-        ),
-      );
+    const shardBucketMaps = sortedShards.map(([, s]) => new Map(s.timeDistribution.map((b) => [b.label, b.count])));
+
+    for (const label of sortedLabels) {
+      const perShard = shardBucketMaps.map((m) => m.get(label) ?? 0);
+      const total = perShard.reduce((a, b) => a + b, 0);
+      console.log(ShardLoadReporter.padColumns([label, ...perShard.map(String), String(total)], widths));
     }
   }
 }

@@ -5,6 +5,7 @@ import { performance } from 'node:perf_hooks';
 import { ShardAwareAggregatorClient } from './ShardAwareAggregatorClient.js';
 import { ShardBlockMonitor } from './ShardBlockMonitor.js';
 import { ShardLoadMintPool } from './ShardLoadMintPool.js';
+import { ShardLoadReporter } from './ShardLoadReporter.js';
 import {
   IBlockRecord,
   ICommitmentValidation,
@@ -437,6 +438,9 @@ export class ShardLoadRunner {
                 errors.push(result);
               }
             }
+            // Live per-batch progress for this shard.
+            const stats = shardStats.get(shardId)!;
+            ShardLoadReporter.printBatchProgress(br, batchCount, stats.successes, stats.totalOps);
           }
 
           return { batches: shardBatches, durationMs: performance.now() - t, shardId };
@@ -514,6 +518,17 @@ export class ShardLoadRunner {
             errors.push(result);
           }
         }
+      }
+
+      // Live per-batch progress: cumulative ok/total across all shards seen so far.
+      let cumOk = 0;
+      let cumTotal = 0;
+      for (const stats of shardStats.values()) {
+        cumOk += stats.successes;
+        cumTotal += stats.totalOps;
+      }
+      for (const br of batchResults) {
+        ShardLoadReporter.printBatchProgress(br, batchCount, cumOk, cumTotal);
       }
     }
 
@@ -720,6 +735,10 @@ export class ShardLoadRunner {
         switch (verificationStatus.status) {
           case InclusionProofVerificationStatus.OK:
             return { pollCount, proof: inclusionProof };
+          // INCLUSION_CERTIFICATE_MISSING is the "round hasn't committed yet" pending status.
+          // PATH_INVALID at load-test scale typically means our commitment landed in a later
+          // round than the one we just polled; both are recoverable on retry.
+          case InclusionProofVerificationStatus.INCLUSION_CERTIFICATE_MISSING:
           case InclusionProofVerificationStatus.PATH_INVALID:
             break;
           default:

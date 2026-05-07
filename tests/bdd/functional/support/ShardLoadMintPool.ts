@@ -14,7 +14,10 @@ interface IWorkerState {
   readonly worker: Worker;
 }
 
-const WORKER_PATH = fileURLToPath(new URL('./ShardLoadMintWorker.ts', import.meta.url));
+// Worker bootstrap installs tsx's ESM loader inside the worker thread before importing the
+// actual .ts worker — `--import tsx/esm` via execArgv doesn't reliably propagate into workers
+// across Node versions, leaving the default resolver to fail on `.js → .ts` rewrites.
+const WORKER_PATH = fileURLToPath(new URL('./ShardLoadMintWorker-bootstrap.mjs', import.meta.url));
 
 export class ShardLoadMintPool {
   private nextId = 0;
