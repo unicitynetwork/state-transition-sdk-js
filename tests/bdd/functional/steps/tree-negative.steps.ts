@@ -3,60 +3,46 @@ import assert from 'node:assert/strict';
 import { Then, When } from '@cucumber/cucumber';
 
 import { PaymentAssetCollection } from '../../../../src/payment/asset/PaymentAssetCollection.js';
-import { TokenSplit } from '../../../../src/payment/TokenSplit.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
-import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
-import { createUser } from '../support/TestSetup.js';
+import { attemptUnauthorizedSplit, attemptUnauthorizedTransfer, createUser } from '../support/TestSetup.js';
 import { TokenWorld } from '../support/World.js';
 
+// Post-PR #112: ownership is no longer enforced at TransferTransaction.create or TokenSplit.split;
+// it's checked by the predicate verifier when the burn/transfer signature is checked.
 When(
   /^(\w+) tries to transfer "(.+)"$/,
   async function (this: TokenWorld, userName: string, tokenName: string): Promise<void> {
-    const user = this.tree.usersByName.get(userName)!;
+    const attacker = this.tree.usersByName.get(userName)!;
     const token = this.tree.tokensByName.get(tokenName)!;
-    assert.ok(user !== undefined);
+    assert.ok(attacker !== undefined);
     assert.ok(token !== undefined);
     const recipient = createUser();
-    this.transferError = null;
-
-    try {
-      await TransferTransaction.create(token, recipient.predicate, crypto.getRandomValues(new Uint8Array(32)));
-    } catch (e) {
-      this.transferError = e as Error;
-    }
+    this.transferError = await attemptUnauthorizedTransfer(this.tree.setup, token, attacker, recipient.predicate);
   },
 );
 
 Then('the transfer fails with predicate mismatch', function (this: TokenWorld): void {
   assert.notStrictEqual(this.transferError, null);
-  assert.ok(this.transferError!.message.includes('Predicate does not match'));
 });
 
 When(
   /^(\w+) tries to split "(.+)"$/,
   async function (this: TokenWorld, userName: string, tokenName: string): Promise<void> {
-    const user = this.tree.usersByName.get(userName)!;
+    const attacker = this.tree.usersByName.get(userName)!;
     const token = this.tree.tokensByName.get(tokenName)!;
     const assets = this.tree.tokenAssets.get(tokenName)!;
     const parser = this.tree.tokenParsers.get(tokenName)!;
-    assert.ok(user !== undefined);
+    assert.ok(attacker !== undefined);
     assert.ok(token !== undefined);
     assert.ok(assets !== undefined);
     assert.ok(parser !== undefined);
-    this.splitError = null;
 
     const splitTokenId = new TokenId(crypto.getRandomValues(new Uint8Array(32)));
     const splitAssets: [TokenId, PaymentAssetCollection][] = [[splitTokenId, assets]];
-
-    try {
-      await TokenSplit.split(token, parser, splitAssets);
-    } catch (e) {
-      this.splitError = e as Error;
-    }
+    this.splitError = await attemptUnauthorizedSplit(this.tree.setup, token, attacker, parser, splitAssets);
   },
 );
 
 Then('the split fails with predicate mismatch', function (this: TokenWorld): void {
   assert.notStrictEqual(this.splitError, null);
-  assert.ok(this.splitError!.message.includes('Predicate does not match'));
 });

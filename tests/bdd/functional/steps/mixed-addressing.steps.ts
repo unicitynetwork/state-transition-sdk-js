@@ -189,11 +189,9 @@ When(
     const { TokenId } = await import('../../../../src/transaction/TokenId.js');
 
     // Bob's child has a single asset — split it in half.
-    // Split-child data is CBOR-array [assetsCBOR, reasonCBOR]; take the first entry.
+    // Post-PR #112: split-child genesis.data is bare assets.toCBOR() (no array wrapper).
     const { PaymentAssetCollection: PAC } = await import('../../../../src/payment/asset/PaymentAssetCollection.js');
-    const { CborDeserializer } = await import('../../../../src/serialization/cbor/CborDeserializer.js');
-    const splitPayload = CborDeserializer.decodeArray(bobToken.genesis.data ?? new Uint8Array());
-    const bobAssets = PAC.fromCBOR(splitPayload[0]);
+    const bobAssets = PAC.fromCBOR(bobToken.genesis.data ?? new Uint8Array());
     const single = bobAssets.toArray()[0];
     const halfA = new Asset(single.id, single.value / 2n);
     const halfB = new Asset(single.id, single.value - single.value / 2n);

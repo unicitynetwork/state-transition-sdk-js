@@ -5,9 +5,9 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import { Asset } from '../../../../src/payment/asset/Asset.js';
 import { PaymentAssetCollection } from '../../../../src/payment/asset/PaymentAssetCollection.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
-import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
 import { VerificationStatus } from '../../../../src/verification/VerificationStatus.js';
 import {
+  attemptUnauthorizedTransfer,
   createAssetId,
   createUser,
   mintTokenWithAssets,
@@ -116,38 +116,26 @@ Then("Carol's received token passes verification", async function (this: TokenWo
 Then(
   'Alice cannot transfer split token 1 to Carol because it was already sent',
   async function (this: TokenWorld): Promise<void> {
-    try {
-      await TransferTransaction.create(
-        this.splitTokens[0],
-        this.carol.predicate,
-        crypto.getRandomValues(new Uint8Array(32)),
-      );
-      this.transferError = null;
-    } catch (e) {
-      this.transferError = e as Error;
-    }
-
+    this.transferError = await attemptUnauthorizedTransfer(
+      this.setup,
+      this.splitTokens[0],
+      this.alice,
+      this.carol.predicate,
+    );
     assert.notStrictEqual(this.transferError, null);
-    assert.ok(this.transferError!.message.includes('Predicate does not match'));
   },
 );
 
 Then(
   'Alice cannot transfer the original token because it was burned',
   async function (this: TokenWorld): Promise<void> {
-    try {
-      await TransferTransaction.create(
-        this.burnedToken,
-        this.bob.predicate,
-        crypto.getRandomValues(new Uint8Array(32)),
-      );
-      this.transferError = null;
-    } catch (e) {
-      this.transferError = e as Error;
-    }
-
+    this.transferError = await attemptUnauthorizedTransfer(
+      this.setup,
+      this.burnedToken,
+      this.alice,
+      this.bob.predicate,
+    );
     assert.notStrictEqual(this.transferError, null);
-    assert.ok(this.transferError!.message.includes('Predicate does not match'));
   },
 );
 
@@ -204,34 +192,17 @@ Then("Dave's token has the correct asset values", function (this: TokenWorld): v
 Then(
   'Bob cannot transfer sub-split token 1 to Dave because it was already sent',
   async function (this: TokenWorld): Promise<void> {
-    try {
-      await TransferTransaction.create(
-        this.subSplitTokens[0],
-        this.dave.predicate,
-        crypto.getRandomValues(new Uint8Array(32)),
-      );
-      this.transferError = null;
-    } catch (e) {
-      this.transferError = e as Error;
-    }
-
+    this.transferError = await attemptUnauthorizedTransfer(
+      this.setup,
+      this.subSplitTokens[0],
+      this.bob,
+      this.dave.predicate,
+    );
     assert.notStrictEqual(this.transferError, null);
-    assert.ok(this.transferError!.message.includes('Predicate does not match'));
   },
 );
 
 Then('Bob cannot transfer the pre-split token because it was burned', async function (this: TokenWorld): Promise<void> {
-  try {
-    await TransferTransaction.create(
-      this.burnedToken,
-      this.carol.predicate,
-      crypto.getRandomValues(new Uint8Array(32)),
-    );
-    this.transferError = null;
-  } catch (e) {
-    this.transferError = e as Error;
-  }
-
+  this.transferError = await attemptUnauthorizedTransfer(this.setup, this.burnedToken, this.bob, this.carol.predicate);
   assert.notStrictEqual(this.transferError, null);
-  assert.ok(this.transferError!.message.includes('Predicate does not match'));
 });

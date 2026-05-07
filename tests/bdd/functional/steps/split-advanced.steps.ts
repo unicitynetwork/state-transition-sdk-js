@@ -4,13 +4,12 @@ import { Given, Then, When } from '@cucumber/cucumber';
 
 import { Asset } from '../../../../src/payment/asset/Asset.js';
 import { PaymentAssetCollection } from '../../../../src/payment/asset/PaymentAssetCollection.js';
-import { TokenSplit } from '../../../../src/payment/TokenSplit.js';
-import { CborDeserializer } from '../../../../src/serialization/cbor/CborDeserializer.js';
 import { Token } from '../../../../src/transaction/Token.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
-import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
 import { VerificationStatus } from '../../../../src/verification/VerificationStatus.js';
 import {
+  attemptUnauthorizedSplit,
+  attemptUnauthorizedTransfer,
   createAssetId,
   createUser,
   IUser,
@@ -231,25 +230,14 @@ When(
       ],
     ];
 
-    // Use the parseSplitPaymentData to properly parse the nested split data
-    const parseSplitPaymentData = (
-      bytes: Uint8Array,
-    ): Promise<{ assets: PaymentAssetCollection; encode: () => Promise<Uint8Array> }> => {
-      const data = CborDeserializer.decodeArray(bytes);
-      const assets = PaymentAssetCollection.fromCBOR(data[0]);
-      return Promise.resolve({
-        assets,
-        encode: (): Promise<Uint8Array> => Promise.resolve(bytes),
-      });
-    };
-
+    // Post-PR #112: split-token genesis.data is bare assets.toCBOR() — no array wrapper.
     const result = await splitTokenToOwner(
       this.setup,
       tokenToSplit,
       user.predicate,
       user.signingService,
       splitAssets,
-      parseSplitPaymentData,
+      parseSimplePaymentData,
       user, // mint back to the same user
     );
 
@@ -363,35 +351,28 @@ When(
       throw new Error(`User ${ownerName} not found in registry`);
     }
 
-    // The token should be the currentToken which was transferred to the owner
     const tokenToSplit = this.currentToken;
     if (!tokenToSplit) {
       throw new Error(`No current token available - expected ${ownerName}'s token`);
     }
 
     const splitTokenId = new TokenId(crypto.getRandomValues(new Uint8Array(32)));
-
-    // Use the actual asset values from the original token (100 and 200)
-    // to ensure we get past asset validation and reach predicate check
     const splitAssets: [TokenId, PaymentAssetCollection][] = [
       [splitTokenId, PaymentAssetCollection.create(new Asset(this.assetId1, 100n), new Asset(this.assetId2, 200n))],
     ];
 
-    try {
-      await TokenSplit.split(tokenToSplit, parseSimplePaymentData, splitAssets);
-      this.splitError = null;
-    } catch (e) {
-      this.splitError = e as Error;
-    }
+    this.splitError = await attemptUnauthorizedSplit(
+      this.setup,
+      tokenToSplit,
+      attacker,
+      parseSimplePaymentData,
+      splitAssets,
+    );
   },
 );
 
 Then('the split should fail with predicate mismatch', function (this: TokenWorld): void {
   assert.notStrictEqual(this.splitError, null, 'Expected split to fail');
-  assert.ok(
-    this.splitError!.message.includes('Predicate does not match'),
-    `Expected predicate mismatch error but got: ${this.splitError!.message}`,
-  );
 });
 
 When(
@@ -406,19 +387,10 @@ When(
       throw new Error(`User ${toUser} not found in registry`);
     }
 
-    try {
-      await TransferTransaction.create(this.burnedToken, to.predicate, crypto.getRandomValues(new Uint8Array(32)));
-      this.transferError = null;
-    } catch (e) {
-      this.transferError = e as Error;
-    }
+    this.transferError = await attemptUnauthorizedTransfer(this.setup, this.burnedToken, from, to.predicate);
   },
 );
 
 Then('the transfer should fail because the token was burned', function (this: TokenWorld): void {
   assert.notStrictEqual(this.transferError, null, 'Expected transfer to fail');
-  assert.ok(
-    this.transferError!.message.includes('Predicate does not match'),
-    `Expected predicate mismatch error but got: ${this.transferError!.message}`,
-  );
 });

@@ -19,7 +19,6 @@ import { PayToPublicKeyPredicate } from '../../../../src/predicate/builtin/PayTo
 import { PayToPublicKeyPredicateUnlockScript } from '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
 import { IPredicate } from '../../../../src/predicate/IPredicate.js';
 import { PredicateVerifierService } from '../../../../src/predicate/verification/PredicateVerifierService.js';
-import { CborDeserializer } from '../../../../src/serialization/cbor/CborDeserializer.js';
 import { StateTransitionClient } from '../../../../src/StateTransitionClient.js';
 import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../../src/transaction/Token.js';
@@ -31,6 +30,7 @@ import { UnicityId } from '../../../../src/unicity-id/UnicityId.js';
 import { UnicityIdMintTransaction } from '../../../../src/unicity-id/UnicityIdMintTransaction.js';
 import { UnicityIdToken } from '../../../../src/unicity-id/UnicityIdToken.js';
 import { waitInclusionProof } from '../../../../src/util/InclusionProofUtils.js';
+import { VerificationStatus } from '../../../../src/verification/VerificationStatus.js';
 
 export interface ITestSetup {
   readonly aggregatorClient: IAggregatorClient;
@@ -282,12 +282,7 @@ export function parseSimplePaymentData(bytes: Uint8Array): Promise<IPaymentData>
 }
 
 export function parseSplitPaymentData(bytes: Uint8Array): Promise<IPaymentData> {
-  const data = CborDeserializer.decodeArray(bytes);
-  const assets = PaymentAssetCollection.fromCBOR(data[0]);
-  return Promise.resolve({
-    assets,
-    encode: (): Promise<Uint8Array> => Promise.resolve(bytes),
-  });
+  return parseSimplePaymentData(bytes);
 }
 
 export function parseSplitVerificationData(bytes: Uint8Array): Promise<IPaymentData> {
@@ -296,6 +291,70 @@ export function parseSplitVerificationData(bytes: Uint8Array): Promise<IPaymentD
     assets,
     encode: (): Promise<Uint8Array> => Promise.resolve(bytes),
   });
+}
+
+/**
+ * Post-PR #112 negative-path helper.
+ *
+ * Why: TransferTransaction.create no longer enforces ownership; rejection moved to the
+ * predicate-verifier layer. Tests that previously asserted .create() throws now build the
+ * transaction, sign with the attacker's key, and verify against the token's lockScript —
+ * expecting either VerificationStatus.FAIL (wrong-signer for PayToPublicKey) or a thrown
+ * error (e.g. BurnPredicate has no registered verifier).
+ */
+export async function attemptUnauthorizedTransfer(
+  setup: ITestSetup,
+  token: Token,
+  attacker: IUser,
+  recipient: IPredicate,
+): Promise<Error | null> {
+  try {
+    const tx = await TransferTransaction.create(token, recipient, crypto.getRandomValues(new Uint8Array(32)));
+    const unlock = await PayToPublicKeyPredicateUnlockScript.create(tx, attacker.signingService);
+    const result = await setup.predicateVerifier.verify(
+      token.latestTransaction.recipient,
+      tx.sourceStateHash,
+      await tx.calculateTransactionHash(),
+      unlock.encode(),
+    );
+    return result.status === VerificationStatus.OK
+      ? null
+      : new Error(`Predicate verification rejected: ${result.message ?? result.status}`);
+  } catch (e) {
+    return e as Error;
+  }
+}
+
+/**
+ * Post-PR #112 negative-path helper for splits.
+ *
+ * Why: TokenSplit.split no longer enforces ownership — it builds a burn TransferTransaction
+ * internally and returns it. Rejection moves to the predicate-verifier layer when the burn
+ * is signed and submitted. This helper attempts the burn signature with the attacker's key
+ * and verifies against the token's current lockScript.
+ */
+export async function attemptUnauthorizedSplit(
+  setup: ITestSetup,
+  token: Token,
+  attacker: IUser,
+  decodePaymentData: (bytes: Uint8Array) => Promise<IPaymentData>,
+  splitAssets: [TokenId, PaymentAssetCollection][],
+): Promise<Error | null> {
+  try {
+    const { burn } = await TokenSplit.split(token, decodePaymentData, splitAssets);
+    const unlock = await PayToPublicKeyPredicateUnlockScript.create(burn.transaction, attacker.signingService);
+    const result = await setup.predicateVerifier.verify(
+      token.latestTransaction.recipient,
+      burn.transaction.sourceStateHash,
+      await burn.transaction.calculateTransactionHash(),
+      unlock.encode(),
+    );
+    return result.status === VerificationStatus.OK
+      ? null
+      : new Error(`Predicate verification rejected split burn: ${result.message ?? result.status}`);
+  } catch (e) {
+    return e as Error;
+  }
 }
 
 export async function splitTokenToOwner(

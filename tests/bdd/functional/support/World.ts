@@ -29,6 +29,7 @@ export class TokenWorld extends World {
   public bob!: IUser;
   public bobToken!: Token;
   public burnedToken!: Token;
+  public canonicalCertDataStash?: { encoded: Uint8Array; reEncoded?: Uint8Array };
   public carol!: IUser;
   public carolToken!: Token;
   public cborData!: Uint8Array;
@@ -41,6 +42,7 @@ export class TokenWorld extends World {
   public dave!: IUser;
   public daveToken!: Token;
   public dupResponseStatus?: CertificationStatus;
+  public duplicateCertData?: import('../../../../src/api/CertificationData.js').CertificationData;
   public finalToken!: Token;
   public firstResponse!: CertificationResponse;
   public firstTransferTransaction!: TransferTransaction;
@@ -59,12 +61,25 @@ export class TokenWorld extends World {
   public loadTestReport!: ILoadTestReport;
   public loadTestRunner!: ShardLoadRunner;
   public mintError: Error | null = null;
+  public mintFieldsStash?: {
+    built: MintTransaction;
+    decoded?: MintTransaction;
+  };
   public mintTokenId!: TokenId;
   public mintTokenType!: TokenType;
   public readonly namedUsers: Map<string, IUser> = new Map();
   public readonly nametags: Map<IUser, UnicityIdToken> = new Map();
   public originalToken!: Token;
   public preparedOperations!: Map<number, IPreparedOperation[]>;
+  public registryStash?: {
+    result?: import('../../../../src/verification/VerificationResult.js').VerificationResult<
+      import('../../../../src/verification/VerificationStatus.js').VerificationStatus
+    >;
+    service: import('../../../../src/transaction/verification/MintJustificationVerifierService.js').MintJustificationVerifierService;
+    stubInvocations: number;
+    stubTag?: bigint;
+    thrownError?: Error;
+  };
   public routingPinStash?: {
     pickedShard?: number;
     stateId?: import('../../../../src/api/StateId.js').StateId;
@@ -95,6 +110,15 @@ export class TokenWorld extends World {
     stateId?: import('../../../../src/api/StateId.js').StateId;
   };
   public splitError: Error | null = null;
+  public splitJustificationStash?: {
+    certMint: import('../../../../src/transaction/CertifiedMintTransaction.js').CertifiedMintTransaction;
+    decoded: import('../../../../src/payment/SplitMintJustification.js').SplitMintJustification;
+    mutatedCert?: import('../../../../src/transaction/CertifiedMintTransaction.js').CertifiedMintTransaction;
+    thrownError?: Error;
+    verifyResult?: import('../../../../src/verification/VerificationResult.js').VerificationResult<
+      import('../../../../src/verification/VerificationStatus.js').VerificationStatus
+    >;
+  };
   public splitTokens!: Token[];
   public stateIdEncodingStash?: {
     bytes: Uint8Array;
@@ -107,9 +131,17 @@ export class TokenWorld extends World {
   public token!: Token;
   public tokens!: PaymentAssetCollection;
   public transferError: Error | null = null;
+  public transferFieldsStash?: {
+    built: TransferTransaction;
+    decoded?: TransferTransaction;
+  };
   public transferTransaction: TransferTransaction | null = null;
   public transferredToken: Token | null = null;
   public tree!: ITokenTree;
+  public unicityIdFieldsStash?: {
+    built: import('../../../../src/unicity-id/UnicityIdMintTransaction.js').UnicityIdMintTransaction;
+    decoded?: import('../../../../src/unicity-id/UnicityIdMintTransaction.js').UnicityIdMintTransaction;
+  };
   public user!: IUser;
   public users!: Map<string, IUser>;
   public verificationResult!: VerificationResult<VerificationStatus>;
