@@ -4,7 +4,7 @@ import { Then, When } from '@cucumber/cucumber';
 
 import { CertificationData } from '../../../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../../../src/api/CertificationResponse.js';
-import { PayToPublicKeyPredicateUnlockScript } from '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
+import { SignaturePredicateUnlockScript } from '../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
 import { waitInclusionProof } from '../../../../src/util/InclusionProofUtils.js';
 import { createUser } from '../support/TestSetup.js';
@@ -46,7 +46,7 @@ When(
 
     const certData = await CertificationData.fromTransaction(
       tx,
-      await PayToPublicKeyPredicateUnlockScript.create(tx, user.signingService),
+      await SignaturePredicateUnlockScript.create(tx, user.signingService),
     );
 
     const response = await this.tree.setup.client.submitCertificationRequest(certData);
@@ -86,7 +86,7 @@ When(
 
     const certData = await CertificationData.fromTransaction(
       this.transferTransaction,
-      await PayToPublicKeyPredicateUnlockScript.create(this.transferTransaction, user.signingService),
+      await SignaturePredicateUnlockScript.create(this.transferTransaction, user.signingService),
     );
 
     const response = await this.tree.setup.client.submitCertificationRequest(certData);

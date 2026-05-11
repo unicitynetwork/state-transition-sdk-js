@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 
 import { Given, Then, When } from '@cucumber/cucumber';
 
-import { PayToPublicKeyPredicate } from '../../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
+import { SignaturePredicate } from '../../../../src/predicate/builtin/SignaturePredicate.js';
+import { EncodedPredicate } from '../../../../src/predicate/EncodedPredicate.js';
 import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../../src/transaction/TokenType.js';
@@ -30,7 +31,7 @@ function parseHexOrNull(value: string): Uint8Array | null {
 Given(
   'a MintTransaction is built with justification {string} and data {string}',
   async function (this: TokenWorld, justification: string, data: string): Promise<void> {
-    const recipient = PayToPublicKeyPredicate.create(SAMPLE_PUBKEY);
+    const recipient = SignaturePredicate.create(SAMPLE_PUBKEY);
     const built = await MintTransaction.create(
       recipient,
       new TokenId(new Uint8Array(32)),
@@ -69,4 +70,24 @@ Then('the decoded data matches {string}', function (this: TokenWorld, expected: 
     assert.ok(stash.decoded.data, 'expected non-null data');
     assert.equal(HexConverter.encode(stash.decoded.data), expected);
   }
+});
+
+// PR #114 #113 — ITransaction.recipient / .lockScript are EncodedPredicate on the wire.
+Then('the recipient is an EncodedPredicate', function (this: TokenWorld): void {
+  const stash = getStash(this);
+  assert.ok(stash.built.recipient instanceof EncodedPredicate);
+});
+
+Then('the lockScript is an EncodedPredicate', function (this: TokenWorld): void {
+  const stash = getStash(this);
+  assert.ok(stash.built.lockScript instanceof EncodedPredicate);
+});
+
+Then('the decoded recipient encodes to the original recipient bytes', function (this: TokenWorld): void {
+  const stash = getStash(this);
+  assert.ok(stash.decoded, 'decoded missing');
+  assert.equal(
+    HexConverter.encode(stash.decoded.recipient.toCBOR()),
+    HexConverter.encode(stash.built.recipient.toCBOR()),
+  );
 });

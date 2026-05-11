@@ -3,7 +3,7 @@ import { strict as assert } from 'assert';
 import { Then, When } from '@cucumber/cucumber';
 
 import { CertificationStatus } from '../../../../src/api/CertificationResponse.js';
-import { PayToPublicKeyPredicate } from '../../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
+import { SignaturePredicate } from '../../../../src/predicate/builtin/SignaturePredicate.js';
 import { Token } from '../../../../src/transaction/Token.js';
 import { createUser, mintToken, transferToken } from '../support/TestSetup.js';
 import { TokenWorld } from '../support/World.js';
@@ -44,8 +44,8 @@ When(
     let token: Token = await mintToken(this.setup, this.alice);
     for (let i = 0; i < hops; i++) {
       const next = createUser();
-      const ownerPredicate = PayToPublicKeyPredicate.fromSigningService(owner.signingService);
-      const recipientPredicate = PayToPublicKeyPredicate.fromSigningService(next.signingService);
+      const ownerPredicate = SignaturePredicate.fromSigningService(owner.signingService);
+      const recipientPredicate = SignaturePredicate.fromSigningService(next.signingService);
       token = await transferToken(this.setup, token, ownerPredicate, owner.signingService, recipientPredicate);
       owner = next;
     }

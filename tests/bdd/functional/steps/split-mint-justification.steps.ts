@@ -207,6 +207,15 @@ Given(/^a CertifiedMintTransaction is mutated by (.+)$/, function (this: TokenWo
       stash.mutatedCert = mockCert(base, { data: tampered.toCBOR() });
       break;
     }
+    case 'duplicating one proof so two share an assetId': {
+      // PR #114 added an early dedup check at the top of each proof iteration. Using two
+      // copies of a genuine proof keeps the first iteration valid (so it lands in the
+      // validated-assets set) and trips the dedup check on the second.
+      const proofs = stash.decoded.proofs;
+      const tamperedJustification = SplitMintJustification.create(stash.decoded.token, [proofs[0], proofs[0]]);
+      stash.mutatedCert = mockCert(base, { justification: tamperedJustification.toCBOR() });
+      break;
+    }
     default:
       throw new Error(`Unknown mutation: ${mutationLabel}`);
   }

@@ -32,7 +32,7 @@ async function handleMessage(msg: WorkerMessage): Promise<void> {
       case 'init': {
         const json: unknown = JSON.parse(readFileSync(msg.trustBasePath, 'utf-8'));
         trustBase = RootTrustBase.fromJSON(json);
-        predicateVerifier = PredicateVerifierService.create(trustBase);
+        predicateVerifier = PredicateVerifierService.create();
         parentPort!.postMessage({ type: 'init-ok' });
         break;
       }

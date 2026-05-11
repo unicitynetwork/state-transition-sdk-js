@@ -1,9 +1,11 @@
 Feature: SplitMintJustificationVerifier rejects malformed split mints
 
-  # PR #110 406f890 — SplitMintJustificationVerifier guards the new split-mint flow with
-  # 12 distinct FAIL branches. Five are reachable via field-level mutation from outside the
-  # SDK (the ones below). The remaining seven require surgical CBOR/path bit-flipping and
-  # are covered in tests/unit/payment/SplitMintJustificationVerifierTest.ts.
+  # SplitMintJustificationVerifier guards the new split-mint flow with distinct FAIL
+  # branches. The ones below are reachable via field-level mutation from outside the SDK.
+  # The "duplicate split proof" branch was added in PR #114 (issue #113) with an explicit
+  # early dedup check, which makes it reachable by a plain field-level mutation too.
+  # The remaining ~6 path-verification branches require surgical CBOR/path bit-flipping and
+  # are tracked for a future direct unit test in tests/unit/payment/.
 
   Background:
     Given a mock aggregator client is set up
@@ -22,3 +24,4 @@ Feature: SplitMintJustificationVerifier rejects malformed split mints
       | adding an extra asset to data not present in proofs   | Total amount of assets differ in token and proofs  |
       | renaming one proof's assetId to one not in data       | not found in asset data                            |
       | mismatching one asset's value between data and tree   | does not match asset tree leaf                     |
+      | duplicating one proof so two share an assetId         | Duplicate split proof for asset id                 |

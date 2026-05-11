@@ -105,10 +105,10 @@ Given('a CertificationData is built from a sample MintTransaction', async functi
   const { MintTransaction } = await import('../../../../src/transaction/MintTransaction.js');
   const { TokenId } = await import('../../../../src/transaction/TokenId.js');
   const { TokenType } = await import('../../../../src/transaction/TokenType.js');
-  const { PayToPublicKeyPredicate } = await import('../../../../src/predicate/builtin/PayToPublicKeyPredicate.js');
+  const { SignaturePredicate } = await import('../../../../src/predicate/builtin/SignaturePredicate.js');
   const { HexConverter } = await import('../../../../src/util/HexConverter.js');
 
-  const recipient = PayToPublicKeyPredicate.create(
+  const recipient = SignaturePredicate.create(
     HexConverter.decode('02ce9f22e51333c97a8fb1f807a229ece3a8765a16af5fc1a13e30834be3280026'),
   );
   const mintTx = await MintTransaction.create(

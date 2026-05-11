@@ -80,8 +80,8 @@ When(
     const { TransferTransaction } = await import('../../../../src/transaction/TransferTransaction.js');
     const { CertificationData } = await import('../../../../src/api/CertificationData.js');
     const { CertificationStatus } = await import('../../../../src/api/CertificationResponse.js');
-    const { PayToPublicKeyPredicateUnlockScript } = await import(
-      '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js'
+    const { SignaturePredicateUnlockScript } = await import(
+      '../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js'
     );
     const { waitInclusionProof } = await import('../../../../src/util/InclusionProofUtils.js');
 
@@ -92,7 +92,7 @@ When(
     );
     const cert = await CertificationData.fromTransaction(
       transferTx,
-      await PayToPublicKeyPredicateUnlockScript.create(transferTx, alice.signingService),
+      await SignaturePredicateUnlockScript.create(transferTx, alice.signingService),
     );
     const resp = await this.setup.client.submitCertificationRequest(cert);
     assert.strictEqual(resp.status, CertificationStatus.SUCCESS);
@@ -142,8 +142,8 @@ When(
     const { TransferTransaction } = await import('../../../../src/transaction/TransferTransaction.js');
     const { CertificationData } = await import('../../../../src/api/CertificationData.js');
     const { CertificationStatus } = await import('../../../../src/api/CertificationResponse.js');
-    const { PayToPublicKeyPredicateUnlockScript } = await import(
-      '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js'
+    const { SignaturePredicateUnlockScript } = await import(
+      '../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js'
     );
     const { waitInclusionProof } = await import('../../../../src/util/InclusionProofUtils.js');
 
@@ -156,7 +156,7 @@ When(
       const tx = await TransferTransaction.create(child, recipientAddress, crypto.getRandomValues(new Uint8Array(32)));
       const cert = await CertificationData.fromTransaction(
         tx,
-        await PayToPublicKeyPredicateUnlockScript.create(tx, alice.signingService),
+        await SignaturePredicateUnlockScript.create(tx, alice.signingService),
       );
       const resp = await this.setup.client.submitCertificationRequest(cert);
       assert.strictEqual(resp.status, CertificationStatus.SUCCESS);
@@ -216,8 +216,8 @@ When(
     const { TransferTransaction } = await import('../../../../src/transaction/TransferTransaction.js');
     const { CertificationData } = await import('../../../../src/api/CertificationData.js');
     const { CertificationStatus } = await import('../../../../src/api/CertificationResponse.js');
-    const { PayToPublicKeyPredicateUnlockScript } = await import(
-      '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js'
+    const { SignaturePredicateUnlockScript } = await import(
+      '../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js'
     );
     const { waitInclusionProof } = await import('../../../../src/util/InclusionProofUtils.js');
 
@@ -228,7 +228,7 @@ When(
     );
     const cert = await CertificationData.fromTransaction(
       tx,
-      await PayToPublicKeyPredicateUnlockScript.create(tx, bob.signingService),
+      await SignaturePredicateUnlockScript.create(tx, bob.signingService),
     );
     const resp = await this.setup.client.submitCertificationRequest(cert);
     assert.strictEqual(resp.status, CertificationStatus.SUCCESS);

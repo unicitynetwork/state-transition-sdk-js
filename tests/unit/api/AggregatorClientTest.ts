@@ -1,7 +1,7 @@
 import { AggregatorClient } from '../../../src/api/AggregatorClient.js';
 import { CertificationData } from '../../../src/api/CertificationData.js';
 import { StateId } from '../../../src/api/StateId.js';
-import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
+import { SignaturePredicate } from '../../../src/predicate/builtin/SignaturePredicate.js';
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { TokenId } from '../../../src/transaction/TokenId.js';
@@ -39,7 +39,7 @@ describe('AggregatorClient X-State-ID header', () => {
 
   it('sends X-State-ID as bare hex without StateId[...] wrapper', async () => {
     const client = new AggregatorClient('http://test.invalid', null);
-    const recipient = PayToPublicKeyPredicate.create(
+    const recipient = SignaturePredicate.create(
       HexConverter.decode('02ce9f22e51333c97a8fb1f807a229ece3a8765a16af5fc1a13e30834be3280026'),
     );
     const mintTx = await MintTransaction.create(
@@ -60,7 +60,7 @@ describe('AggregatorClient X-State-ID header', () => {
 
   it('does not send X-API-Key when no key is provided', async () => {
     const client = new AggregatorClient('http://test.invalid', null);
-    const recipient = PayToPublicKeyPredicate.create(
+    const recipient = SignaturePredicate.create(
       HexConverter.decode('02ce9f22e51333c97a8fb1f807a229ece3a8765a16af5fc1a13e30834be3280026'),
     );
     const mintTx = await MintTransaction.create(
@@ -77,7 +77,7 @@ describe('AggregatorClient X-State-ID header', () => {
 
   it('sends X-API-Key when a key is provided', async () => {
     const client = new AggregatorClient('http://test.invalid', 'secret-key-abc');
-    const recipient = PayToPublicKeyPredicate.create(
+    const recipient = SignaturePredicate.create(
       HexConverter.decode('02ce9f22e51333c97a8fb1f807a229ece3a8765a16af5fc1a13e30834be3280026'),
     );
     const mintTx = await MintTransaction.create(

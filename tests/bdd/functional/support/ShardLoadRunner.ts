@@ -669,10 +669,7 @@ export class ShardLoadRunner {
   }
 
   private getRecipientAddress(): IPredicate {
-    if (!this.cachedAddress) {
-      this.cachedAddress = this.user.predicate;
-    }
-    return this.cachedAddress;
+    return (this.cachedAddress ??= this.user.predicate);
   }
 
   private async runBatch(shardId: number, batchIndex: number, ops: IPreparedOperation[]): Promise<IShardBatchResult> {

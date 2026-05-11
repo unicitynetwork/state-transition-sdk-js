@@ -4,7 +4,7 @@ import { Then, When } from '@cucumber/cucumber';
 
 import { CertificationData } from '../../../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../../../src/api/CertificationResponse.js';
-import { PayToPublicKeyPredicateUnlockScript } from '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
+import { SignaturePredicateUnlockScript } from '../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
 import { waitInclusionProof } from '../../../../src/util/InclusionProofUtils.js';
 import { TokenWorld } from '../support/World.js';
@@ -18,7 +18,7 @@ When('Alice submits a valid transfer to Bob', async function (this: TokenWorld):
 
   const certificationData = await CertificationData.fromTransaction(
     this.firstTransferTransaction,
-    await PayToPublicKeyPredicateUnlockScript.create(this.firstTransferTransaction, this.alice.signingService),
+    await SignaturePredicateUnlockScript.create(this.firstTransferTransaction, this.alice.signingService),
   );
 
   this.firstResponse = await this.setup.client.submitCertificationRequest(certificationData);
@@ -33,7 +33,7 @@ When('Alice submits a second transfer of the same token', async function (this: 
 
   const certificationData = await CertificationData.fromTransaction(
     this.secondTransferTransaction,
-    await PayToPublicKeyPredicateUnlockScript.create(this.secondTransferTransaction, this.alice.signingService),
+    await SignaturePredicateUnlockScript.create(this.secondTransferTransaction, this.alice.signingService),
   );
 
   this.secondResponse = await this.setup.client.submitCertificationRequest(certificationData);

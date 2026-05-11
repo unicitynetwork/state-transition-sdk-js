@@ -58,6 +58,13 @@ export class TokenWorld extends World {
     siblingCount?: number;
     verifyResult?: boolean;
   };
+  public issuerPinStash?: {
+    result?: import('../../../../src/verification/VerificationResult.js').VerificationResult<
+      import('../../../../src/verification/VerificationStatus.js').VerificationStatus
+    >;
+    token: import('../../../../src/unicity-id/UnicityIdToken.js').UnicityIdToken;
+    trueIssuerPublicKey: Uint8Array;
+  };
   public loadTestReport!: ILoadTestReport;
   public loadTestRunner!: ShardLoadRunner;
   public mintError: Error | null = null;

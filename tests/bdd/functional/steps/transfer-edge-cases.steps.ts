@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { Then, When } from '@cucumber/cucumber';
 
 import { CertificationData } from '../../../../src/api/CertificationData.js';
-import { PayToPublicKeyPredicateUnlockScript } from '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
+import { SignaturePredicateUnlockScript } from '../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
 import { waitInclusionProof } from '../../../../src/util/InclusionProofUtils.js';
 import { transferToken } from '../support/TestSetup.js';
@@ -28,7 +28,7 @@ When('Alice tries to submit a transfer of the stale token to Bob', async functio
 
   const certificationData = await CertificationData.fromTransaction(
     this.transferTransaction,
-    await PayToPublicKeyPredicateUnlockScript.create(this.transferTransaction, this.alice.signingService),
+    await SignaturePredicateUnlockScript.create(this.transferTransaction, this.alice.signingService),
   );
 
   const response = await this.setup.client.submitCertificationRequest(certificationData);

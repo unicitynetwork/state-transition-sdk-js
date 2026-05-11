@@ -4,7 +4,7 @@ import { Then, When } from '@cucumber/cucumber';
 
 import { CertificationData } from '../../../../src/api/CertificationData.js';
 import { SigningService } from '../../../../src/crypto/secp256k1/SigningService.js';
-import { PayToPublicKeyPredicateUnlockScript } from '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
+import { SignaturePredicateUnlockScript } from '../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js';
 import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../../src/transaction/TokenType.js';
@@ -63,7 +63,7 @@ When('Alice creates a transfer to Bob signed with the wrong key', async function
   const wrongSigningService = new SigningService(SigningService.generatePrivateKey());
   const certificationData = await CertificationData.fromTransaction(
     transferTransaction,
-    await PayToPublicKeyPredicateUnlockScript.create(transferTransaction, wrongSigningService),
+    await SignaturePredicateUnlockScript.create(transferTransaction, wrongSigningService),
   );
 
   const response = await this.setup.client.submitCertificationRequest(certificationData);

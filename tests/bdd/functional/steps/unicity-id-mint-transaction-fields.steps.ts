@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 
 import { Given, Then, When } from '@cucumber/cucumber';
 
-import { PayToPublicKeyPredicate } from '../../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
+import { SignaturePredicate } from '../../../../src/predicate/builtin/SignaturePredicate.js';
 import { EncodedPredicate } from '../../../../src/predicate/EncodedPredicate.js';
 import { TokenType } from '../../../../src/transaction/TokenType.js';
 import { UnicityId } from '../../../../src/unicity-id/UnicityId.js';
@@ -31,9 +31,9 @@ function getStash(world: TokenWorld): IUnicityIdFieldsStash {
 Given(
   'a UnicityIdMintTransaction is built with a sample lockScript, recipient, unicityId, tokenType, and targetPredicate',
   async function (this: TokenWorld): Promise<void> {
-    const lockScript = PayToPublicKeyPredicate.create(SAMPLE_LOCK_PUBKEY);
-    const recipient = PayToPublicKeyPredicate.create(SAMPLE_RECIPIENT_PUBKEY);
-    const targetPredicate = PayToPublicKeyPredicate.create(SAMPLE_TARGET_PUBKEY);
+    const lockScript = SignaturePredicate.create(SAMPLE_LOCK_PUBKEY);
+    const recipient = SignaturePredicate.create(SAMPLE_RECIPIENT_PUBKEY);
+    const targetPredicate = SignaturePredicate.create(SAMPLE_TARGET_PUBKEY);
     const built = await UnicityIdMintTransaction.create(
       lockScript,
       recipient,

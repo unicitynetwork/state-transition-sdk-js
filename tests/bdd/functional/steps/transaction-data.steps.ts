@@ -2,7 +2,7 @@ import { When } from '@cucumber/cucumber';
 
 import { CertificationData } from '../../../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../../../src/api/CertificationResponse.js';
-import { PayToPublicKeyPredicateUnlockScript } from '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
+import { SignaturePredicateUnlockScript } from '../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js';
 import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../../src/transaction/TokenType.js';
@@ -55,7 +55,7 @@ When(
 
     const certificationData = await CertificationData.fromTransaction(
       transferTransaction,
-      await PayToPublicKeyPredicateUnlockScript.create(transferTransaction, this.alice.signingService),
+      await SignaturePredicateUnlockScript.create(transferTransaction, this.alice.signingService),
     );
 
     const response = await this.setup.client.submitCertificationRequest(certificationData);

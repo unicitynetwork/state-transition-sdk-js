@@ -15,8 +15,8 @@ import { IPaymentData } from '../../../../src/payment/IPaymentData.js';
 import { SplitMintJustification } from '../../../../src/payment/SplitMintJustification.js';
 import { SplitMintJustificationVerifier } from '../../../../src/payment/SplitMintJustificationVerifier.js';
 import { TokenSplit } from '../../../../src/payment/TokenSplit.js';
-import { PayToPublicKeyPredicate } from '../../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
-import { PayToPublicKeyPredicateUnlockScript } from '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
+import { SignaturePredicate } from '../../../../src/predicate/builtin/SignaturePredicate.js';
+import { SignaturePredicateUnlockScript } from '../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js';
 import { IPredicate } from '../../../../src/predicate/IPredicate.js';
 import { PredicateVerifierService } from '../../../../src/predicate/verification/PredicateVerifierService.js';
 import { StateTransitionClient } from '../../../../src/StateTransitionClient.js';
@@ -41,7 +41,7 @@ export interface ITestSetup {
 }
 
 export interface IUser {
-  readonly predicate: PayToPublicKeyPredicate;
+  readonly predicate: SignaturePredicate;
   readonly signingService: SigningService;
 }
 
@@ -53,7 +53,7 @@ export function createTestSetup(): ITestSetup {
     fileURLToPath(new URL('../../../../tests/functional/trust-base.json', import.meta.url));
   const trustBaseJsonString = readFileSync(trustBasePath, 'utf-8');
   const trustBase = RootTrustBase.fromJSON(JSON.parse(trustBaseJsonString));
-  const predicateVerifier = PredicateVerifierService.create(trustBase);
+  const predicateVerifier = PredicateVerifierService.create();
   const mintJustificationVerifier = new MintJustificationVerifierService().register(
     new SplitMintJustificationVerifier(trustBase, predicateVerifier, parseSplitVerificationData),
   );
@@ -99,7 +99,7 @@ function createAggregatorClient(): IAggregatorClient {
 
 export function createUser(): IUser {
   const signingService = new SigningService(SigningService.generatePrivateKey());
-  const predicate = PayToPublicKeyPredicate.fromSigningService(signingService);
+  const predicate = SignaturePredicate.fromSigningService(signingService);
   return { predicate, signingService };
 }
 
@@ -170,7 +170,7 @@ export async function transferToken(
 
   const certificationData = await CertificationData.fromTransaction(
     transferTransaction,
-    await PayToPublicKeyPredicateUnlockScript.create(transferTransaction, ownerSigningService),
+    await SignaturePredicateUnlockScript.create(transferTransaction, ownerSigningService),
   );
 
   const response = await setup.client.submitCertificationRequest(certificationData);
@@ -202,7 +202,7 @@ export async function splitToken(
   // Submit burn transaction
   const burnCertificationData = await CertificationData.fromTransaction(
     splitResult.burn.transaction,
-    await PayToPublicKeyPredicateUnlockScript.create(splitResult.burn.transaction, ownerSigningService),
+    await SignaturePredicateUnlockScript.create(splitResult.burn.transaction, ownerSigningService),
   );
 
   const burnResponse = await setup.client.submitCertificationRequest(burnCertificationData);
@@ -310,7 +310,7 @@ export async function attemptUnauthorizedTransfer(
 ): Promise<Error | null> {
   try {
     const tx = await TransferTransaction.create(token, recipient, crypto.getRandomValues(new Uint8Array(32)));
-    const unlock = await PayToPublicKeyPredicateUnlockScript.create(tx, attacker.signingService);
+    const unlock = await SignaturePredicateUnlockScript.create(tx, attacker.signingService);
     const result = await setup.predicateVerifier.verify(
       token.latestTransaction.recipient,
       tx.sourceStateHash,
@@ -342,7 +342,7 @@ export async function attemptUnauthorizedSplit(
 ): Promise<Error | null> {
   try {
     const { burn } = await TokenSplit.split(token, decodePaymentData, splitAssets);
-    const unlock = await PayToPublicKeyPredicateUnlockScript.create(burn.transaction, attacker.signingService);
+    const unlock = await SignaturePredicateUnlockScript.create(burn.transaction, attacker.signingService);
     const result = await setup.predicateVerifier.verify(
       token.latestTransaction.recipient,
       burn.transaction.sourceStateHash,
@@ -371,7 +371,7 @@ export async function splitTokenToOwner(
   // Submit burn transaction
   const burnCertificationData = await CertificationData.fromTransaction(
     splitResult.burn.transaction,
-    await PayToPublicKeyPredicateUnlockScript.create(splitResult.burn.transaction, ownerSigningService),
+    await SignaturePredicateUnlockScript.create(splitResult.burn.transaction, ownerSigningService),
   );
 
   const burnResponse = await setup.client.submitCertificationRequest(burnCertificationData);
@@ -445,7 +445,7 @@ export async function registerNametag(
   const unicityId = new UnicityId(name, domain);
 
   const mintTransaction = await UnicityIdMintTransaction.create(
-    PayToPublicKeyPredicate.fromSigningService(nametagSigningService),
+    SignaturePredicate.fromSigningService(nametagSigningService),
     user.predicate,
     unicityId,
     TokenType.generate(),
@@ -454,7 +454,7 @@ export async function registerNametag(
 
   const certificationData = await CertificationData.fromTransaction(
     mintTransaction,
-    await PayToPublicKeyPredicateUnlockScript.create(mintTransaction, nametagSigningService),
+    await SignaturePredicateUnlockScript.create(mintTransaction, nametagSigningService),
   );
 
   const response = await setup.client.submitCertificationRequest(certificationData);
@@ -557,7 +557,7 @@ export async function runMixedChain(
 
     const transferCert = await CertificationData.fromTransaction(
       transferTransaction,
-      await PayToPublicKeyPredicateUnlockScript.create(transferTransaction, hop.from.signingService),
+      await SignaturePredicateUnlockScript.create(transferTransaction, hop.from.signingService),
     );
 
     const transferResponse = await setup.client.submitCertificationRequest(transferCert);

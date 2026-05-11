@@ -4,7 +4,7 @@ import { Given, Then, When } from '@cucumber/cucumber';
 
 import { CertificationData } from '../../../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../../../src/api/CertificationResponse.js';
-import { PayToPublicKeyPredicateUnlockScript } from '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
+import { SignaturePredicateUnlockScript } from '../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js';
 import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../../src/transaction/Token.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
@@ -137,7 +137,7 @@ When(
 
     const certificationData = await CertificationData.fromTransaction(
       transferTransaction,
-      await PayToPublicKeyPredicateUnlockScript.create(transferTransaction, sender.signingService),
+      await SignaturePredicateUnlockScript.create(transferTransaction, sender.signingService),
     );
 
     const response = await this.setup.client.submitCertificationRequest(certificationData);
@@ -183,7 +183,7 @@ Then(/^the current token can be spent by (\w+)$/, async function (this: TokenWor
 
   const certificationData = await CertificationData.fromTransaction(
     transferTransaction,
-    await PayToPublicKeyPredicateUnlockScript.create(transferTransaction, owner.signingService),
+    await SignaturePredicateUnlockScript.create(transferTransaction, owner.signingService),
   );
 
   const response = await this.setup.client.submitCertificationRequest(certificationData);

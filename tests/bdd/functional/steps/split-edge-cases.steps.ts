@@ -8,7 +8,7 @@ import { Asset } from '../../../../src/payment/asset/Asset.js';
 import { PaymentAssetCollection } from '../../../../src/payment/asset/PaymentAssetCollection.js';
 import { SplitMintJustification } from '../../../../src/payment/SplitMintJustification.js';
 import { TokenSplit } from '../../../../src/payment/TokenSplit.js';
-import { PayToPublicKeyPredicateUnlockScript } from '../../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
+import { SignaturePredicateUnlockScript } from '../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js';
 import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
 import { parseSimplePaymentData, splitToken } from '../support/TestSetup.js';
@@ -45,7 +45,7 @@ When(
     const splitResult = await TokenSplit.split(this.token, parseSimplePaymentData, splitAssets);
 
     // Submit burn first.
-    const burnUnlock = await PayToPublicKeyPredicateUnlockScript.create(
+    const burnUnlock = await SignaturePredicateUnlockScript.create(
       splitResult.burn.transaction,
       this.alice.signingService,
     );
