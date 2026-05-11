@@ -106,3 +106,21 @@ Then("the decoded transaction's unicityId encodes to the original unicityId byte
     HexConverter.encode(stash.built.unicityId.toCBOR()),
   );
 });
+
+// PR #114 #113 — lockScript/recipient are EncodedPredicate; targetPredicate stays a SignaturePredicate.
+Then('the unicity-id lockScript is an EncodedPredicate', function (this: TokenWorld): void {
+  assert.ok(getStash(this).built.lockScript instanceof EncodedPredicate);
+});
+
+Then('the unicity-id recipient is an EncodedPredicate', function (this: TokenWorld): void {
+  assert.ok(getStash(this).built.recipient instanceof EncodedPredicate);
+});
+
+Then(
+  'the unicity-id targetPredicate is a SignaturePredicate, not an EncodedPredicate',
+  function (this: TokenWorld): void {
+    const built = getStash(this).built;
+    assert.ok(built.targetPredicate instanceof SignaturePredicate);
+    assert.ok(!(built.targetPredicate instanceof EncodedPredicate));
+  },
+);

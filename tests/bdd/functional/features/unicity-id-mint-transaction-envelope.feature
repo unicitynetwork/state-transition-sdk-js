@@ -14,3 +14,11 @@ Feature: UnicityIdMintTransaction CBOR envelope and round-trip
     And the decoded transaction's recipient encodes to the original recipient bytes
     And the decoded transaction's targetPredicate encodes to the original targetPredicate bytes
     And the decoded transaction's unicityId encodes to the original unicityId bytes
+
+  # PR #114 #113 — lockScript/recipient are EncodedPredicate on this transaction too;
+  # targetPredicate deliberately stays a SignaturePredicate (it is signed against, not just carried).
+  Scenario: UnicityIdMintTransaction lockScript and recipient are EncodedPredicate; targetPredicate is not
+    Given a UnicityIdMintTransaction is built with a sample lockScript, recipient, unicityId, tokenType, and targetPredicate
+    Then the unicity-id lockScript is an EncodedPredicate
+    And the unicity-id recipient is an EncodedPredicate
+    And the unicity-id targetPredicate is a SignaturePredicate, not an EncodedPredicate
