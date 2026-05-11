@@ -145,6 +145,12 @@ export class TokenWorld extends World {
   public transferTransaction: TransferTransaction | null = null;
   public transferredToken: Token | null = null;
   public tree!: ITokenTree;
+  public uidVerifierStash?: {
+    aliceSigningService: import('../../../../src/crypto/secp256k1/SigningService.js').SigningService;
+    lockedToken: Token;
+    nametag: import('../../../../src/unicity-id/UnicityIdToken.js').UnicityIdToken;
+    trueIssuerPublicKey: Uint8Array;
+  };
   public unicityIdFieldsStash?: {
     built: import('../../../../src/unicity-id/UnicityIdMintTransaction.js').UnicityIdMintTransaction;
     decoded?: import('../../../../src/unicity-id/UnicityIdMintTransaction.js').UnicityIdMintTransaction;

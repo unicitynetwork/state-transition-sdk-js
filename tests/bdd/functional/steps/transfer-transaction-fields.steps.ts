@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 
 import { Given, Then, When } from '@cucumber/cucumber';
 
+import { EncodedPredicate } from '../../../../src/predicate/EncodedPredicate.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
 import { HexConverter } from '../../../../src/util/HexConverter.js';
 import { TokenWorld } from '../support/World.js';
@@ -44,4 +45,22 @@ Then('the decoded stateMask byte-for-byte equals the original', function (this: 
   const stash = getStash(this);
   assert.ok(stash.decoded, 'decoded missing');
   assert.equal(HexConverter.encode(stash.decoded.stateMask), HexConverter.encode(stash.built.stateMask));
+});
+
+// PR #114 #113 — ITransaction.recipient / .lockScript are EncodedPredicate on the wire.
+Then('the transfer recipient is an EncodedPredicate', function (this: TokenWorld): void {
+  assert.ok(getStash(this).built.recipient instanceof EncodedPredicate);
+});
+
+Then('the transfer lockScript is an EncodedPredicate', function (this: TokenWorld): void {
+  assert.ok(getStash(this).built.lockScript instanceof EncodedPredicate);
+});
+
+Then('the decoded transfer recipient encodes to the original recipient bytes', function (this: TokenWorld): void {
+  const stash = getStash(this);
+  assert.ok(stash.decoded, 'decoded missing');
+  assert.equal(
+    HexConverter.encode(stash.decoded.recipient.toCBOR()),
+    HexConverter.encode(stash.built.recipient.toCBOR()),
+  );
 });

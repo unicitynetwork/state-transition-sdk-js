@@ -103,8 +103,16 @@ export function createUser(): IUser {
   return { predicate, signingService };
 }
 
-export async function mintToken(setup: ITestSetup, user: IUser): Promise<Token> {
-  const mintTransaction = await MintTransaction.create(user.predicate, TokenId.generate(), TokenType.generate());
+export function mintToken(setup: ITestSetup, user: IUser): Promise<Token> {
+  return mintTokenToRecipient(setup, user.predicate);
+}
+
+/**
+ * Mint a fresh token locked to an arbitrary recipient predicate (e.g. a UnicityIdPredicate),
+ * not just a SignaturePredicate. Used by the unicity-id-predicate-verifier coverage.
+ */
+export async function mintTokenToRecipient(setup: ITestSetup, recipient: IPredicate): Promise<Token> {
+  const mintTransaction = await MintTransaction.create(recipient, TokenId.generate(), TokenType.generate());
 
   const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
   const response = await setup.client.submitCertificationRequest(certificationData);
