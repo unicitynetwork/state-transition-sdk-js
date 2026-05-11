@@ -5,7 +5,7 @@ import { InclusionProof } from '../api/InclusionProof.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
-import { PayToPublicKeyPredicate } from '../predicate/builtin/PayToPublicKeyPredicate.js';
+import { SignaturePredicate } from '../predicate/builtin/SignaturePredicate.js';
 import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
 import { IPredicate } from '../predicate/IPredicate.js';
 import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
@@ -24,11 +24,11 @@ export class UnicityIdMintTransaction implements ITransaction {
 
   private constructor(
     public readonly sourceStateHash: MintTransactionState,
-    public readonly lockScript: PayToPublicKeyPredicate,
-    public readonly recipient: IPredicate,
+    public readonly lockScript: EncodedPredicate,
+    public readonly recipient: EncodedPredicate,
     public readonly tokenId: TokenId,
     public readonly tokenType: TokenType,
-    public readonly targetPredicate: PayToPublicKeyPredicate,
+    public readonly targetPredicate: SignaturePredicate,
     public readonly unicityId: UnicityId,
   ) {}
 
@@ -45,18 +45,18 @@ export class UnicityIdMintTransaction implements ITransaction {
   }
 
   public static async create(
-    lockScript: PayToPublicKeyPredicate,
+    lockScript: SignaturePredicate,
     recipient: IPredicate,
     unicityId: UnicityId,
     tokenType: TokenType,
-    targetPredicate: PayToPublicKeyPredicate,
+    targetPredicate: SignaturePredicate,
   ): Promise<UnicityIdMintTransaction> {
     const tokenId = await unicityId.toTokenId();
 
     return new UnicityIdMintTransaction(
       await MintTransactionState.create(tokenId),
-      lockScript,
-      recipient,
+      EncodedPredicate.fromPredicate(lockScript),
+      EncodedPredicate.fromPredicate(recipient),
       tokenId,
       tokenType,
       targetPredicate,
@@ -77,11 +77,11 @@ export class UnicityIdMintTransaction implements ITransaction {
     }
 
     return UnicityIdMintTransaction.create(
-      PayToPublicKeyPredicate.fromPredicate(EncodedPredicate.fromCBOR(data[1])),
+      SignaturePredicate.fromPredicate(EncodedPredicate.fromCBOR(data[1])),
       EncodedPredicate.fromCBOR(data[2]),
       UnicityId.fromCBOR(data[3]),
       TokenType.fromCBOR(data[4]),
-      PayToPublicKeyPredicate.fromPredicate(EncodedPredicate.fromCBOR(data[5])),
+      SignaturePredicate.fromPredicate(EncodedPredicate.fromCBOR(data[5])),
     );
   }
 
@@ -105,8 +105,8 @@ export class UnicityIdMintTransaction implements ITransaction {
       UnicityIdMintTransaction.CBOR_TAG,
       CborSerializer.encodeArray(
         CborSerializer.encodeUnsignedInteger(this.version),
-        EncodedPredicate.fromPredicate(this.lockScript).toCBOR(),
-        EncodedPredicate.fromPredicate(this.recipient).toCBOR(),
+        this.lockScript.toCBOR(),
+        this.recipient.toCBOR(),
         this.unicityId.toCBOR(),
         this.tokenType.toCBOR(),
         EncodedPredicate.fromPredicate(this.targetPredicate).toCBOR(),

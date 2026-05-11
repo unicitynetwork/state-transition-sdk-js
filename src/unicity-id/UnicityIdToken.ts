@@ -34,7 +34,11 @@ export class UnicityIdToken {
     genesis: CertifiedUnicityIdMintTransaction,
   ): Promise<UnicityIdToken> {
     const token = new UnicityIdToken(genesis);
-    const result = await token.verify(trustBase, predicateVerifier);
+    const result = await CertifiedUnicityIdMintTransactionVerificationRule.verify(
+      trustBase,
+      predicateVerifier,
+      genesis,
+    );
     if (result.status !== VerificationStatus.OK) {
       throw new VerificationError('Invalid token genesis', result);
     }
@@ -55,12 +59,14 @@ export class UnicityIdToken {
   public async verify(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,
+    issuerPublicKey: Uint8Array,
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];
     const result = await CertifiedUnicityIdMintTransactionVerificationRule.verify(
       trustBase,
       predicateVerifier,
       this.genesis,
+      issuerPublicKey,
     );
     results.push(result);
     if (result.status !== VerificationStatus.OK) {

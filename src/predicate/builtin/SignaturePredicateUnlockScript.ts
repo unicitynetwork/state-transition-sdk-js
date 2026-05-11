@@ -6,13 +6,13 @@ import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
 import { ITransaction } from '../../transaction/ITransaction.js';
 import { IUnlockScript } from '../IUnlockScript.js';
 
-export class PayToPublicKeyPredicateUnlockScript implements IUnlockScript {
+export class SignaturePredicateUnlockScript implements IUnlockScript {
   private constructor(public readonly signature: Signature) {}
 
   public static async create(
     transaction: ITransaction,
     signingService: SigningService,
-  ): Promise<PayToPublicKeyPredicateUnlockScript> {
+  ): Promise<SignaturePredicateUnlockScript> {
     const hash = await new DataHasher(HashAlgorithm.SHA256)
       .update(
         CborSerializer.encodeArray(
@@ -22,11 +22,11 @@ export class PayToPublicKeyPredicateUnlockScript implements IUnlockScript {
       )
       .digest();
 
-    return new PayToPublicKeyPredicateUnlockScript(await signingService.sign(hash));
+    return new SignaturePredicateUnlockScript(await signingService.sign(hash));
   }
 
-  public static decode(bytes: Uint8Array): PayToPublicKeyPredicateUnlockScript {
-    return new PayToPublicKeyPredicateUnlockScript(Signature.decode(bytes));
+  public static decode(bytes: Uint8Array): SignaturePredicateUnlockScript {
+    return new SignaturePredicateUnlockScript(Signature.decode(bytes));
   }
 
   public encode(): Uint8Array {

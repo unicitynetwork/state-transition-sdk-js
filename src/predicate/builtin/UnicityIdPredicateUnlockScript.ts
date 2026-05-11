@@ -1,4 +1,4 @@
-import { PayToPublicKeyPredicateUnlockScript } from './PayToPublicKeyPredicateUnlockScript.js';
+import { SignaturePredicateUnlockScript } from './SignaturePredicateUnlockScript.js';
 import { UnicityIdPredicate } from './UnicityIdPredicate.js';
 import { SigningService } from '../../crypto/secp256k1/SigningService.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
@@ -29,7 +29,7 @@ export class UnicityIdPredicateUnlockScript implements IUnlockScript {
       throw new Error('Invalid Unicity ID for transaction');
     }
 
-    const unlockScript = await PayToPublicKeyPredicateUnlockScript.create(transaction, signingService);
+    const unlockScript = await SignaturePredicateUnlockScript.create(transaction, signingService);
     return new UnicityIdPredicateUnlockScript(unlockScript.encode(), token);
   }
 

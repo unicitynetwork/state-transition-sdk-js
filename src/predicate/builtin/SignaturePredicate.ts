@@ -6,9 +6,9 @@ import { dedent } from '../../util/StringUtils.js';
 import { PredicateEngine } from '../PredicateEngine.js';
 import { BuiltInPredicateType } from './BuiltInPredicateType.js';
 import { IBuiltInPredicate } from './IBuiltInPredicate.js';
-import { IPredicate } from '../IPredicate.js';
+import { EncodedPredicate } from '../EncodedPredicate.js';
 
-export class PayToPublicKeyPredicate implements IBuiltInPredicate {
+export class SignaturePredicate implements IBuiltInPredicate {
   private constructor(private readonly _publicKey: Uint8Array) {
     this._publicKey = new Uint8Array(_publicKey);
   }
@@ -22,32 +22,32 @@ export class PayToPublicKeyPredicate implements IBuiltInPredicate {
   }
 
   public get type(): BuiltInPredicateType {
-    return BuiltInPredicateType.PayToPublicKey;
+    return BuiltInPredicateType.Signature;
   }
 
-  public static create(publicKey: Uint8Array): PayToPublicKeyPredicate {
+  public static create(publicKey: Uint8Array): SignaturePredicate {
     if (!SigningService.isPublicKeyValid(publicKey)) {
       throw new Error('Invalid public key.');
     }
 
-    return new PayToPublicKeyPredicate(publicKey);
+    return new SignaturePredicate(publicKey);
   }
 
-  public static fromPredicate(predicate: IPredicate): PayToPublicKeyPredicate {
+  public static fromPredicate(predicate: EncodedPredicate): SignaturePredicate {
     if (predicate.engine !== PredicateEngine.BUILT_IN) {
       throw new Error(`Predicate engine must be ${PredicateEngine.BUILT_IN}.`);
     }
 
     const type = CborDeserializer.decodeUnsignedInteger(predicate.encodeCode());
-    if (type !== BigInt(BuiltInPredicateType.PayToPublicKey)) {
-      throw new Error(`Predicate type must be ${BuiltInPredicateType.PayToPublicKey}.`);
+    if (type !== BigInt(BuiltInPredicateType.Signature)) {
+      throw new Error(`Predicate type must be ${BuiltInPredicateType.Signature}.`);
     }
 
-    return new PayToPublicKeyPredicate(predicate.encodeParameters());
+    return new SignaturePredicate(predicate.encodeParameters());
   }
 
-  public static fromSigningService(signingService: SigningService): PayToPublicKeyPredicate {
-    return new PayToPublicKeyPredicate(signingService.publicKey);
+  public static fromSigningService(signingService: SigningService): SignaturePredicate {
+    return new SignaturePredicate(signingService.publicKey);
   }
   public encodeCode(): Uint8Array {
     return CborSerializer.encodeUnsignedInteger(this.type);
@@ -59,7 +59,7 @@ export class PayToPublicKeyPredicate implements IBuiltInPredicate {
 
   public toString(): string {
     return dedent`
-      PayToPublicKeyPredicate
+      SignaturePredicate
         Public Key: ${HexConverter.encode(this._publicKey)}`;
   }
 }

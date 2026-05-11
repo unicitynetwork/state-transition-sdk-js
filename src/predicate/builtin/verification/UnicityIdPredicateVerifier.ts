@@ -3,7 +3,7 @@ import { RootTrustBase } from '../../../api/bft/RootTrustBase.js';
 import { DataHash } from '../../../crypto/hash/DataHash.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
-import { IPredicate } from '../../IPredicate.js';
+import { EncodedPredicate } from '../../EncodedPredicate.js';
 import { PredicateVerifierService } from '../../verification/PredicateVerifierService.js';
 import { BuiltInPredicateType } from '../BuiltInPredicateType.js';
 import { UnicityIdPredicate } from '../UnicityIdPredicate.js';
@@ -13,6 +13,7 @@ export class UnicityIdPredicateVerifier implements IBuiltInPredicateVerifier {
   public constructor(
     private readonly verifier: PredicateVerifierService,
     private readonly trustBase: RootTrustBase,
+    private readonly issuerPublicKey: Uint8Array,
   ) {}
 
   public get type(): BuiltInPredicateType {
@@ -20,7 +21,7 @@ export class UnicityIdPredicateVerifier implements IBuiltInPredicateVerifier {
   }
 
   public async verify(
-    encodedPredicate: IPredicate,
+    encodedPredicate: EncodedPredicate,
     sourceStateHash: DataHash,
     transactionHash: DataHash,
     unlockScript: Uint8Array,
@@ -33,7 +34,7 @@ export class UnicityIdPredicateVerifier implements IBuiltInPredicateVerifier {
       return new VerificationResult('UnicityIdPredicateVerifier', VerificationStatus.FAIL, 'Token ID mismatch.');
     }
 
-    let result = await decodedUnlockScript.token.verify(this.trustBase, this.verifier);
+    let result = await decodedUnlockScript.token.verify(this.trustBase, this.verifier, this.issuerPublicKey);
     if (result.status !== VerificationStatus.OK) {
       return new VerificationResult(
         'UnicityIdPredicateVerifier',
@@ -44,7 +45,7 @@ export class UnicityIdPredicateVerifier implements IBuiltInPredicateVerifier {
     }
 
     result = await this.verifier.verify(
-      decodedUnlockScript.token.genesis.targetPredicate,
+      EncodedPredicate.fromPredicate(decodedUnlockScript.token.genesis.targetPredicate),
       sourceStateHash,
       transactionHash,
       decodedUnlockScript.unlockScript,

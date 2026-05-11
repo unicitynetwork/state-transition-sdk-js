@@ -6,21 +6,21 @@ import { SigningService } from '../../../crypto/secp256k1/SigningService.js';
 import { CborSerializer } from '../../../serialization/cbor/CborSerializer.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
-import { IPredicate } from '../../IPredicate.js';
-import { PayToPublicKeyPredicate } from '../PayToPublicKeyPredicate.js';
+import { EncodedPredicate } from '../../EncodedPredicate.js';
+import { SignaturePredicate } from '../SignaturePredicate.js';
 import { IBuiltInPredicateVerifier } from './IBuiltInPredicateVerifier.js';
 import { BuiltInPredicateType } from '../BuiltInPredicateType.js';
 
-export class PayToPublicKeyPredicateVerifier implements IBuiltInPredicateVerifier {
-  public readonly type = BuiltInPredicateType.PayToPublicKey;
+export class SignaturePredicateVerifier implements IBuiltInPredicateVerifier {
+  public readonly type = BuiltInPredicateType.Signature;
 
   public async verify(
-    encodedPredicate: IPredicate,
+    encodedPredicate: EncodedPredicate,
     sourceStateHash: DataHash,
     transactionHash: DataHash,
     unlockScript: Uint8Array,
   ): Promise<VerificationResult<VerificationStatus>> {
-    const predicate = PayToPublicKeyPredicate.fromPredicate(encodedPredicate);
+    const predicate = SignaturePredicate.fromPredicate(encodedPredicate);
 
     const result = await SigningService.verifyWithPublicKey(
       await new DataHasher(HashAlgorithm.SHA256)
@@ -37,12 +37,12 @@ export class PayToPublicKeyPredicateVerifier implements IBuiltInPredicateVerifie
 
     if (!result) {
       return new VerificationResult(
-        'PayToPublicKeyPredicateVerifier',
+        'SignaturePredicateVerifier',
         VerificationStatus.FAIL,
         'Signature verification failed.',
       );
     }
 
-    return new VerificationResult('PayToPublicKeyPredicateVerifier', VerificationStatus.OK);
+    return new VerificationResult('SignaturePredicateVerifier', VerificationStatus.OK);
   }
 }
