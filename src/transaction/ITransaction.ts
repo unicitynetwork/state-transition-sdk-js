@@ -1,12 +1,12 @@
 import { DataHash } from '../crypto/hash/DataHash.js';
-import { IPredicate } from '../predicate/IPredicate.js';
+import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
 
 export interface ITransaction {
   readonly data: Uint8Array | null;
 
-  readonly lockScript: IPredicate;
+  readonly lockScript: EncodedPredicate;
 
-  readonly recipient: IPredicate;
+  readonly recipient: EncodedPredicate;
 
   readonly sourceStateHash: DataHash;
 

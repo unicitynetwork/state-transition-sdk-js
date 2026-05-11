@@ -1,11 +1,11 @@
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
 import { dedent } from '../../util/StringUtils.js';
-import { IPredicate } from '../IPredicate.js';
 import { PredicateEngine } from '../PredicateEngine.js';
 import { BuiltInPredicateType } from './BuiltInPredicateType.js';
 import { IBuiltInPredicate } from './IBuiltInPredicate.js';
 import { UnicityId } from '../../unicity-id/UnicityId.js';
+import { EncodedPredicate } from '../EncodedPredicate.js';
 
 export class UnicityIdPredicate implements IBuiltInPredicate {
   private constructor(public readonly unicityId: UnicityId) {}
@@ -22,7 +22,7 @@ export class UnicityIdPredicate implements IBuiltInPredicate {
     return new UnicityIdPredicate(unicityId);
   }
 
-  public static fromPredicate(predicate: IPredicate): UnicityIdPredicate {
+  public static fromPredicate(predicate: EncodedPredicate): UnicityIdPredicate {
     if (predicate.engine !== PredicateEngine.BUILT_IN) {
       throw new Error(`Predicate engine must be ${PredicateEngine.BUILT_IN}.`);
     }

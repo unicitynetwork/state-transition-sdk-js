@@ -1,10 +1,15 @@
 import { CborError } from './CborError.js';
+import { CborMap } from './CborMap.js';
 import { CborMapEntry } from './CborMapEntry.js';
 import { CborReader } from './CborReader.js';
 import { MajorType } from './MajorType.js';
-import { HexConverter } from '../../util/HexConverter.js';
+import { areUint8ArraysEqual } from '../../util/TypedArrayUtils.js';
 
 export class CborDeserializer {
+  private static readonly FALSE_CBOR = new Uint8Array([0xf4]);
+  private static readonly NULL_CBOR = new Uint8Array([0xf6]);
+  private static readonly TRUE_CBOR = new Uint8Array([0xf5]);
+
   public static decodeArray(data: Uint8Array, expectedLength: number | null = null): Uint8Array[] {
     const reader = new CborReader(data);
     const length = reader.readLength(MajorType.ARRAY);
@@ -21,18 +26,24 @@ export class CborDeserializer {
       throw new CborError(`Expected array length ${expectedLength}, got ${result.length}.`);
     }
 
+    reader.assertExhausted();
+
     return result;
   }
 
   public static decodeBoolean(data: Uint8Array): boolean {
-    const byte = new CborReader(data).readByte();
+    const reader = new CborReader(data);
+    const cbor = reader.readRawCbor();
+    reader.assertExhausted();
 
-    if (byte === 0xf5) {
+    if (areUint8ArraysEqual(cbor, CborDeserializer.TRUE_CBOR)) {
       return true;
     }
-    if (byte === 0xf4) {
+
+    if (areUint8ArraysEqual(cbor, CborDeserializer.FALSE_CBOR)) {
       return false;
     }
+
     throw new CborError('Type mismatch, expected boolean.');
   }
 
@@ -42,7 +53,10 @@ export class CborDeserializer {
     if (length > 0xffffffff) {
       throw new CborError('Byte string too long.');
     }
-    return reader.read(Number(length));
+
+    const result = reader.read(Number(length));
+    reader.assertExhausted();
+    return result;
   }
 
   public static decodeMap(data: Uint8Array): CborMapEntry[] {
@@ -53,19 +67,22 @@ export class CborDeserializer {
     }
 
     const result: CborMapEntry[] = [];
-    const keys = new Set();
     for (let i = 0; i < length; i++) {
-      const key = reader.readRawCbor();
-      const value = reader.readRawCbor();
+      const entry = new CborMapEntry(reader.readRawCbor(), reader.readRawCbor());
 
-      const keyString = HexConverter.encode(key);
-      if (keys.has(keyString)) {
-        throw new CborError('Duplicate map key found.');
+      if (result.length > 0) {
+        const comparison = CborMap.compareEntries(result[result.length - 1], entry);
+        if (comparison === 0) {
+          throw new CborError('Duplicate map key found.');
+        }
+        if (comparison > 0) {
+          throw new CborError('Map keys are not in canonical order.');
+        }
       }
-      keys.add(keyString);
-      result.push(new CborMapEntry(key, value));
+      result.push(entry);
     }
 
+    reader.assertExhausted();
     return result;
   }
 
@@ -73,18 +90,25 @@ export class CborDeserializer {
     throw new CborError('Not implemented.');
   }
 
-  public static decodeNullable<T>(data: Uint8Array, reader: (data: Uint8Array) => T): T | null {
-    const initialByte = new CborReader(data).readByte();
-    if (initialByte === 0xf6) {
+  public static decodeNullable<T>(data: Uint8Array, decode: (data: Uint8Array) => T): T | null {
+    const reader = new CborReader(data);
+    const cbor = reader.readRawCbor();
+    reader.assertExhausted();
+
+    if (areUint8ArraysEqual(cbor, CborDeserializer.NULL_CBOR)) {
       return null;
     }
-    return reader(data);
+
+    return decode(cbor);
   }
 
   public static decodeTag(data: Uint8Array): { data: Uint8Array; tag: bigint } {
     const reader = new CborReader(data);
     const tag = reader.readLength(MajorType.TAG);
-    return { data: reader.readRawCbor(), tag };
+    const cbor = reader.readRawCbor();
+    reader.assertExhausted();
+
+    return { data: cbor, tag };
   }
 
   public static decodeTextString(data: Uint8Array): string {
@@ -93,10 +117,17 @@ export class CborDeserializer {
     if (length > BigInt(Number.MAX_SAFE_INTEGER)) {
       throw new CborError('Text string too long.');
     }
-    return new TextDecoder().decode(reader.read(Number(length)));
+    const result = reader.read(Number(length));
+    reader.assertExhausted();
+
+    return new TextDecoder().decode(result);
   }
 
   public static decodeUnsignedInteger(data: Uint8Array): bigint {
-    return new CborReader(data).readLength(MajorType.UNSIGNED_INTEGER);
+    const reader = new CborReader(data);
+    const result = reader.readLength(MajorType.UNSIGNED_INTEGER);
+    reader.assertExhausted();
+
+    return result;
   }
 }

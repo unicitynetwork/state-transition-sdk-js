@@ -9,7 +9,7 @@ import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { MintSigningService } from '../crypto/MintSigningService.js';
-import { PayToPublicKeyPredicate } from '../predicate/builtin/PayToPublicKeyPredicate.js';
+import { SignaturePredicate } from '../predicate/builtin/SignaturePredicate.js';
 import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
 import { IPredicate } from '../predicate/IPredicate.js';
 import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
@@ -25,8 +25,8 @@ export class MintTransaction implements ITransaction {
 
   private constructor(
     public readonly sourceStateHash: MintTransactionState,
-    public readonly lockScript: IPredicate,
-    public readonly recipient: IPredicate,
+    public readonly lockScript: EncodedPredicate,
+    public readonly recipient: EncodedPredicate,
     public readonly tokenId: TokenId,
     public readonly tokenType: TokenType,
     private readonly _justification: Uint8Array | null,
@@ -62,8 +62,8 @@ export class MintTransaction implements ITransaction {
     const signingService = await MintSigningService.create(tokenId);
     return new MintTransaction(
       await MintTransactionState.create(tokenId),
-      PayToPublicKeyPredicate.fromSigningService(signingService),
-      recipient,
+      EncodedPredicate.fromPredicate(SignaturePredicate.fromSigningService(signingService)),
+      EncodedPredicate.fromPredicate(recipient),
       tokenId,
       tokenType,
       justification,
@@ -112,7 +112,7 @@ export class MintTransaction implements ITransaction {
       MintTransaction.CBOR_TAG,
       CborSerializer.encodeArray(
         CborSerializer.encodeUnsignedInteger(this.version),
-        EncodedPredicate.fromPredicate(this.recipient).toCBOR(),
+        this.recipient.toCBOR(),
         this.tokenId.toCBOR(),
         this.tokenType.toCBOR(),
         CborSerializer.encodeNullable(this._justification, CborSerializer.encodeByteString),

@@ -1,5 +1,5 @@
 export enum BuiltInPredicateType {
-  PayToPublicKey = 0x01,
-  UnicityId = 0x02,
-  Burn = 0x03,
+  Signature = 0x01,
+  Burn = 0x02,
+  UnicityId = 0x100,
 }

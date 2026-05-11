@@ -11,8 +11,8 @@ import { TokenAssetValueMismatchError } from '../../../src/payment/error/TokenAs
 import { SplitMintJustification } from '../../../src/payment/SplitMintJustification.js';
 import { SplitMintJustificationVerifier } from '../../../src/payment/SplitMintJustificationVerifier.js';
 import { TokenSplit } from '../../../src/payment/TokenSplit.js';
-import { PayToPublicKeyPredicate } from '../../../src/predicate/builtin/PayToPublicKeyPredicate.js';
-import { PayToPublicKeyPredicateUnlockScript } from '../../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
+import { SignaturePredicate } from '../../../src/predicate/builtin/SignaturePredicate.js';
+import { SignaturePredicateUnlockScript } from '../../../src/predicate/builtin/SignaturePredicateUnlockScript.js';
 import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
@@ -29,14 +29,14 @@ describe('SplitBuilder Functional Test', () => {
     const aggregatorClient = TestAggregatorClient.create();
     const trustBase = aggregatorClient.rootTrustBase;
     const client = new StateTransitionClient(aggregatorClient);
-    const predicateVerifier = PredicateVerifierService.create(trustBase);
+    const predicateVerifier = PredicateVerifierService.create();
     const mintJustificationVerifier = new MintJustificationVerifierService();
     mintJustificationVerifier.register(
       new SplitMintJustificationVerifier(trustBase, predicateVerifier, TestPaymentData.decode),
     );
 
     const signingService = new SigningService(SigningService.generatePrivateKey());
-    const predicate = PayToPublicKeyPredicate.fromSigningService(signingService);
+    const predicate = SignaturePredicate.fromSigningService(signingService);
 
     const assets = [
       new Asset(new AssetId(crypto.getRandomValues(new Uint8Array(10))), 500n),
@@ -97,7 +97,7 @@ describe('SplitBuilder Functional Test', () => {
 
     certificationData = await CertificationData.fromTransaction(
       result.burn.transaction,
-      await PayToPublicKeyPredicateUnlockScript.create(result.burn.transaction, signingService),
+      await SignaturePredicateUnlockScript.create(result.burn.transaction, signingService),
     );
 
     response = await client.submitCertificationRequest(certificationData);

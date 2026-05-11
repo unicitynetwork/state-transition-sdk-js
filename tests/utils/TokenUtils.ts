@@ -2,7 +2,7 @@ import { RootTrustBase } from '../../src/api/bft/RootTrustBase.js';
 import { CertificationData } from '../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../src/api/CertificationResponse.js';
 import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
-import { PayToPublicKeyPredicateUnlockScript } from '../../src/predicate/builtin/PayToPublicKeyPredicateUnlockScript.js';
+import { SignaturePredicateUnlockScript } from '../../src/predicate/builtin/SignaturePredicateUnlockScript.js';
 import { IPredicate } from '../../src/predicate/IPredicate.js';
 import { IUnlockScript } from '../../src/predicate/IUnlockScript.js';
 import { PredicateVerifierService } from '../../src/predicate/verification/PredicateVerifierService.js';
@@ -75,7 +75,7 @@ export async function transferToken(
     predicateVerifier,
     token,
     transaction,
-    await PayToPublicKeyPredicateUnlockScript.create(transaction, signingService),
+    await SignaturePredicateUnlockScript.create(transaction, signingService),
   );
 }
 
