@@ -6,7 +6,6 @@ Feature: Token Security
   # Two attack vectors against the same negative-path assertion. They were considered for
   # promotion to a Scenario Outline but the preambles differ enough that two scenarios are
   # clearer than a 2-row outline padded with no-op meta-steps.
-  # See docs/pr-110-test-coverage-plan.md "Amendments" section for the analysis.
 
   Background:
     Given a mock aggregator client is set up

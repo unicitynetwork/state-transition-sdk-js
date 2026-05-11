@@ -49,7 +49,7 @@ Feature: CBOR envelope tags and version slots
   # T4-09: Cause-Effect — "Predicate has no version slot" invariant.
   # Note: EncodedPredicate.fromCBOR currently does not validate array arity, so a 4-element
   # payload with the correct tag silently decodes (only the first 3 fields are read).
-  # This is a coverage gap in the SDK itself — tracked in docs/test-expansion-discoveries.md.
+  # This is a coverage gap in the SDK itself.
   # We assert the *positive* invariant instead: a correctly-tagged 3-element payload decodes.
   Scenario: EncodedPredicate's correct-shape payload decodes (3-element, no version slot)
     Given a tagged CBOR payload using tag 39032 with arity 3 and version 1
