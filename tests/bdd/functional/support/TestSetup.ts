@@ -46,7 +46,7 @@ export interface IUser {
 }
 
 export function createTestSetup(): ITestSetup {
-  const aggregatorClient = createAggregatorClient();
+  const aggregatorClient = withTransportRetry(createAggregatorClient());
   const client = new StateTransitionClient(aggregatorClient);
   const trustBasePath =
     process.env.TRUST_BASE_PATH ??
@@ -95,6 +95,75 @@ function createAggregatorClient(): IAggregatorClient {
   const url = process.env.AGGREGATOR_URL ?? 'http://localhost:3000';
   console.log(`[TestSetup] Single aggregator mode: ${url}`);
   return new AggregatorClient(url, apiKey);
+}
+
+// --- transport-level retry ---------------------------------------------------
+// A shared aggregator proxy choking under concurrent BDD load tends to drop
+// connections, surfacing as `TypeError: fetch failed` (undici) deep inside
+// submitCertificationRequest / getInclusionProof. Those are transport faults,
+// not protocol outcomes (STATE_ID_EXISTS, SIGNATURE_VERIFICATION_FAILED, …),
+// so they are safe to retry. Protocol responses pass straight through.
+// Tune with AGGREGATOR_RETRY_ATTEMPTS / AGGREGATOR_RETRY_DELAY_MS.
+
+const TRANSPORT_RETRY_ATTEMPTS = parseInt(process.env.AGGREGATOR_RETRY_ATTEMPTS ?? '5', 10);
+const TRANSPORT_RETRY_BASE_DELAY_MS = parseInt(process.env.AGGREGATOR_RETRY_DELAY_MS ?? '300', 10);
+const TRANSPORT_ERROR_NEEDLES = [
+  'fetch failed',
+  'socket hang up',
+  'other side closed',
+  'ECONNRESET',
+  'ECONNREFUSED',
+  'ETIMEDOUT',
+  'EAI_AGAIN',
+  'EPIPE',
+  'UND_ERR_SOCKET',
+  'UND_ERR_CONNECT_TIMEOUT',
+  'UND_ERR_HEADERS_TIMEOUT',
+  'UND_ERR_BODY_TIMEOUT',
+];
+
+function isTransportError(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < 5 && current instanceof Error; depth++) {
+    const code = (current as { code?: unknown }).code;
+    const haystack = `${current.name} ${current.message} ${typeof code === 'string' ? code : ''}`;
+    if (TRANSPORT_ERROR_NEEDLES.some((needle) => haystack.includes(needle))) {
+      return true;
+    }
+    current = (current as { cause?: unknown }).cause;
+  }
+  return false;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function withTransportRetry(target: IAggregatorClient): IAggregatorClient {
+  return new Proxy(target, {
+    get(obj: IAggregatorClient, prop: string | symbol, receiver: unknown): unknown {
+      const member: unknown = Reflect.get(obj, prop, receiver);
+      if (typeof member !== 'function') {
+        return member;
+      }
+      const original = member as (...args: unknown[]) => unknown;
+      return async function retrying(...args: unknown[]): Promise<unknown> {
+        let lastError: unknown;
+        for (let attempt = 1; attempt <= TRANSPORT_RETRY_ATTEMPTS; attempt++) {
+          try {
+            return await original.apply(obj, args);
+          } catch (error) {
+            lastError = error;
+            if (!isTransportError(error) || attempt === TRANSPORT_RETRY_ATTEMPTS) {
+              throw error;
+            }
+            await sleep(TRANSPORT_RETRY_BASE_DELAY_MS * 2 ** (attempt - 1));
+          }
+        }
+        throw lastError;
+      };
+    },
+  });
 }
 
 export function createUser(): IUser {
