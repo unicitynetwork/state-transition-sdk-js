@@ -67,6 +67,9 @@ export class RootTrustBaseNodeInfo {
   }
 }
 
+/**
+ * JSON shape of a {@link RootTrustBase}.
+ */
 interface IRootTrustBaseJson {
   readonly changeRecordHash: string | null;
   readonly epoch: string;
@@ -192,6 +195,9 @@ export class RootTrustBase {
     );
   }
 
+  /**
+   * @returns {string} String representation of the trust base.
+   */
   public toString(): string {
     return dedent`
     RootTrustBase:

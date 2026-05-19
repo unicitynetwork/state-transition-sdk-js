@@ -1,6 +1,11 @@
 import { BigintConverter } from './BigintConverter.js';
 import { HexConverter } from './HexConverter.js';
 
+/**
+ * Bit string backed by a {@link bigint} with a leading sentinel bit, so that
+ * leading zero bits are preserved across conversions. Provides byte-order and
+ * bit-order helpers used by sparse Merkle tree routing.
+ */
 export class BitString {
   /**
    * Represents a bit string as a bigint.
@@ -12,24 +17,33 @@ export class BitString {
   }
 
   /**
-   * Creates a BitString from raw bytes with no bit reordering.
+   * Create a BitString from raw bytes with no bit reordering.
    * Bigint bit 0 is the LSB of the last byte.
+   *
+   * @param {Uint8Array} data Input bytes.
+   * @returns {BitString} New bit string.
    */
   public static fromBytes(data: Uint8Array): BitString {
     return new BitString(new Uint8Array(data));
   }
 
   /**
-   * Creates a BitString for LSB-first tree routing with reversed byte order.
+   * Create a BitString for LSB-first tree routing with reversed byte order.
    * Bigint bit 0 = bit 0 (LSB) of data[0], matching getBitAtDepth LSB convention.
+   *
+   * @param {Uint8Array} data Input bytes.
+   * @returns {BitString} New bit string.
    */
   public static fromBytesReversedLSB(data: Uint8Array): BitString {
     return new BitString(new Uint8Array(data).reverse());
   }
 
   /**
-   * Creates a BitString for MSB-first tree routing with reversed byte order.
+   * Create a BitString for MSB-first tree routing with reversed byte order.
    * Bigint bit 0 = bit 7 (MSB) of data[0], matching getBitAtDepth MSB convention.
+   *
+   * @param {Uint8Array} data Input bytes.
+   * @returns {BitString} New bit string.
    */
   public static fromBytesReversedMSB(data: Uint8Array): BitString {
     return new BitString(
@@ -50,25 +64,28 @@ export class BitString {
   }
 
   /**
-   * Converts BitString to bigint by adding a leading byte 1 to input byte array.
+   * Convert BitString to bigint by adding a leading byte 1 to input byte array.
    * This is to ensure that the bigint will retain the leading zero bits.
-   * @returns {bigint} The bigint representation of the bit string
+   *
+   * @returns {bigint} Bigint representation of the bit string.
    */
   public toBigInt(): bigint {
     return this.value;
   }
 
   /**
-   * Converts bit string to Uint8Array.
-   * @returns {Uint8Array} The Uint8Array representation of the bit string
+   * Convert bit string to Uint8Array.
+   *
+   * @returns {Uint8Array} Byte representation of the bit string.
    */
   public toBytes(): Uint8Array {
     return BigintConverter.encode(this.value).slice(1);
   }
 
   /**
-   * Converts bit string to string.
-   * @returns {string} The string representation of the bit string
+   * Convert bit string to string.
+   *
+   * @returns {string} Binary string representation of the bit string.
    */
   public toString(): string {
     return this.value.toString(2).slice(1);

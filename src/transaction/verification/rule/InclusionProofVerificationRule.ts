@@ -28,6 +28,15 @@ export enum InclusionProofVerificationStatus {
  * Genesis verification rule.
  */
 export class InclusionProofVerificationRule {
+  /**
+   * Verify an inclusion proof for a transaction.
+   *
+   * @param {RootTrustBase} trustBase Root trust base.
+   * @param {PredicateVerifierService} predicateVerifierFactory Predicate verifier service.
+   * @param {InclusionProof} inclusionProof Inclusion proof to verify.
+   * @param {ITransaction} transaction Transaction the proof should attest to.
+   * @returns {Promise<VerificationResult<InclusionProofVerificationStatus>>} Verification outcome.
+   */
   public static async verify(
     trustBase: RootTrustBase,
     predicateVerifierFactory: PredicateVerifierService,

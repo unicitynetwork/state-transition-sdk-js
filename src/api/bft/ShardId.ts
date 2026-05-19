@@ -1,15 +1,28 @@
 import { CborError } from '../../serialization/cbor/CborError.js';
 
+/**
+ * Shard identifier.
+ */
 export class ShardId {
   private constructor(
     private readonly _bits: Uint8Array,
     public readonly length: number,
   ) {}
 
+  /**
+   * @returns {Uint8Array} Copy of the bit-string bytes.
+   */
   public get bits(): Uint8Array {
     return new Uint8Array(this._bits);
   }
 
+  /**
+   * Decode a ShardId from its byte encoding.
+   *
+   * @param {Uint8Array} data Encoded bytes.
+   * @returns {ShardId} Decoded shard id.
+   * @throws {CborError} If the encoding is invalid.
+   */
   public static decode(data: Uint8Array): ShardId {
     let lastByte = data.at(-1);
     if (lastByte === undefined) {
@@ -34,6 +47,9 @@ export class ShardId {
     throw new CborError('Invalid ShardId encoding: last byte doesnt contain end marker');
   }
 
+  /**
+   * @returns {Uint8Array} Encoded shard id bytes.
+   */
   public encode(): Uint8Array {
     const byteCount = Math.floor(this.length / 8);
     const bitCount = this.length % 8;
@@ -48,6 +64,13 @@ export class ShardId {
     return result;
   }
 
+  /**
+   * Return the bit at the given index.
+   *
+   * @param {number} index Bit index, zero-based.
+   * @returns {number} The bit value (0 or 1).
+   * @throws {Error} If the index is out of bounds.
+   */
   public getBit(index: number): number {
     if (index < 0 || index >= this.length) {
       throw new Error('ShardId bit index out of bounds');
@@ -55,6 +78,12 @@ export class ShardId {
     return (this._bits[Math.floor(index / 8)] >> (7 - (index % 8))) & 1;
   }
 
+  /**
+   * Check whether this shard id is a bit-prefix of the given data.
+   *
+   * @param {Uint8Array} data Bytes to test.
+   * @returns {boolean} True if this shard id is a prefix of `data`.
+   */
   public isPrefixOf(data: Uint8Array): boolean {
     const fullBytes = Math.floor(this.length / 8);
     const remainingBits = this.length % 8;
@@ -75,6 +104,9 @@ export class ShardId {
     return true;
   }
 
+  /**
+   * @returns {string} Binary string representation of the shard id.
+   */
   public toString(): string {
     const fullBytes = Math.floor(this.length / 8);
     const remainingBits = this.length % 8;

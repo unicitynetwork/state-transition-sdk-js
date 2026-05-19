@@ -4,9 +4,25 @@ import { VerificationStatus } from '../../../verification/VerificationStatus.js'
 import { EncodedPredicate } from '../../EncodedPredicate.js';
 import { BuiltInPredicateType } from '../BuiltInPredicateType.js';
 
+/**
+ * Verifier for a single {@link BuiltInPredicateType}. Plugged into
+ * {@link DefaultBuiltInPredicateVerifier} which dispatches by type id.
+ */
 export interface IBuiltInPredicateVerifier {
+  /**
+   * Built-in predicate type this verifier handles.
+   */
   get type(): BuiltInPredicateType;
 
+  /**
+   * Verify an unlock script against the predicate.
+   *
+   * @param {EncodedPredicate} predicate Predicate being unlocked.
+   * @param {DataHash} sourceStateHash Hash of the state being spent.
+   * @param {DataHash} transactionHash Hash of the spending transaction.
+   * @param {Uint8Array} unlockScript Witness bytes for the predicate.
+   * @returns {Promise<VerificationResult<VerificationStatus>>} Verification outcome.
+   */
   verify(
     predicate: EncodedPredicate,
     sourceStateHash: DataHash,

@@ -56,6 +56,12 @@ export class SparseMerkleTreeRootNode {
     return new SparseMerkleTreeRootNode(null, null, new DataHash(HashAlgorithm.SHA256, new Uint8Array(32)));
   }
 
+  /**
+   * Check whether a leaf with the given key is in the tree.
+   *
+   * @param {Uint8Array} key Leaf key.
+   * @returns {boolean} True if the key is present.
+   */
   public has(key: Uint8Array): boolean {
     const keyPath = BitString.fromBytesReversedLSB(key).toBigInt();
     // eslint-disable-next-line @typescript-eslint/no-this-alias

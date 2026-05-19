@@ -1,7 +1,11 @@
 import { dedent } from '../util/StringUtils.js';
 
 /**
- * Verification result implementation.
+ * Outcome of one verification rule. Carries the rule name, a status of any
+ * type `S`, an optional message, and child results from nested rules so that
+ * a full verification trace can be rendered.
+ *
+ * @typeParam S Status type produced by the rule.
  */
 export class VerificationResult<S> {
   public constructor(
@@ -13,6 +17,9 @@ export class VerificationResult<S> {
     this.results = results.slice();
   }
 
+  /**
+   * @returns {string} String representation of the verification result.
+   */
   public toString(): string {
     return dedent`
       VerificationResult[${this.rule}]:

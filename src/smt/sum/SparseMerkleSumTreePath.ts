@@ -11,17 +11,29 @@ import { HexConverter } from '../../util/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
 import { PathVerificationResult } from '../PathVerificationResult.js';
 
+/**
+ * JSON shape of a {@link SparseMerkleSumTreePath}.
+ */
 export interface ISparseMerkleSumTreePathJson {
   readonly root: string;
   readonly steps: ReadonlyArray<ISparseMerkleSumTreePathStepJson>;
 }
 
+/**
+ * Path through a sparse Merkle sum tree from a leaf to the root.
+ */
 export class SparseMerkleSumTreePath {
   public constructor(
     public readonly root: DataHash,
     public readonly steps: ReadonlyArray<SparseMerkleSumTreePathStep>,
   ) {}
 
+  /**
+   * Create SparseMerkleSumTreePath from CBOR bytes.
+   *
+   * @param {Uint8Array} bytes CBOR bytes.
+   * @returns {SparseMerkleSumTreePath} Decoded path.
+   */
   public static fromCBOR(bytes: Uint8Array): SparseMerkleSumTreePath {
     const data = CborDeserializer.decodeArray(bytes, 2);
     const steps = CborDeserializer.decodeArray(data[1]);
@@ -32,6 +44,13 @@ export class SparseMerkleSumTreePath {
     );
   }
 
+  /**
+   * Create SparseMerkleSumTreePath from JSON.
+   *
+   * @param {unknown} data JSON object.
+   * @returns {SparseMerkleSumTreePath} Decoded path.
+   * @throws {InvalidJsonStructureError} If the JSON does not match the expected shape.
+   */
   public static fromJSON(data: unknown): SparseMerkleSumTreePath {
     if (!SparseMerkleSumTreePath.isJSON(data)) {
       throw new InvalidJsonStructureError();
@@ -43,6 +62,12 @@ export class SparseMerkleSumTreePath {
     );
   }
 
+  /**
+   * Type guard for the JSON shape of a path.
+   *
+   * @param {unknown} data Value to test.
+   * @returns {boolean} True if `data` matches {@link ISparseMerkleSumTreePathJson}.
+   */
   public static isJSON(data: unknown): data is ISparseMerkleSumTreePathJson {
     return (
       typeof data === 'object' &&
@@ -55,6 +80,11 @@ export class SparseMerkleSumTreePath {
     );
   }
 
+  /**
+   * Convert SparseMerkleSumTreePath to CBOR bytes.
+   *
+   * @returns {Uint8Array} CBOR bytes.
+   */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
       CborSerializer.encodeByteString(this.root.imprint),
@@ -62,6 +92,9 @@ export class SparseMerkleSumTreePath {
     );
   }
 
+  /**
+   * @returns {string} String representation of the path.
+   */
   public toString(): string {
     return dedent`
       Merkle Tree Path

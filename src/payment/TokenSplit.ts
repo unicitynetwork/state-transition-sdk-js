@@ -17,6 +17,9 @@ import { PaymentAssetCollection } from './asset/PaymentAssetCollection.js';
 import { TokenAssetCountMismatchError } from './error/TokenAssetCountMismatchError.js';
 import { BurnPredicate } from '../predicate/builtin/BurnPredicate.js';
 
+/**
+ * Per-token entry in a {@link ProofMap}: a token id and its asset proofs.
+ */
 class ProofMapEntry {
   private constructor(
     public readonly tokenId: TokenId,
@@ -25,18 +28,37 @@ class ProofMapEntry {
     this._proofs = _proofs.slice();
   }
 
+  /**
+   * @returns {SplitAssetProof[]} Copy of the asset proofs.
+   */
   public get proofs(): SplitAssetProof[] {
     return this._proofs.slice();
   }
 
+  /**
+   * Create a ProofMapEntry.
+   *
+   * @param {TokenId} tokenId Token id.
+   * @param {SplitAssetProof[]} proofs Asset proofs.
+   * @returns {ProofMapEntry} New entry.
+   */
   public static create(tokenId: TokenId, proofs: SplitAssetProof[]): ProofMapEntry {
     return new ProofMapEntry(tokenId, proofs);
   }
 }
 
+/**
+ * Token-id-keyed map of asset proofs produced by a token split.
+ */
 class ProofMap {
   private constructor(private readonly _proofs: Map<string, ProofMapEntry>) {}
 
+  /**
+   * Create a ProofMap from raw entries.
+   *
+   * @param {[TokenId, SplitAssetProof[]][]} data Token-id and proofs pairs.
+   * @returns {ProofMap} New map.
+   */
   public static create(data: [TokenId, SplitAssetProof[]][]): ProofMap {
     return new ProofMap(
       new Map(
@@ -45,15 +67,28 @@ class ProofMap {
     );
   }
 
+  /**
+   * Look up the entry for a token id.
+   *
+   * @param {TokenId} id Token id.
+   * @returns {ProofMapEntry|null} Matching entry, or `null`.
+   */
   public get(id: TokenId): ProofMapEntry | null {
     return this._proofs.get(HexConverter.encode(id.bytes)) ?? null;
   }
 
+  /**
+   * @returns {number} Number of entries in this map.
+   */
   public size(): number {
     return this._proofs.size;
   }
 }
 
+/**
+ * Result of splitting a token: a burn transaction for the original token plus
+ * per-token asset proofs for the new tokens.
+ */
 interface ISplit {
   readonly burn: {
     readonly ownerPredicate: BurnPredicate;

@@ -8,18 +8,18 @@ import { StateId } from './StateId.js';
  */
 export interface IAggregatorClient {
   /**
-   * Retrieve an inclusion proof for the given request.
+   * Retrieve an inclusion proof for the given state id.
    *
-   * @param stateId State identifier to query
-   * @returns The inclusion proof returned by the aggregator
+   * @param {StateId} stateId State identifier to query.
+   * @returns {Promise<InclusionProofResponse>} Inclusion proof response from the aggregator.
    */
   getInclusionProof(stateId: StateId): Promise<InclusionProofResponse>;
 
   /**
    * Submit a transaction commitment for inclusion in the ledger.
    *
-   * @param {CertificationData} certificationData  The certification data to submit
-   * @returns Result status from the aggregator
+   * @param {CertificationData} certificationData Certification data to submit.
+   * @returns {Promise<CertificationResponse>} Certification response from the aggregator.
    */
   submitCertificationRequest(certificationData: CertificationData): Promise<CertificationResponse>;
 }

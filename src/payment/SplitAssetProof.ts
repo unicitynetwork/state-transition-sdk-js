@@ -4,6 +4,9 @@ import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { SparseMerkleTreePath } from '../smt/plain/SparseMerkleTreePath.js';
 import { SparseMerkleSumTreePath } from '../smt/sum/SparseMerkleSumTreePath.js';
 
+/**
+ * Inclusion proof for a single asset within a split payment.
+ */
 export class SplitAssetProof {
   private constructor(
     public readonly assetId: AssetId,
@@ -11,6 +14,14 @@ export class SplitAssetProof {
     public readonly assetTreePath: SparseMerkleSumTreePath,
   ) {}
 
+  /**
+   * Create a SplitAssetProof.
+   *
+   * @param {AssetId} assetId Asset id.
+   * @param {SparseMerkleTreePath} aggregationPath Aggregation tree path.
+   * @param {SparseMerkleSumTreePath} assetTreePath Asset tree path.
+   * @returns {SplitAssetProof} New proof.
+   */
   public static create(
     assetId: AssetId,
     aggregationPath: SparseMerkleTreePath,
@@ -35,6 +46,11 @@ export class SplitAssetProof {
     );
   }
 
+  /**
+   * Convert SplitAssetProof to CBOR bytes.
+   *
+   * @returns {Uint8Array} CBOR bytes.
+   */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
       this.assetId.toCBOR(),

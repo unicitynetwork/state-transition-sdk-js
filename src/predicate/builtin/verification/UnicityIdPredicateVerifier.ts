@@ -9,6 +9,11 @@ import { BuiltInPredicateType } from '../BuiltInPredicateType.js';
 import { UnicityIdPredicate } from '../UnicityIdPredicate.js';
 import { UnicityIdPredicateUnlockScript } from '../UnicityIdPredicateUnlockScript.js';
 
+/**
+ * Verifier for {@link UnicityIdPredicate}: confirms the unlock script
+ * carries a valid unicity-id token whose id matches the predicate, then
+ * recursively verifies the token's target predicate against the spend.
+ */
 export class UnicityIdPredicateVerifier implements IBuiltInPredicateVerifier {
   public constructor(
     private readonly verifier: PredicateVerifierService,
@@ -16,10 +21,16 @@ export class UnicityIdPredicateVerifier implements IBuiltInPredicateVerifier {
     private readonly issuerPublicKey: Uint8Array,
   ) {}
 
+  /**
+   * @returns {BuiltInPredicateType} UnicityId predicate type id.
+   */
   public get type(): BuiltInPredicateType {
     return BuiltInPredicateType.UnicityId;
   }
 
+  /**
+   * @inheritDoc
+   */
   public async verify(
     encodedPredicate: EncodedPredicate,
     sourceStateHash: DataHash,

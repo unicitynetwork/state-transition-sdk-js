@@ -26,6 +26,9 @@ export enum CertificationStatus {
   INVALID_SHARD = 'INVALID_SHARD',
 }
 
+/**
+ * JSON shape of a certification response.
+ */
 export interface ICertificationResponseJson {
   readonly status: CertificationStatus;
 }

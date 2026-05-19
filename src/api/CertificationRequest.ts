@@ -19,6 +19,9 @@ export class CertificationRequest {
     public readonly certificationData: CertificationData,
   ) {}
 
+  /**
+   * @returns {bigint} Wire-format version of this request.
+   */
   public get version(): bigint {
     return CertificationRequest.VERSION;
   }

@@ -15,6 +15,9 @@ import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../util/HexConverter.js';
 import { dedent } from '../util/StringUtils.js';
 
+/**
+ * Token transfer transaction.
+ */
 export class TransferTransaction implements ITransaction {
   public static readonly CBOR_TAG = 39045n;
   private static readonly VERSION = 1n;
@@ -27,18 +30,36 @@ export class TransferTransaction implements ITransaction {
     private readonly _data: Uint8Array | null,
   ) {}
 
+  /**
+   * @returns {Uint8Array|null} Copy of the data payload, or `null` if absent.
+   */
   public get data(): Uint8Array | null {
     return this._data ? new Uint8Array(this._data) : null;
   }
 
+  /**
+   * @returns {Uint8Array} Copy of the state mask.
+   */
   public get stateMask(): Uint8Array {
     return new Uint8Array(this._stateMask);
   }
 
+  /**
+   * @returns {bigint} Wire-format version of this transaction.
+   */
   public get version(): bigint {
     return TransferTransaction.VERSION;
   }
 
+  /**
+   * Create a TransferTransaction for the given token.
+   *
+   * @param {Token} token Token being transferred (last transaction is used as the source).
+   * @param {IPredicate} recipient Predicate that will lock the new state.
+   * @param {Uint8Array} stateMask State mask mixed into the new state hash.
+   * @param {Uint8Array|null} data Optional data payload.
+   * @returns {Promise<TransferTransaction>} New transfer transaction.
+   */
   public static async create(
     token: Token,
     recipient: IPredicate,
@@ -58,6 +79,14 @@ export class TransferTransaction implements ITransaction {
     );
   }
 
+  /**
+   * Create TransferTransaction from CBOR bytes.
+   *
+   * @param {Uint8Array} bytes CBOR bytes.
+   * @param {Token} token Token providing context for the transfer transaction.
+   * @returns {Promise<TransferTransaction>} Decoded transaction.
+   * @throws {CborError} On wrong tag or unsupported version.
+   */
   public static fromCBOR(bytes: Uint8Array, token: Token): Promise<TransferTransaction> {
     const tag = CborDeserializer.decodeTag(bytes);
     if (tag.tag !== TransferTransaction.CBOR_TAG) {
@@ -78,6 +107,9 @@ export class TransferTransaction implements ITransaction {
     );
   }
 
+  /**
+   * @inheritDoc
+   */
   public calculateStateHash(): Promise<DataHash> {
     return new DataHasher(HashAlgorithm.SHA256)
       .update(
@@ -89,10 +121,16 @@ export class TransferTransaction implements ITransaction {
       .digest();
   }
 
+  /**
+   * @inheritDoc
+   */
   public calculateTransactionHash(): Promise<DataHash> {
     return new DataHasher(HashAlgorithm.SHA256).update(this.toCBOR()).digest();
   }
 
+  /**
+   * @inheritDoc
+   */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeTag(
       TransferTransaction.CBOR_TAG,
@@ -105,6 +143,14 @@ export class TransferTransaction implements ITransaction {
     );
   }
 
+  /**
+   * Bundle this transaction with its inclusion proof into a CertifiedTransferTransaction.
+   *
+   * @param {RootTrustBase} trustBase Root trust base used to verify the inclusion certificate.
+   * @param {PredicateVerifierService} predicateVerifier Verifier for any embedded predicates.
+   * @param {InclusionProof} inclusionProof Inclusion proof for this transaction.
+   * @returns {Promise<CertifiedTransferTransaction>} Verified certified transaction.
+   */
   public toCertifiedTransaction(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,
@@ -113,6 +159,9 @@ export class TransferTransaction implements ITransaction {
     return CertifiedTransferTransaction.fromTransaction(trustBase, predicateVerifier, this, inclusionProof);
   }
 
+  /**
+   * @returns {string} String representation of the transaction.
+   */
   public toString(): string {
     return dedent`
       TransferTransaction

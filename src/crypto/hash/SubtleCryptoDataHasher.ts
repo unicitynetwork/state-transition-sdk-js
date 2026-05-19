@@ -17,10 +17,6 @@ export const Algorithm = {
 export class SubtleCryptoDataHasher implements IDataHasher {
   private _data: Uint8Array<ArrayBuffer>;
 
-  /**
-   * Create DataHasher instance the hash algorithm
-   * @param {string} algorithm
-   */
   public constructor(public readonly algorithm: HashAlgorithm) {
     if (!Algorithm[algorithm.id]) {
       throw new UnsupportedHashAlgorithmError(algorithm);
@@ -30,8 +26,7 @@ export class SubtleCryptoDataHasher implements IDataHasher {
   }
 
   /**
-   * Create hashing Promise for getting result DataHash
-   * @returns Promise.<DataHash, Error>
+   * @inheritDoc
    */
   public async digest(): Promise<DataHash> {
     return new DataHash(
@@ -41,9 +36,7 @@ export class SubtleCryptoDataHasher implements IDataHasher {
   }
 
   /**
-   * Add data for hashing
-   * @param {Uint8Array} data byte array
-   * @returns {SubtleCryptoDataHasher}
+   * @inheritDoc
    */
   public update(data: Uint8Array): this {
     const previousData = this._data;

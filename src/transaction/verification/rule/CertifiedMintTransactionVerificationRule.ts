@@ -13,6 +13,15 @@ import { MintJustificationVerifierService } from '../MintJustificationVerifierSe
  * Genesis verification rule.
  */
 export class CertifiedMintTransactionVerificationRule {
+  /**
+   * Verify a certified mint genesis.
+   *
+   * @param {RootTrustBase} trustBase Root trust base used to verify the inclusion proof.
+   * @param {PredicateVerifierService} predicateVerifier Predicate verifier service.
+   * @param {MintJustificationVerifierService} mintJustificationVerifier Verifier for the mint justification.
+   * @param {CertifiedMintTransaction} genesis Certified mint transaction to verify.
+   * @returns {Promise<VerificationResult<VerificationStatus>>} Verification outcome.
+   */
   public static async verify(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,

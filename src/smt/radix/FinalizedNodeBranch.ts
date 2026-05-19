@@ -5,6 +5,9 @@ import { IDataHasher } from '../../crypto/hash/IDataHasher.js';
 import { IDataHasherFactory } from '../../crypto/hash/IDataHasherFactory.js';
 import { dedent } from '../../util/StringUtils.js';
 
+/**
+ * Finalized interior node in a radix sparse Merkle tree.
+ */
 export class FinalizedNodeBranch {
   public constructor(
     public readonly path: bigint,
@@ -14,6 +17,13 @@ export class FinalizedNodeBranch {
     public readonly hash: DataHash,
   ) {}
 
+  /**
+   * Hash a {@link PendingNodeBranch} into a finalized node.
+   *
+   * @param {IDataHasherFactory<IDataHasher>} factory Hasher factory.
+   * @param {PendingNodeBranch} node Pending node to finalize.
+   * @returns {Promise<FinalizedNodeBranch>} Finalized node branch.
+   */
   public static async create(
     factory: IDataHasherFactory<IDataHasher>,
     node: PendingNodeBranch,
@@ -29,10 +39,16 @@ export class FinalizedNodeBranch {
     return new FinalizedNodeBranch(node.path, node.depth, left, right, hash);
   }
 
+  /**
+   * @returns {Promise<FinalizedNodeBranch>} This branch (already finalized).
+   */
   public finalize(): Promise<FinalizedNodeBranch> {
     return Promise.resolve(this);
   }
 
+  /**
+   * @returns {string} String representation of the node.
+   */
   public toString(): string {
     return dedent`
       Node[${this.path.toString(2)}]

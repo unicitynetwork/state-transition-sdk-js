@@ -19,6 +19,9 @@ import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../util/HexConverter.js';
 import { dedent } from '../util/StringUtils.js';
 
+/**
+ * Token mint transaction.
+ */
 export class MintTransaction implements ITransaction {
   public static readonly CBOR_TAG = 39041n;
   private static readonly VERSION = 1n;
@@ -33,22 +36,44 @@ export class MintTransaction implements ITransaction {
     private readonly _data: Uint8Array | null,
   ) {}
 
+  /**
+   * @returns {Uint8Array|null} Copy of the data payload, or `null` if absent.
+   */
   public get data(): Uint8Array | null {
     return this._data ? new Uint8Array(this._data) : null;
   }
 
+  /**
+   * @returns {Uint8Array|null} Copy of the mint justification bytes, or `null` if absent.
+   */
   public get justification(): Uint8Array | null {
     return this._justification ? new Uint8Array(this._justification) : null;
   }
 
+  /**
+   * @returns {Uint8Array} State mask used when computing the resulting state hash.
+   */
   public get stateMask(): Uint8Array {
     return new Uint8Array(this.tokenId.bytes);
   }
 
+  /**
+   * @returns {bigint} Wire-format version of this transaction.
+   */
   public get version(): bigint {
     return MintTransaction.VERSION;
   }
 
+  /**
+   * Create a MintTransaction for a fresh token.
+   *
+   * @param {IPredicate} recipient Predicate that will lock the minted state.
+   * @param {TokenId} tokenId Token id being minted.
+   * @param {TokenType} tokenType Token type being minted.
+   * @param {Uint8Array|null} justification Optional mint justification bytes.
+   * @param {Uint8Array|null} data Optional data payload.
+   * @returns {Promise<MintTransaction>} New mint transaction.
+   */
   public static async create(
     recipient: IPredicate,
     tokenId: TokenId,
@@ -71,6 +96,13 @@ export class MintTransaction implements ITransaction {
     );
   }
 
+  /**
+   * Create MintTransaction from CBOR bytes.
+   *
+   * @param {Uint8Array} bytes CBOR bytes.
+   * @returns {Promise<MintTransaction>} Decoded transaction.
+   * @throws {CborError} On wrong tag or unsupported version.
+   */
   public static fromCBOR(bytes: Uint8Array): Promise<MintTransaction> {
     const tag = CborDeserializer.decodeTag(bytes);
     if (tag.tag !== MintTransaction.CBOR_TAG) {
@@ -92,6 +124,9 @@ export class MintTransaction implements ITransaction {
     );
   }
 
+  /**
+   * @inheritDoc
+   */
   public calculateStateHash(): Promise<DataHash> {
     return new DataHasher(HashAlgorithm.SHA256)
       .update(
@@ -103,10 +138,16 @@ export class MintTransaction implements ITransaction {
       .digest();
   }
 
+  /**
+   * @inheritDoc
+   */
   public calculateTransactionHash(): Promise<DataHash> {
     return new DataHasher(HashAlgorithm.SHA256).update(this.toCBOR()).digest();
   }
 
+  /**
+   * @inheritDoc
+   */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeTag(
       MintTransaction.CBOR_TAG,
@@ -121,6 +162,14 @@ export class MintTransaction implements ITransaction {
     );
   }
 
+  /**
+   * Bundle this transaction with its inclusion proof into a CertifiedMintTransaction.
+   *
+   * @param {RootTrustBase} trustBase Root trust base used to verify the inclusion certificate.
+   * @param {PredicateVerifierService} predicateVerifier Verifier for any predicates.
+   * @param {InclusionProof} inclusionProof Inclusion proof for this transaction.
+   * @returns {Promise<CertifiedMintTransaction>} Verified certified transaction.
+   */
   public toCertifiedTransaction(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,
@@ -129,6 +178,9 @@ export class MintTransaction implements ITransaction {
     return CertifiedMintTransaction.fromTransaction(trustBase, predicateVerifier, this, inclusionProof);
   }
 
+  /**
+   * @returns {string} String representation of the transaction.
+   */
   public toString(): string {
     return dedent`
       MintTransaction

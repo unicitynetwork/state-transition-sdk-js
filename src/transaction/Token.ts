@@ -16,6 +16,9 @@ import { VerificationStatus } from '../verification/VerificationStatus.js';
 import { CertifiedMintTransactionVerificationRule } from './verification/rule/CertifiedMintTransactionVerificationRule.js';
 import { CertifiedTransferTransactionVerificationRule } from './verification/rule/CertifiedTransferTransactionVerificationRule.js';
 
+/**
+ * Token representation.
+ */
 export class Token {
   public static readonly CBOR_TAG = 39040n;
   private static readonly VERSION = 1n;
@@ -25,26 +28,48 @@ export class Token {
     private readonly _transactions: CertifiedTransferTransaction[] = [],
   ) {}
 
+  /**
+   * @returns {TokenId} Token id from the genesis transaction.
+   */
   public get id(): TokenId {
     return this.genesis.tokenId;
   }
 
+  /**
+   * @returns {ITransaction} Latest transaction, or the genesis if there are no transfers.
+   */
   public get latestTransaction(): ITransaction {
     return this._transactions.at(-1) ?? this.genesis;
   }
 
+  /**
+   * @returns {CertifiedTransferTransaction[]} Copy of the transfer history.
+   */
   public get transactions(): CertifiedTransferTransaction[] {
     return this._transactions.slice();
   }
 
+  /**
+   * @returns {TokenType} Token type from the genesis transaction.
+   */
   public get type(): TokenType {
     return this.genesis.tokenType;
   }
 
+  /**
+   * @returns {bigint} Wire-format version of this token.
+   */
   public get version(): bigint {
     return Token.VERSION;
   }
 
+  /**
+   * Create Token from CBOR bytes.
+   *
+   * @param {Uint8Array} bytes CBOR bytes.
+   * @returns {Promise<Token>} Decoded token.
+   * @throws {CborError} On wrong tag or unsupported version.
+   */
   public static async fromCBOR(bytes: Uint8Array): Promise<Token> {
     const tag = CborDeserializer.decodeTag(bytes);
     if (tag.tag !== Token.CBOR_TAG) {
@@ -68,6 +93,16 @@ export class Token {
     return token;
   }
 
+  /**
+   * Create a Token from a verified genesis mint transaction.
+   *
+   * @param {RootTrustBase} trustBase Root trust base used to verify the inclusion certificate.
+   * @param {PredicateVerifierService} predicateVerifier Verifier for embedded predicates.
+   * @param {MintJustificationVerifierService} mintJustificationVerifier Verifier for the mint justification.
+   * @param {CertifiedMintTransaction} genesis Genesis mint transaction.
+   * @returns {Promise<Token>} New token.
+   * @throws {VerificationError} If the genesis does not verify.
+   */
   public static async mint(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,
@@ -83,6 +118,11 @@ export class Token {
     return token;
   }
 
+  /**
+   * Convert Token to CBOR bytes.
+   *
+   * @returns {Uint8Array} CBOR bytes.
+   */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeTag(
       Token.CBOR_TAG,
@@ -94,6 +134,9 @@ export class Token {
     );
   }
 
+  /**
+   * @returns {string} String representation of the token.
+   */
   public toString(): string {
     return dedent`
       Token
@@ -104,6 +147,15 @@ export class Token {
         ]`;
   }
 
+  /**
+   * Append token with certified transfer transaction.
+   *
+   * @param {RootTrustBase} trustBase Root trust base used to verify the inclusion certificate.
+   * @param {PredicateVerifierService} predicateVerifier Verifier for embedded predicates.
+   * @param {CertifiedTransferTransaction} transaction Transfer transaction to apply.
+   * @returns {Promise<Token>} Updated token including the new transaction.
+   * @throws {VerificationError} If the transfer transaction does not verify.
+   */
   public async transfer(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,
@@ -120,6 +172,14 @@ export class Token {
     return new Token(this.genesis, transactions);
   }
 
+  /**
+   * Verify the genesis and every transfer in this token.
+   *
+   * @param {RootTrustBase} trustBase Root trust base used to verify inclusion certificates.
+   * @param {PredicateVerifierService} predicateVerifier Verifier for embedded predicates.
+   * @param {MintJustificationVerifierService} mintJustificationVerifier Verifier for the mint justification.
+   * @returns {Promise<VerificationResult<VerificationStatus>>} Aggregated verification result.
+   */
   public async verify(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,

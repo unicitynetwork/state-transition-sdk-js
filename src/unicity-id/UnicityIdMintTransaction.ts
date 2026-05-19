@@ -18,6 +18,9 @@ import { TokenId } from '../transaction/TokenId.js';
 import { TokenType } from '../transaction/TokenType.js';
 import { dedent } from '../util/StringUtils.js';
 
+/**
+ * Mint transaction for a unicity-id token.
+ */
 export class UnicityIdMintTransaction implements ITransaction {
   public static readonly CBOR_TAG = 39041n;
   private static readonly VERSION = 1n;
@@ -32,18 +35,37 @@ export class UnicityIdMintTransaction implements ITransaction {
     public readonly unicityId: UnicityId,
   ) {}
 
+  /**
+   * @returns {Uint8Array} CBOR-encoded target predicate.
+   */
   public get data(): Uint8Array {
     return EncodedPredicate.fromPredicate(this.targetPredicate).toCBOR();
   }
 
+  /**
+   * @returns {Uint8Array} State mask used when computing the resulting state hash.
+   */
   public get stateMask(): Uint8Array {
     return new Uint8Array(this.tokenId.bytes);
   }
 
+  /**
+   * @returns {bigint} Wire-format version of this transaction.
+   */
   public get version(): bigint {
     return UnicityIdMintTransaction.VERSION;
   }
 
+  /**
+   * Create a UnicityIdMintTransaction.
+   *
+   * @param {SignaturePredicate} lockScript Issuer lock script.
+   * @param {IPredicate} recipient Predicate that will lock the minted state.
+   * @param {UnicityId} unicityId Unicity id being minted.
+   * @param {TokenType} tokenType Token type.
+   * @param {SignaturePredicate} targetPredicate Predicate the unicity id resolves to.
+   * @returns {Promise<UnicityIdMintTransaction>} New mint transaction.
+   */
   public static async create(
     lockScript: SignaturePredicate,
     recipient: IPredicate,
@@ -64,6 +86,13 @@ export class UnicityIdMintTransaction implements ITransaction {
     );
   }
 
+  /**
+   * Create UnicityIdMintTransaction from CBOR bytes.
+   *
+   * @param {Uint8Array} bytes CBOR bytes.
+   * @returns {Promise<UnicityIdMintTransaction>} Decoded transaction.
+   * @throws {CborError} On wrong tag or unsupported version.
+   */
   public static fromCBOR(bytes: Uint8Array): Promise<UnicityIdMintTransaction> {
     const tag = CborDeserializer.decodeTag(bytes);
     if (tag.tag !== UnicityIdMintTransaction.CBOR_TAG) {
@@ -85,6 +114,9 @@ export class UnicityIdMintTransaction implements ITransaction {
     );
   }
 
+  /**
+   * @inheritDoc
+   */
   public calculateStateHash(): Promise<DataHash> {
     return new DataHasher(HashAlgorithm.SHA256)
       .update(
@@ -96,10 +128,16 @@ export class UnicityIdMintTransaction implements ITransaction {
       .digest();
   }
 
+  /**
+   * @inheritDoc
+   */
   public calculateTransactionHash(): Promise<DataHash> {
     return new DataHasher(HashAlgorithm.SHA256).update(this.toCBOR()).digest();
   }
 
+  /**
+   * @inheritDoc
+   */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeTag(
       UnicityIdMintTransaction.CBOR_TAG,
@@ -114,6 +152,14 @@ export class UnicityIdMintTransaction implements ITransaction {
     );
   }
 
+  /**
+   * Bundle this transaction with its inclusion proof.
+   *
+   * @param {RootTrustBase} trustBase Root trust base used to verify the inclusion certificate.
+   * @param {PredicateVerifierService} predicateVerifier Verifier for embedded predicates.
+   * @param {InclusionProof} inclusionProof Inclusion proof for this transaction.
+   * @returns {Promise<CertifiedUnicityIdMintTransaction>} Verified certified transaction.
+   */
   public toCertifiedTransaction(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,
@@ -122,6 +168,9 @@ export class UnicityIdMintTransaction implements ITransaction {
     return CertifiedUnicityIdMintTransaction.fromTransaction(trustBase, predicateVerifier, this, inclusionProof);
   }
 
+  /**
+   * @returns {string} String representation of the transaction.
+   */
   public toString(): string {
     return dedent`
       UnicityIdMintTransaction

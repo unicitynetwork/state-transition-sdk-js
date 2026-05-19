@@ -7,6 +7,11 @@ import { HexConverter } from '../util/HexConverter.js';
 import { dedent } from '../util/StringUtils.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 
+/**
+ * Wire-form predicate: holds the engine id and opaque code/parameter bytes
+ * without re-decoding them. Used wherever predicates are stored or
+ * transmitted as CBOR.
+ */
 export class EncodedPredicate implements IPredicate {
   public static readonly CBOR_TAG = 39032n;
 
@@ -19,6 +24,13 @@ export class EncodedPredicate implements IPredicate {
     this._params = new Uint8Array(_params);
   }
 
+  /**
+   * Null-safe structural equality on engine, code, and parameters.
+   *
+   * @param {EncodedPredicate|null|undefined} a First predicate.
+   * @param {EncodedPredicate|null|undefined} b Second predicate.
+   * @returns {boolean} True if both are nullish, or if engines and bytes match.
+   */
   public static equals(a: EncodedPredicate | null | undefined, b: EncodedPredicate | null | undefined): boolean {
     if (a == null || b == null) {
       return a == null && b == null;
@@ -34,6 +46,13 @@ export class EncodedPredicate implements IPredicate {
     );
   }
 
+  /**
+   * Create EncodedPredicate from CBOR bytes.
+   *
+   * @param {Uint8Array} bytes CBOR bytes.
+   * @returns {EncodedPredicate} Decoded predicate.
+   * @throws {CborError} On wrong tag or unknown engine.
+   */
   public static fromCBOR(bytes: Uint8Array): EncodedPredicate {
     const tag = CborDeserializer.decodeTag(bytes);
     if (tag.tag !== EncodedPredicate.CBOR_TAG) {
@@ -53,18 +72,35 @@ export class EncodedPredicate implements IPredicate {
     );
   }
 
+  /**
+   * Wrap any {@link IPredicate} into its encoded form.
+   *
+   * @param {IPredicate} predicate Predicate to wrap.
+   * @returns {EncodedPredicate} Encoded copy of the predicate.
+   */
   public static fromPredicate(predicate: IPredicate): EncodedPredicate {
     return new EncodedPredicate(predicate.engine, predicate.encodeCode(), predicate.encodeParameters());
   }
 
+  /**
+   * @inheritDoc
+   */
   public encodeCode(): Uint8Array {
     return this._code.slice();
   }
 
+  /**
+   * @inheritDoc
+   */
   public encodeParameters(): Uint8Array {
     return this._params.slice();
   }
 
+  /**
+   * Convert EncodedPredicate to CBOR bytes.
+   *
+   * @returns {Uint8Array} Tagged CBOR encoding of this predicate.
+   */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeTag(
       EncodedPredicate.CBOR_TAG,
@@ -76,6 +112,9 @@ export class EncodedPredicate implements IPredicate {
     );
   }
 
+  /**
+   * @returns {string} String representation of the predicate.
+   */
   public toString(): string {
     return dedent`
       EncodedPredicate:

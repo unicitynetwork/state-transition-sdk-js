@@ -2,7 +2,17 @@ import { CborError } from './CborError.js';
 import { CborMap } from './CborMap.js';
 import { MajorType } from './MajorType.js';
 
+/**
+ * Static helpers that encode TypeScript values to canonical CBOR bytes
+ * (RFC 8949 §4.2).
+ */
 export class CborSerializer {
+  /**
+   * Encode an array of already-encoded CBOR items as a CBOR array.
+   *
+   * @param {...Uint8Array} input Encoded CBOR items.
+   * @returns {Uint8Array} CBOR bytes.
+   */
   public static encodeArray(...input: Uint8Array[]): Uint8Array {
     const data = new Uint8Array(input.reduce((result, value) => result + value.length, 0));
     let length = 0;
@@ -23,6 +33,12 @@ export class CborSerializer {
     ]);
   }
 
+  /**
+   * Encode a boolean as the CBOR simple values `true` (0xf5) or `false` (0xf4).
+   *
+   * @param {boolean} data Boolean value.
+   * @returns {Uint8Array} CBOR bytes.
+   */
   public static encodeBoolean(data: boolean): Uint8Array {
     if (data) {
       return new Uint8Array([0xf5]);
@@ -30,6 +46,12 @@ export class CborSerializer {
     return new Uint8Array([0xf4]);
   }
 
+  /**
+   * Encode raw bytes as a CBOR byte string.
+   *
+   * @param {Uint8Array} input Raw bytes.
+   * @returns {Uint8Array} CBOR bytes.
+   */
   public static encodeByteString(input: Uint8Array): Uint8Array {
     if (input.length < 24) {
       return new Uint8Array([MajorType.BYTE_STRING | input.length, ...input]);
@@ -43,6 +65,12 @@ export class CborSerializer {
     ]);
   }
 
+  /**
+   * Encode a {@link CborMap} as a canonical CBOR map.
+   *
+   * @param {CborMap} input Canonical CBOR map.
+   * @returns {Uint8Array} CBOR bytes.
+   */
   public static encodeMap(input: CborMap): Uint8Array {
     const entries = input.entries;
     const dataLength = entries.reduce((result, entry) => result + entry.key.length + entry.value.length, 0);
@@ -67,10 +95,23 @@ export class CborSerializer {
     ]);
   }
 
+  /**
+   * Encode the CBOR `null` simple value (0xf6).
+   *
+   * @returns {Uint8Array} CBOR bytes.
+   */
   public static encodeNull(): Uint8Array {
     return new Uint8Array([0xf6]);
   }
 
+  /**
+   * Encode `data` with `encoder`, or return CBOR `null` if `data` is
+   * `null`/`undefined`.
+   *
+   * @param {T|null|undefined} data Value to encode.
+   * @param {(data: T) => Uint8Array} encoder Encoder for the inner value.
+   * @returns {Uint8Array} CBOR bytes.
+   */
   public static encodeNullable<T>(data: T | null | undefined, encoder: (data: T) => Uint8Array): Uint8Array {
     if (data == null) {
       return new Uint8Array([0xf6]);
@@ -79,6 +120,13 @@ export class CborSerializer {
     return encoder(data);
   }
 
+  /**
+   * Wrap already-encoded CBOR bytes in a CBOR tag.
+   *
+   * @param {number|bigint} tag Tag number.
+   * @param {Uint8Array} input Encoded CBOR bytes to tag.
+   * @returns {Uint8Array} CBOR bytes.
+   */
   public static encodeTag(tag: number | bigint, input: Uint8Array): Uint8Array {
     if (tag < 24) {
       return new Uint8Array([MajorType.TAG | Number(tag), ...input]);
@@ -92,6 +140,12 @@ export class CborSerializer {
     ]);
   }
 
+  /**
+   * Encode a UTF-8 string as a CBOR text string.
+   *
+   * @param {string} input Text value.
+   * @returns {Uint8Array} CBOR bytes.
+   */
   public static encodeTextString(input: string): Uint8Array {
     const bytes = new TextEncoder().encode(input);
     if (bytes.length < 24) {
@@ -106,6 +160,13 @@ export class CborSerializer {
     ]);
   }
 
+  /**
+   * Encode a non-negative integer as a CBOR unsigned integer.
+   *
+   * @param {bigint|number} input Non-negative integer.
+   * @returns {Uint8Array} CBOR bytes.
+   * @throws {CborError} If `input` is negative.
+   */
   public static encodeUnsignedInteger(input: bigint | number): Uint8Array {
     if (input < 0) {
       throw new CborError('Only unsigned numbers are allowed.');

@@ -4,6 +4,9 @@ import { BigintConverter } from '../../util/BigintConverter.js';
 import { HexConverter } from '../../util/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
 
+/**
+ * Single step along a plain sparse Merkle tree path.
+ */
 export class SparseMerkleTreePathStep {
   public constructor(
     public readonly path: bigint,
@@ -14,10 +17,19 @@ export class SparseMerkleTreePathStep {
     }
   }
 
+  /**
+   * @returns {Uint8Array|null} Copy of the step data bytes, or `null`.
+   */
   public get data(): Uint8Array | null {
     return this._data ? new Uint8Array(this._data) : null;
   }
 
+  /**
+   * Create SparseMerkleTreePathStep from CBOR bytes.
+   *
+   * @param {Uint8Array} bytes CBOR bytes.
+   * @returns {SparseMerkleTreePathStep} Decoded step.
+   */
   public static fromCBOR(bytes: Uint8Array): SparseMerkleTreePathStep {
     const data = CborDeserializer.decodeArray(bytes, 2);
 
@@ -27,6 +39,11 @@ export class SparseMerkleTreePathStep {
     );
   }
 
+  /**
+   * Convert SparseMerkleTreePathStep to CBOR bytes.
+   *
+   * @returns {Uint8Array} CBOR bytes.
+   */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
       CborSerializer.encodeByteString(BigintConverter.encode(this.path)),
@@ -34,6 +51,9 @@ export class SparseMerkleTreePathStep {
     );
   }
 
+  /**
+   * @returns {string} String representation of the step.
+   */
   public toString(): string {
     return dedent`
       Merkle Tree Path Step
