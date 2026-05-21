@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { Then, When } from '@cucumber/cucumber';
 
 import { CertificationData } from '../../../../src/api/CertificationData.js';
+import { CertificationStatus } from '../../../../src/api/CertificationResponse.js';
 import { SignaturePredicateUnlockScript } from '../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
 import { waitInclusionProof } from '../../../../src/util/InclusionProofUtils.js';
@@ -51,3 +52,28 @@ Then(
     );
   },
 );
+
+// aggregator-go#151 (sdk-js#118): the spent state cannot be re-spent — rejected either at
+// submit (STATE_ID_EXISTS, finalized-dup lookup) or at proof time (TRANSACTION_HASH_MISMATCH,
+// skip-finalized-dup-lookup async-v2 path). Accept either; both block the double-spend.
+Then('the stale-token re-spend is rejected as a double-spend', async function (this: TokenWorld): Promise<void> {
+  if (this.certificationStatus === CertificationStatus.STATE_ID_EXISTS) {
+    return;
+  }
+  assert.strictEqual(
+    this.certificationStatus,
+    CertificationStatus.SUCCESS,
+    `re-spend submit status should be STATE_ID_EXISTS or SUCCESS, got ${String(this.certificationStatus)}`,
+  );
+  assert.ok(this.transferTransaction !== null);
+  await assert.rejects(
+    () =>
+      waitInclusionProof(
+        this.setup.client,
+        this.setup.trustBase,
+        this.setup.predicateVerifier,
+        this.transferTransaction!,
+      ),
+    (e: Error) => e.message.includes('TRANSACTION_HASH_MISMATCH'),
+  );
+});

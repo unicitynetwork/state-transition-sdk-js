@@ -30,9 +30,13 @@ Feature: 4-Level Token Tree - Owner Actions and Double-Spend Prevention
       | Alice | T4a_alice | Carol     |
       | Bob   | T4b_bob   | Dave      |
 
+  # The re-spend is rejected either at submit (STATE_ID_EXISTS, finalized-dup lookup) or at
+  # proof time (TRANSACTION_HASH_MISMATCH) depending on the aggregator's submit path
+  # (aggregator-go#151 skip-finalized-dup-lookup / async-v2). Either way the double-spend
+  # cannot produce a valid token — assert tolerantly. See sdk-js#118.
   Scenario Outline: Double-spend detected when <user> reuses pre-transfer token <token>
     When <user> submits a duplicate transfer for pre-transfer token "<token>"
-    Then the aggregator responds with "STATE_ID_EXISTS"
+    Then the duplicate transfer is rejected as a double-spend
 
     Examples:
       | user  | token   |
