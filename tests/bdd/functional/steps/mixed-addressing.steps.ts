@@ -80,9 +80,8 @@ When(
     const { TransferTransaction } = await import('../../../../src/transaction/TransferTransaction.js');
     const { CertificationData } = await import('../../../../src/api/CertificationData.js');
     const { CertificationStatus } = await import('../../../../src/api/CertificationResponse.js');
-    const { SignaturePredicateUnlockScript } = await import(
-      '../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js'
-    );
+    const { SignaturePredicateUnlockScript } =
+      await import('../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js');
     const { waitInclusionProof } = await import('../../../../src/util/InclusionProofUtils.js');
 
     const transferTx = await TransferTransaction.create(
@@ -142,9 +141,8 @@ When(
     const { TransferTransaction } = await import('../../../../src/transaction/TransferTransaction.js');
     const { CertificationData } = await import('../../../../src/api/CertificationData.js');
     const { CertificationStatus } = await import('../../../../src/api/CertificationResponse.js');
-    const { SignaturePredicateUnlockScript } = await import(
-      '../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js'
-    );
+    const { SignaturePredicateUnlockScript } =
+      await import('../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js');
     const { waitInclusionProof } = await import('../../../../src/util/InclusionProofUtils.js');
 
     const deliverChild = async (
@@ -216,9 +214,8 @@ When(
     const { TransferTransaction } = await import('../../../../src/transaction/TransferTransaction.js');
     const { CertificationData } = await import('../../../../src/api/CertificationData.js');
     const { CertificationStatus } = await import('../../../../src/api/CertificationResponse.js');
-    const { SignaturePredicateUnlockScript } = await import(
-      '../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js'
-    );
+    const { SignaturePredicateUnlockScript } =
+      await import('../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js');
     const { waitInclusionProof } = await import('../../../../src/util/InclusionProofUtils.js');
 
     const tx = await TransferTransaction.create(
