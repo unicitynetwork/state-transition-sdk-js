@@ -6,12 +6,12 @@
  * {@link NetworkId.fromId}.
  */
 export class NetworkId {
-  public static readonly LOCAL = new NetworkId(3n, 'LOCAL');
-  public static readonly MAINNET = new NetworkId(1n, 'MAINNET');
-  public static readonly TESTNET = new NetworkId(2n, 'TESTNET');
+  public static readonly LOCAL = new NetworkId(3, 'LOCAL');
+  public static readonly MAINNET = new NetworkId(1, 'MAINNET');
+  public static readonly TESTNET = new NetworkId(2, 'TESTNET');
 
   private constructor(
-    public readonly id: bigint,
+    public readonly id: number,
     public readonly name: string,
   ) {}
 
@@ -23,7 +23,11 @@ export class NetworkId {
    * @throws {Error} If `id` is `0`, negative, or not registered.
    */
   public static fromId(id: number | bigint): NetworkId {
-    switch (BigInt(id)) {
+    const value = BigInt(id);
+    if (value < 0n || value > 0xffffffffn) {
+      throw new Error(`Network identifier out of 32-bit unsigned range: ${id}.`);
+    }
+    switch (Number(value)) {
       case NetworkId.MAINNET.id:
         return NetworkId.MAINNET;
       case NetworkId.TESTNET.id:

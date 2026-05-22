@@ -7,7 +7,7 @@ export function createRootTrustBase(publicKey: Uint8Array): RootTrustBase {
     changeRecordHash: null,
     epoch: '0',
     epochStartRound: '0',
-    networkId: Number(NetworkId.LOCAL.id),
+    networkId: NetworkId.LOCAL.id,
     previousEntryHash: null,
     quorumThreshold: '1',
     rootNodes: [
