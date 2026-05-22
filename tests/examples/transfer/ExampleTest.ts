@@ -32,10 +32,8 @@ async function receiveToken(client: StateTransitionClient, trustBase: RootTrustB
   const mintTransaction = await MintTransaction.create(
     NetworkId.LOCAL,
     ownerPredicate,
-    TokenType.generate(),
-    null,
-    null,
     CborSerializer.encodeTextString('My custom data'),
+    TokenType.generate(),
   );
   const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
 

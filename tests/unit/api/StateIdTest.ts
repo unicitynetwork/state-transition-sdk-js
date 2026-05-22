@@ -14,6 +14,7 @@ describe('StateId', () => {
         SignaturePredicate.create(
           HexConverter.decode('02ce9f22e51333c97a8fb1f807a229ece3a8765a16af5fc1a13e30834be3280026'),
         ),
+        null,
         new TokenType(new Uint8Array(32)),
         TokenSalt.fromBytes(new Uint8Array(32)),
       ),

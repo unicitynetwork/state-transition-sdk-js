@@ -73,21 +73,20 @@ export class MintTransaction implements ITransaction {
    *
    * @param {NetworkId} networkId Network identifier.
    * @param {IPredicate} recipient Predicate that will lock the minted state.
+   * @param {Uint8Array|null} data Optional data payload.
    * @param {TokenType} tokenType Token type being minted.
    * @param {TokenSalt} salt Mint-transaction salt; defaults to a random 32-byte salt.
    * @param {Uint8Array|null} justification Optional mint justification bytes.
-   * @param {Uint8Array|null} data Optional data payload.
    * @returns {Promise<MintTransaction>} New mint transaction.
    */
   public static async create(
     networkId: NetworkId,
     recipient: IPredicate,
-    tokenType: TokenType,
-    salt: TokenSalt | null = null,
-    justification: Uint8Array | null = null,
     data: Uint8Array | null = null,
+    tokenType: TokenType = TokenType.generate(),
+    salt: TokenSalt = TokenSalt.generate(),
+    justification: Uint8Array | null = null,
   ): Promise<MintTransaction> {
-    salt = salt ?? TokenSalt.generate();
     justification = justification ? new Uint8Array(justification) : null;
     data = data ? new Uint8Array(data) : null;
 
@@ -128,10 +127,10 @@ export class MintTransaction implements ITransaction {
     return MintTransaction.create(
       NetworkId.fromId(CborDeserializer.decodeUnsignedInteger(data[1])),
       EncodedPredicate.fromCBOR(data[2]),
+      CborDeserializer.decodeNullable(data[6], CborDeserializer.decodeByteString),
       TokenType.fromCBOR(data[4]),
       TokenSalt.fromCBOR(data[3]),
       CborDeserializer.decodeNullable(data[5], CborDeserializer.decodeByteString),
-      CborDeserializer.decodeNullable(data[6], CborDeserializer.decodeByteString),
     );
   }
 

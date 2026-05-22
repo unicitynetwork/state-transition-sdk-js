@@ -19,7 +19,6 @@ import { PredicateVerifierService } from '../../../src/predicate/verification/Pr
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../src/transaction/Token.js';
-import { TokenType } from '../../../src/transaction/TokenType.js';
 import { MintJustificationVerifierService } from '../../../src/transaction/verification/MintJustificationVerifierService.js';
 import { waitInclusionProof } from '../../../src/util/InclusionProofUtils.js';
 import { VerificationStatus } from '../../../src/verification/VerificationStatus.js';
@@ -46,14 +45,7 @@ describe('SplitBuilder Functional Test', () => {
 
     const paymentData = new TestPaymentData(PaymentAssetCollection.create(...assets));
     const networkId = NetworkId.LOCAL;
-    const mintTransaction = await MintTransaction.create(
-      networkId,
-      predicate,
-      TokenType.generate(),
-      null,
-      null,
-      await paymentData.encode(),
-    );
+    const mintTransaction = await MintTransaction.create(networkId, predicate, await paymentData.encode());
     let certificationData = await CertificationData.fromMintTransaction(mintTransaction);
 
     let response = await client.submitCertificationRequest(certificationData);
@@ -122,10 +114,10 @@ describe('SplitBuilder Functional Test', () => {
       const mintTransaction = await MintTransaction.create(
         splitToken.networkId,
         splitToken.recipient,
+        await new TestPaymentData(splitToken.assets).encode(),
         splitToken.tokenType,
         splitToken.salt,
         SplitMintJustification.create(token, splitToken.proofs).toCBOR(),
-        await new TestPaymentData(splitToken.assets).encode(),
       );
 
       const certificationData = await CertificationData.fromMintTransaction(mintTransaction);

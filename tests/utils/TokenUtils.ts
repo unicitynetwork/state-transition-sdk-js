@@ -24,19 +24,19 @@ export async function mintToken(
   predicateVerifier: PredicateVerifierService,
   mintJustificationVerifier: MintJustificationVerifierService,
   recipient: IPredicate,
+  data: Uint8Array | null = null,
   networkId: NetworkId = NetworkId.LOCAL,
   tokenType: TokenType = TokenType.generate(),
   salt: TokenSalt = TokenSalt.generate(),
   justification: ICborSerializable | null = null,
-  data: Uint8Array | null = null,
 ): Promise<Token> {
   const transaction = await MintTransaction.create(
     networkId,
     recipient,
+    data,
     tokenType,
     salt,
     justification?.toCBOR(),
-    data,
   );
 
   const certificationData = await CertificationData.fromMintTransaction(transaction);

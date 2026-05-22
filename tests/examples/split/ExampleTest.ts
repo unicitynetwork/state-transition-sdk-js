@@ -53,10 +53,8 @@ it('Token splitting', async () => {
   const mintTransaction = await MintTransaction.create(
     networkId,
     ownerPredicate,
-    TokenType.generate(),
-    null,
-    null,
     await paymentData.encode(),
+    TokenType.generate(),
   );
 
   let response = await client.submitCertificationRequest(await CertificationData.fromMintTransaction(mintTransaction));
@@ -120,10 +118,10 @@ it('Token splitting', async () => {
     const mintTransaction = await MintTransaction.create(
       splitToken.networkId,
       splitToken.recipient,
+      await splitPaymentData.encode(),
       splitToken.tokenType,
       splitToken.salt,
       SplitMintJustification.create(burntToken, splitToken.proofs).toCBOR(),
-      await splitPaymentData.encode(),
     );
 
     const certificationData = await CertificationData.fromMintTransaction(mintTransaction);

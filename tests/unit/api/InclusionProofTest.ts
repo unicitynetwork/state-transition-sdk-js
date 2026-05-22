@@ -16,8 +16,6 @@ import { PredicateVerifierService } from '../../../src/predicate/verification/Pr
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { SparseMerkleTree } from '../../../src/smt/radix/SparseMerkleTree.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
-import { TokenSalt } from '../../../src/transaction/TokenSalt.js';
-import { TokenType } from '../../../src/transaction/TokenType.js';
 import {
   InclusionProofVerificationRule,
   InclusionProofVerificationStatus,
@@ -39,11 +37,7 @@ describe('InclusionProof', () => {
   let trustBase: RootTrustBase;
 
   beforeAll(async () => {
-    transaction = await MintTransaction.create(
-      NetworkId.LOCAL,
-      SignaturePredicate.fromSigningService(signingService),
-      TokenType.generate(),
-    );
+    transaction = await MintTransaction.create(NetworkId.LOCAL, SignaturePredicate.fromSigningService(signingService));
     const smt = new SparseMerkleTree(new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher));
     const stateId = await StateId.fromTransaction(transaction);
     certificationData = await CertificationData.fromMintTransaction(transaction);
@@ -90,10 +84,8 @@ describe('InclusionProof', () => {
         await MintTransaction.create(
           transaction.networkId,
           transaction.lockScript,
-          transaction.tokenType,
-          TokenSalt.generate(),
-          null,
           transaction.data,
+          transaction.tokenType,
         ),
       ).then((result) => result.status),
     ).resolves.toEqual(InclusionProofVerificationStatus.INCLUSION_CERTIFICATE_MISSING);
