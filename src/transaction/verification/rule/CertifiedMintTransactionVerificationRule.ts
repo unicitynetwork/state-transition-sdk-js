@@ -30,6 +30,17 @@ export class CertifiedMintTransactionVerificationRule {
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];
 
+    if (genesis.networkId.id !== BigInt(trustBase.networkId)) {
+      results.push(new VerificationResult('MintNetworkMatchesTrustBaseRule', VerificationStatus.FAIL));
+      return new VerificationResult(
+        'CertifiedMintTransactionVerificationRule',
+        VerificationStatus.FAIL,
+        'Mint network does not match trust base.',
+        results,
+      );
+    }
+    results.push(new VerificationResult('MintNetworkMatchesTrustBaseRule', VerificationStatus.OK));
+
     const signingService = await MintSigningService.create(genesis.tokenId);
     const expectedLockScript = EncodedPredicate.fromPredicate(SignaturePredicate.fromSigningService(signingService));
     let result: VerificationResult<unknown> = EncodedPredicate.equals(

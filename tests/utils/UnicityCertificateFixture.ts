@@ -6,6 +6,7 @@ import { ShardTreeCertificate } from '../../src/api/bft/ShardTreeCertificate.js'
 import { UnicityCertificate } from '../../src/api/bft/UnicityCertificate.js';
 import { UnicitySeal } from '../../src/api/bft/UnicitySeal.js';
 import { UnicityTreeCertificate } from '../../src/api/bft/UnicityTreeCertificate.js';
+import { NetworkId } from '../../src/api/NetworkId.js';
 import { DataHash } from '../../src/crypto/hash/DataHash.js';
 import { DataHasher } from '../../src/crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../../src/crypto/hash/HashAlgorithm.js';
@@ -42,7 +43,7 @@ export async function createUnicityCertificate(
     .digest();
 
   const seal = await UnicitySeal.create(
-    0n,
+    NetworkId.LOCAL.id,
     0n,
     0n,
     0n,

@@ -50,6 +50,14 @@ export class UnicityCertificateVerification {
     inclusionProof: InclusionProof,
   ): Promise<UnicityCertificateVerificationResult> {
     const results: VerificationResult<VerificationStatus>[] = [];
+
+    const sealNetworkId = inclusionProof.unicityCertificate.unicitySeal.networkId;
+    if (sealNetworkId !== BigInt(trustBase.networkId)) {
+      results.push(new VerificationResult('UnicitySealNetworkMatchesTrustBaseRule', VerificationStatus.FAIL));
+      return UnicityCertificateVerificationResult.fail(results);
+    }
+    results.push(new VerificationResult('UnicitySealNetworkMatchesTrustBaseRule', VerificationStatus.OK));
+
     let result = await UnicitySealHashMatchesWithRootHashRule.verify(inclusionProof.unicityCertificate);
     results.push(result);
     if (result.status !== VerificationStatus.OK) {
