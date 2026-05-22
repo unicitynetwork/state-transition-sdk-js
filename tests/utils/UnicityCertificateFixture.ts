@@ -43,7 +43,7 @@ export async function createUnicityCertificate(
     .digest();
 
   const seal = await UnicitySeal.create(
-    BigInt(NetworkId.LOCAL.id),
+    NetworkId.LOCAL,
     0n,
     0n,
     0n,

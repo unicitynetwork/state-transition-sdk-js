@@ -24,8 +24,8 @@ export class NetworkId {
    */
   public static fromId(id: number | bigint): NetworkId {
     const value = BigInt(id);
-    if (value < 0n || value > 0xffffffffn) {
-      throw new Error(`Network identifier out of 32-bit unsigned range: ${id}.`);
+    if (value < 0n || value > 0xffffn) {
+      throw new Error(`Network identifier out of 16-bit unsigned range: ${id}.`);
     }
     switch (Number(value)) {
       case NetworkId.MAINNET.id:

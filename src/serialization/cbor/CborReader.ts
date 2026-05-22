@@ -72,7 +72,7 @@ export class CborReader {
    */
   public readLength(majorType: MajorType): bigint {
     const initialByte = this.readByte();
-    const parsedMajorType = (initialByte & CborReader.MAJOR_TYPE_MASK) as MajorType;
+    const parsedMajorType: MajorType = initialByte & CborReader.MAJOR_TYPE_MASK;
 
     if (parsedMajorType !== majorType) {
       throw new CborError(`Major type mismatch: expected ${majorType}, got ${parsedMajorType}.`);
@@ -123,10 +123,10 @@ export class CborReader {
       throw new CborError('Premature end of data.');
     }
 
-    const majorType = this.data[this.position] & CborReader.MAJOR_TYPE_MASK;
+    const majorType: MajorType = this.data[this.position] & CborReader.MAJOR_TYPE_MASK;
     const position = this.position;
     const length = this.readLength(majorType);
-    switch (majorType as MajorType) {
+    switch (majorType) {
       case MajorType.BYTE_STRING:
       case MajorType.TEXT_STRING:
         this.read(Number(length));

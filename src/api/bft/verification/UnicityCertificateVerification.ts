@@ -51,8 +51,7 @@ export class UnicityCertificateVerification {
   ): Promise<UnicityCertificateVerificationResult> {
     const results: VerificationResult<VerificationStatus>[] = [];
 
-    const sealNetworkId = inclusionProof.unicityCertificate.unicitySeal.networkId;
-    if (sealNetworkId !== BigInt(trustBase.networkId)) {
+    if (inclusionProof.unicityCertificate.unicitySeal.networkId !== trustBase.networkId) {
       results.push(new VerificationResult('UnicitySealNetworkMatchesTrustBaseRule', VerificationStatus.FAIL));
       return UnicityCertificateVerificationResult.fail(results);
     }
