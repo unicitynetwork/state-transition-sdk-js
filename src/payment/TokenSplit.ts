@@ -1,3 +1,4 @@
+import { DuplicateSplitTokenIdError } from './error/DuplicateSplitTokenIdError.js';
 import { TokenAssetMissingError } from './error/TokenAssetMissingError.js';
 import { IPaymentData } from './IPaymentData.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
@@ -50,10 +51,14 @@ export class TokenSplit {
     const trees = new Map<string, [AssetId, SparseMerkleSumTree]>();
     const networkId = token.genesis.networkId;
 
-    const resolved: [SplitTokenRequest, TokenId][] = [];
+    const requestsWithTokenId = new Map<bigint, [SplitTokenRequest, TokenId]>();
     for (const request of requests) {
       const tokenId = await TokenId.fromSalt(networkId, request.salt);
-      resolved.push([request, tokenId]);
+      const tokenIdPath = tokenId.toBitString().toBigInt();
+      if (requestsWithTokenId.has(tokenIdPath)) {
+        throw new DuplicateSplitTokenIdError(tokenId.toString());
+      }
+      requestsWithTokenId.set(tokenIdPath, [request, tokenId]);
 
       for (const asset of request.assets.toArray()) {
         const key = HexConverter.encode(asset.id.bytes);
@@ -63,7 +68,7 @@ export class TokenSplit {
           trees.set(key, [asset.id, tree]);
         }
 
-        await tree.addLeaf(tokenId.toBitString().toBigInt(), asset.id.bytes, asset.value);
+        await tree.addLeaf(tokenIdPath, asset.id.bytes, asset.value);
       }
     }
 
@@ -104,7 +109,7 @@ export class TokenSplit {
       crypto.getRandomValues(new Uint8Array(32)),
     );
 
-    const tokens: SplitToken[] = resolved.map(
+    const tokens: SplitToken[] = Array.from(requestsWithTokenId.values()).map(
       ([request, tokenId]) =>
         new SplitToken(
           networkId,

@@ -48,15 +48,6 @@ export class TokenId {
   }
 
   /**
-   * Generate a fresh random TokenId.
-   *
-   * @returns {TokenId} New token id with random 32-byte payload.
-   */
-  public static generate(): TokenId {
-    return new TokenId(crypto.getRandomValues(new Uint8Array(32)));
-  }
-
-  /**
    * Equality check against another value.
    *
    * @param {unknown} o Other value.
