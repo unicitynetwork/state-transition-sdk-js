@@ -59,6 +59,15 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
       );
     }
 
+    if (transaction.networkId.id !== justification.token.genesis.networkId.id) {
+      return new VerificationResult(
+        'SplitMintJustificationVerifier',
+        VerificationStatus.FAIL,
+        `Network identifier mismatch: mint is on ${transaction.networkId.toString()}, source token is on ${justification.token.genesis.networkId.toString()}.`,
+        [],
+      );
+    }
+
     const tokenVerificationResult = await justification.token.verify(
       this.trustBase,
       this.predicateVerifier,

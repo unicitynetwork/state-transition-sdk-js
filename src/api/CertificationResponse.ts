@@ -6,8 +6,6 @@ import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
 export enum CertificationStatus {
   /** The certification request was accepted and stored. */
   SUCCESS = 'SUCCESS',
-  /** State identifier exists. */
-  STATE_ID_EXISTS = 'STATE_ID_EXISTS',
   /** State identifier did not match the payload. */
   STATE_ID_MISMATCH = 'STATE_ID_MISMATCH',
   /** Signature verification failed. */

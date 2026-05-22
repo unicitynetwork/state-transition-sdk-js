@@ -3,6 +3,7 @@ import { UnicityCertificate } from '../../../src/api/bft/UnicityCertificate.js';
 import { CertificationData } from '../../../src/api/CertificationData.js';
 import { InclusionCertificate } from '../../../src/api/InclusionCertificate.js';
 import { InclusionProof } from '../../../src/api/InclusionProof.js';
+import { NetworkId } from '../../../src/api/NetworkId.js';
 import { StateId } from '../../../src/api/StateId.js';
 import { DataHash } from '../../../src/crypto/hash/DataHash.js';
 import { DataHasherFactory } from '../../../src/crypto/hash/DataHasherFactory.js';
@@ -15,7 +16,7 @@ import { PredicateVerifierService } from '../../../src/predicate/verification/Pr
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { SparseMerkleTree } from '../../../src/smt/radix/SparseMerkleTree.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
-import { TokenId } from '../../../src/transaction/TokenId.js';
+import { TokenSalt } from '../../../src/transaction/TokenSalt.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
 import {
   InclusionProofVerificationRule,
@@ -39,8 +40,8 @@ describe('InclusionProof', () => {
 
   beforeAll(async () => {
     transaction = await MintTransaction.create(
+      NetworkId.LOCAL,
       SignaturePredicate.fromSigningService(signingService),
-      TokenId.generate(),
       TokenType.generate(),
     );
     const smt = new SparseMerkleTree(new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher));
@@ -87,9 +88,10 @@ describe('InclusionProof', () => {
         predicateVerifier,
         new InclusionProof(certificationData, null, unicityCertificate),
         await MintTransaction.create(
+          transaction.networkId,
           transaction.lockScript,
-          TokenId.generate(),
           transaction.tokenType,
+          TokenSalt.generate(),
           null,
           transaction.data,
         ),

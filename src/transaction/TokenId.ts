@@ -1,3 +1,7 @@
+import { TokenSalt } from './TokenSalt.js';
+import { NetworkId } from '../api/NetworkId.js';
+import { DataHasher } from '../crypto/hash/DataHasher.js';
+import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { BitString } from '../util/BitString.js';
@@ -27,6 +31,20 @@ export class TokenId {
    */
   public static fromCBOR(bytes: Uint8Array): TokenId {
     return new TokenId(CborDeserializer.decodeByteString(bytes));
+  }
+
+  /**
+   * Derive a TokenId from a salt and network identifier.
+   *
+   * @param {NetworkId} networkId Network identifier.
+   * @param {TokenSalt} salt Mint-transaction salt.
+   * @returns {Promise<TokenId>} Derived token id.
+   */
+  public static async fromSalt(networkId: NetworkId, salt: TokenSalt): Promise<TokenId> {
+    const hash = await new DataHasher(HashAlgorithm.SHA256)
+      .update(CborSerializer.encodeArray(salt.toCBOR(), CborSerializer.encodeUnsignedInteger(networkId.id)))
+      .digest();
+    return new TokenId(hash.data);
   }
 
   /**

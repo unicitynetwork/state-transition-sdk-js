@@ -4,12 +4,14 @@ import { AggregatorClient } from '../../../src/api/AggregatorClient.js';
 import { RootTrustBase } from '../../../src/api/bft/RootTrustBase.js';
 import { CertificationData } from '../../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../../src/api/CertificationResponse.js';
+import { NetworkId } from '../../../src/api/NetworkId.js';
 import { SigningService } from '../../../src/crypto/secp256k1/SigningService.js';
 import { Asset } from '../../../src/payment/asset/Asset.js';
 import { AssetId } from '../../../src/payment/asset/AssetId.js';
 import { PaymentAssetCollection } from '../../../src/payment/asset/PaymentAssetCollection.js';
 import { SplitMintJustification } from '../../../src/payment/SplitMintJustification.js';
 import { SplitMintJustificationVerifier } from '../../../src/payment/SplitMintJustificationVerifier.js';
+import { SplitTokenRequest } from '../../../src/payment/SplitTokenRequest.js';
 import { TokenSplit } from '../../../src/payment/TokenSplit.js';
 import { SignaturePredicate } from '../../../src/predicate/builtin/SignaturePredicate.js';
 import { SignaturePredicateUnlockScript } from '../../../src/predicate/builtin/SignaturePredicateUnlockScript.js';
@@ -17,7 +19,6 @@ import { PredicateVerifierService } from '../../../src/predicate/verification/Pr
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../src/transaction/Token.js';
-import { TokenId } from '../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
 import { MintJustificationVerifierService } from '../../../src/transaction/verification/MintJustificationVerifierService.js';
 import { HexConverter } from '../../../src/util/HexConverter.js';
@@ -48,10 +49,12 @@ it('Token splitting', async () => {
   ];
 
   const paymentData = new CustomPaymentData(PaymentAssetCollection.create(...assets), 'my other data');
+  const networkId = NetworkId.LOCAL;
   const mintTransaction = await MintTransaction.create(
+    networkId,
     ownerPredicate,
-    TokenId.generate(),
     TokenType.generate(),
+    null,
     null,
     await paymentData.encode(),
   );
@@ -72,13 +75,22 @@ it('Token splitting', async () => {
     ),
   );
 
-  const splitTokens: [TokenId, PaymentAssetCollection][] = [
-    [TokenId.generate(), PaymentAssetCollection.create(new Asset(new AssetId(textEncoder.encode('EUR')), 150n))],
-    [TokenId.generate(), PaymentAssetCollection.create(new Asset(new AssetId(textEncoder.encode('EUR')), 150n))],
-    [TokenId.generate(), PaymentAssetCollection.create(new Asset(new AssetId(textEncoder.encode('USD')), 500n))],
+  const requests = [
+    SplitTokenRequest.create(
+      ownerPredicate,
+      PaymentAssetCollection.create(new Asset(new AssetId(textEncoder.encode('EUR')), 150n)),
+    ),
+    SplitTokenRequest.create(
+      ownerPredicate,
+      PaymentAssetCollection.create(new Asset(new AssetId(textEncoder.encode('EUR')), 150n)),
+    ),
+    SplitTokenRequest.create(
+      ownerPredicate,
+      PaymentAssetCollection.create(new Asset(new AssetId(textEncoder.encode('USD')), 500n)),
+    ),
   ];
 
-  const result = await TokenSplit.split(token, CustomPaymentData.decode, splitTokens);
+  const result = await TokenSplit.split(token, CustomPaymentData.decode, requests);
 
   response = await client.submitCertificationRequest(
     await CertificationData.fromTransaction(
@@ -102,19 +114,15 @@ it('Token splitting', async () => {
   );
 
   let i = 1;
-  for (const [tokenId, assets] of splitTokens) {
-    const entry = result.proofs.get(tokenId);
-    if (entry == null) {
-      throw new Error('Missing split reason proof for token.');
-    }
-
-    const splitPaymentData = new CustomPaymentData(assets, 'split token');
+  for (const splitToken of result.tokens) {
+    const splitPaymentData = new CustomPaymentData(splitToken.assets, 'split token');
 
     const mintTransaction = await MintTransaction.create(
-      ownerPredicate,
-      tokenId,
-      TokenType.generate(),
-      SplitMintJustification.create(burntToken, entry.proofs).toCBOR(),
+      splitToken.networkId,
+      splitToken.recipient,
+      splitToken.tokenType,
+      splitToken.salt,
+      SplitMintJustification.create(burntToken, splitToken.proofs).toCBOR(),
       await splitPaymentData.encode(),
     );
 
@@ -125,7 +133,7 @@ it('Token splitting', async () => {
       throw new Error(`Token certification failed: ${response.status}`);
     }
 
-    const splitToken = await Token.mint(
+    const mintedSplitToken = await Token.mint(
       trustBase,
       predicateVerifier,
       mintJustificationVerifier,
@@ -136,6 +144,6 @@ it('Token splitting', async () => {
       ),
     );
 
-    console.log(`Token[${i++}]: `, HexConverter.encode(splitToken.toCBOR()), '\n');
+    console.log(`Token[${i++}]: `, HexConverter.encode(mintedSplitToken.toCBOR()), '\n');
   }
 }, 30000);

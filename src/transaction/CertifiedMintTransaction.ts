@@ -1,9 +1,11 @@
 import { ITransaction } from './ITransaction.js';
 import { MintTransaction } from './MintTransaction.js';
 import { TokenId } from './TokenId.js';
+import { TokenSalt } from './TokenSalt.js';
 import { TokenType } from './TokenType.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { InclusionProof } from '../api/InclusionProof.js';
+import { NetworkId } from '../api/NetworkId.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
 import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
@@ -47,10 +49,24 @@ export class CertifiedMintTransaction implements ITransaction {
   }
 
   /**
+   * @returns {NetworkId} Network identifier of the inner transaction.
+   */
+  public get networkId(): NetworkId {
+    return this.transaction.networkId;
+  }
+
+  /**
    * @returns {EncodedPredicate} Recipient predicate of the inner transaction.
    */
   public get recipient(): EncodedPredicate {
     return this.transaction.recipient;
+  }
+
+  /**
+   * @returns {TokenSalt} Mint-transaction salt of the inner transaction.
+   */
+  public get salt(): TokenSalt {
+    return this.transaction.salt;
   }
 
   /**
@@ -68,7 +84,7 @@ export class CertifiedMintTransaction implements ITransaction {
   }
 
   /**
-   * @returns {TokenId} Token id of the inner transaction.
+   * @returns {TokenId} Token id of the inner transaction (derived from networkId and salt).
    */
   public get tokenId(): TokenId {
     return this.transaction.tokenId;

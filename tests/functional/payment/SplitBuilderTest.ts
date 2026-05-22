@@ -1,6 +1,7 @@
 import { TestPaymentData } from './TestPaymentData.js';
 import { CertificationData } from '../../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../../src/api/CertificationResponse.js';
+import { NetworkId } from '../../../src/api/NetworkId.js';
 import { SigningService } from '../../../src/crypto/secp256k1/SigningService.js';
 import { Asset } from '../../../src/payment/asset/Asset.js';
 import { AssetId } from '../../../src/payment/asset/AssetId.js';
@@ -10,6 +11,7 @@ import { TokenAssetMissingError } from '../../../src/payment/error/TokenAssetMis
 import { TokenAssetValueMismatchError } from '../../../src/payment/error/TokenAssetValueMismatchError.js';
 import { SplitMintJustification } from '../../../src/payment/SplitMintJustification.js';
 import { SplitMintJustificationVerifier } from '../../../src/payment/SplitMintJustificationVerifier.js';
+import { SplitTokenRequest } from '../../../src/payment/SplitTokenRequest.js';
 import { TokenSplit } from '../../../src/payment/TokenSplit.js';
 import { SignaturePredicate } from '../../../src/predicate/builtin/SignaturePredicate.js';
 import { SignaturePredicateUnlockScript } from '../../../src/predicate/builtin/SignaturePredicateUnlockScript.js';
@@ -17,7 +19,6 @@ import { PredicateVerifierService } from '../../../src/predicate/verification/Pr
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../src/transaction/Token.js';
-import { TokenId } from '../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
 import { MintJustificationVerifierService } from '../../../src/transaction/verification/MintJustificationVerifierService.js';
 import { waitInclusionProof } from '../../../src/util/InclusionProofUtils.js';
@@ -44,10 +45,12 @@ describe('SplitBuilder Functional Test', () => {
     ];
 
     const paymentData = new TestPaymentData(PaymentAssetCollection.create(...assets));
+    const networkId = NetworkId.LOCAL;
     const mintTransaction = await MintTransaction.create(
+      networkId,
       predicate,
-      TokenId.generate(),
       TokenType.generate(),
+      null,
       null,
       await paymentData.encode(),
     );
@@ -68,32 +71,34 @@ describe('SplitBuilder Functional Test', () => {
     );
 
     await expect(
-      TokenSplit.split(token, TestPaymentData.decode, [[TokenId.generate(), PaymentAssetCollection.create(assets[0])]]),
+      TokenSplit.split(token, TestPaymentData.decode, [
+        SplitTokenRequest.create(predicate, PaymentAssetCollection.create(assets[0])),
+      ]),
     ).rejects.toThrow(TokenAssetCountMismatchError);
 
     await expect(
       TokenSplit.split(token, TestPaymentData.decode, [
-        [
-          TokenId.generate(),
+        SplitTokenRequest.create(
+          predicate,
           PaymentAssetCollection.create(
             assets[0],
             new Asset(new AssetId(crypto.getRandomValues(new Uint8Array(10))), 400n),
           ),
-        ],
+        ),
       ]),
     ).rejects.toThrow(TokenAssetMissingError);
 
     await expect(
       TokenSplit.split(token, TestPaymentData.decode, [
-        [TokenId.generate(), PaymentAssetCollection.create(assets[0], new Asset(assets[1].id, 1500n))],
+        SplitTokenRequest.create(predicate, PaymentAssetCollection.create(assets[0], new Asset(assets[1].id, 1500n))),
       ]),
     ).rejects.toThrow(TokenAssetValueMismatchError);
 
-    const splitTokens: [TokenId, PaymentAssetCollection][] = [
-      [TokenId.generate(), PaymentAssetCollection.create(assets[0])],
-      [TokenId.generate(), PaymentAssetCollection.create(assets[1])],
+    const requests = [
+      SplitTokenRequest.create(predicate, PaymentAssetCollection.create(assets[0])),
+      SplitTokenRequest.create(predicate, PaymentAssetCollection.create(assets[1])),
     ];
-    const result = await TokenSplit.split(token, TestPaymentData.decode, splitTokens);
+    const result = await TokenSplit.split(token, TestPaymentData.decode, requests);
 
     certificationData = await CertificationData.fromTransaction(
       result.burn.transaction,
@@ -113,18 +118,14 @@ describe('SplitBuilder Functional Test', () => {
       ),
     );
 
-    for (const [tokenId, assets] of splitTokens) {
-      const entry = result.proofs.get(tokenId);
-      if (entry == null) {
-        throw new Error('Missing split reason proof for token.');
-      }
-
+    for (const splitToken of result.tokens) {
       const mintTransaction = await MintTransaction.create(
-        predicate,
-        tokenId,
-        TokenType.generate(),
-        SplitMintJustification.create(token, entry.proofs).toCBOR(),
-        await new TestPaymentData(assets).encode(),
+        splitToken.networkId,
+        splitToken.recipient,
+        splitToken.tokenType,
+        splitToken.salt,
+        SplitMintJustification.create(token, splitToken.proofs).toCBOR(),
+        await new TestPaymentData(splitToken.assets).encode(),
       );
 
       const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
@@ -132,7 +133,7 @@ describe('SplitBuilder Functional Test', () => {
       const response = await client.submitCertificationRequest(certificationData);
       expect(response.status).toEqual(CertificationStatus.SUCCESS);
 
-      const splitToken = await Token.mint(
+      const mintedSplitToken = await Token.mint(
         trustBase,
         predicateVerifier,
         mintJustificationVerifier,
@@ -144,7 +145,7 @@ describe('SplitBuilder Functional Test', () => {
       );
 
       await expect(
-        Token.fromCBOR(splitToken.toCBOR())
+        Token.fromCBOR(mintedSplitToken.toCBOR())
           .then((token) => token.verify(trustBase, predicateVerifier, mintJustificationVerifier))
           .then((result) => result.status),
       ).resolves.toEqual(VerificationStatus.OK);

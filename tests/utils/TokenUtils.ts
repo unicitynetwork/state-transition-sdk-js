@@ -1,6 +1,7 @@
 import { RootTrustBase } from '../../src/api/bft/RootTrustBase.js';
 import { CertificationData } from '../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../src/api/CertificationResponse.js';
+import { NetworkId } from '../../src/api/NetworkId.js';
 import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
 import { SignaturePredicateUnlockScript } from '../../src/predicate/builtin/SignaturePredicateUnlockScript.js';
 import { IPredicate } from '../../src/predicate/IPredicate.js';
@@ -10,7 +11,7 @@ import { ICborSerializable } from '../../src/serialization/cbor/ICborSerializabl
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
 import { MintTransaction } from '../../src/transaction/MintTransaction.js';
 import { Token } from '../../src/transaction/Token.js';
-import { TokenId } from '../../src/transaction/TokenId.js';
+import { TokenSalt } from '../../src/transaction/TokenSalt.js';
 import { TokenType } from '../../src/transaction/TokenType.js';
 import { TransferTransaction } from '../../src/transaction/TransferTransaction.js';
 import { MintJustificationVerifierService } from '../../src/transaction/verification/MintJustificationVerifierService.js';
@@ -23,12 +24,20 @@ export async function mintToken(
   predicateVerifier: PredicateVerifierService,
   mintJustificationVerifier: MintJustificationVerifierService,
   recipient: IPredicate,
-  tokenId: TokenId = TokenId.generate(),
+  networkId: NetworkId = NetworkId.LOCAL,
   tokenType: TokenType = TokenType.generate(),
+  salt: TokenSalt = TokenSalt.generate(),
   justification: ICborSerializable | null = null,
   data: Uint8Array | null = null,
 ): Promise<Token> {
-  const transaction = await MintTransaction.create(recipient, tokenId, tokenType, justification?.toCBOR(), data);
+  const transaction = await MintTransaction.create(
+    networkId,
+    recipient,
+    tokenType,
+    salt,
+    justification?.toCBOR(),
+    data,
+  );
 
   const certificationData = await CertificationData.fromMintTransaction(transaction);
 

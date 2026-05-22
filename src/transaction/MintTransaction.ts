@@ -2,9 +2,11 @@ import { CertifiedMintTransaction } from './CertifiedMintTransaction.js';
 import { ITransaction } from './ITransaction.js';
 import { MintTransactionState } from './MintTransactionState.js';
 import { TokenId } from './TokenId.js';
+import { TokenSalt } from './TokenSalt.js';
 import { TokenType } from './TokenType.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { InclusionProof } from '../api/InclusionProof.js';
+import { NetworkId } from '../api/NetworkId.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
@@ -29,9 +31,11 @@ export class MintTransaction implements ITransaction {
   private constructor(
     public readonly sourceStateHash: MintTransactionState,
     public readonly lockScript: EncodedPredicate,
+    public readonly networkId: NetworkId,
     public readonly recipient: EncodedPredicate,
-    public readonly tokenId: TokenId,
+    public readonly salt: TokenSalt,
     public readonly tokenType: TokenType,
+    public readonly tokenId: TokenId,
     private readonly _justification: Uint8Array | null,
     private readonly _data: Uint8Array | null,
   ) {}
@@ -67,30 +71,36 @@ export class MintTransaction implements ITransaction {
   /**
    * Create a MintTransaction for a fresh token.
    *
+   * @param {NetworkId} networkId Network identifier.
    * @param {IPredicate} recipient Predicate that will lock the minted state.
-   * @param {TokenId} tokenId Token id being minted.
    * @param {TokenType} tokenType Token type being minted.
+   * @param {TokenSalt} salt Mint-transaction salt; defaults to a random 32-byte salt.
    * @param {Uint8Array|null} justification Optional mint justification bytes.
    * @param {Uint8Array|null} data Optional data payload.
    * @returns {Promise<MintTransaction>} New mint transaction.
    */
   public static async create(
+    networkId: NetworkId,
     recipient: IPredicate,
-    tokenId: TokenId,
     tokenType: TokenType,
+    salt: TokenSalt | null = null,
     justification: Uint8Array | null = null,
     data: Uint8Array | null = null,
   ): Promise<MintTransaction> {
+    salt = salt ?? TokenSalt.generate();
     justification = justification ? new Uint8Array(justification) : null;
     data = data ? new Uint8Array(data) : null;
 
+    const tokenId = await TokenId.fromSalt(networkId, salt);
     const signingService = await MintSigningService.create(tokenId);
     return new MintTransaction(
       await MintTransactionState.create(tokenId),
       EncodedPredicate.fromPredicate(SignaturePredicate.fromSigningService(signingService)),
+      networkId,
       EncodedPredicate.fromPredicate(recipient),
-      tokenId,
+      salt,
       tokenType,
+      tokenId,
       justification,
       data,
     );
@@ -109,18 +119,19 @@ export class MintTransaction implements ITransaction {
       throw new CborError(`Invalid CBOR tag for MintTransaction: ${tag.tag}`);
     }
 
-    const data = CborDeserializer.decodeArray(tag.data, 6);
+    const data = CborDeserializer.decodeArray(tag.data, 7);
     const version = CborDeserializer.decodeUnsignedInteger(data[0]);
     if (version !== MintTransaction.VERSION) {
       throw new CborError(`Unsupported MintTransaction version: ${version}`);
     }
 
     return MintTransaction.create(
-      EncodedPredicate.fromCBOR(data[1]),
-      TokenId.fromCBOR(data[2]),
-      TokenType.fromCBOR(data[3]),
-      CborDeserializer.decodeNullable(data[4], CborDeserializer.decodeByteString),
+      NetworkId.fromId(CborDeserializer.decodeUnsignedInteger(data[1])),
+      EncodedPredicate.fromCBOR(data[2]),
+      TokenType.fromCBOR(data[4]),
+      TokenSalt.fromCBOR(data[3]),
       CborDeserializer.decodeNullable(data[5], CborDeserializer.decodeByteString),
+      CborDeserializer.decodeNullable(data[6], CborDeserializer.decodeByteString),
     );
   }
 
@@ -153,8 +164,9 @@ export class MintTransaction implements ITransaction {
       MintTransaction.CBOR_TAG,
       CborSerializer.encodeArray(
         CborSerializer.encodeUnsignedInteger(this.version),
+        CborSerializer.encodeUnsignedInteger(this.networkId.id),
         this.recipient.toCBOR(),
-        this.tokenId.toCBOR(),
+        this.salt.toCBOR(),
         this.tokenType.toCBOR(),
         CborSerializer.encodeNullable(this._justification, CborSerializer.encodeByteString),
         CborSerializer.encodeNullable(this._data, CborSerializer.encodeByteString),
@@ -185,9 +197,11 @@ export class MintTransaction implements ITransaction {
     return dedent`
       MintTransaction
         Version: ${this.version.toString()}
+        Network ID: ${this.networkId.toString()}
         Lock Script:
           ${this.lockScript.toString()}
         Recipient: ${this.recipient.toString()}
+        Salt: ${this.salt.toString()}
         Token ID: ${this.tokenId.toString()}
         Token Type: ${this.tokenType.toString()}
         Mint Justification: ${this._justification ? HexConverter.encode(this._justification) : 'null'}
