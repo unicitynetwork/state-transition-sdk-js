@@ -29,6 +29,12 @@ export class TokenWorld extends World {
   public bob!: IUser;
   public bobToken!: Token;
   public burnedToken!: Token;
+  public canonicalCborStash?: {
+    bytes: Uint8Array;
+    stateId: import('../../../../src/api/StateId.js').StateId;
+    submitError?: Error;
+    submitResponse?: CertificationResponse;
+  };
   public canonicalCertDataStash?: { encoded: Uint8Array; reEncoded?: Uint8Array };
   public carol!: IUser;
   public carolToken!: Token;
@@ -86,6 +92,10 @@ export class TokenWorld extends World {
     stubInvocations: number;
     stubTag?: bigint;
     thrownError?: Error;
+  };
+  public requestDeterminismStash?: {
+    first: { bytes: Uint8Array; stateId: import('../../../../src/api/StateId.js').StateId };
+    second: { bytes: Uint8Array; stateId: import('../../../../src/api/StateId.js').StateId };
   };
   public routingPinStash?: {
     pickedShard?: number;
