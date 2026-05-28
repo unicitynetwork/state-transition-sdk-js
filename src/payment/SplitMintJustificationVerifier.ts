@@ -59,7 +59,7 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
       );
     }
 
-    if (transaction.networkId.id !== justification.token.genesis.networkId.id) {
+    if (!transaction.networkId.equals(justification.token.genesis.networkId)) {
       return new VerificationResult(
         'SplitMintJustificationVerifier',
         VerificationStatus.FAIL,

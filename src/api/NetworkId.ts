@@ -1,9 +1,6 @@
 /**
  * Unicity network identifier (α). Used to scope token ids and other
  * network-bound values so they cannot be replayed across networks.
- *
- * `0` is reserved as an uninitialized sentinel and is rejected by
- * {@link NetworkId.fromId}.
  */
 export class NetworkId {
   public static readonly LOCAL = new NetworkId(3, 'LOCAL');
@@ -12,22 +9,25 @@ export class NetworkId {
 
   private constructor(
     public readonly id: number,
-    public readonly name: string,
+    private readonly name?: string,
   ) {}
 
   /**
-   * Look up a NetworkId by its numeric identifier.
+   * Resolve a NetworkId from its numeric identifier. Returns the registered
+   * singleton for known ids; constructs a new (unnamed) instance for any
+   * other value in the 16-bit unsigned range.
    *
    * @param {number|bigint} id Numeric network identifier.
-   * @returns {NetworkId} Matching network identifier.
-   * @throws {Error} If `id` is `0`, negative, or not registered.
+   * @returns {NetworkId} NetworkId for the given identifier.
+   * @throws {Error} If `id` is outside the 16-bit unsigned range.
    */
   public static fromId(id: number | bigint): NetworkId {
     const value = BigInt(id);
     if (value < 0n || value > 0xffffn) {
       throw new Error(`Network identifier out of 16-bit unsigned range: ${id}.`);
     }
-    switch (Number(value)) {
+    const numeric = Number(value);
+    switch (numeric) {
       case NetworkId.MAINNET.id:
         return NetworkId.MAINNET;
       case NetworkId.TESTNET.id:
@@ -35,14 +35,24 @@ export class NetworkId {
       case NetworkId.LOCAL.id:
         return NetworkId.LOCAL;
       default:
-        throw new Error(`Unknown network identifier: ${id}.`);
+        return new NetworkId(numeric);
     }
   }
 
   /**
-   * @returns {string} Human-readable name of the network.
+   * Equality check against another NetworkId.
+   *
+   * @param {NetworkId} other Other network identifier.
+   * @returns {boolean} True if both share the same numeric id.
+   */
+  public equals(other: NetworkId): boolean {
+    return this.id === other.id;
+  }
+
+  /**
+   * @returns {string} `NetworkId[<name>]` for registered networks, `NetworkId[<id>]` otherwise.
    */
   public toString(): string {
-    return this.name;
+    return `NetworkId[${this.name ?? this.id}]`;
   }
 }
