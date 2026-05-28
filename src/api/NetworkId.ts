@@ -23,8 +23,8 @@ export class NetworkId {
    */
   public static fromId(id: number | bigint): NetworkId {
     const value = BigInt(id);
-    if (value < 0n || value > 0xffffn) {
-      throw new Error(`Network identifier out of 16-bit unsigned range: ${id}.`);
+    if (value < 1n || value > 0xffffn) {
+      throw new Error(`Network identifier out of allowed 16-bit unsigned range: ${id}.`);
     }
     const numeric = Number(value);
     switch (numeric) {
