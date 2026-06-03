@@ -5,44 +5,70 @@ import { Signature } from './Signature.js';
 import { DataHash } from '../hash/DataHash.js';
 
 /**
- * Default signing service.
+ * Default secp256k1 signing service. Wraps a 32-byte private key and exposes
+ * the matching compressed public key, plus helpers for sign/verify and for
+ * recovering a public key from a signature.
+ *
  * @implements {ISigningService}
  */
 export class SigningService implements ISigningService<Signature> {
   private readonly _publicKey: Uint8Array;
 
-  /**
-   * Signing service constructor.
-   * @param {Uint8Array} privateKey private key bytes.
-   */
   public constructor(private readonly privateKey: Uint8Array) {
     this.privateKey = new Uint8Array(privateKey);
     this._publicKey = secp256k1.getPublicKey(this.privateKey, true);
   }
 
+  /**
+   * @returns {string} Algorithm name (`secp256k1`).
+   */
   public get algorithm(): string {
     return 'secp256k1';
   }
 
   /**
-   * @see {ISigningService.publicKey}
+   * @returns {Uint8Array} Copy of the compressed public key.
    */
   public get publicKey(): Uint8Array {
     return new Uint8Array(this._publicKey);
   }
 
+  /**
+   * Generate a signing service with a fresh random private key.
+   *
+   * @returns {SigningService} New signing service.
+   */
   public static generate(): SigningService {
     return new SigningService(SigningService.generatePrivateKey());
   }
 
+  /**
+   * Generate a fresh random secp256k1 private key.
+   *
+   * @returns {Uint8Array} 32-byte private key.
+   */
   public static generatePrivateKey(): Uint8Array {
     return secp256k1.utils.randomSecretKey();
   }
 
+  /**
+   * Check whether the given bytes form a valid compressed secp256k1 public key.
+   *
+   * @param {Uint8Array} publicKey Compressed public key bytes.
+   * @returns {boolean} True if valid.
+   */
   public static isPublicKeyValid(publicKey: Uint8Array): boolean {
     return secp256k1.utils.isValidPublicKey(publicKey, true);
   }
 
+  /**
+   * Recover the public key from the signature's recovery byte and verify the
+   * signature against `hash`.
+   *
+   * @param {DataHash} hash Hash that was signed.
+   * @param {Signature} signature Recoverable signature.
+   * @returns {Promise<boolean>} True if the signature verifies.
+   */
   public static verifySignatureWithRecoveredPublicKey(hash: DataHash, signature: Signature): Promise<boolean> {
     const publicKey = secp256k1.Signature.fromBytes(
       new Uint8Array([signature.recovery, ...signature.bytes]),
@@ -54,17 +80,22 @@ export class SigningService implements ISigningService<Signature> {
   }
 
   /**
-   * Verify secp256k1 signature hash.
-   * @param {Uint8Array} hash Hash.
-   * @param {Uint8Array} signature Signature.
-   * @param {Uint8Array} publicKey Public key.
+   * Verify secp256k1 signature against the given public key.
+   *
+   * @param {DataHash} hash Signed hash.
+   * @param {Uint8Array} signature Compact signature bytes.
+   * @param {Uint8Array} publicKey Compressed public key.
+   * @returns {Promise<boolean>} True if the signature verifies.
    */
   public static verifyWithPublicKey(hash: DataHash, signature: Uint8Array, publicKey: Uint8Array): Promise<boolean> {
     return Promise.resolve(secp256k1.verify(signature, hash.data, publicKey, { format: 'compact', prehash: false }));
   }
 
   /**
-   * @see {ISigningService.sign} 32-byte hash.
+   * Sign a hash with this service's private key.
+   *
+   * @param {DataHash} hash Hash to sign.
+   * @returns {Promise<Signature>} Recoverable signature.
    */
   public sign(hash: DataHash): Promise<Signature> {
     const signature = secp256k1.sign(hash.data, this.privateKey, { format: 'recovered', prehash: false });
@@ -72,9 +103,11 @@ export class SigningService implements ISigningService<Signature> {
   }
 
   /**
-   * Verify secp256k1 signature hash.
-   * @param {Uint8Array} hash Hash.
-   * @param {Uint8Array} signature Signature.
+   * Verify a signature against this service's public key.
+   *
+   * @param {DataHash} hash Signed hash.
+   * @param {Signature} signature Recoverable signature.
+   * @returns {Promise<boolean>} True if the signature verifies.
    */
   public verify(hash: DataHash, signature: Signature): Promise<boolean> {
     return SigningService.verifyWithPublicKey(hash, signature.bytes, this._publicKey);

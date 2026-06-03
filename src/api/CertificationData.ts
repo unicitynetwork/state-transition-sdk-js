@@ -12,6 +12,9 @@ import { MintTransaction } from '../transaction/MintTransaction.js';
 import { HexConverter } from '../util/HexConverter.js';
 import { dedent } from '../util/StringUtils.js';
 
+/**
+ * Certification request data.
+ */
 export class CertificationData {
   public static readonly CBOR_TAG = 39031n;
   private static readonly VERSION = 1n;
@@ -39,6 +42,9 @@ export class CertificationData {
     return new Uint8Array(this._unlockScript);
   }
 
+  /**
+   * @returns {bigint} Wire-format version of this certification data.
+   */
   public get version(): bigint {
     return CertificationData.VERSION;
   }
@@ -69,6 +75,12 @@ export class CertificationData {
     );
   }
 
+  /**
+   * Create CertificationData from a mint transaction.
+   *
+   * @param {MintTransaction} transaction Mint transaction to certify.
+   * @returns {Promise<CertificationData>} Certification data.
+   */
   public static async fromMintTransaction(transaction: MintTransaction): Promise<CertificationData> {
     const signingService = await MintSigningService.create(transaction.tokenId);
 
@@ -78,6 +90,13 @@ export class CertificationData {
     );
   }
 
+  /**
+   * Create CertificationData from a transaction and its unlock script.
+   *
+   * @param {ITransaction} transaction Transaction to certify.
+   * @param {IUnlockScript} unlockScript Unlock script for the transaction.
+   * @returns {Promise<CertificationData>} Certification data.
+   */
   public static async fromTransaction(
     transaction: ITransaction,
     unlockScript: IUnlockScript,

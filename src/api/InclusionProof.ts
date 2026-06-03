@@ -25,6 +25,9 @@ export class InclusionProof {
     public readonly unicityCertificate: UnicityCertificate,
   ) {}
 
+  /**
+   * @returns {bigint} Wire-format version of this inclusion proof.
+   */
   public get version(): bigint {
     return InclusionProof.VERSION;
   }

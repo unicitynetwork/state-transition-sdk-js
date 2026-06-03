@@ -4,6 +4,9 @@ import { IDataHasherFactory } from '../../crypto/hash/IDataHasherFactory.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
 import { BigintConverter } from '../../util/BigintConverter.js';
 
+/**
+ * Pending leaf in a sparse Merkle sum tree, awaiting hashing.
+ */
 export class PendingLeafBranch {
   public constructor(
     public readonly path: bigint,
@@ -13,10 +16,19 @@ export class PendingLeafBranch {
     this._data = new Uint8Array(_data);
   }
 
+  /**
+   * @returns {Uint8Array} Copy of the leaf data bytes.
+   */
   public get data(): Uint8Array {
     return new Uint8Array(this._data);
   }
 
+  /**
+   * Hash this leaf to produce a finalized branch.
+   *
+   * @param {IDataHasherFactory<IDataHasher>} factory Hasher factory.
+   * @returns {Promise<FinalizedLeafBranch>} Finalized leaf branch.
+   */
   public async finalize(factory: IDataHasherFactory<IDataHasher>): Promise<FinalizedLeafBranch> {
     const hash = await factory
       .create()

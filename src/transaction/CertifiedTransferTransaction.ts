@@ -15,32 +15,57 @@ import {
   InclusionProofVerificationStatus,
 } from './verification/rule/InclusionProofVerificationRule.js';
 
+/**
+ * Transfer transaction bundled with a verified inclusion proof.
+ */
 export class CertifiedTransferTransaction implements ITransaction {
   private constructor(
     private readonly transaction: TransferTransaction,
     public readonly inclusionProof: InclusionProof,
   ) {}
 
+  /**
+   * @returns {Uint8Array|null} Data payload of the inner transaction.
+   */
   public get data(): Uint8Array | null {
     return this.transaction.data;
   }
 
+  /**
+   * @returns {EncodedPredicate} Lock script of the inner transaction.
+   */
   public get lockScript(): EncodedPredicate {
     return this.transaction.lockScript;
   }
 
+  /**
+   * @returns {EncodedPredicate} Recipient predicate of the inner transaction.
+   */
   public get recipient(): EncodedPredicate {
     return this.transaction.recipient;
   }
 
+  /**
+   * @returns {DataHash} Source state hash of the inner transaction.
+   */
   public get sourceStateHash(): DataHash {
     return this.transaction.sourceStateHash;
   }
 
+  /**
+   * @returns {Uint8Array} State mask of the inner transaction.
+   */
   public get stateMask(): Uint8Array {
     return this.transaction.stateMask;
   }
 
+  /**
+   * Create CertifiedTransferTransaction from CBOR bytes.
+   *
+   * @param {Uint8Array} bytes CBOR bytes.
+   * @param {Token} token Token providing context for the transfer transaction.
+   * @returns {Promise<CertifiedTransferTransaction>} Decoded certified transaction.
+   */
   public static async fromCBOR(bytes: Uint8Array, token: Token): Promise<CertifiedTransferTransaction> {
     const data = CborDeserializer.decodeArray(bytes, 2);
     return new CertifiedTransferTransaction(
@@ -49,6 +74,16 @@ export class CertifiedTransferTransaction implements ITransaction {
     );
   }
 
+  /**
+   * Create CertifiedTransferTransaction from mint transaction and inclusion proof.
+   *
+   * @param {RootTrustBase} trustBase Root trust base used to verify the inclusion certificate.
+   * @param {PredicateVerifierService} predicateVerifier Verifier for any embedded predicates.
+   * @param {TransferTransaction} transaction Transaction to certify.
+   * @param {InclusionProof} inclusionProof Inclusion proof for the transaction.
+   * @returns {Promise<CertifiedTransferTransaction>} Verified certified transaction.
+   * @throws {VerificationError} If the inclusion proof does not verify.
+   */
   public static async fromTransaction(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,
@@ -68,18 +103,30 @@ export class CertifiedTransferTransaction implements ITransaction {
     return new CertifiedTransferTransaction(transaction, inclusionProof);
   }
 
+  /**
+   * @inheritDoc
+   */
   public calculateStateHash(): Promise<DataHash> {
     return this.transaction.calculateStateHash();
   }
 
+  /**
+   * @inheritDoc
+   */
   public calculateTransactionHash(): Promise<DataHash> {
     return this.transaction.calculateTransactionHash();
   }
 
+  /**
+   * @inheritDoc
+   */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(this.transaction.toCBOR(), this.inclusionProof.toCBOR());
   }
 
+  /**
+   * @returns {string} String representation of the certified transaction.
+   */
   public toString(): string {
     return dedent`
       CertifiedTransferTransaction

@@ -24,8 +24,8 @@ export class MintTransactionState extends DataHash {
   /**
    * Create token initial state from token id.
    *
-   * @param {TokenId} tokenId token id
-   * @return mint state
+   * @param {TokenId} tokenId Token id.
+   * @returns {Promise<MintTransactionState>} Mint state.
    */
   public static async create(tokenId: TokenId): Promise<MintTransactionState> {
     return new MintTransactionState(

@@ -6,6 +6,9 @@ import { HashAlgorithm } from './HashAlgorithm.js';
 import { IDataHasher } from './IDataHasher.js';
 import { UnsupportedHashAlgorithmError } from './UnsupportedHashAlgorithmError.js';
 
+/**
+ * Internal streaming digest interface implemented by the noble hashers.
+ */
 interface IMessageDigest {
   destroy(): void;
 
@@ -28,10 +31,6 @@ export const Algorithm = {
 export class DataHasher implements IDataHasher {
   private _messageDigest: IMessageDigest;
 
-  /**
-   * Create DataHasher instance the hash algorithm
-   * @param {HashAlgorithm} algorithm
-   */
   public constructor(public readonly algorithm: HashAlgorithm) {
     if (!Algorithm[algorithm.id]) {
       throw new UnsupportedHashAlgorithmError(algorithm);
@@ -41,17 +40,14 @@ export class DataHasher implements IDataHasher {
   }
 
   /**
-   * Hashes the data and returns the DataHash
-   * @returns DataHash
+   * @inheritDoc
    */
   public digest(): Promise<DataHash> {
     return Promise.resolve(new DataHash(this.algorithm, this._messageDigest.digest()));
   }
 
   /**
-   * Add data for hashing
-   * @param {Uint8Array} data byte array
-   * @returns {DataHasher}
+   * @inheritDoc
    */
   public update(data: Uint8Array): this {
     this._messageDigest.update(data);

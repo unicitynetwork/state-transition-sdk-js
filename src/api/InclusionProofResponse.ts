@@ -33,6 +33,11 @@ export class InclusionProofResponse {
     );
   }
 
+  /**
+   * Convert InclusionProofResponse to CBOR bytes.
+   *
+   * @returns {Uint8Array} CBOR bytes.
+   */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
       CborSerializer.encodeUnsignedInteger(this.blockNumber),

@@ -17,48 +17,84 @@ import {
 } from '../transaction/verification/rule/InclusionProofVerificationRule.js';
 import { dedent } from '../util/StringUtils.js';
 
+/**
+ * Unicity-id mint transaction bundled with a verified inclusion proof.
+ */
 export class CertifiedUnicityIdMintTransaction implements ITransaction {
   public constructor(
     private readonly transaction: UnicityIdMintTransaction,
     public readonly inclusionProof: InclusionProof,
   ) {}
 
+  /**
+   * @returns {Uint8Array} Data payload of the inner transaction.
+   */
   public get data(): Uint8Array {
     return this.transaction.data;
   }
 
+  /**
+   * @returns {EncodedPredicate} Lock script of the inner transaction.
+   */
   public get lockScript(): EncodedPredicate {
     return this.transaction.lockScript;
   }
 
+  /**
+   * @returns {EncodedPredicate} Recipient predicate of the inner transaction.
+   */
   public get recipient(): EncodedPredicate {
     return this.transaction.recipient;
   }
 
+  /**
+   * @returns {DataHash} Source state hash of the inner transaction.
+   */
   public get sourceStateHash(): DataHash {
     return this.transaction.sourceStateHash;
   }
 
+  /**
+   * @returns {Uint8Array} State mask of the inner transaction.
+   */
   public get stateMask(): Uint8Array {
     return this.transaction.stateMask;
   }
 
+  /**
+   * @returns {SignaturePredicate} Target predicate of the inner transaction.
+   */
   public get targetPredicate(): SignaturePredicate {
     return this.transaction.targetPredicate;
   }
 
+  /**
+   * @returns {TokenId} Token id of the inner transaction.
+   */
   public get tokenId(): TokenId {
     return this.transaction.tokenId;
   }
 
+  /**
+   * @returns {TokenType} Token type of the inner transaction.
+   */
   public get tokenType(): TokenType {
     return this.transaction.tokenType;
   }
 
+  /**
+   * @returns {UnicityId} Unicity id of the inner transaction.
+   */
   public get unicityId(): UnicityId {
     return this.transaction.unicityId;
   }
 
+  /**
+   * Create CertifiedUnicityIdMintTransaction from CBOR bytes.
+   *
+   * @param {Uint8Array} bytes CBOR bytes.
+   * @returns {Promise<CertifiedUnicityIdMintTransaction>} Decoded certified transaction.
+   */
   public static async fromCBOR(bytes: Uint8Array): Promise<CertifiedUnicityIdMintTransaction> {
     const data = CborDeserializer.decodeArray(bytes, 2);
     return new CertifiedUnicityIdMintTransaction(
@@ -67,6 +103,16 @@ export class CertifiedUnicityIdMintTransaction implements ITransaction {
     );
   }
 
+  /**
+   * Create CertifiedUnicityIdMintTransaction from unicity-id mint transaction and inclusion proof.
+   *
+   * @param {RootTrustBase} trustBase Root trust base.
+   * @param {PredicateVerifierService} predicateVerifier Predicate verifier service.
+   * @param {UnicityIdMintTransaction} transaction Transaction to certify.
+   * @param {InclusionProof} inclusionProof Inclusion proof for the transaction.
+   * @returns {Promise<CertifiedUnicityIdMintTransaction>} Verified certified transaction.
+   * @throws {Error} If the inclusion proof does not verify.
+   */
   public static async fromTransaction(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,
@@ -86,18 +132,30 @@ export class CertifiedUnicityIdMintTransaction implements ITransaction {
     return new CertifiedUnicityIdMintTransaction(transaction, inclusionProof);
   }
 
+  /**
+   * @inheritDoc
+   */
   public calculateStateHash(): Promise<DataHash> {
     return this.transaction.calculateStateHash();
   }
 
+  /**
+   * @inheritDoc
+   */
   public calculateTransactionHash(): Promise<DataHash> {
     return this.transaction.calculateTransactionHash();
   }
 
+  /**
+   * @inheritDoc
+   */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(this.transaction.toCBOR(), this.inclusionProof.toCBOR());
   }
 
+  /**
+   * @returns {string} String representation of the certified transaction.
+   */
   public toString(): string {
     return dedent`
       CertifiedUnicityIdMintTransaction

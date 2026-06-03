@@ -23,16 +23,29 @@ npm install @unicitylabs/state-transition-sdk
 
 ## Quick Start
 
-Note: for examples, see further down in the [Examples section](#examples) or browse around in the [tests folder](./tests) of this SDK.
+End-to-end runnable examples live under [`tests/examples/`](./tests/examples):
+
+- Mint: [`tests/examples/mint/ExampleTest.ts`](./tests/examples/mint/ExampleTest.ts)
+- Transfer: [`tests/examples/transfer/ExampleTest.ts`](./tests/examples/transfer/ExampleTest.ts)
+- Split: [`tests/examples/split/ExampleTest.ts`](./tests/examples/split/ExampleTest.ts)
+
+Tokens are shipped between parties as CBOR — use `token.toCBOR()` on the sender side and `Token.fromCBOR(bytes)` on the receiver side.
 
 ## Core Components
 
 ### StateTransitionClient
 
-The main SDK interface for token operations:
+A thin client over the aggregator. As a consumer you'll typically:
 
-- `submitCertificationRequest()` - Submit transaction to aggregator
-- `getInclusionProof()` - Retrieve inclusion proof for a commitment
+1. Build a `MintTransaction` or `TransferTransaction`.
+2. Submit its `CertificationData` and wait for an inclusion proof.
+3. Turn it into a certified transaction and apply it to a `Token` (`Token.mint` / `token.transfer`).
+4. Call `token.verify(...)` on the receiving side.
+
+`StateTransitionClient` covers step 2 only:
+
+- `submitCertificationRequest()` - Submit a commitment to the aggregator
+- `getInclusionProof()` - Retrieve an inclusion proof for a state id
 
 ### Transaction Flow
 
@@ -61,32 +74,12 @@ I --> J[End]
 
 ### Token Structure
 
-```
-Token {
-  genesis: CertifiedMintTransaction {
-    transaction: MintTransaction {
-      recipient: IPredicate,
-      tokenId: TokenId,
-      tokenType: TokenType,
-      justification: Uint8Array | null
-      data: Uint8Array | null
-    },
-    inclusionProof: InclusionProof
-  },
-  transactions: [
-    CertifiedTransferTransaction {
-      transaction: TransferTransaction {
-        version: number,
-        recipient: IPredicate,
-        stateMask: Uint8Array,
-        data: Uint8Array | null
-      },
-      inclusionProof: InclusionProof
-    },
-    ...
-  ]
-}
-```
+A `Token` is a self-contained, CBOR-serializable record that bundles its genesis with an ordered transfer history:
+
+- `genesis`: a `CertifiedMintTransaction` (a `MintTransaction` plus its `InclusionProof`). The mint transaction carries `networkId`, `tokenId`, `tokenType`, `salt`, `recipient`, optional `justification`, and optional `data`.
+- `transactions`: an ordered list of `CertifiedTransferTransaction` entries, each wrapping a `TransferTransaction` (recipient, state mask, optional data) with its `InclusionProof`.
+
+See [`src/transaction/Token.ts`](./src/transaction/Token.ts) for the authoritative shape.
 
 ### Privacy Model
 - **Commitment-based**: Only cryptographic commitments published on-chain
@@ -110,29 +103,22 @@ npm run build
 
 ### Testing
 
-Run unit and integration tests.
-NB! Integration tests require docker to be installed.
+Run the default suite (unit + functional tests):
 
 ```bash
 npm test
 ```
 
-Run unit tests only.
+Run the example flows (requires a reachable aggregator; URL is read from each example's `config.json`):
 
 ```bash
-npm run test:unit
+npm run test:examples
 ```
 
-Run integration tests only.
+Run the end-to-end suite (expects a local aggregator at `http://localhost:3000` — see [`tests/e2e/E2ETransitionFlowTest.ts`](./tests/e2e/E2ETransitionFlowTest.ts)):
 
 ```bash
-npm run test:integration
-```
-
-Run end-to-end tests only.
-
-```bash
-AGGREGATOR_URL='https://gateway-test.unicity.network' npm run test:e2e
+npm run test:e2e
 ```
 
 ### Linting
@@ -150,18 +136,8 @@ npm run lint:fix
 ## Network Configuration
 
 - **Test Gateway**: `https://gateway-test.unicity.network`
-- **Default Token Type**: Configurable via TokenType enum
-
-## Examples
-
-### Minting Tokens 
-`tests/examples/mint/ExampleTest.ts`
-
-### Token Transfer
-`tests/examples/transfer/ExampleTest.ts`
-
-### Token Splitting
-`tests/examples/split/ExampleTest.ts`
+- **Network identifiers**: `NetworkId.MAINNET`, `NetworkId.TESTNET`, `NetworkId.LOCAL`
+- **Token type**: caller-supplied; use `TokenType.generate()` or construct from explicit bytes
 
 ## Unicity Signature Standard
 

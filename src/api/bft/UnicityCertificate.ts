@@ -31,14 +31,23 @@ export class UnicityCertificate {
     this._shardConfigurationHash = new Uint8Array(_shardConfigurationHash);
   }
 
+  /**
+   * @returns {Uint8Array} Copy of the shard configuration hash.
+   */
   public get shardConfigurationHash(): Uint8Array {
     return new Uint8Array(this._shardConfigurationHash);
   }
 
+  /**
+   * @returns {Uint8Array|null} Copy of the technical record hash, or `null` if absent.
+   */
   public get technicalRecordHash(): Uint8Array | null {
     return this._technicalRecordHash ? new Uint8Array(this._technicalRecordHash) : null;
   }
 
+  /**
+   * @returns {bigint} Wire-format version of this certificate.
+   */
   public get version(): bigint {
     return UnicityCertificate.VERSION;
   }
@@ -112,6 +121,13 @@ export class UnicityCertificate {
     );
   }
 
+  /**
+   * Create UnicityCertificate from JSON.
+   *
+   * @param {unknown} data Hex string of CBOR-encoded certificate.
+   * @returns {UnicityCertificate} Decoded certificate.
+   * @throws {InvalidJsonStructureError} If the input is not a string.
+   */
   public static fromJSON(data: unknown): UnicityCertificate {
     if (!UnicityCertificate.isJSON(data)) {
       throw new InvalidJsonStructureError();

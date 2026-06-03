@@ -11,9 +11,17 @@ import { SignaturePredicate } from '../SignaturePredicate.js';
 import { IBuiltInPredicateVerifier } from './IBuiltInPredicateVerifier.js';
 import { BuiltInPredicateType } from '../BuiltInPredicateType.js';
 
+/**
+ * Verifier for {@link SignaturePredicate}: recomputes the
+ * (sourceStateHash, transactionHash) digest and checks the secp256k1
+ * signature in the unlock script against the predicate's public key.
+ */
 export class SignaturePredicateVerifier implements IBuiltInPredicateVerifier {
   public readonly type = BuiltInPredicateType.Signature;
 
+  /**
+   * @inheritDoc
+   */
   public async verify(
     encodedPredicate: EncodedPredicate,
     sourceStateHash: DataHash,

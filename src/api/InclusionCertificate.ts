@@ -10,6 +10,9 @@ import { HexConverter } from '../util/HexConverter.js';
 import { dedent } from '../util/StringUtils.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 
+/**
+ * Inclusion certificate for a leaf in a sparse Merkle tree.
+ */
 export class InclusionCertificate {
   private static readonly BITMAP_SIZE = 32;
   private static readonly MAX_DEPTH = 255;
@@ -19,6 +22,14 @@ export class InclusionCertificate {
     private readonly siblings: DataHash[],
   ) {}
 
+  /**
+   * Create an InclusionCertificate from a sparse Merkle tree root and leaf key.
+   *
+   * @param {SparseMerkleTreeRootNode} root Root node of the tree.
+   * @param {Uint8Array} key Leaf key.
+   * @returns {InclusionCertificate} New certificate.
+   * @throws {Error} If the path cannot be constructed.
+   */
   public static create(root: SparseMerkleTreeRootNode, key: Uint8Array): InclusionCertificate {
     let node: FinalizedBranch | SparseMerkleTreeRootNode | null = root;
 
@@ -50,6 +61,13 @@ export class InclusionCertificate {
     throw new Error('Could not construct inclusion certificate: Invalid path');
   }
 
+  /**
+   * Decode an InclusionCertificate from its byte encoding.
+   *
+   * @param {Uint8Array} bytes Encoded certificate.
+   * @returns {InclusionCertificate} Decoded certificate.
+   * @throws {Error} If the encoding is malformed.
+   */
   public static decode(bytes: Uint8Array): InclusionCertificate {
     if (bytes.length < InclusionCertificate.BITMAP_SIZE) {
       throw new Error('Inclusion Certificate bitmap is invalid');
@@ -83,6 +101,9 @@ export class InclusionCertificate {
     return new InclusionCertificate(bytes.slice(0, InclusionCertificate.BITMAP_SIZE), siblings);
   }
 
+  /**
+   * @returns {Uint8Array} Encoded certificate bytes.
+   */
   public encode(): Uint8Array {
     const bytes = new Uint8Array(this.bitmap.length + this.siblings.length * HashAlgorithm.SHA256.length);
     bytes.set(this.bitmap);
@@ -96,6 +117,9 @@ export class InclusionCertificate {
     return bytes;
   }
 
+  /**
+   * @returns {string} String representation of the inclusion certificate.
+   */
   public toString(): string {
     return dedent`
       Inclusion Certificate
@@ -105,6 +129,14 @@ export class InclusionCertificate {
         ]`;
   }
 
+  /**
+   * Verify the certificate path against the expected root hash.
+   *
+   * @param {StateId} leafKey Leaf key.
+   * @param {DataHash} leafValue Leaf value hash.
+   * @param {DataHash} expectedRootHash Expected sparse Merkle tree root hash.
+   * @returns {Promise<boolean>} True if the path is valid.
+   */
   public async verify(leafKey: StateId, leafValue: DataHash, expectedRootHash: DataHash): Promise<boolean> {
     const key = leafKey.data;
     const value = leafValue.data;

@@ -9,12 +9,21 @@ import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
 import { BigintConverter } from '../../util/BigintConverter.js';
 import { dedent } from '../../util/StringUtils.js';
 
+/**
+ * Path through a plain sparse Merkle tree from a leaf to the root.
+ */
 export class SparseMerkleTreePath {
   public constructor(
     public readonly root: DataHash,
     public readonly steps: ReadonlyArray<SparseMerkleTreePathStep>,
   ) {}
 
+  /**
+   * Create SparseMerkleTreePath from CBOR bytes.
+   *
+   * @param {Uint8Array} bytes CBOR bytes.
+   * @returns {SparseMerkleTreePath} Decoded path.
+   */
   public static fromCBOR(bytes: Uint8Array): SparseMerkleTreePath {
     const data = CborDeserializer.decodeArray(bytes, 2);
     const steps = CborDeserializer.decodeArray(data[1]);
@@ -25,6 +34,11 @@ export class SparseMerkleTreePath {
     );
   }
 
+  /**
+   * Convert SparseMerkleTreePath to CBOR bytes.
+   *
+   * @returns {Uint8Array} CBOR bytes.
+   */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
       CborSerializer.encodeByteString(this.root.imprint),
@@ -32,6 +46,9 @@ export class SparseMerkleTreePath {
     );
   }
 
+  /**
+   * @returns {string} String representation of the path.
+   */
   public toString(): string {
     return dedent`
       Merkle Tree Path

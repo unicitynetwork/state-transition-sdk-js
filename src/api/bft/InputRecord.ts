@@ -64,6 +64,9 @@ export class InputRecord {
     return new Uint8Array(this._summaryValue);
   }
 
+  /**
+   * @returns {bigint} Wire-format version of this input record.
+   */
   public get version(): bigint {
     return InputRecord.VERSION;
   }

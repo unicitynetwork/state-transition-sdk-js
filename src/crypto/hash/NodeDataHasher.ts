@@ -12,29 +12,27 @@ export const Algorithm = {
   [HashAlgorithm.SHA512.id]: 'SHA512',
 };
 
+/**
+ * {@link IDataHasher} implementation backed by Node's built-in `crypto` module.
+ * Suitable for server-side code; use {@link SubtleCryptoDataHasher} in the
+ * browser.
+ */
 export class NodeDataHasher implements IDataHasher {
   private _hasher: Hash;
 
-  /**
-   * Create Node Hasher
-   * @param {string} algorithm
-   */
   public constructor(public readonly algorithm: HashAlgorithm) {
     this._hasher = createHash(Algorithm[this.algorithm.id]);
   }
 
   /**
-   * Digest the final result
-   * @return {Promise<Uint8Array>}
+   * @inheritDoc
    */
   public digest(): Promise<DataHash> {
     return Promise.resolve(new DataHash(this.algorithm, this._hasher.digest()));
   }
 
   /**
-   * Update the hasher content
-   * @param {Uint8Array} data byte array
-   * @return {IDataHasher}
+   * @inheritDoc
    */
   public update(data: Uint8Array): this {
     this._hasher.update(data);

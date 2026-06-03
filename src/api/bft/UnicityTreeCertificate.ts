@@ -79,6 +79,9 @@ export class UnicityTreeCertificate {
     return this._steps.slice();
   }
 
+  /**
+   * @returns {bigint} Wire-format version of this certificate.
+   */
   public get version(): bigint {
     return UnicityTreeCertificate.VERSION;
   }

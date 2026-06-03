@@ -1,3 +1,4 @@
+import { DuplicateSplitTokenIdError } from './error/DuplicateSplitTokenIdError.js';
 import { TokenAssetMissingError } from './error/TokenAssetMissingError.js';
 import { IPaymentData } from './IPaymentData.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
@@ -6,6 +7,8 @@ import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { HexConverter } from '../util/HexConverter.js';
 import { TokenAssetValueMismatchError } from './error/TokenAssetValueMismatchError.js';
 import { SplitAssetProof } from './SplitAssetProof.js';
+import { SplitToken } from './SplitToken.js';
+import { SplitTokenRequest } from './SplitTokenRequest.js';
 import { SparseMerkleTree } from '../smt/plain/SparseMerkleTree.js';
 import { SparseMerkleSumTree } from '../smt/sum/SparseMerkleSumTree.js';
 import { SparseMerkleSumTreeRootNode } from '../smt/sum/SparseMerkleSumTreeRootNode.js';
@@ -13,54 +16,18 @@ import { Token } from '../transaction/Token.js';
 import { TokenId } from '../transaction/TokenId.js';
 import { TransferTransaction } from '../transaction/TransferTransaction.js';
 import { AssetId } from './asset/AssetId.js';
-import { PaymentAssetCollection } from './asset/PaymentAssetCollection.js';
 import { TokenAssetCountMismatchError } from './error/TokenAssetCountMismatchError.js';
 import { BurnPredicate } from '../predicate/builtin/BurnPredicate.js';
 
-class ProofMapEntry {
-  private constructor(
-    public readonly tokenId: TokenId,
-    private readonly _proofs: SplitAssetProof[],
-  ) {
-    this._proofs = _proofs.slice();
-  }
-
-  public get proofs(): SplitAssetProof[] {
-    return this._proofs.slice();
-  }
-
-  public static create(tokenId: TokenId, proofs: SplitAssetProof[]): ProofMapEntry {
-    return new ProofMapEntry(tokenId, proofs);
-  }
-}
-
-class ProofMap {
-  private constructor(private readonly _proofs: Map<string, ProofMapEntry>) {}
-
-  public static create(data: [TokenId, SplitAssetProof[]][]): ProofMap {
-    return new ProofMap(
-      new Map(
-        data.map(([tokenId, proofs]) => [HexConverter.encode(tokenId.bytes), ProofMapEntry.create(tokenId, proofs)]),
-      ),
-    );
-  }
-
-  public get(id: TokenId): ProofMapEntry | null {
-    return this._proofs.get(HexConverter.encode(id.bytes)) ?? null;
-  }
-
-  public size(): number {
-    return this._proofs.size;
-  }
-}
-
-interface ISplit {
+/**
+ * Result of splitting a token.
+ */
+export interface ISplit {
   readonly burn: {
     readonly ownerPredicate: BurnPredicate;
     readonly transaction: TransferTransaction;
   };
-
-  readonly proofs: ProofMap;
+  readonly tokens: SplitToken[];
 }
 
 /**
@@ -68,23 +35,32 @@ interface ISplit {
  */
 export class TokenSplit {
   /**
-   * Split old token to new tokens.
+   * Split a token into new outputs.
    *
-   * @param token token to be used for split
-   * @param decodePaymentData
-   * @param splitTokens
-   * @return token split object for submitting info
+   * @param {Token} token Source token to split.
+   * @param {(bytes: Uint8Array) => Promise<IPaymentData>} decodePaymentData Decoder for the source token's payment data.
+   * @param {SplitTokenRequest[]} requests Per-output mint requests.
+   * @returns {Promise<ISplit>} Burn transaction and split tokens ready to mint.
    */
   public static async split(
     token: Token,
     decodePaymentData: (bytes: Uint8Array) => Promise<IPaymentData>,
-    splitTokens: [TokenId, PaymentAssetCollection][],
+    requests: SplitTokenRequest[],
   ): Promise<ISplit> {
     const hasher = new DataHasherFactory(HashAlgorithm.SHA256, DataHasher);
     const trees = new Map<string, [AssetId, SparseMerkleSumTree]>();
+    const networkId = token.genesis.networkId;
 
-    for (const [tokenId, assets] of splitTokens) {
-      for (const asset of assets.toArray()) {
+    const requestsWithTokenId = new Map<bigint, [SplitTokenRequest, TokenId]>();
+    for (const request of requests) {
+      const tokenId = await TokenId.fromSalt(networkId, request.salt);
+      const tokenIdPath = tokenId.toBitString().toBigInt();
+      if (requestsWithTokenId.has(tokenIdPath)) {
+        throw new DuplicateSplitTokenIdError(tokenId.toString());
+      }
+      requestsWithTokenId.set(tokenIdPath, [request, tokenId]);
+
+      for (const asset of request.assets.toArray()) {
         const key = HexConverter.encode(asset.id.bytes);
         let tree = trees.get(key)?.[1];
         if (!tree) {
@@ -92,11 +68,10 @@ export class TokenSplit {
           trees.set(key, [asset.id, tree]);
         }
 
-        await tree.addLeaf(tokenId.toBitString().toBigInt(), asset.id.bytes, asset.value);
+        await tree.addLeaf(tokenIdPath, asset.id.bytes, asset.value);
       }
     }
 
-    // Parse this from user object
     const paymentDataBytes = token.genesis.data;
     const paymentData = paymentDataBytes ? await decodePaymentData(paymentDataBytes) : null;
     if (paymentData == null) {
@@ -134,28 +109,32 @@ export class TokenSplit {
       crypto.getRandomValues(new Uint8Array(32)),
     );
 
-    const proofs: [TokenId, SplitAssetProof[]][] = [];
-    for (const [tokenId, assets] of splitTokens) {
-      proofs.push([
-        tokenId,
-        assets
-          .toArray()
-          .map((asset) =>
-            SplitAssetProof.create(
-              asset.id,
-              aggregationRoot.getPath(asset.id.toBitString().toBigInt()),
-              assetTreeRoots.get(HexConverter.encode(asset.id.bytes))!.getPath(tokenId.toBitString().toBigInt()),
+    const tokens: SplitToken[] = Array.from(requestsWithTokenId.values()).map(
+      ([request, tokenId]) =>
+        new SplitToken(
+          networkId,
+          request.recipient,
+          request.tokenType,
+          request.salt,
+          request.assets,
+          request.assets
+            .toArray()
+            .map((asset) =>
+              SplitAssetProof.create(
+                asset.id,
+                aggregationRoot.getPath(asset.id.toBitString().toBigInt()),
+                assetTreeRoots.get(HexConverter.encode(asset.id.bytes))!.getPath(tokenId.toBitString().toBigInt()),
+              ),
             ),
-          ),
-      ]);
-    }
+        ),
+    );
 
     return {
       burn: {
         ownerPredicate: burnPredicate,
         transaction: burnTransaction,
       },
-      proofs: ProofMap.create(proofs),
+      tokens,
     };
   }
 }

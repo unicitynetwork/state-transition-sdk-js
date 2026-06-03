@@ -3,6 +3,7 @@ import { UnicityCertificate } from '../../../src/api/bft/UnicityCertificate.js';
 import { CertificationData } from '../../../src/api/CertificationData.js';
 import { InclusionCertificate } from '../../../src/api/InclusionCertificate.js';
 import { InclusionProof } from '../../../src/api/InclusionProof.js';
+import { NetworkId } from '../../../src/api/NetworkId.js';
 import { StateId } from '../../../src/api/StateId.js';
 import { DataHash } from '../../../src/crypto/hash/DataHash.js';
 import { DataHasherFactory } from '../../../src/crypto/hash/DataHasherFactory.js';
@@ -15,8 +16,6 @@ import { PredicateVerifierService } from '../../../src/predicate/verification/Pr
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { SparseMerkleTree } from '../../../src/smt/radix/SparseMerkleTree.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
-import { TokenId } from '../../../src/transaction/TokenId.js';
-import { TokenType } from '../../../src/transaction/TokenType.js';
 import {
   InclusionProofVerificationRule,
   InclusionProofVerificationStatus,
@@ -38,11 +37,7 @@ describe('InclusionProof', () => {
   let trustBase: RootTrustBase;
 
   beforeAll(async () => {
-    transaction = await MintTransaction.create(
-      SignaturePredicate.fromSigningService(signingService),
-      TokenId.generate(),
-      TokenType.generate(),
-    );
+    transaction = await MintTransaction.create(NetworkId.LOCAL, SignaturePredicate.fromSigningService(signingService));
     const smt = new SparseMerkleTree(new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher));
     const stateId = await StateId.fromTransaction(transaction);
     certificationData = await CertificationData.fromMintTransaction(transaction);
@@ -87,11 +82,10 @@ describe('InclusionProof', () => {
         predicateVerifier,
         new InclusionProof(certificationData, null, unicityCertificate),
         await MintTransaction.create(
+          transaction.networkId,
           transaction.lockScript,
-          TokenId.generate(),
-          transaction.tokenType,
-          null,
           transaction.data,
+          transaction.tokenType,
         ),
       ).then((result) => result.status),
     ).resolves.toEqual(InclusionProofVerificationStatus.INCLUSION_CERTIFICATE_MISSING);

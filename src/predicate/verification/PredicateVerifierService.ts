@@ -6,11 +6,20 @@ import { PredicateEngine } from '../PredicateEngine.js';
 import { IPredicateVerifier } from './IPredicateVerifier.js';
 import { EncodedPredicate } from '../EncodedPredicate.js';
 
+/**
+ * Registry that dispatches predicate verification to the right
+ * {@link IPredicateVerifier} based on the predicate's engine.
+ */
 export class PredicateVerifierService {
   private readonly verifiers: Map<PredicateEngine, IPredicateVerifier> = new Map();
 
   private constructor() {}
 
+  /**
+   * Create verifier service with default verifiers.
+   *
+   * @returns {PredicateVerifierService} Service with the default verifiers registered.
+   */
   public static create(): PredicateVerifierService {
     const verifier = new PredicateVerifierService();
     verifier.addVerifier(DefaultBuiltInPredicateVerifier.create());
@@ -18,6 +27,13 @@ export class PredicateVerifierService {
     return verifier;
   }
 
+  /**
+   * Register a verifier for its declared engine.
+   *
+   * @param {IPredicateVerifier} verifier Verifier to register.
+   * @returns {PredicateVerifierService} This service for chaining.
+   * @throws {Error} If a verifier is already registered for the engine.
+   */
   public addVerifier(verifier: IPredicateVerifier): this {
     if (this.verifiers.has(verifier.engine)) {
       throw new Error(`Found duplicate predicate verifier for engine ${verifier.engine}.`);
@@ -28,6 +44,16 @@ export class PredicateVerifierService {
     return this;
   }
 
+  /**
+   * Verify given predicate with registered predicate verifiers.
+   *
+   * @param {EncodedPredicate} predicate Predicate being unlocked.
+   * @param {DataHash} sourceStateHash Hash of the state being spent.
+   * @param {DataHash} transactionHash Hash of the spending transaction.
+   * @param {Uint8Array} unlockScript Witness bytes for the predicate.
+   * @returns {Promise<VerificationResult<VerificationStatus>>} Verification outcome.
+   * @throws {Error} If no verifier is registered for the predicate's engine.
+   */
   public verify(
     predicate: EncodedPredicate,
     sourceStateHash: DataHash,

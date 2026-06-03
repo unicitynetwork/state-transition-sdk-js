@@ -5,6 +5,10 @@
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "type": "module",
+  "exports": {
+    "./lib/*.js": "./lib/*.js",
+    "./lib/*": "./lib/*.js"
+  },
   "scripts": {
     "build": "tsc",
     "build:check": "tsc --project tsconfig.eslint.json --noEmit",
@@ -14,10 +18,7 @@
     "test:unit": "jest --testPathPatterns=tests/unit --testPathPatterns=tests/functional",
     "test:e2e": "jest --testPathPatterns=tests/e2e",
     "test:examples": "jest --testPathPatterns=tests/examples",
-    "test:ci": "jest --testPathPatterns=tests --testPathIgnorePatterns=tests/e2e --testPathIgnorePatterns=tests/examples --ci --reporters=default",
-    "test:bdd": "node --import tsx/esm ./node_modules/.bin/cucumber-js",
-    "test:single": "jest",
-    "prepublishOnly": "npm run build"
+    "test:ci": "jest --testPathPatterns=tests --testPathIgnorePatterns=tests/e2e --testPathIgnorePatterns=tests/examples --ci --reporters=default"
   },
   "repository": {
     "type": "git",
@@ -34,24 +35,24 @@
   "dependencies": {
     "@noble/curves": "2.2.0",
     "@noble/hashes": "2.2.0",
-    "uuid": "13.0.0"
+    "uuid": "14.0.0"
   },
   "devDependencies": {
-    "@babel/preset-env": "7.29.2",
+    "@babel/preset-env": "7.29.5",
     "@babel/preset-typescript": "7.28.5",
     "@cucumber/cucumber": "^12.6.0",
     "@eslint/js": "9.39.4",
     "@types/jest": "30.0.0",
-    "@types/node": "^20.19.39",
-    "babel-jest": "30.3.0",
+    "@types/node": "20.19.41",
+    "babel-jest": "30.4.1",
     "eslint": "9.39.4",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-import": "2.32.0",
     "eslint-plugin-prettier": "5.5.5",
-    "globals": "17.4.0",
-    "jest": "30.3.0",
+    "globals": "17.6.0",
+    "jest": "30.4.2",
     "tsx": "^4.21.0",
-    "typescript": "6.0.2",
-    "typescript-eslint": "8.58.2"
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.59.4"
   }
 }

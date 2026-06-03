@@ -24,6 +24,13 @@ export class SparseMerkleTree {
    */
   public constructor(public readonly factory: IDataHasherFactory<IDataHasher>) {}
 
+  /**
+   * Add a leaf to the tree.
+   *
+   * @param {Uint8Array} key Leaf key.
+   * @param {Uint8Array} data Leaf data bytes.
+   * @returns {Promise<void>} Resolves when the leaf has been inserted.
+   */
   public async addLeaf(key: Uint8Array, data: Uint8Array): Promise<void> {
     // TODO: Add length check
     data = new Uint8Array(data);

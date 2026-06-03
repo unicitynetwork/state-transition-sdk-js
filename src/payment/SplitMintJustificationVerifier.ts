@@ -12,6 +12,9 @@ import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 import { VerificationResult } from '../verification/VerificationResult.js';
 import { VerificationStatus } from '../verification/VerificationStatus.js';
 
+/**
+ * Verifier for {@link SplitMintJustification} mint justifications.
+ */
 export class SplitMintJustificationVerifier implements IMintJustificationVerifier {
   public constructor(
     private readonly trustBase: RootTrustBase,
@@ -19,10 +22,16 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
     private readonly decodePaymentData: (bytes: Uint8Array) => Promise<IPaymentData>,
   ) {}
 
+  /**
+   * @returns {bigint} CBOR tag this verifier handles.
+   */
   public get tag(): bigint {
     return SplitMintJustification.CBOR_TAG;
   }
 
+  /**
+   * @inheritDoc
+   */
   public async verify(
     transaction: CertifiedMintTransaction,
     mintJustificationVerifier: MintJustificationVerifierService,
@@ -46,6 +55,15 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
         'SplitMintJustificationVerifier',
         VerificationStatus.FAIL,
         'Assets data is missing.',
+        [],
+      );
+    }
+
+    if (!transaction.networkId.equals(justification.token.genesis.networkId)) {
+      return new VerificationResult(
+        'SplitMintJustificationVerifier',
+        VerificationStatus.FAIL,
+        `Network identifier mismatch: mint is on ${transaction.networkId.toString()}, source token is on ${justification.token.genesis.networkId.toString()}.`,
         [],
       );
     }

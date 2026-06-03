@@ -1,3 +1,8 @@
+/**
+ * CBOR major type bits (RFC 8949 §3.1), packed into the high 3 bits of the
+ * initial byte. Used by the serializer/deserializer to tag and recognize
+ * values.
+ */
 export enum MajorType {
   UNSIGNED_INTEGER = 0b00000000,
   NEGATIVE_INTEGER = 0b00100000,

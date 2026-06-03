@@ -1,3 +1,6 @@
+/**
+ * Big-endian conversion between {@link bigint} values and byte arrays.
+ */
 export class BigintConverter {
   /**
    * Convert bytes to unsigned long
