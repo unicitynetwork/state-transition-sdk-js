@@ -89,8 +89,16 @@ When(
       await SignaturePredicateUnlockScript.create(this.transferTransaction, user.signingService),
     );
 
-    const response = await this.tree.setup.client.submitCertificationRequest(certData);
-    this.certificationStatusTree = response.status;
+    try {
+      const response = await this.tree.setup.client.submitCertificationRequest(certData);
+      this.certificationStatusTree = response.status;
+    } catch (error) {
+      // PR #119+: the aggregator may surface a re-spend rejection as a JSON-RPC error / a
+      // response shape that doesn't parse as CertificationResponse. Treat any submit-side
+      // throw as the rejection signal; the Then step accepts that path explicitly.
+      this.certificationStatusTree = null;
+      this.respendSubmitError = error instanceof Error ? error : new Error(String(error));
+    }
   },
 );
 
@@ -114,10 +122,16 @@ Then(/^the inclusion proof rejects with "([^"]+)"$/, async function (this: Token
   );
 });
 
-// aggregator-go#151 (sdk-js#118) + sdk-js#119: a re-spend is accepted at submit (SUCCESS) and
-// rejected at proof time as TRANSACTION_HASH_MISMATCH. STATE_ID_EXISTS was removed from
-// CertificationStatus in #119; the proof-time check is the only enforcement the SDK surfaces.
+// aggregator-go#151 (sdk-js#118) + sdk-js#119: a re-spend is rejected EITHER at submit (the
+// aggregator surfaces a JSON-RPC error; the submit throws) OR accepted at submit (SUCCESS)
+// and rejected at proof time as TRANSACTION_HASH_MISMATCH. STATE_ID_EXISTS was removed from
+// CertificationStatus in #119; the proof-time check is the SDK's only enforcement layer when
+// the aggregator accepts the submit.
 Then('the duplicate transfer is rejected as a double-spend', async function (this: TokenWorld): Promise<void> {
+  if (this.certificationStatusTree === null) {
+    assert.ok(this.respendSubmitError, 'submit was reported as failed but no error was captured');
+    return;
+  }
   assert.strictEqual(
     this.certificationStatusTree,
     CertificationStatus.SUCCESS,

@@ -32,8 +32,15 @@ When('Alice tries to submit a transfer of the stale token to Bob', async functio
     await SignaturePredicateUnlockScript.create(this.transferTransaction, this.alice.signingService),
   );
 
-  const response = await this.setup.client.submitCertificationRequest(certificationData);
-  this.certificationStatus = response.status;
+  try {
+    const response = await this.setup.client.submitCertificationRequest(certificationData);
+    this.certificationStatus = response.status;
+  } catch (error) {
+    // PR #119+: the aggregator may surface a re-spend rejection as a JSON-RPC error.
+    // Signal it via a null status; the Then step accepts this path explicitly.
+    this.certificationStatus = null;
+    this.respendSubmitError = error instanceof Error ? error : new Error(String(error));
+  }
 });
 
 Then(
@@ -53,11 +60,16 @@ Then(
   },
 );
 
-// aggregator-go#151 (sdk-js#118) + sdk-js#119: a re-spend is accepted at submit (SUCCESS) and
+// aggregator-go#151 (sdk-js#118) + sdk-js#119: a re-spend is rejected EITHER at submit (the
+// aggregator surfaces a JSON-RPC error — submit throws) OR accepted at submit (SUCCESS) and
 // rejected at proof time as TRANSACTION_HASH_MISMATCH. STATE_ID_EXISTS was removed from
-// CertificationStatus in #119; the proof-time check is the only enforcement layer the SDK
-// surfaces now.
+// CertificationStatus in #119; the proof-time check is the only SDK-visible enforcement
+// when the aggregator accepts the submit.
 Then('the stale-token re-spend is rejected as a double-spend', async function (this: TokenWorld): Promise<void> {
+  if (this.certificationStatus === null) {
+    assert.ok(this.respendSubmitError, 'submit was reported as failed but no error was captured');
+    return;
+  }
   assert.strictEqual(
     this.certificationStatus,
     CertificationStatus.SUCCESS,

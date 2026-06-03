@@ -42,7 +42,7 @@ export class TokenWorld extends World {
   public cborEnvelopeStash?: { bytes: Uint8Array; thrownError?: Error };
   public cborRoundtripFirst?: Uint8Array;
   public cborRoundtripSecond?: Uint8Array;
-  public certificationStatus!: CertificationStatus;
+  public certificationStatus!: CertificationStatus | null;
   public certificationStatusTree: CertificationStatus | null = null;
   public currentToken!: Token;
   public dave!: IUser;
@@ -83,6 +83,18 @@ export class TokenWorld extends World {
   public mintTokenType!: TokenType;
   public readonly namedUsers: Map<string, IUser> = new Map();
   public readonly nametags: Map<IUser, UnicityIdToken> = new Map();
+  public networkConsistencyStash?: {
+    result?: import('../../../../src/verification/VerificationResult.js').VerificationResult<unknown>;
+  };
+  public networkIdSaltStash?: {
+    fixedNetworkId?: import('../../../../src/api/NetworkId.js').NetworkId;
+    fixedSalt?: import('../../../../src/transaction/TokenSalt.js').TokenSalt;
+    generatedSalt?: import('../../../../src/transaction/TokenSalt.js').TokenSalt;
+    mintRoundtrip?: { built: MintTransaction; decoded?: MintTransaction };
+    resolvedNetworkId?: import('../../../../src/api/NetworkId.js').NetworkId;
+    thrownError?: Error;
+    tokenIdPair?: { first: TokenId; second?: TokenId };
+  };
   public originalToken!: Token;
   public preparedOperations!: Map<number, IPreparedOperation[]>;
   public registryStash?: {
@@ -98,6 +110,7 @@ export class TokenWorld extends World {
     first: { bytes: Uint8Array; stateId: import('../../../../src/api/StateId.js').StateId };
     second: { bytes: Uint8Array; stateId: import('../../../../src/api/StateId.js').StateId };
   };
+  public respendSubmitError?: Error;
   public routingPinStash?: {
     pickedShard?: number;
     stateId?: import('../../../../src/api/StateId.js').StateId;
