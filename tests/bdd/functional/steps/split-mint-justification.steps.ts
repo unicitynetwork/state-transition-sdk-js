@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 
 import { Given, Then, When } from '@cucumber/cucumber';
 
+import { NetworkId } from '../../../../src/api/NetworkId.js';
 import { Asset } from '../../../../src/payment/asset/Asset.js';
 import { AssetId } from '../../../../src/payment/asset/AssetId.js';
 import { PaymentAssetCollection } from '../../../../src/payment/asset/PaymentAssetCollection.js';
@@ -156,12 +157,12 @@ Then('no decoding error is raised', function (this: TokenWorld): void {
 
 function mockCert(
   base: CertifiedMintTransaction,
-  overrides: Partial<Pick<CertifiedMintTransaction, 'justification' | 'data' | 'tokenId'>>,
+  overrides: Partial<Pick<CertifiedMintTransaction, 'justification' | 'data' | 'tokenId' | 'networkId'>>,
 ): CertifiedMintTransaction {
   return {
     data: overrides.data !== undefined ? overrides.data : base.data,
     justification: overrides.justification !== undefined ? overrides.justification : base.justification,
-    networkId: base.networkId,
+    networkId: overrides.networkId ?? base.networkId,
     tokenId: overrides.tokenId ?? base.tokenId,
   } as unknown as CertifiedMintTransaction;
 }
@@ -206,6 +207,15 @@ Given(/^a CertifiedMintTransaction is mutated by (.+)$/, function (this: TokenWo
       const bumped = arr.map((a, i) => (i === 0 ? new Asset(a.id, a.value + 1n) : a));
       const tampered = PaymentAssetCollection.create(...bumped);
       stash.mutatedCert = mockCert(base, { data: tampered.toCBOR() });
+      break;
+    }
+    case 'swapping the mint networkId to a different network': {
+      // PR #119 / sdk-js#116: SplitMintJustificationVerifier line 62 fails if the cert mint's
+      // networkId differs from the burnt source token's genesis.networkId. Pick a guaranteed-
+      // different networkId (LOCAL=3 vs MAINNET=1) without breaking the rest of the cert.
+      const sourceId = base.networkId.id;
+      const altId = sourceId === 1 ? 2 : 1;
+      stash.mutatedCert = mockCert(base, { networkId: NetworkId.fromId(altId) });
       break;
     }
     case 'duplicating one proof so two share an assetId': {

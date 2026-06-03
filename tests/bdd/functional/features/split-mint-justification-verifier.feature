@@ -25,3 +25,4 @@ Feature: SplitMintJustificationVerifier rejects malformed split mints
       | renaming one proof's assetId to one not in data       | not found in asset data                            |
       | mismatching one asset's value between data and tree   | does not match asset tree leaf                     |
       | duplicating one proof so two share an assetId         | Duplicate split proof for asset id                 |
+      | swapping the mint networkId to a different network    | Network identifier mismatch                        |

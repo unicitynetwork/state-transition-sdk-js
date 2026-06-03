@@ -90,6 +90,14 @@ export class TokenWorld extends World {
     built: MintTransaction;
     decoded?: MintTransaction;
   };
+  public mintRespendStash?: {
+    firstMint: MintTransaction;
+    respendStatus?: CertificationStatus | null;
+    respendSubmitError?: Error;
+    secondMint?: MintTransaction;
+    sharedSalt: import('../../../../src/transaction/TokenSalt.js').TokenSalt;
+    sharedTokenType: TokenType;
+  };
   public mintTokenId!: TokenId;
   public mintTokenSalt!: import('../../../../src/transaction/TokenSalt.js').TokenSalt;
   public mintTokenType!: TokenType;
@@ -97,6 +105,12 @@ export class TokenWorld extends World {
   public readonly nametags: Map<IUser, UnicityIdToken> = new Map();
   public networkConsistencyStash?: {
     result?: import('../../../../src/verification/VerificationResult.js').VerificationResult<unknown>;
+  };
+  public networkIdEdgeStash?: {
+    baseline?: import('../../../../src/api/NetworkId.js').NetworkId;
+    first?: import('../../../../src/api/NetworkId.js').NetworkId;
+    roundTripped?: import('../../../../src/api/NetworkId.js').NetworkId;
+    second?: import('../../../../src/api/NetworkId.js').NetworkId;
   };
   public networkIdSaltStash?: {
     fixedNetworkId?: import('../../../../src/api/NetworkId.js').NetworkId;
@@ -152,6 +166,11 @@ export class TokenWorld extends World {
     shardIdEncoded?: Uint8Array;
     stateId?: import('../../../../src/api/StateId.js').StateId;
   };
+  public slotPinningStash?: {
+    built: MintTransaction;
+    decoded?: MintTransaction;
+    originalRecipientHex: string;
+  };
   public splitError: Error | null = null;
   public splitJustificationStash?: {
     certMint: import('../../../../src/transaction/CertifiedMintTransaction.js').CertifiedMintTransaction;
@@ -172,6 +191,13 @@ export class TokenWorld extends World {
   public stressMintedTokens?: Token[];
   public subSplitTokens!: Token[];
   public token!: Token;
+  public tokenSaltEdgeStash?: {
+    generated?: import('../../../../src/transaction/TokenSalt.js').TokenSalt[];
+    inputBuffer?: Uint8Array;
+    originalHex?: string;
+    outputBuffer?: Uint8Array;
+    salt?: import('../../../../src/transaction/TokenSalt.js').TokenSalt;
+  };
   public tokens!: PaymentAssetCollection;
   public transferError: Error | null = null;
   public transferFieldsStash?: {
