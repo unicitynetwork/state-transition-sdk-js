@@ -22,7 +22,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/unicitynetwork/state-transition-sdk.git"
+    "url": "https://github.com/unicitynetwork/state-transition-sdk-js.git"
   },
   "files": [
     "lib/**/*",
@@ -31,7 +31,7 @@
   ],
   "author": "cryptohog",
   "license": "ISC",
-  "homepage": "https://unicitynetwork.github.io/state-transition-sdk/",
+  "homepage": "https://unicitynetwork.github.io/state-transition-sdk-js/",
   "dependencies": {
     "@noble/curves": "2.2.0",
     "@noble/hashes": "2.2.0",

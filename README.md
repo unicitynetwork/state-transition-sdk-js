@@ -193,8 +193,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Support
 
-- **Repository**: [GitHub](https://github.com/unicitynetwork/state-transition-sdk)
-- **Issues**: [GitHub Issues](https://github.com/unicitynetwork/state-transition-sdk/issues)
+- **Repository**: [GitHub](https://github.com/unicitynetwork/state-transition-sdk-js)
+- **Issues**: [GitHub Issues](https://github.com/unicitynetwork/state-transition-sdk-js/issues)
 - **Gateway API**: `https://gateway-test.unicity.network`
 
 ---
