@@ -103,7 +103,6 @@ function getCanonicalStash(world: TokenWorld): ICanonicalStash {
 Given('a CertificationData is built from a sample MintTransaction', async function (this: TokenWorld): Promise<void> {
   const { CertificationData } = await import('../../../../src/api/CertificationData.js');
   const { MintTransaction } = await import('../../../../src/transaction/MintTransaction.js');
-  const { TokenId } = await import('../../../../src/transaction/TokenId.js');
   const { TokenType } = await import('../../../../src/transaction/TokenType.js');
   const { SignaturePredicate } = await import('../../../../src/predicate/builtin/SignaturePredicate.js');
   const { HexConverter } = await import('../../../../src/util/HexConverter.js');
@@ -111,10 +110,14 @@ Given('a CertificationData is built from a sample MintTransaction', async functi
   const recipient = SignaturePredicate.create(
     HexConverter.decode('02ce9f22e51333c97a8fb1f807a229ece3a8765a16af5fc1a13e30834be3280026'),
   );
+  const { NetworkId } = await import('../../../../src/api/NetworkId.js');
+  const { TokenSalt } = await import('../../../../src/transaction/TokenSalt.js');
   const mintTx = await MintTransaction.create(
+    NetworkId.LOCAL,
     recipient,
-    new TokenId(new Uint8Array(32)),
+    null,
     new TokenType(new Uint8Array(32)),
+    TokenSalt.fromBytes(new Uint8Array(32)),
   );
   const certData = await CertificationData.fromMintTransaction(mintTx);
   getCanonicalStash(this).encoded = certData.toCBOR();

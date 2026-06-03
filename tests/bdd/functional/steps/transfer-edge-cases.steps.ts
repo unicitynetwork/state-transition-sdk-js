@@ -53,17 +53,15 @@ Then(
   },
 );
 
-// aggregator-go#151 (sdk-js#118): the spent state cannot be re-spent — rejected either at
-// submit (STATE_ID_EXISTS, finalized-dup lookup) or at proof time (TRANSACTION_HASH_MISMATCH,
-// skip-finalized-dup-lookup async-v2 path). Accept either; both block the double-spend.
+// aggregator-go#151 (sdk-js#118) + sdk-js#119: a re-spend is accepted at submit (SUCCESS) and
+// rejected at proof time as TRANSACTION_HASH_MISMATCH. STATE_ID_EXISTS was removed from
+// CertificationStatus in #119; the proof-time check is the only enforcement layer the SDK
+// surfaces now.
 Then('the stale-token re-spend is rejected as a double-spend', async function (this: TokenWorld): Promise<void> {
-  if (this.certificationStatus === CertificationStatus.STATE_ID_EXISTS) {
-    return;
-  }
   assert.strictEqual(
     this.certificationStatus,
     CertificationStatus.SUCCESS,
-    `re-spend submit status should be STATE_ID_EXISTS or SUCCESS, got ${String(this.certificationStatus)}`,
+    `re-spend submit status should be SUCCESS, got ${String(this.certificationStatus)}`,
   );
   assert.ok(this.transferTransaction !== null);
   await assert.rejects(

@@ -1,11 +1,10 @@
 import { AggregatorClient } from '../../../src/api/AggregatorClient.js';
 import { CertificationData } from '../../../src/api/CertificationData.js';
+import { NetworkId } from '../../../src/api/NetworkId.js';
 import { StateId } from '../../../src/api/StateId.js';
 import { SignaturePredicate } from '../../../src/predicate/builtin/SignaturePredicate.js';
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
-import { TokenId } from '../../../src/transaction/TokenId.js';
-import { TokenType } from '../../../src/transaction/TokenType.js';
 import { HexConverter } from '../../../src/util/HexConverter.js';
 
 /**
@@ -42,11 +41,7 @@ describe('AggregatorClient X-State-ID header', () => {
     const recipient = SignaturePredicate.create(
       HexConverter.decode('02ce9f22e51333c97a8fb1f807a229ece3a8765a16af5fc1a13e30834be3280026'),
     );
-    const mintTx = await MintTransaction.create(
-      recipient,
-      new TokenId(new Uint8Array(32)),
-      new TokenType(new Uint8Array(32)),
-    );
+    const mintTx = await MintTransaction.create(NetworkId.LOCAL, recipient);
     const certData = await CertificationData.fromMintTransaction(mintTx);
 
     await client.submitCertificationRequest(certData);
@@ -63,11 +58,7 @@ describe('AggregatorClient X-State-ID header', () => {
     const recipient = SignaturePredicate.create(
       HexConverter.decode('02ce9f22e51333c97a8fb1f807a229ece3a8765a16af5fc1a13e30834be3280026'),
     );
-    const mintTx = await MintTransaction.create(
-      recipient,
-      new TokenId(new Uint8Array(32)),
-      new TokenType(new Uint8Array(32)),
-    );
+    const mintTx = await MintTransaction.create(NetworkId.LOCAL, recipient);
     const certData = await CertificationData.fromMintTransaction(mintTx);
 
     await client.submitCertificationRequest(certData);
@@ -80,11 +71,7 @@ describe('AggregatorClient X-State-ID header', () => {
     const recipient = SignaturePredicate.create(
       HexConverter.decode('02ce9f22e51333c97a8fb1f807a229ece3a8765a16af5fc1a13e30834be3280026'),
     );
-    const mintTx = await MintTransaction.create(
-      recipient,
-      new TokenId(new Uint8Array(32)),
-      new TokenType(new Uint8Array(32)),
-    );
+    const mintTx = await MintTransaction.create(NetworkId.LOCAL, recipient);
     const certData = await CertificationData.fromMintTransaction(mintTx);
 
     await client.submitCertificationRequest(certData);

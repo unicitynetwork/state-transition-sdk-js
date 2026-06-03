@@ -2,10 +2,11 @@ import assert from 'node:assert/strict';
 
 import { Given, Then, When } from '@cucumber/cucumber';
 
+import { NetworkId } from '../../../../src/api/NetworkId.js';
 import { SignaturePredicate } from '../../../../src/predicate/builtin/SignaturePredicate.js';
 import { EncodedPredicate } from '../../../../src/predicate/EncodedPredicate.js';
 import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
-import { TokenId } from '../../../../src/transaction/TokenId.js';
+import { TokenSalt } from '../../../../src/transaction/TokenSalt.js';
 import { TokenType } from '../../../../src/transaction/TokenType.js';
 import { HexConverter } from '../../../../src/util/HexConverter.js';
 import { TokenWorld } from '../support/World.js';
@@ -33,11 +34,12 @@ Given(
   async function (this: TokenWorld, justification: string, data: string): Promise<void> {
     const recipient = SignaturePredicate.create(SAMPLE_PUBKEY);
     const built = await MintTransaction.create(
+      NetworkId.LOCAL,
       recipient,
-      new TokenId(new Uint8Array(32)),
-      new TokenType(new Uint8Array(32)),
-      parseHexOrNull(justification),
       parseHexOrNull(data),
+      new TokenType(new Uint8Array(32)),
+      TokenSalt.fromBytes(new Uint8Array(32)),
+      parseHexOrNull(justification),
     );
     this.mintFieldsStash = { built };
   },

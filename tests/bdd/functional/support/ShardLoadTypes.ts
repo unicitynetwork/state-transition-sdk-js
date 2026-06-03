@@ -1,6 +1,6 @@
 export interface IPreparedOperation {
+  readonly saltBytes: Uint8Array;
   readonly shardId: number;
-  readonly tokenIdBytes: Uint8Array;
   readonly tokenTypeBytes: Uint8Array;
 }
 

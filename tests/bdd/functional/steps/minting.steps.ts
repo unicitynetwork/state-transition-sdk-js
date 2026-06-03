@@ -6,7 +6,6 @@ import { CertificationData } from '../../../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../../../src/api/CertificationResponse.js';
 import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../../src/transaction/Token.js';
-import { TokenId } from '../../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../../src/transaction/TokenType.js';
 import { waitInclusionProof } from '../../../../src/util/InclusionProofUtils.js';
 import { VerificationStatus } from '../../../../src/verification/VerificationStatus.js';
@@ -18,11 +17,7 @@ Given('a user with a signing key', function (this: TokenWorld): void {
 });
 
 When('the user mints a new token', async function (this: TokenWorld): Promise<void> {
-  const mintTransaction = await MintTransaction.create(
-    this.user.predicate,
-    new TokenId(crypto.getRandomValues(new Uint8Array(32))),
-    new TokenType(crypto.getRandomValues(new Uint8Array(32))),
-  );
+  const mintTransaction = await MintTransaction.create(this.setup.trustBase.networkId, this.user.predicate);
 
   const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
   const response = await this.setup.client.submitCertificationRequest(certificationData);
@@ -41,10 +36,16 @@ When('the user mints a new token', async function (this: TokenWorld): Promise<vo
 });
 
 When('the user mints a new token with specific token ID and type', async function (this: TokenWorld): Promise<void> {
-  this.mintTokenId = new TokenId(crypto.getRandomValues(new Uint8Array(32)));
   this.mintTokenType = new TokenType(crypto.getRandomValues(new Uint8Array(32)));
 
-  const mintTransaction = await MintTransaction.create(this.user.predicate, this.mintTokenId, this.mintTokenType);
+  const mintTransaction = await MintTransaction.create(
+    this.setup.trustBase.networkId,
+    this.user.predicate,
+    null,
+    this.mintTokenType,
+  );
+  // PR #119: tokenId is derived from (networkId, salt) — capture it from the built mint.
+  this.mintTokenId = mintTransaction.tokenId;
 
   const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
   await this.setup.client.submitCertificationRequest(certificationData);

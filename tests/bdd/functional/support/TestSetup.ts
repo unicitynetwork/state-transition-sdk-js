@@ -14,6 +14,7 @@ import { PaymentAssetCollection } from '../../../../src/payment/asset/PaymentAss
 import { IPaymentData } from '../../../../src/payment/IPaymentData.js';
 import { SplitMintJustification } from '../../../../src/payment/SplitMintJustification.js';
 import { SplitMintJustificationVerifier } from '../../../../src/payment/SplitMintJustificationVerifier.js';
+import { SplitTokenRequest } from '../../../../src/payment/SplitTokenRequest.js';
 import { TokenSplit } from '../../../../src/payment/TokenSplit.js';
 import { SignaturePredicate } from '../../../../src/predicate/builtin/SignaturePredicate.js';
 import { SignaturePredicateUnlockScript } from '../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js';
@@ -181,7 +182,7 @@ export function mintToken(setup: ITestSetup, user: IUser): Promise<Token> {
  * not just a SignaturePredicate. Used by the unicity-id-predicate-verifier coverage.
  */
 export async function mintTokenToRecipient(setup: ITestSetup, recipient: IPredicate): Promise<Token> {
-  const mintTransaction = await MintTransaction.create(recipient, TokenId.generate(), TokenType.generate());
+  const mintTransaction = await MintTransaction.create(setup.trustBase.networkId, recipient);
 
   const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
   const response = await setup.client.submitCertificationRequest(certificationData);
@@ -206,13 +207,7 @@ export async function mintTokenWithAssets(
   user: IUser,
   assets: PaymentAssetCollection,
 ): Promise<Token> {
-  const mintTransaction = await MintTransaction.create(
-    user.predicate,
-    TokenId.generate(),
-    TokenType.generate(),
-    null,
-    assets.toCBOR(),
-  );
+  const mintTransaction = await MintTransaction.create(setup.trustBase.networkId, user.predicate, assets.toCBOR());
 
   const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
   const response = await setup.client.submitCertificationRequest(certificationData);
@@ -274,7 +269,12 @@ export async function splitToken(
   splitTokenAssets: [TokenId, PaymentAssetCollection][],
   parsePaymentData: (bytes: Uint8Array) => Promise<IPaymentData>,
 ): Promise<{ burnedToken: Token; splitTokens: Token[] }> {
-  const splitResult = await TokenSplit.split(token, parsePaymentData, splitTokenAssets);
+  // PR #119: token ids are derived from (networkId, salt); callers' tokenIds are ignored.
+  // Each split output is sent to a fresh random recipient (matching prior behaviour).
+  const requests = splitTokenAssets.map(([, assets]) =>
+    SplitTokenRequest.create(createUser().predicate, assets, token.type),
+  );
+  const splitResult = await TokenSplit.split(token, parsePaymentData, requests);
 
   // Submit burn transaction
   const burnCertificationData = await CertificationData.fromTransaction(
@@ -297,22 +297,17 @@ export async function splitToken(
     ),
   );
 
-  // Mint split tokens
+  // Mint split tokens (PR #119: SplitToken carries its own networkId / recipient / tokenType / salt / assets / proofs)
   const splitTokens: Token[] = [];
-  for (const [tokenId, assets] of splitTokenAssets) {
-    const proofEntry = splitResult.proofs.get(tokenId);
-    if (!proofEntry) {
-      throw new Error(`Proofs not found for token ${tokenId.toString()}`);
-    }
-
-    const justification = SplitMintJustification.create(burnedToken, proofEntry.proofs);
-    const splitUser = createUser();
+  for (const splitTokenInfo of splitResult.tokens) {
+    const justification = SplitMintJustification.create(burnedToken, splitTokenInfo.proofs);
     const mintTransaction = await MintTransaction.create(
-      splitUser.predicate,
-      tokenId,
-      token.type,
+      splitTokenInfo.networkId,
+      splitTokenInfo.recipient,
+      splitTokenInfo.assets.toCBOR(),
+      splitTokenInfo.tokenType,
+      splitTokenInfo.salt,
       justification.toCBOR(),
-      assets.toCBOR(),
     );
 
     const certData = await CertificationData.fromMintTransaction(mintTransaction);
@@ -418,7 +413,10 @@ export async function attemptUnauthorizedSplit(
   splitAssets: [TokenId, PaymentAssetCollection][],
 ): Promise<Error | null> {
   try {
-    const { burn } = await TokenSplit.split(token, decodePaymentData, splitAssets);
+    const requests = splitAssets.map(([, assets]) =>
+      SplitTokenRequest.create(createUser().predicate, assets, token.type),
+    );
+    const { burn } = await TokenSplit.split(token, decodePaymentData, requests);
     const unlock = await SignaturePredicateUnlockScript.create(burn.transaction, attacker.signingService);
     const result = await setup.predicateVerifier.verify(
       token.latestTransaction.recipient,
@@ -443,7 +441,9 @@ export async function splitTokenToOwner(
   parsePaymentData: (bytes: Uint8Array) => Promise<IPaymentData>,
   mintTo: IUser,
 ): Promise<{ burnedToken: Token; splitTokens: Token[] }> {
-  const splitResult = await TokenSplit.split(token, parsePaymentData, splitTokenAssets);
+  // PR #119: token ids are derived from (networkId, salt); callers' tokenIds are ignored.
+  const requests = splitTokenAssets.map(([, assets]) => SplitTokenRequest.create(mintTo.predicate, assets, token.type));
+  const splitResult = await TokenSplit.split(token, parsePaymentData, requests);
 
   // Submit burn transaction
   const burnCertificationData = await CertificationData.fromTransaction(
@@ -468,19 +468,15 @@ export async function splitTokenToOwner(
 
   // Mint split tokens to the specified owner
   const splitTokens: Token[] = [];
-  for (const [tokenId, assets] of splitTokenAssets) {
-    const proofEntry = splitResult.proofs.get(tokenId);
-    if (!proofEntry) {
-      throw new Error(`Proofs not found for token ${tokenId.toString()}`);
-    }
-
-    const justification = SplitMintJustification.create(burnedToken, proofEntry.proofs);
+  for (const splitTokenInfo of splitResult.tokens) {
+    const justification = SplitMintJustification.create(burnedToken, splitTokenInfo.proofs);
     const mintTransaction = await MintTransaction.create(
-      mintTo.predicate,
-      tokenId,
-      token.type,
+      splitTokenInfo.networkId,
+      splitTokenInfo.recipient,
+      splitTokenInfo.assets.toCBOR(),
+      splitTokenInfo.tokenType,
+      splitTokenInfo.salt,
       justification.toCBOR(),
-      assets.toCBOR(),
     );
 
     const certData = await CertificationData.fromMintTransaction(mintTransaction);
@@ -593,7 +589,7 @@ export async function runMixedChain(
     firstHop.method === 'nametag' ? (nametagRegistry.get(firstHop.to) ?? null) : null,
   );
 
-  const mintTransaction = await MintTransaction.create(firstRecipient, TokenId.generate(), TokenType.generate());
+  const mintTransaction = await MintTransaction.create(setup.trustBase.networkId, firstRecipient);
   const mintCert = await CertificationData.fromMintTransaction(mintTransaction);
   const mintResponse = await setup.client.submitCertificationRequest(mintCert);
   if (mintResponse.status !== CertificationStatus.SUCCESS) {

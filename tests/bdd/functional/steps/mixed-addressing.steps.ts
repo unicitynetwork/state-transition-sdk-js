@@ -55,8 +55,8 @@ When(
     const parent = await mintTokenWithAssets(this.setup, alice, assets);
 
     const { TokenId } = await import('../../../../src/transaction/TokenId.js');
-    const child1Id = TokenId.generate();
-    const child2Id = TokenId.generate();
+    const child1Id = new TokenId(crypto.getRandomValues(new Uint8Array(32)));
+    const child2Id = new TokenId(crypto.getRandomValues(new Uint8Array(32)));
 
     // Split into 2 children; children are initially minted to Alice then
     // transferred to Bob via the chosen addressing method.
@@ -80,8 +80,9 @@ When(
     const { TransferTransaction } = await import('../../../../src/transaction/TransferTransaction.js');
     const { CertificationData } = await import('../../../../src/api/CertificationData.js');
     const { CertificationStatus } = await import('../../../../src/api/CertificationResponse.js');
-    const { SignaturePredicateUnlockScript } =
-      await import('../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js');
+    const { SignaturePredicateUnlockScript } = await import(
+      '../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js'
+    );
     const { waitInclusionProof } = await import('../../../../src/util/InclusionProofUtils.js');
 
     const transferTx = await TransferTransaction.create(
@@ -131,8 +132,8 @@ When(
       alice.predicate,
       alice.signingService,
       [
-        [TokenId.generate(), PaymentAssetCollection.create(assets.toArray()[0])],
-        [TokenId.generate(), PaymentAssetCollection.create(assets.toArray()[1])],
+        [new TokenId(crypto.getRandomValues(new Uint8Array(32))), PaymentAssetCollection.create(assets.toArray()[0])],
+        [new TokenId(crypto.getRandomValues(new Uint8Array(32))), PaymentAssetCollection.create(assets.toArray()[1])],
       ],
       parseSimplePaymentData,
       alice,
@@ -141,8 +142,9 @@ When(
     const { TransferTransaction } = await import('../../../../src/transaction/TransferTransaction.js');
     const { CertificationData } = await import('../../../../src/api/CertificationData.js');
     const { CertificationStatus } = await import('../../../../src/api/CertificationResponse.js');
-    const { SignaturePredicateUnlockScript } =
-      await import('../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js');
+    const { SignaturePredicateUnlockScript } = await import(
+      '../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js'
+    );
     const { waitInclusionProof } = await import('../../../../src/util/InclusionProofUtils.js');
 
     const deliverChild = async (
@@ -193,8 +195,8 @@ When(
     const single = bobAssets.toArray()[0];
     const halfA = new Asset(single.id, single.value / 2n);
     const halfB = new Asset(single.id, single.value - single.value / 2n);
-    const dummyId1 = TokenId.generate();
-    const dummyId2 = TokenId.generate();
+    const dummyId1 = new TokenId(crypto.getRandomValues(new Uint8Array(32)));
+    const dummyId2 = new TokenId(crypto.getRandomValues(new Uint8Array(32)));
 
     const { splitTokens: grandchildren } = await splitTokenToOwner(
       this.setup,
@@ -214,8 +216,9 @@ When(
     const { TransferTransaction } = await import('../../../../src/transaction/TransferTransaction.js');
     const { CertificationData } = await import('../../../../src/api/CertificationData.js');
     const { CertificationStatus } = await import('../../../../src/api/CertificationResponse.js');
-    const { SignaturePredicateUnlockScript } =
-      await import('../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js');
+    const { SignaturePredicateUnlockScript } = await import(
+      '../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js'
+    );
     const { waitInclusionProof } = await import('../../../../src/util/InclusionProofUtils.js');
 
     const tx = await TransferTransaction.create(

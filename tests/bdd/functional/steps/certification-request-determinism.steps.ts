@@ -4,7 +4,7 @@ import { Then, When } from '@cucumber/cucumber';
 
 import { CertificationData } from '../../../../src/api/CertificationData.js';
 import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
-import { TokenId } from '../../../../src/transaction/TokenId.js';
+import { TokenSalt } from '../../../../src/transaction/TokenSalt.js';
 import { TokenType } from '../../../../src/transaction/TokenType.js';
 import { HexConverter } from '../../../../src/util/HexConverter.js';
 import { buildCanonicalCertificationRequest, ICanonicalRequest } from '../support/RawCertificationSubmitter.js';
@@ -19,13 +19,14 @@ function getStash(world: TokenWorld): NonNullable<TokenWorld['requestDeterminism
 }
 
 When('the same logical mint certification_request is built twice', async function (this: TokenWorld): Promise<void> {
-  // Fixed logical inputs across both builds. MintTransaction.create is deterministic given
-  // (recipient, tokenId, tokenType) — no salt — so two builds must agree byte-for-byte.
+  // Fixed logical inputs across both builds. With PR #119, tokenId = SHA-256(CBOR(salt,
+  // networkId)) — pinning (recipient, networkId, salt, tokenType) makes two builds deterministic.
+  const networkId = this.setup.trustBase.networkId;
   const recipient = createUser().predicate;
-  const tokenId = TokenId.generate();
+  const salt = TokenSalt.generate();
   const tokenType = TokenType.generate();
   const build = async (): Promise<ICanonicalRequest> => {
-    const mintTransaction = await MintTransaction.create(recipient, tokenId, tokenType);
+    const mintTransaction = await MintTransaction.create(networkId, recipient, null, tokenType, salt);
     return buildCanonicalCertificationRequest(await CertificationData.fromMintTransaction(mintTransaction));
   };
   this.requestDeterminismStash = { first: await build(), second: await build() };

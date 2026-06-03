@@ -5,8 +5,6 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import { CertificationData } from '../../../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../../../src/api/CertificationResponse.js';
 import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
-import { TokenId } from '../../../../src/transaction/TokenId.js';
-import { TokenType } from '../../../../src/transaction/TokenType.js';
 import {
   buildCanonicalCertificationRequest,
   submitRawCertificationRequest,
@@ -82,7 +80,7 @@ function getStash(world: TokenWorld): NonNullable<TokenWorld['canonicalCborStash
 
 Given('a fresh canonical certification_request is built', async function (this: TokenWorld): Promise<void> {
   const recipient = createUser().predicate;
-  const mintTransaction = await MintTransaction.create(recipient, TokenId.generate(), TokenType.generate());
+  const mintTransaction = await MintTransaction.create(this.setup.trustBase.networkId, recipient);
   const certData = await CertificationData.fromMintTransaction(mintTransaction);
   const { bytes, stateId } = await buildCanonicalCertificationRequest(certData);
   this.canonicalCborStash = { bytes, stateId };

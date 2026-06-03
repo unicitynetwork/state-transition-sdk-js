@@ -79,6 +79,7 @@ export class TokenWorld extends World {
     decoded?: MintTransaction;
   };
   public mintTokenId!: TokenId;
+  public mintTokenSalt!: import('../../../../src/transaction/TokenSalt.js').TokenSalt;
   public mintTokenType!: TokenType;
   public readonly namedUsers: Map<string, IUser> = new Map();
   public readonly nametags: Map<IUser, UnicityIdToken> = new Map();

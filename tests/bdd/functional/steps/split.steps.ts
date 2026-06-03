@@ -7,6 +7,7 @@ import { PaymentAssetCollection } from '../../../../src/payment/asset/PaymentAss
 import { TokenAssetCountMismatchError } from '../../../../src/payment/error/TokenAssetCountMismatchError.js';
 import { TokenAssetMissingError } from '../../../../src/payment/error/TokenAssetMissingError.js';
 import { TokenAssetValueMismatchError } from '../../../../src/payment/error/TokenAssetValueMismatchError.js';
+import { SplitTokenRequest } from '../../../../src/payment/SplitTokenRequest.js';
 import { TokenSplit } from '../../../../src/payment/TokenSplit.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
 import { VerificationStatus } from '../../../../src/verification/VerificationStatus.js';
@@ -50,40 +51,46 @@ When('Alice splits the token into 2 new tokens', async function (this: TokenWorl
 });
 
 When('Alice tries to split with only 1 asset instead of 2', async function (this: TokenWorld): Promise<void> {
-  const splitTokenId = new TokenId(crypto.getRandomValues(new Uint8Array(32)));
-  const splitAssets: [TokenId, PaymentAssetCollection][] = [
-    [splitTokenId, PaymentAssetCollection.create(new Asset(this.assetId1, 100n))],
+  const requests = [
+    SplitTokenRequest.create(
+      createUser().predicate,
+      PaymentAssetCollection.create(new Asset(this.assetId1, 100n)),
+      this.token.type,
+    ),
   ];
-
   try {
-    await TokenSplit.split(this.token, parseSimplePaymentData, splitAssets);
+    await TokenSplit.split(this.token, parseSimplePaymentData, requests);
   } catch (e) {
     this.splitError = e as Error;
   }
 });
 
 When('Alice tries to split with a wrong asset ID', async function (this: TokenWorld): Promise<void> {
-  const splitTokenId = new TokenId(crypto.getRandomValues(new Uint8Array(32)));
   const wrongAssetId = createAssetId();
-  const splitAssets: [TokenId, PaymentAssetCollection][] = [
-    [splitTokenId, PaymentAssetCollection.create(new Asset(this.assetId1, 100n), new Asset(wrongAssetId, 200n))],
+  const requests = [
+    SplitTokenRequest.create(
+      createUser().predicate,
+      PaymentAssetCollection.create(new Asset(this.assetId1, 100n), new Asset(wrongAssetId, 200n)),
+      this.token.type,
+    ),
   ];
-
   try {
-    await TokenSplit.split(this.token, parseSimplePaymentData, splitAssets);
+    await TokenSplit.split(this.token, parseSimplePaymentData, requests);
   } catch (e) {
     this.splitError = e as Error;
   }
 });
 
 When('Alice tries to split with incorrect asset values', async function (this: TokenWorld): Promise<void> {
-  const splitTokenId = new TokenId(crypto.getRandomValues(new Uint8Array(32)));
-  const splitAssets: [TokenId, PaymentAssetCollection][] = [
-    [splitTokenId, PaymentAssetCollection.create(new Asset(this.assetId1, 50n), new Asset(this.assetId2, 200n))],
+  const requests = [
+    SplitTokenRequest.create(
+      createUser().predicate,
+      PaymentAssetCollection.create(new Asset(this.assetId1, 50n), new Asset(this.assetId2, 200n)),
+      this.token.type,
+    ),
   ];
-
   try {
-    await TokenSplit.split(this.token, parseSimplePaymentData, splitAssets);
+    await TokenSplit.split(this.token, parseSimplePaymentData, requests);
   } catch (e) {
     this.splitError = e as Error;
   }

@@ -25,7 +25,7 @@ import { StateId } from '../../../../src/api/StateId.js';
 import { IPredicate } from '../../../../src/predicate/IPredicate.js';
 import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../../src/transaction/Token.js';
-import { TokenId } from '../../../../src/transaction/TokenId.js';
+import { TokenSalt } from '../../../../src/transaction/TokenSalt.js';
 import { TokenType } from '../../../../src/transaction/TokenType.js';
 import {
   InclusionProofVerificationRule,
@@ -287,14 +287,16 @@ export class ShardLoadRunner {
       }
 
       attempts++;
-      const tokenIdBytes = crypto.getRandomValues(new Uint8Array(32));
+      const saltBytes = crypto.getRandomValues(new Uint8Array(32));
       const tokenTypeBytes = crypto.getRandomValues(new Uint8Array(32));
 
       // Create temporary transaction only to determine shard routing
       const mintTransaction = await MintTransaction.create(
+        this.setup.trustBase.networkId,
         recipient,
-        new TokenId(tokenIdBytes),
+        null,
         new TokenType(tokenTypeBytes),
+        TokenSalt.fromBytes(saltBytes),
       );
       const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
       const stateId = await StateId.fromCertificationData(certificationData);
@@ -303,7 +305,7 @@ export class ShardLoadRunner {
       const bucket = buckets.get(shardId)!;
       if (bucket.length < opsPerShard) {
         // Store only lightweight seeds, discard heavy transaction objects
-        bucket.push({ shardId, tokenIdBytes, tokenTypeBytes });
+        bucket.push({ saltBytes, shardId, tokenTypeBytes });
       }
 
       if (attempts % 100_000 === 0) {
@@ -574,9 +576,11 @@ export class ShardLoadRunner {
       failedPhase = 'transaction-creation';
       const recipient = this.getRecipientAddress();
       const mintTransaction = await MintTransaction.create(
+        this.setup.trustBase.networkId,
         recipient,
-        new TokenId(op.tokenIdBytes),
+        null,
         new TokenType(op.tokenTypeBytes),
+        TokenSalt.fromBytes(op.saltBytes),
       );
       const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
       const stateIdObj = await StateId.fromCertificationData(certificationData);

@@ -6,30 +6,38 @@ import { CertificationData } from '../../../../src/api/CertificationData.js';
 import { SigningService } from '../../../../src/crypto/secp256k1/SigningService.js';
 import { SignaturePredicateUnlockScript } from '../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js';
 import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
-import { TokenId } from '../../../../src/transaction/TokenId.js';
+import { TokenSalt } from '../../../../src/transaction/TokenSalt.js';
 import { TokenType } from '../../../../src/transaction/TokenType.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
 import { waitInclusionProof } from '../../../../src/util/InclusionProofUtils.js';
 import { TokenWorld } from '../support/World.js';
 
 When('the user submits a mint request for a specific token ID', async function (this: TokenWorld): Promise<void> {
-  this.mintTokenId = new TokenId(crypto.getRandomValues(new Uint8Array(32)));
+  // PR #119: tokenId is derived from (networkId, salt). Pin the salt so the second mint can
+  // reproduce the same tokenId while varying tokenType (→ different transaction hash).
+  this.mintTokenSalt = TokenSalt.generate();
   const mintTransaction = await MintTransaction.create(
+    this.setup.trustBase.networkId,
     this.user.predicate,
-    this.mintTokenId,
+    null,
     new TokenType(crypto.getRandomValues(new Uint8Array(32))),
+    this.mintTokenSalt,
   );
+  this.mintTokenId = mintTransaction.tokenId;
 
   const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
   this.firstResponse = await this.setup.client.submitCertificationRequest(certificationData);
 });
 
 When('the user submits a second mint request for the same token ID', async function (this: TokenWorld): Promise<void> {
-  // Same TokenId → same state ID, but different TokenType → different transaction hash
+  // Reuse the same salt → identical derived tokenId, but a different tokenType yields a
+  // different transaction hash; the conflict surfaces at proof time.
   const mintTransaction = await MintTransaction.create(
+    this.setup.trustBase.networkId,
     this.user.predicate,
-    this.mintTokenId,
+    null,
     new TokenType(crypto.getRandomValues(new Uint8Array(32))),
+    this.mintTokenSalt,
   );
 
   this.secondMintTransaction = mintTransaction;

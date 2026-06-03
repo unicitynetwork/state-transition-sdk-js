@@ -114,18 +114,14 @@ Then(/^the inclusion proof rejects with "([^"]+)"$/, async function (this: Token
   );
 });
 
-// aggregator-go#151 (sdk-js#118): a re-spend is rejected either at submit (STATE_ID_EXISTS,
-// finalized-dup lookup) or accepted at submit (SUCCESS) and rejected at proof time
-// (TRANSACTION_HASH_MISMATCH, skip-finalized-dup-lookup async-v2 path). Both prevent the
-// double-spend; only the rejection layer differs — so accept either.
+// aggregator-go#151 (sdk-js#118) + sdk-js#119: a re-spend is accepted at submit (SUCCESS) and
+// rejected at proof time as TRANSACTION_HASH_MISMATCH. STATE_ID_EXISTS was removed from
+// CertificationStatus in #119; the proof-time check is the only enforcement the SDK surfaces.
 Then('the duplicate transfer is rejected as a double-spend', async function (this: TokenWorld): Promise<void> {
-  if (this.certificationStatusTree === CertificationStatus.STATE_ID_EXISTS) {
-    return;
-  }
   assert.strictEqual(
     this.certificationStatusTree,
     CertificationStatus.SUCCESS,
-    `re-spend submit status should be STATE_ID_EXISTS or SUCCESS, got ${String(this.certificationStatusTree)}`,
+    `re-spend submit status should be SUCCESS, got ${String(this.certificationStatusTree)}`,
   );
   assert.ok(this.transferTransaction !== null);
   await assert.rejects(

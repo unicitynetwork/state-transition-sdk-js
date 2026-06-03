@@ -7,8 +7,6 @@ import { CertificationStatus } from '../../../../src/api/CertificationResponse.j
 import { SignaturePredicateUnlockScript } from '../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js';
 import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../../src/transaction/Token.js';
-import { TokenId } from '../../../../src/transaction/TokenId.js';
-import { TokenType } from '../../../../src/transaction/TokenType.js';
 import { TransferTransaction } from '../../../../src/transaction/TransferTransaction.js';
 import { waitInclusionProof } from '../../../../src/util/InclusionProofUtils.js';
 import { VerificationStatus } from '../../../../src/verification/VerificationStatus.js';
@@ -91,7 +89,7 @@ When(
     this.addressingMethod = method;
     this.user = sender;
 
-    const mintTransaction = await MintTransaction.create(recipientPredicate, TokenId.generate(), TokenType.generate());
+    const mintTransaction = await MintTransaction.create(this.setup.trustBase.networkId, recipientPredicate);
 
     const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
     const response = await this.setup.client.submitCertificationRequest(certificationData);

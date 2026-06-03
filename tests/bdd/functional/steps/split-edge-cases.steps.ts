@@ -7,11 +7,12 @@ import { CertificationStatus } from '../../../../src/api/CertificationResponse.j
 import { Asset } from '../../../../src/payment/asset/Asset.js';
 import { PaymentAssetCollection } from '../../../../src/payment/asset/PaymentAssetCollection.js';
 import { SplitMintJustification } from '../../../../src/payment/SplitMintJustification.js';
+import { SplitTokenRequest } from '../../../../src/payment/SplitTokenRequest.js';
 import { TokenSplit } from '../../../../src/payment/TokenSplit.js';
 import { SignaturePredicateUnlockScript } from '../../../../src/predicate/builtin/SignaturePredicateUnlockScript.js';
 import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
 import { TokenId } from '../../../../src/transaction/TokenId.js';
-import { parseSimplePaymentData, splitToken } from '../support/TestSetup.js';
+import { createUser, parseSimplePaymentData, splitToken } from '../support/TestSetup.js';
 import { TokenWorld } from '../support/World.js';
 
 When('Alice splits the token into 1 output that consumes all assets', async function (this: TokenWorld): Promise<void> {
@@ -35,14 +36,21 @@ When('Alice splits the token into 1 output that consumes all assets', async func
 When(
   'Alice splits the token into 2 outputs and remembers the first cert request',
   async function (this: TokenWorld): Promise<void> {
-    const splitTokenId1 = new TokenId(crypto.getRandomValues(new Uint8Array(32)));
-    const splitTokenId2 = new TokenId(crypto.getRandomValues(new Uint8Array(32)));
-    const splitAssets: [TokenId, PaymentAssetCollection][] = [
-      [splitTokenId1, PaymentAssetCollection.create(new Asset(this.assetId1, 60n), new Asset(this.assetId2, 120n))],
-      [splitTokenId2, PaymentAssetCollection.create(new Asset(this.assetId1, 40n), new Asset(this.assetId2, 80n))],
+    const splitRecipient = createUser();
+    const requests: SplitTokenRequest[] = [
+      SplitTokenRequest.create(
+        splitRecipient.predicate,
+        PaymentAssetCollection.create(new Asset(this.assetId1, 60n), new Asset(this.assetId2, 120n)),
+        this.token.type,
+      ),
+      SplitTokenRequest.create(
+        createUser().predicate,
+        PaymentAssetCollection.create(new Asset(this.assetId1, 40n), new Asset(this.assetId2, 80n)),
+        this.token.type,
+      ),
     ];
 
-    const splitResult = await TokenSplit.split(this.token, parseSimplePaymentData, splitAssets);
+    const splitResult = await TokenSplit.split(this.token, parseSimplePaymentData, requests);
 
     // Submit burn first.
     const burnUnlock = await SignaturePredicateUnlockScript.create(
@@ -56,12 +64,7 @@ When(
     }
 
     // Build the split-mint cert request for the FIRST split token; we will submit it twice.
-    const proofEntry = splitResult.proofs.get(splitTokenId1);
-    if (!proofEntry) {
-      throw new Error('proof missing');
-    }
-    // Bind a fresh user as the split recipient — irrelevant for the idempotency test.
-    const splitRecipient = (await import('../support/TestSetup.js')).createUser();
+    const firstSplit = splitResult.tokens[0];
 
     const justification = SplitMintJustification.create(
       await this.token.transfer(
@@ -80,15 +83,16 @@ When(
           ),
         ),
       ),
-      proofEntry.proofs,
+      firstSplit.proofs,
     );
 
     const mintTx = await MintTransaction.create(
-      splitRecipient.predicate,
-      splitTokenId1,
-      this.token.type,
+      firstSplit.networkId,
+      firstSplit.recipient,
+      firstSplit.assets.toCBOR(),
+      firstSplit.tokenType,
+      firstSplit.salt,
       justification.toCBOR(),
-      splitAssets[0][1].toCBOR(),
     );
     const mintCertData = await CertificationData.fromMintTransaction(mintTx);
 
