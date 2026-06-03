@@ -35,7 +35,7 @@
   "dependencies": {
     "@noble/curves": "2.2.0",
     "@noble/hashes": "2.2.0",
-    "uuid": "13.0.0"
+    "uuid": "13.0.2"
   },
   "devDependencies": {
     "@babel/preset-env": "7.29.2",
