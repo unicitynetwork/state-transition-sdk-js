@@ -2,19 +2,37 @@
   "version": 1,
   "networkId": 3,
   "epoch": 1,
-  "epochStartRound": 0,
+  "epochStartRound": 1,
   "rootNodes": [
     {
-      "nodeId": "16Uiu2HAkxzJRtChQuim9AB3iAfnwXTLMSJtULm9GDq37tBkmLriD",
-      "sigKey": "0x03ea54d0c6e66cc76f1b10b51e0feb4dec7f9ec7ee45be8b16640b38308b089b99",
+      "nodeId": "16Uiu2HAm2Mj1dszMPuPWofWye9jNNcQ2dEPmaNHmDtgtg5ZuQS2p",
+      "sigKey": "0x02d2df58eb2d49539c0a7422361837a0e7b33440d915d83639f63b964e4c25420f",
+      "stake": 1
+    },
+    {
+      "nodeId": "16Uiu2HAmLDvii3pMrKVYVR5JV2LNsU2E5DvuAocK2U7W2vZyLJjN",
+      "sigKey": "0x03554e00186af4d649cecf9840fc7cd852185013011d55c1d917a16243d24ef5f9",
+      "stake": 1
+    },
+    {
+      "nodeId": "16Uiu2HAmRAX3ev16JGCqzaTS91V2fCS1vMktS9soYdHnhUtnD7S5",
+      "sigKey": "0x02309f3c4881ae2de48e7361a84c968a91fe823df1c77a3ff8e6928b7b402c0965",
+      "stake": 1
+    },
+    {
+      "nodeId": "16Uiu2HAmUsjgm7rbmHUY4dyMNXMVouyafqneFbDMy3bhgS5zFJsG",
+      "sigKey": "0x0233efdf7e00e889fada77651fac8d85facaa25749676e96f6291ebaaa676f703d",
       "stake": 1
     }
   ],
-  "quorumThreshold": 1,
+  "quorumThreshold": 3,
   "stateHash": "",
   "changeRecordHash": "",
   "previousEntryHash": "",
   "signatures": {
-    "16Uiu2HAkxzJRtChQuim9AB3iAfnwXTLMSJtULm9GDq37tBkmLriD": "0x753aa47d5a1d0262b9ef326dc06946ae109a0803afda0726bdb6aaec48ce8e6f71605f6e26dd5941c692493cac45b8fcbf611153b05049c92ef2d449541e8ba201"
+    "16Uiu2HAm2Mj1dszMPuPWofWye9jNNcQ2dEPmaNHmDtgtg5ZuQS2p": "0xb0c0969aa5dba31084e32938c948b950bb4a93d733598dd2aca79d2b7255b84a127832cf99fd3679fc6626d9397ff842dbbf97b5d285987d5256769312d65e8a00",
+    "16Uiu2HAmLDvii3pMrKVYVR5JV2LNsU2E5DvuAocK2U7W2vZyLJjN": "0xc96f2f32b3a721867ef521c7289838bf3132a27330837a38ec7892814b271e6b69d2b42b67b2701c5a3c8613b0323391f55efc63f6956a6cb39db4310d099f5801",
+    "16Uiu2HAmRAX3ev16JGCqzaTS91V2fCS1vMktS9soYdHnhUtnD7S5": "0x273eef0ad35dd31e04e208a4022ced5def06d8ef1b8298b0fb50e00ed7db3b6618361d5542478c6809a2fc53987a61eb07008fd8ee87ef33f837ad2c66d43c0901",
+    "16Uiu2HAmUsjgm7rbmHUY4dyMNXMVouyafqneFbDMy3bhgS5zFJsG": "0x3f0249a03c79e1cc663df97a5882ec3531857579a7608437e8a34dddb4ef88824080755a87ec5d50214cb08200b2e81a83d3eae0ff36f6f5451548495bdeccb400"
   }
 }

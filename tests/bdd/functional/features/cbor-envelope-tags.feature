@@ -42,7 +42,7 @@ Feature: CBOR envelope tags and version slots
       | CertificationData        | 39031      | 5     | 2       |
       | InclusionProof           | 39033      | 4     | 2       |
       | InputRecord              | 39002      | 10    | 2       |
-      | MintTransaction          | 39041      | 6     | 2       |
+      | MintTransaction          | 39041      | 7     | 2       |
       | UnicityCertificate       | 39001      | 7     | 2       |
       | UnicityIdMintTransaction | 39041      | 6     | 2       |
 

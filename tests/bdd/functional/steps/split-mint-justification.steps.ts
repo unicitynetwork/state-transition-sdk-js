@@ -161,6 +161,7 @@ function mockCert(
   return {
     data: overrides.data !== undefined ? overrides.data : base.data,
     justification: overrides.justification !== undefined ? overrides.justification : base.justification,
+    networkId: base.networkId,
     tokenId: overrides.tokenId ?? base.tokenId,
   } as unknown as CertifiedMintTransaction;
 }

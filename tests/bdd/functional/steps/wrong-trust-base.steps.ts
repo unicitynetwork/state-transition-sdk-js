@@ -14,7 +14,7 @@ Then('the token fails verification against a different trust base', async functi
     changeRecordHash: null,
     epoch: '0',
     epochStartRound: '0',
-    networkId: 0,
+    networkId: 2,
     previousEntryHash: null,
     quorumThreshold: '1',
     rootNodes: [{ nodeId: 'WRONG', sigKey: HexConverter.encode(wrongSigningService.publicKey), stake: '1' }],
