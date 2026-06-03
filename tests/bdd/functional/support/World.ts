@@ -49,6 +49,12 @@ export class TokenWorld extends World {
   public daveToken!: Token;
   public dupResponseStatus?: CertificationStatus;
   public duplicateCertData?: import('../../../../src/api/CertificationData.js').CertificationData;
+  public emptyProofsStash?: {
+    decodeError?: Error;
+    rewrittenCbor?: Uint8Array;
+    thrownError?: Error;
+    token?: Token;
+  };
   public finalToken!: Token;
   public firstResponse!: CertificationResponse;
   public firstTransferTransaction!: TransferTransaction;
@@ -73,6 +79,12 @@ export class TokenWorld extends World {
   };
   public loadTestReport!: ILoadTestReport;
   public loadTestRunner!: ShardLoadRunner;
+  public mintCanonicalStash?: {
+    encoded: Uint8Array;
+    reEncoded?: Uint8Array;
+    twin?: MintTransaction;
+    twinTokenId?: TokenId;
+  };
   public mintError: Error | null = null;
   public mintFieldsStash?: {
     built: MintTransaction;
@@ -182,6 +194,11 @@ export class TokenWorld extends World {
   public user!: IUser;
   public users!: Map<string, IUser>;
   public verificationResult!: VerificationResult<VerificationStatus>;
+  public wireMutationStash?: {
+    baseline: MintTransaction;
+    tampered?: Uint8Array;
+    thrownError?: Error;
+  };
 }
 
 setWorldConstructor(TokenWorld);
