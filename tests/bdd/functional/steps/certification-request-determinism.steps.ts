@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { Then, When } from '@cucumber/cucumber';
 
 import { CertificationData } from '../../../../src/api/CertificationData.js';
+import { NetworkId } from '../../../../src/api/NetworkId.js';
 import { MintTransaction } from '../../../../src/transaction/MintTransaction.js';
 import { TokenSalt } from '../../../../src/transaction/TokenSalt.js';
 import { TokenType } from '../../../../src/transaction/TokenType.js';
@@ -20,8 +21,9 @@ function getStash(world: TokenWorld): NonNullable<TokenWorld['requestDeterminism
 
 When('the same logical mint certification_request is built twice', async function (this: TokenWorld): Promise<void> {
   // Fixed logical inputs across both builds. With PR #119, tokenId = SHA-256(CBOR(salt,
-  // networkId)) — pinning (recipient, networkId, salt, tokenType) makes two builds deterministic.
-  const networkId = this.setup.trustBase.networkId;
+  // networkId)) — pinning (networkId, recipient, salt, tokenType) makes two builds deterministic.
+  // This scenario is offline — use NetworkId.LOCAL directly instead of going through setup.
+  const networkId = NetworkId.LOCAL;
   const recipient = createUser().predicate;
   const salt = TokenSalt.generate();
   const tokenType = TokenType.generate();
