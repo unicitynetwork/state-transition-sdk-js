@@ -148,6 +148,10 @@ export class TokenWorld extends World {
     stateId?: import('../../../../src/api/StateId.js').StateId;
     wrongShardResponseStatus?: string;
   };
+  public sealIsolationStash?: {
+    mockCert?: import('../../../../src/transaction/CertifiedMintTransaction.js').CertifiedMintTransaction;
+    tamperedProof?: import('../../../../src/api/InclusionProof.js').InclusionProof;
+  };
   public secondMintTransaction!: MintTransaction;
   public secondResponse!: CertificationResponse;
   public secondTransferTransaction!: TransferTransaction;
