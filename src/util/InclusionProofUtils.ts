@@ -10,6 +10,10 @@ import {
   InclusionProofVerificationStatus,
 } from '../transaction/verification/rule/InclusionProofVerificationRule.js';
 
+/**
+ * Thrown by {@link waitInclusionProof} when the polling sleep is aborted
+ * (typically because the caller's abort signal fired).
+ */
 class SleepError extends Error {
   public constructor(message: string) {
     super(message);
@@ -31,6 +35,19 @@ function sleep(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
+/**
+ * Poll the aggregator until a valid inclusion proof for the given transaction
+ * is available, or the abort signal fires.
+ *
+ * @param {StateTransitionClient} client Client used to fetch inclusion proofs.
+ * @param {RootTrustBase} trustBase Root trust base used to verify the inclusion certificate.
+ * @param {PredicateVerifierService} predicateVerifier Verifier used to check the transaction predicate.
+ * @param {ITransaction} transaction Transaction whose inclusion is being awaited.
+ * @param {AbortSignal} signal Abort signal that terminates polling. Defaults to a 10s timeout.
+ * @param {number} interval Delay between polls in milliseconds. Defaults to 1000.
+ * @returns {Promise<InclusionProof>} Verified inclusion proof.
+ * @throws {SleepError} If the abort signal fires while sleeping between polls.
+ */
 export async function waitInclusionProof(
   client: StateTransitionClient,
   trustBase: RootTrustBase,

@@ -8,6 +8,10 @@ import { IPredicateVerifier } from '../verification/IPredicateVerifier.js';
 import { IBuiltInPredicateVerifier } from './verification/IBuiltInPredicateVerifier.js';
 import { SignaturePredicateVerifier } from './verification/SignaturePredicateVerifier.js';
 
+/**
+ * Default {@link IPredicateVerifier} for the built-in engine. Uses
+ * {@link IBuiltInPredicateVerifier} by the predicate's type id to verify it.
+ */
 export class DefaultBuiltInPredicateVerifier implements IPredicateVerifier {
   public readonly engine: PredicateEngine = PredicateEngine.BUILT_IN;
 
@@ -27,10 +31,18 @@ export class DefaultBuiltInPredicateVerifier implements IPredicateVerifier {
     this.verifiers = result;
   }
 
+  /**
+   * Create a verifier preloaded with the default built-in predicate verifiers.
+   *
+   * @returns {DefaultBuiltInPredicateVerifier} New verifier.
+   */
   public static create(): DefaultBuiltInPredicateVerifier {
     return new DefaultBuiltInPredicateVerifier([new SignaturePredicateVerifier()]);
   }
 
+  /**
+   * @inheritDoc
+   */
   public verify(
     predicate: EncodedPredicate,
     sourceStateHash: DataHash,

@@ -18,11 +18,13 @@ import { VerificationStatus } from '../../../verification/VerificationStatus.js'
  */
 export class CertifiedUnicityIdMintTransactionVerificationRule {
   /**
-   * @param trustBase          Root trust base used to verify the inclusion proof.
-   * @param predicateVerifier  Predicate verifier service.
-   * @param genesis            Certified unicity-id mint transaction to verify.
-   * @param issuerPublicKey    Trusted issuer public key to pin the lock script
-   *                           against, or `null` to skip the issuer pin.
+   * Verify the inclusion proof and (optionally) the issuer of the genesis transaction.
+   *
+   * @param {RootTrustBase} trustBase Root trust base used to verify the inclusion proof.
+   * @param {PredicateVerifierService} predicateVerifier Predicate verifier service.
+   * @param {CertifiedUnicityIdMintTransaction} genesis Certified unicity-id mint transaction to verify.
+   * @param {Uint8Array|null} issuerPublicKey Trusted issuer public key to pin the lock script against, or `null` to skip the issuer pin.
+   * @returns {Promise<VerificationResult<VerificationStatus>>} Verification outcome.
    */
   public static async verify(
     trustBase: RootTrustBase,

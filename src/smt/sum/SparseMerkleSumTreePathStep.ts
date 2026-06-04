@@ -5,12 +5,18 @@ import { BigintConverter } from '../../util/BigintConverter.js';
 import { HexConverter } from '../../util/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
 
+/**
+ * JSON shape of a {@link SparseMerkleSumTreePathStep}.
+ */
 export interface ISparseMerkleSumTreePathStepJson {
   readonly data: string | null;
   readonly path: string;
   readonly value: string;
 }
 
+/**
+ * Single step along a sparse Merkle sum tree path.
+ */
 export class SparseMerkleSumTreePathStep {
   public constructor(
     public readonly path: bigint,
@@ -26,10 +32,19 @@ export class SparseMerkleSumTreePathStep {
     }
   }
 
+  /**
+   * @returns {Uint8Array|null} Copy of the step data bytes, or `null`.
+   */
   public get data(): Uint8Array | null {
     return this._data ? new Uint8Array(this._data) : null;
   }
 
+  /**
+   * Create SparseMerkleSumTreePathStep from CBOR bytes.
+   *
+   * @param {Uint8Array} bytes CBOR bytes.
+   * @returns {SparseMerkleSumTreePathStep} Decoded step.
+   */
   public static fromCBOR(bytes: Uint8Array): SparseMerkleSumTreePathStep {
     const data = CborDeserializer.decodeArray(bytes, 3);
 
@@ -40,6 +55,13 @@ export class SparseMerkleSumTreePathStep {
     );
   }
 
+  /**
+   * Create SparseMerkleSumTreePathStep from JSON.
+   *
+   * @param {unknown} data JSON object.
+   * @returns {SparseMerkleSumTreePathStep} Decoded step.
+   * @throws {InvalidJsonStructureError} If the JSON does not match the expected shape.
+   */
   public static fromJSON(data: unknown): SparseMerkleSumTreePathStep {
     if (!SparseMerkleSumTreePathStep.isJSON(data)) {
       throw new InvalidJsonStructureError();
@@ -52,6 +74,12 @@ export class SparseMerkleSumTreePathStep {
     );
   }
 
+  /**
+   * Type guard for the JSON shape of a step.
+   *
+   * @param {unknown} data Value to test.
+   * @returns {boolean} True if `data` matches {@link ISparseMerkleSumTreePathStepJson}.
+   */
   public static isJSON(data: unknown): data is ISparseMerkleSumTreePathStepJson {
     return (
       typeof data === 'object' &&
@@ -65,6 +93,11 @@ export class SparseMerkleSumTreePathStep {
     );
   }
 
+  /**
+   * Convert SparseMerkleSumTreePathStep to CBOR bytes.
+   *
+   * @returns {Uint8Array} CBOR bytes.
+   */
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
       CborSerializer.encodeByteString(BigintConverter.encode(this.path)),
@@ -73,6 +106,9 @@ export class SparseMerkleSumTreePathStep {
     );
   }
 
+  /**
+   * @returns {string} String representation of the step.
+   */
   public toString(): string {
     return dedent`
       Merkle Tree Path Step

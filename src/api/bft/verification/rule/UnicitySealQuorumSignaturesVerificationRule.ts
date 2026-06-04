@@ -9,6 +9,13 @@ import { UnicitySeal } from '../../UnicitySeal.js';
  * Rule to verify that the UnicitySeal contains valid quorum signatures.
  */
 export class UnicitySealQuorumSignaturesVerificationRule {
+  /**
+   * Verify the unicity seal carries a quorum of valid root-node signatures.
+   *
+   * @param {RootTrustBase} trustBase Root trust base.
+   * @param {UnicitySeal} unicitySeal Seal to verify.
+   * @returns {Promise<VerificationResult<VerificationStatus>>} Verification outcome.
+   */
   public static async verify(
     trustBase: RootTrustBase,
     unicitySeal: UnicitySeal,
@@ -67,6 +74,6 @@ export class UnicitySealQuorumSignaturesVerificationRule {
       );
     }
 
-    return new VerificationResult(`SignatureVerificationRule[${nodeId}]}`, VerificationStatus.OK);
+    return new VerificationResult(`SignatureVerificationRule[${nodeId}]`, VerificationStatus.OK);
   }
 }

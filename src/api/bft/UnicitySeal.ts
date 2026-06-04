@@ -9,6 +9,7 @@ import { CborMapEntry } from '../../serialization/cbor/CborMapEntry.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../util/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
+import { NetworkId } from '../NetworkId.js';
 
 /**
  * UnicitySeal represents a seal in the Unicity BFT system, containing metadata and signatures.
@@ -18,7 +19,7 @@ export class UnicitySeal {
   private static readonly VERSION = 1n;
 
   private constructor(
-    public readonly networkId: bigint,
+    public readonly networkId: NetworkId,
     public readonly rootChainRoundNumber: bigint,
     public readonly epoch: bigint,
     public readonly timestamp: bigint,
@@ -27,26 +28,50 @@ export class UnicitySeal {
     private readonly _signatures: Map<string, Uint8Array> | null,
   ) {}
 
+  /**
+   * @returns {Uint8Array} Copy of the seal hash bytes.
+   */
   public get hash(): Uint8Array {
     return new Uint8Array(this._hash);
   }
 
+  /**
+   * @returns {Uint8Array|null} Copy of the previous-seal hash, or `null` if absent.
+   */
   public get previousHash(): Uint8Array | null {
     return this._previousHash ? new Uint8Array(this._previousHash) : null;
   }
 
+  /**
+   * @returns {Map<string, Uint8Array>|null} Copy of the signer-to-signature map, or `null` if absent.
+   */
   public get signatures(): Map<string, Uint8Array> | null {
     return this._signatures
       ? new Map(Array.from(this._signatures.entries()).map(([key, value]) => [key, new Uint8Array(value)]))
       : null;
   }
 
+  /**
+   * @returns {bigint} Wire-format version of this seal.
+   */
   public get version(): bigint {
     return UnicitySeal.VERSION;
   }
 
+  /**
+   * Create a UnicitySeal and sign it with the given signing services.
+   *
+   * @param {NetworkId} networkId Network identifier.
+   * @param {bigint} rootChainRoundNumber Root-chain round number.
+   * @param {bigint} epoch Epoch number.
+   * @param {bigint} timestamp Timestamp.
+   * @param {Uint8Array|null} _previousHash Previous-seal hash, or `null` for the first seal.
+   * @param {Uint8Array} _hash Hash being sealed.
+   * @param {Map<string, SigningService>} signers Signing services keyed by signer id.
+   * @returns {Promise<UnicitySeal>} Signed seal.
+   */
   public static async create(
-    networkId: bigint,
+    networkId: NetworkId,
     rootChainRoundNumber: bigint,
     epoch: bigint,
     timestamp: bigint,
@@ -94,7 +119,7 @@ export class UnicitySeal {
     }
 
     return new UnicitySeal(
-      CborDeserializer.decodeUnsignedInteger(data[1]),
+      NetworkId.fromId(CborDeserializer.decodeUnsignedInteger(data[1])),
       CborDeserializer.decodeUnsignedInteger(data[2]),
       CborDeserializer.decodeUnsignedInteger(data[3]),
       CborDeserializer.decodeUnsignedInteger(data[4]),
@@ -109,6 +134,9 @@ export class UnicitySeal {
     );
   }
 
+  /**
+   * @returns {Promise<DataHash>} Hash of this seal, computed without the signatures.
+   */
   public calculateHash(): Promise<DataHash> {
     return new DataHasher(HashAlgorithm.SHA256)
       .update(
@@ -135,7 +163,7 @@ export class UnicitySeal {
       UnicitySeal.CBOR_TAG,
       CborSerializer.encodeArray(
         CborSerializer.encodeUnsignedInteger(this.version),
-        CborSerializer.encodeUnsignedInteger(this.networkId),
+        CborSerializer.encodeUnsignedInteger(this.networkId.id),
         CborSerializer.encodeUnsignedInteger(this.rootChainRoundNumber),
         CborSerializer.encodeUnsignedInteger(this.epoch),
         CborSerializer.encodeUnsignedInteger(this.timestamp),

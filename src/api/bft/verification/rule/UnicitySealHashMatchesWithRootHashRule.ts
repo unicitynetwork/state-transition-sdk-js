@@ -12,6 +12,12 @@ import { UnicityCertificate } from '../../UnicityCertificate.js';
  * Rule to verify that the UnicitySeal hash matches the root hash of the UnicityTreeCertificate.
  */
 export class UnicitySealHashMatchesWithRootHashRule {
+  /**
+   * Verify the unicity seal hash matches the recomputed root hash.
+   *
+   * @param {UnicityCertificate} unicityCertificate Unicity certificate to verify.
+   * @returns {Promise<VerificationResult<VerificationStatus>>} Verification outcome.
+   */
   public static async verify(unicityCertificate: UnicityCertificate): Promise<VerificationResult<VerificationStatus>> {
     const shardTreeCertificateRootHash = await UnicityCertificate.calculateShardTreeCertificateRootHash(
       unicityCertificate.inputRecord,

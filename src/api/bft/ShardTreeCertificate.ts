@@ -33,6 +33,9 @@ export class ShardTreeCertificate {
     return this._siblingHashList.map((hash) => new Uint8Array(hash));
   }
 
+  /**
+   * @returns {bigint} Wire-format version of this certificate.
+   */
   public get version(): bigint {
     return ShardTreeCertificate.VERSION;
   }

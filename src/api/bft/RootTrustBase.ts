@@ -1,6 +1,7 @@
 import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
 import { HexConverter } from '../../util/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
+import { NetworkId } from '../NetworkId.js';
 
 /**
  * JSON representation of a root trust base node information.
@@ -67,6 +68,9 @@ export class RootTrustBaseNodeInfo {
   }
 }
 
+/**
+ * JSON shape of a {@link RootTrustBase}.
+ */
 interface IRootTrustBaseJson {
   readonly changeRecordHash: string | null;
   readonly epoch: string;
@@ -86,7 +90,7 @@ interface IRootTrustBaseJson {
 export class RootTrustBase {
   public constructor(
     public readonly version: bigint,
-    public readonly networkId: number,
+    public readonly networkId: NetworkId,
     public readonly epoch: bigint,
     public readonly epochStartRound: bigint,
     public readonly _rootNodes: RootTrustBaseNodeInfo[],
@@ -155,7 +159,7 @@ export class RootTrustBase {
 
     return new RootTrustBase(
       BigInt(input.version),
-      input.networkId,
+      NetworkId.fromId(input.networkId),
       BigInt(input.epoch),
       BigInt(input.epochStartRound),
       input.rootNodes.map((node) => RootTrustBaseNodeInfo.fromJSON(node)),
@@ -192,11 +196,14 @@ export class RootTrustBase {
     );
   }
 
+  /**
+   * @returns {string} String representation of the trust base.
+   */
   public toString(): string {
     return dedent`
     RootTrustBase:
       Version: ${this.version},
-      NetworkId: ${this.networkId},
+      NetworkId: ${this.networkId.toString()},
       Epoch: ${this.epoch},
       EpochStartRound: ${this.epochStartRound},
       RootNodes: [${this.rootNodes.map((node) => node.nodeId).join(', ')}],

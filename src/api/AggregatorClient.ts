@@ -26,7 +26,23 @@ export class AggregatorClient implements IAggregatorClient {
     this.transport = new JsonRpcHttpTransport(url);
   }
 
-  public async getBlockHeight(): Promise<bigint> {
+  /**
+   * @inheritDoc
+   */
+  public async getInclusionProof(stateId: StateId): Promise<InclusionProofResponse> {
+    const data = { stateId: HexConverter.encode(stateId.data) };
+    return InclusionProofResponse.fromCBOR(
+      HexConverter.decode((await this.transport.request('get_inclusion_proof.v2', data)) as string),
+    );
+  }
+
+  /**
+   * Query the aggregator's latest block number.
+   *
+   * @returns {Promise<bigint>} Latest block number.
+   * @throws {Error} If the response does not contain a numeric `blockNumber`.
+   */
+  public async getLatestBlockNumber(): Promise<bigint> {
     const response = await this.transport.request('get_block_height', {});
     if (
       response &&
@@ -39,16 +55,6 @@ export class AggregatorClient implements IAggregatorClient {
       return BigInt(response.blockNumber);
     }
     throw new Error('Invalid response format for block height');
-  }
-
-  /**
-   * @inheritDoc
-   */
-  public async getInclusionProof(stateId: StateId): Promise<InclusionProofResponse> {
-    const data = { stateId: HexConverter.encode(stateId.data) };
-    return InclusionProofResponse.fromCBOR(
-      HexConverter.decode((await this.transport.request('get_inclusion_proof.v2', data)) as string),
-    );
   }
 
   /**

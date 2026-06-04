@@ -23,7 +23,15 @@ export class ShardAggregatorClient implements IAggregatorClient {
       .map(([shardId, url]) => [shardId, new JsonRpcHttpTransport(url)]);
   }
 
-  public async getBlockHeight(): Promise<bigint> {
+  public async getInclusionProof(stateId: StateId): Promise<InclusionProofResponse> {
+    const transport = this.getTransport(stateId);
+    const data = { stateId: HexConverter.encode(stateId.data) };
+    return InclusionProofResponse.fromCBOR(
+      HexConverter.decode((await transport.request('get_inclusion_proof.v2', data)) as string),
+    );
+  }
+
+  public async getLatestBlockNumber(): Promise<bigint> {
     const heights = await Promise.all(
       this.shards.map(async ([, transport]) => {
         const response = await transport.request('get_block_height', {});
@@ -41,14 +49,6 @@ export class ShardAggregatorClient implements IAggregatorClient {
       }),
     );
     return heights.reduce((max, h) => (h > max ? h : max));
-  }
-
-  public async getInclusionProof(stateId: StateId): Promise<InclusionProofResponse> {
-    const transport = this.getTransport(stateId);
-    const data = { stateId: HexConverter.encode(stateId.data) };
-    return InclusionProofResponse.fromCBOR(
-      HexConverter.decode((await transport.request('get_inclusion_proof.v2', data)) as string),
-    );
   }
 
   public async submitCertificationRequest(certificationData: CertificationData): Promise<CertificationResponse> {

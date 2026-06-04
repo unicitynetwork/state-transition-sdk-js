@@ -2,6 +2,7 @@ import config from './config.json' with { type: 'json' };
 import { AggregatorClient } from '../../../src/api/AggregatorClient.js';
 import { RootTrustBase } from '../../../src/api/bft/RootTrustBase.js';
 import { CertificationData } from '../../../src/api/CertificationData.js';
+import { NetworkId } from '../../../src/api/NetworkId.js';
 import { SigningService } from '../../../src/crypto/secp256k1/SigningService.js';
 import { SignaturePredicate } from '../../../src/predicate/builtin/SignaturePredicate.js';
 import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
@@ -9,7 +10,6 @@ import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.j
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../src/transaction/Token.js';
-import { TokenId } from '../../../src/transaction/TokenId.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
 import { MintJustificationVerifierService } from '../../../src/transaction/verification/MintJustificationVerifierService.js';
 import { HexConverter } from '../../../src/util/HexConverter.js';
@@ -30,11 +30,10 @@ it('Token minting', async () => {
   const ownerPredicate = SignaturePredicate.fromSigningService(ownerSigningService);
 
   const mintTransaction = await MintTransaction.create(
+    NetworkId.LOCAL,
     ownerPredicate,
-    TokenId.generate(),
-    TokenType.generate(),
-    null,
     CborSerializer.encodeTextString('My custom data'),
+    TokenType.generate(),
   );
   const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
 

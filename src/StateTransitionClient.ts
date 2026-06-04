@@ -4,19 +4,30 @@ import { IAggregatorClient } from './api/IAggregatorClient.js';
 import { InclusionProofResponse } from './api/InclusionProofResponse.js';
 import { StateId } from './api/StateId.js';
 
+/**
+ * High-level facade over an {@link IAggregatorClient}. Provides the two
+ * operations a state-transition flow needs: fetching an inclusion proof for a
+ * known state ID and submitting a certification request.
+ */
 export class StateTransitionClient {
   public constructor(private readonly client: IAggregatorClient) {}
 
   /**
-   * Retrieves the inclusion proof for a given transaction.
+   * Retrieve the inclusion proof for a given state id.
    *
-   * @param {StateId} stateId The state ID of inclusion proof to retrieve.
-   * @return inclusion proof response from the aggregator.
+   * @param {StateId} stateId State id whose inclusion proof to retrieve.
+   * @returns {Promise<InclusionProofResponse>} Inclusion proof response from the aggregator.
    */
   public getInclusionProof(stateId: StateId): Promise<InclusionProofResponse> {
     return this.client.getInclusionProof(stateId);
   }
 
+  /**
+   * Submit a certification request derived from the given certification data.
+   *
+   * @param {CertificationData} certificationData Certification data to submit.
+   * @returns {Promise<CertificationResponse>} Certification response from the aggregator.
+   */
   public submitCertificationRequest(certificationData: CertificationData): Promise<CertificationResponse> {
     return this.client.submitCertificationRequest(certificationData);
   }

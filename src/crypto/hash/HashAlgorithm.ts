@@ -1,5 +1,9 @@
 import { HashError } from './HashError.js';
 
+/**
+ * Enumeration of supported hash algorithms. Each instance carries its
+ * protocol id, human-readable name, and output length in bytes.
+ */
 export class HashAlgorithm {
   public static readonly RIPEMD160 = new HashAlgorithm(4, 'RIPEMD-160', 20);
   public static readonly SHA224 = new HashAlgorithm(1, 'SHA-224', 28);
@@ -13,6 +17,13 @@ export class HashAlgorithm {
     public readonly length: number,
   ) {}
 
+  /**
+   * Look up the algorithm by its protocol id.
+   *
+   * @param {number} id Numeric algorithm id.
+   * @returns {HashAlgorithm} Matching algorithm.
+   * @throws {HashError} If no algorithm with the given id is registered.
+   */
   public static fromId(id: number): HashAlgorithm {
     switch (id) {
       case HashAlgorithm.SHA256.id:
@@ -30,6 +41,9 @@ export class HashAlgorithm {
     }
   }
 
+  /**
+   * @returns {string} Human-readable name of the algorithm (e.g. `SHA-256`).
+   */
   public toString(): string {
     return this.name;
   }

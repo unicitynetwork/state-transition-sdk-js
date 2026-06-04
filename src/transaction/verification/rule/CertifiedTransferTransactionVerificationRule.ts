@@ -9,6 +9,14 @@ import { CertifiedTransferTransaction } from '../../CertifiedTransferTransaction
  * Transfer transaction verification rule.
  */
 export class CertifiedTransferTransactionVerificationRule {
+  /**
+   * Verify a certified transfer transaction.
+   *
+   * @param {RootTrustBase} trustBase Root trust base.
+   * @param {PredicateVerifierService} predicateVerifier Predicate verifier service.
+   * @param {CertifiedTransferTransaction} transaction Transfer transaction to verify.
+   * @returns {Promise<VerificationResult<VerificationStatus>>} Verification outcome.
+   */
   public static async verify(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,

@@ -1,3 +1,6 @@
+/**
+ * Predicate type ids for the built-in predicate engine.
+ */
 export enum BuiltInPredicateType {
   Signature = 0x01,
   Burn = 0x02,
