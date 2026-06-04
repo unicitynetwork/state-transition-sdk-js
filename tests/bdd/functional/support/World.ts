@@ -170,6 +170,9 @@ export class TokenWorld extends World {
     shardIdEncoded?: Uint8Array;
     stateId?: import('../../../../src/api/StateId.js').StateId;
   };
+  public signatureRuleStash?: {
+    result?: VerificationResult<unknown>;
+  };
   public slotPinningStash?: {
     built: MintTransaction;
     decoded?: MintTransaction;
