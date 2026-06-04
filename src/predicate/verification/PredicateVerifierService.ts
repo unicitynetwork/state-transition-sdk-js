@@ -1,10 +1,10 @@
+import { IPredicateVerifier } from './IPredicateVerifier.js';
 import { DataHash } from '../../crypto/hash/DataHash.js';
 import { VerificationResult } from '../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../verification/VerificationStatus.js';
 import { DefaultBuiltInPredicateVerifier } from '../builtin/DefaultBuiltInPredicateVerifier.js';
-import { PredicateEngine } from '../PredicateEngine.js';
-import { IPredicateVerifier } from './IPredicateVerifier.js';
 import { EncodedPredicate } from '../EncodedPredicate.js';
+import { PredicateEngine } from '../PredicateEngine.js';
 
 /**
  * Registry that dispatches predicate verification to the right

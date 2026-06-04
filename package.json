@@ -30,6 +30,9 @@
   "author": "cryptohog",
   "license": "ISC",
   "homepage": "https://unicitynetwork.github.io/state-transition-sdk-js/",
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "@noble/curves": "2.2.0",
     "@noble/hashes": "2.2.0",
