@@ -2,8 +2,6 @@
   "name": "@unicitylabs/state-transition-sdk",
   "version": "2.0.0",
   "description": "Generic State Transition Flow engine for value-carrier agents",
-  "main": "./lib/index.js",
-  "types": "./lib/index.d.ts",
   "type": "module",
   "exports": {
     "./lib/*.js": "./lib/*.js",
