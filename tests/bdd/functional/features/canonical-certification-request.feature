@@ -17,7 +17,8 @@ Feature: Aggregator rejects non-canonical certification_request CBOR
   # is the e2e smoke that proves the control fires through the gateway.
 
   Background:
-    Given a fresh canonical certification_request is built
+    Given a mock aggregator client is set up
+    And a fresh canonical certification_request is built
 
   # Positive control — proves the raw seam itself is sound, so rejections below are due to the
   # mutation and not the transport.
