@@ -61,8 +61,8 @@ When('the CBOR is rewritten with an empty proofs array', function (this: TokenWo
 });
 
 Then(
-  'SplitMintJustification.fromCBOR should reject the empty-proofs payload',
-  async function (this: TokenWorld): Promise<void> {
+  'SplitMintJustification.fromCBOR rejects with {string}',
+  async function (this: TokenWorld, fragment: string): Promise<void> {
     const stash = getStash(this);
     assert.ok(stash.rewrittenCbor, 'rewritten CBOR missing — When step skipped?');
     try {
@@ -72,10 +72,11 @@ Then(
     }
     assert.ok(
       stash.decodeError,
-      'BUG: SplitMintJustification.fromCBOR accepted an empty proofs array, bypassing the create() invariant. ' +
-        'See split-mint-justification.feature — `SplitMintJustification.create([])` correctly throws ' +
-        '"proofs cannot be empty." but fromCBOR at SplitMintJustification.ts:58 routes around create(). ' +
-        'Fix: route fromCBOR through create() or duplicate the proofs.length>0 check.',
+      `expected fromCBOR to reject the empty-proofs payload (commit 1dbc4a0 routed it through create())`,
+    );
+    assert.ok(
+      stash.decodeError.message.toLowerCase().includes(fragment.toLowerCase()),
+      `expected error to contain "${fragment}", got "${stash.decodeError.message}"`,
     );
   },
 );
