@@ -55,7 +55,7 @@ export class SplitMintJustification {
 
     const data = CborDeserializer.decodeArray(tag.data, 2);
 
-    return new SplitMintJustification(
+    return SplitMintJustification.create(
       await Token.fromCBOR(data[0]),
       CborDeserializer.decodeArray(data[1]).map((proof) => SplitAssetProof.fromCBOR(proof)),
     );
