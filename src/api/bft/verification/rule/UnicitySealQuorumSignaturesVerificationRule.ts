@@ -75,6 +75,6 @@ export class UnicitySealQuorumSignaturesVerificationRule {
       );
     }
 
-    return new VerificationResult(`SignatureVerificationRule[${nodeId}]}`, VerificationStatus.OK);
+    return new VerificationResult(`SignatureVerificationRule[${nodeId}]`, VerificationStatus.OK);
   }
 }
