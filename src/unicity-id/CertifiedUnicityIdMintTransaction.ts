@@ -2,6 +2,7 @@ import { UnicityId } from './UnicityId.js';
 import { UnicityIdMintTransaction } from './UnicityIdMintTransaction.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { InclusionProof } from '../api/InclusionProof.js';
+import { NetworkId } from '../api/NetworkId.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { SignaturePredicate } from '../predicate/builtin/SignaturePredicate.js';
 import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
@@ -21,6 +22,8 @@ import { dedent } from '../util/StringUtils.js';
  * Unicity-id mint transaction bundled with a verified inclusion proof.
  */
 export class CertifiedUnicityIdMintTransaction implements ITransaction {
+  private readonly _brand = 'CertifiedUnicityIdMintTransaction' as const;
+
   public constructor(
     private readonly transaction: UnicityIdMintTransaction,
     public readonly inclusionProof: InclusionProof,
@@ -38,6 +41,13 @@ export class CertifiedUnicityIdMintTransaction implements ITransaction {
    */
   public get lockScript(): EncodedPredicate {
     return this.transaction.lockScript;
+  }
+
+  /**
+   * @returns {NetworkId} Network identifier of the inner transaction.
+   */
+  public get networkId(): NetworkId {
+    return this.transaction.networkId;
   }
 
   /**

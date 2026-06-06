@@ -2,6 +2,7 @@ import { CertifiedUnicityIdMintTransaction } from './CertifiedUnicityIdMintTrans
 import { UnicityId } from './UnicityId.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { InclusionProof } from '../api/InclusionProof.js';
+import { NetworkId } from '../api/NetworkId.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
@@ -25,9 +26,12 @@ export class UnicityIdMintTransaction implements ITransaction {
   public static readonly CBOR_TAG = 39041n;
   private static readonly VERSION = 1n;
 
+  private readonly _brand = 'UnicityIdMintTransaction' as const;
+
   private constructor(
     public readonly sourceStateHash: MintTransactionState,
     public readonly lockScript: EncodedPredicate,
+    public readonly networkId: NetworkId,
     public readonly recipient: EncodedPredicate,
     public readonly tokenId: TokenId,
     public readonly tokenType: TokenType,
@@ -59,6 +63,7 @@ export class UnicityIdMintTransaction implements ITransaction {
   /**
    * Create a UnicityIdMintTransaction.
    *
+   * @param {NetworkId} networkId Network identifier.
    * @param {SignaturePredicate} lockScript Issuer lock script.
    * @param {IPredicate} recipient Predicate that will lock the minted state.
    * @param {UnicityId} unicityId Unicity id being minted.
@@ -67,6 +72,7 @@ export class UnicityIdMintTransaction implements ITransaction {
    * @returns {Promise<UnicityIdMintTransaction>} New mint transaction.
    */
   public static async create(
+    networkId: NetworkId,
     lockScript: SignaturePredicate,
     recipient: IPredicate,
     unicityId: UnicityId,
@@ -78,6 +84,7 @@ export class UnicityIdMintTransaction implements ITransaction {
     return new UnicityIdMintTransaction(
       await MintTransactionState.create(tokenId),
       EncodedPredicate.fromPredicate(lockScript),
+      networkId,
       EncodedPredicate.fromPredicate(recipient),
       tokenId,
       tokenType,
@@ -99,18 +106,19 @@ export class UnicityIdMintTransaction implements ITransaction {
       throw new CborError(`Invalid CBOR tag for UnicityIdMintTransaction: ${tag.tag}`);
     }
 
-    const data = CborDeserializer.decodeArray(tag.data, 6);
+    const data = CborDeserializer.decodeArray(tag.data, 7);
     const version = CborDeserializer.decodeUnsignedInteger(data[0]);
     if (version !== UnicityIdMintTransaction.VERSION) {
       throw new CborError(`Unsupported UnicityIdMintTransaction version: ${version}`);
     }
 
     return UnicityIdMintTransaction.create(
-      SignaturePredicate.fromPredicate(EncodedPredicate.fromCBOR(data[1])),
-      EncodedPredicate.fromCBOR(data[2]),
-      UnicityId.fromCBOR(data[3]),
-      TokenType.fromCBOR(data[4]),
-      SignaturePredicate.fromPredicate(EncodedPredicate.fromCBOR(data[5])),
+      NetworkId.fromId(CborDeserializer.decodeUnsignedInteger(data[1])),
+      SignaturePredicate.fromPredicate(EncodedPredicate.fromCBOR(data[2])),
+      EncodedPredicate.fromCBOR(data[3]),
+      UnicityId.fromCBOR(data[4]),
+      TokenType.fromCBOR(data[5]),
+      SignaturePredicate.fromPredicate(EncodedPredicate.fromCBOR(data[6])),
     );
   }
 
@@ -143,6 +151,7 @@ export class UnicityIdMintTransaction implements ITransaction {
       UnicityIdMintTransaction.CBOR_TAG,
       CborSerializer.encodeArray(
         CborSerializer.encodeUnsignedInteger(this.version),
+        CborSerializer.encodeUnsignedInteger(this.networkId.id),
         this.lockScript.toCBOR(),
         this.recipient.toCBOR(),
         this.unicityId.toCBOR(),
@@ -175,6 +184,7 @@ export class UnicityIdMintTransaction implements ITransaction {
     return dedent`
       UnicityIdMintTransaction
         Version: ${this.version.toString()}
+        Network ID: ${this.networkId.toString()}
         Lock Script:
           ${this.lockScript.toString()}
         Recipient: ${this.recipient.toString()}

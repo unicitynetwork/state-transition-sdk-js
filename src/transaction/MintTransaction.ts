@@ -28,6 +28,8 @@ export class MintTransaction implements ITransaction {
   public static readonly CBOR_TAG = 39041n;
   private static readonly VERSION = 1n;
 
+  private readonly _brand = 'MintTransaction' as const;
+
   private constructor(
     public readonly sourceStateHash: MintTransactionState,
     public readonly lockScript: EncodedPredicate,

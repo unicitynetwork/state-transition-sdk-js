@@ -22,6 +22,8 @@ import {
  * Mint transaction bundled with a verified inclusion proof.
  */
 export class CertifiedMintTransaction implements ITransaction {
+  private readonly _brand = 'CertifiedMintTransaction' as const;
+
   private constructor(
     private readonly transaction: MintTransaction,
     public readonly inclusionProof: InclusionProof,
