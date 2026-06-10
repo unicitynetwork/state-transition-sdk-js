@@ -79,7 +79,7 @@ export class UnicityIdMintTransaction implements ITransaction {
     tokenType: TokenType,
     targetPredicate: SignaturePredicate,
   ): Promise<UnicityIdMintTransaction> {
-    const tokenId = await unicityId.toTokenId();
+    const tokenId = await TokenId.fromSalt(networkId, await unicityId.toTokenSalt());
 
     return new UnicityIdMintTransaction(
       await MintTransactionState.create(tokenId),
