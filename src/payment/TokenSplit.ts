@@ -51,6 +51,9 @@ export class TokenSplit {
     requests: SplitTokenRequest[],
     burnStateMask?: Uint8Array,
   ): Promise<ISplit> {
+    if (burnStateMask !== undefined && burnStateMask.length !== 32) {
+      throw new RangeError('The burnStateMask must be exactly 32 bytes long.');
+    }
     const hasher = new DataHasherFactory(HashAlgorithm.SHA256, DataHasher);
     const trees = new Map<string, [AssetId, SparseMerkleSumTree]>();
     const networkId = token.genesis.networkId;

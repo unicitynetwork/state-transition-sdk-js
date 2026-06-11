@@ -189,5 +189,10 @@ describe('SplitBuilder Functional Test', () => {
     expect(HexConverter.encode(second.burn.transaction.toCBOR())).toEqual(firstBurn);
     // The default stays random — omitting the mask must not become deterministic.
     expect(HexConverter.encode(defaulted.burn.transaction.toCBOR())).not.toEqual(firstBurn);
+
+    // A mask of the wrong length is a caller bug — rejected before any work.
+    await expect(
+      TokenSplit.split(token, TestPaymentData.decode, requests, crypto.getRandomValues(new Uint8Array(31))),
+    ).rejects.toThrow(RangeError);
   });
 });

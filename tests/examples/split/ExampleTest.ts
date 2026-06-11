@@ -58,7 +58,7 @@ it('Token splitting', async () => {
   );
 
   let response = await client.submitCertificationRequest(await CertificationData.fromMintTransaction(mintTransaction));
-  if (response.status !== CertificationStatus.SUCCESS) {
+  if (response.status !== String(CertificationStatus.SUCCESS)) {
     throw new Error(`Token mint certification failed: ${response.status}`);
   }
 
@@ -97,7 +97,7 @@ it('Token splitting', async () => {
     ),
   );
 
-  if (response.status !== CertificationStatus.SUCCESS) {
+  if (response.status !== String(CertificationStatus.SUCCESS)) {
     throw new Error(`Token certification failed: ${response.status}`);
   }
 
@@ -127,7 +127,7 @@ it('Token splitting', async () => {
     const certificationData = await CertificationData.fromMintTransaction(mintTransaction);
 
     const response = await client.submitCertificationRequest(certificationData);
-    if (response.status !== CertificationStatus.SUCCESS) {
+    if (response.status !== String(CertificationStatus.SUCCESS)) {
       throw new Error(`Token certification failed: ${response.status}`);
     }
 

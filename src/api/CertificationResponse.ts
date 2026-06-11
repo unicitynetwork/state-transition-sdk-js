@@ -40,15 +40,17 @@ export interface ICertificationResponseJson {
  * `getInclusionProof` to learn the state's actual certification, instead of failing on parse.
  */
 export class CertificationResponse {
-  public constructor(public readonly status: CertificationStatus | (string & {})) {}
+  /** The aggregator's status string. Known values are enumerated in {@link CertificationStatus};
+   * compare against those members. Unknown strings are preserved as-is. */
+  public constructor(public readonly status: string) {}
 
   /**
    * Create a new certification response.
-   * @param {CertificationStatus | string} status Certification response status (unknown strings allowed — see class doc)
+   * @param {string} status Certification response status (unknown strings allowed — see class doc)
    *
    * @returns {CertificationResponse} Created certification response
    */
-  public static create(status: CertificationStatus | (string & {})): CertificationResponse {
+  public static create(status: string): CertificationResponse {
     return new CertificationResponse(status);
   }
 
