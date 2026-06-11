@@ -20,6 +20,7 @@ import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../src/transaction/Token.js';
 import { MintJustificationVerifierService } from '../../../src/transaction/verification/MintJustificationVerifierService.js';
+import { HexConverter } from '../../../src/util/HexConverter.js';
 import { waitInclusionProof } from '../../../src/util/InclusionProofUtils.js';
 import { VerificationStatus } from '../../../src/verification/VerificationStatus.js';
 import { TestAggregatorClient } from '../TestAggregatorClient.js';
@@ -142,5 +143,51 @@ describe('SplitBuilder Functional Test', () => {
           .then((result) => result.status),
       ).resolves.toEqual(VerificationStatus.OK);
     }
+  });
+
+  it('should rebuild a byte-identical burn transaction from a caller-supplied burn state mask', async () => {
+    const aggregatorClient = TestAggregatorClient.create();
+    const trustBase = aggregatorClient.rootTrustBase;
+    const client = new StateTransitionClient(aggregatorClient);
+    const predicateVerifier = PredicateVerifierService.create();
+    const mintJustificationVerifier = new MintJustificationVerifierService();
+    mintJustificationVerifier.register(
+      new SplitMintJustificationVerifier(trustBase, predicateVerifier, TestPaymentData.decode),
+    );
+
+    const signingService = new SigningService(SigningService.generatePrivateKey());
+    const predicate = SignaturePredicate.fromSigningService(signingService);
+    const assets = [new Asset(new AssetId(crypto.getRandomValues(new Uint8Array(10))), 500n)];
+    const paymentData = new TestPaymentData(PaymentAssetCollection.create(...assets));
+    const mintTransaction = await MintTransaction.create(NetworkId.LOCAL, predicate, await paymentData.encode());
+
+    const response = await client.submitCertificationRequest(
+      await CertificationData.fromMintTransaction(mintTransaction),
+    );
+    expect(response.status).toEqual(CertificationStatus.SUCCESS);
+
+    const token = await Token.mint(
+      trustBase,
+      predicateVerifier,
+      mintJustificationVerifier,
+      await mintTransaction.toCertifiedTransaction(
+        trustBase,
+        predicateVerifier,
+        await waitInclusionProof(client, trustBase, predicateVerifier, mintTransaction),
+      ),
+    );
+
+    // Identical requests across all calls; only the burn mask determines reproducibility.
+    const requests = [SplitTokenRequest.create(predicate, PaymentAssetCollection.create(assets[0]))];
+    const burnStateMask = crypto.getRandomValues(new Uint8Array(32));
+
+    const first = await TokenSplit.split(token, TestPaymentData.decode, requests, burnStateMask);
+    const second = await TokenSplit.split(token, TestPaymentData.decode, requests, burnStateMask);
+    const defaulted = await TokenSplit.split(token, TestPaymentData.decode, requests);
+
+    const firstBurn = HexConverter.encode(first.burn.transaction.toCBOR());
+    expect(HexConverter.encode(second.burn.transaction.toCBOR())).toEqual(firstBurn);
+    // The default stays random — omitting the mask must not become deterministic.
+    expect(HexConverter.encode(defaulted.burn.transaction.toCBOR())).not.toEqual(firstBurn);
   });
 });
