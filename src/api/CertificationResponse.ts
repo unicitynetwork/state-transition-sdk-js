@@ -28,22 +28,29 @@ export enum CertificationStatus {
  * JSON shape of a certification response.
  */
 export interface ICertificationResponseJson {
-  readonly status: CertificationStatus;
+  readonly status: string;
 }
 
 /**
  * Response object returned by the aggregator on certification request.
+ *
+ * The status is deliberately tolerant: the aggregator may emit status strings unknown to this SDK
+ * version (older deployments, or statuses added later). An unknown status parses successfully and
+ * must be treated by callers as "the request was not accepted" — the caller then probes
+ * `getInclusionProof` to learn the state's actual certification, instead of failing on parse.
  */
 export class CertificationResponse {
-  public constructor(public readonly status: CertificationStatus) {}
+  /** The aggregator's status string. Known values are enumerated in {@link CertificationStatus};
+   * compare against those members. Unknown strings are preserved as-is. */
+  public constructor(public readonly status: string) {}
 
   /**
    * Create a new certification response.
-   * @param {CertificationStatus} status Certification response status
+   * @param {string} status Certification response status (unknown strings allowed — see class doc)
    *
    * @returns {CertificationResponse} Created certification response
    */
-  public static create(status: CertificationStatus): CertificationResponse {
+  public static create(status: string): CertificationResponse {
     return new CertificationResponse(status);
   }
 
@@ -74,7 +81,7 @@ export class CertificationResponse {
       data !== null &&
       'status' in data &&
       typeof data.status === 'string' &&
-      !!CertificationStatus[data.status as keyof typeof CertificationStatus]
+      data.status.length > 0
     );
   }
 

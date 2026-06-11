@@ -30,5 +30,20 @@ describe('CertificationResponse', () => {
     expect(() => CertificationResponse.fromJSON({})).toThrow(InvalidJsonStructureError);
     expect(() => CertificationResponse.fromJSON(null)).toThrow(InvalidJsonStructureError);
     expect(() => CertificationResponse.fromJSON({ status: 123 })).toThrow(InvalidJsonStructureError);
+    expect(() => CertificationResponse.fromJSON({ status: '' })).toThrow(InvalidJsonStructureError);
+  });
+
+  it('should tolerate status strings unknown to this SDK version', () => {
+    // An aggregator may emit statuses this SDK version does not know (older deployments emitting
+    // since-removed statuses, or statuses added later). Parsing must not throw; callers treat an
+    // unknown status as "not accepted" and probe the inclusion proof instead.
+    expect(CertificationResponse.isJSON({ status: 'STATE_ID_EXISTS' })).toBe(true);
+
+    const response = CertificationResponse.fromJSON({ status: 'STATE_ID_EXISTS' });
+    expect(response.status).toBe('STATE_ID_EXISTS');
+    expect(response.status).not.toBe(CertificationStatus.SUCCESS);
+
+    // Round-trips through JSON unchanged.
+    expect(CertificationResponse.fromJSON(response.toJSON()).status).toBe('STATE_ID_EXISTS');
   });
 });

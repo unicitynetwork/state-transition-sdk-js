@@ -42,7 +42,7 @@ export async function mintToken(
   const certificationData = await CertificationData.fromMintTransaction(transaction);
 
   const response = await client.submitCertificationRequest(certificationData);
-  if (response.status !== CertificationStatus.SUCCESS) {
+  if (response.status !== String(CertificationStatus.SUCCESS)) {
     throw new Error(`Certification Request failed with status '${response.status}'`);
   }
 
@@ -100,7 +100,7 @@ export async function transferTokenWithTransaction(
     await CertificationData.fromTransaction(transaction, unlockScript),
   );
 
-  if (response.status !== CertificationStatus.SUCCESS) {
+  if (response.status !== String(CertificationStatus.SUCCESS)) {
     throw new Error(`Certification Request failed with status '${response.status}'`);
   }
 

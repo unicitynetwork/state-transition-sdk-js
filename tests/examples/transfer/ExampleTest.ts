@@ -87,7 +87,7 @@ it('Token transfer', async () => {
 
   const response = await client.submitCertificationRequest(certificationData);
 
-  if (response.status !== CertificationStatus.SUCCESS) {
+  if (response.status !== String(CertificationStatus.SUCCESS)) {
     throw new Error(`Token certification failed: ${response.status}`);
   }
 

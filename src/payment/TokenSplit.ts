@@ -40,13 +40,20 @@ export class TokenSplit {
    * @param {Token} token Source token to split.
    * @param {(bytes: Uint8Array) => Promise<IPaymentData>} decodePaymentData Decoder for the source token's payment data.
    * @param {SplitTokenRequest[]} requests Per-output mint requests.
+   * @param {Uint8Array} [burnStateMask] State mask for the burn transaction. Defaults to a random
+   *   value; callers needing a crash-resumable (re-buildable) split supply a deterministically
+   *   derived mask so the identical burn transaction can be reconstructed after a failure.
    * @returns {Promise<ISplit>} Burn transaction and split tokens ready to mint.
    */
   public static async split(
     token: Token,
     decodePaymentData: (bytes: Uint8Array) => Promise<IPaymentData>,
     requests: SplitTokenRequest[],
+    burnStateMask?: Uint8Array,
   ): Promise<ISplit> {
+    if (burnStateMask !== undefined && burnStateMask.length !== 32) {
+      throw new RangeError('The burnStateMask must be exactly 32 bytes long.');
+    }
     const hasher = new DataHasherFactory(HashAlgorithm.SHA256, DataHasher);
     const trees = new Map<string, [AssetId, SparseMerkleSumTree]>();
     const networkId = token.genesis.networkId;
@@ -106,7 +113,7 @@ export class TokenSplit {
     const burnTransaction = await TransferTransaction.create(
       token,
       burnPredicate,
-      crypto.getRandomValues(new Uint8Array(32)),
+      burnStateMask ?? crypto.getRandomValues(new Uint8Array(32)),
     );
 
     const tokens: SplitToken[] = Array.from(requestsWithTokenId.values()).map(
