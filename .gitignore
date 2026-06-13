@@ -142,3 +142,10 @@ txf
 
 # docker output for integration tests
 tests/integration/docker/aggregator/mongo-data
+
+# shard-load test output artifacts
+shard-load-*.csv
+
+# local scratch — fixes shared between laptops, not for version control
+issueFix/
+issueFix.zip

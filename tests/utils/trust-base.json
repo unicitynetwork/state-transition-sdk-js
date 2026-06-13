@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "networkId": 3,
+  "epoch": 1,
+  "epochStartRound": 0,
+  "rootNodes": [
+    {
+      "nodeId": "16Uiu2HAm2FHSncv86Yrj6VEXWVKs87ExiACTaZNmcvtecBD5Veaj",
+      "sigKey": "0x02e05caa3ad6bae4b312f21243a4a5132a9a3b2178d617c8d4cae6d465b6c3e70a",
+      "stake": 1
+    }
+  ],
+  "quorumThreshold": 1,
+  "stateHash": "",
+  "changeRecordHash": "",
+  "previousEntryHash": "",
+  "signatures": {
+    "16Uiu2HAm2FHSncv86Yrj6VEXWVKs87ExiACTaZNmcvtecBD5Veaj": "0x4e93ffc8ea9ae97349a66cda792932c35ca9f724867ad57d2fbfd420dec33b8f579328cdbedc584565a2b3e3388cf12c3c1e73395ca75840156cfa7712a0846d01"
+  }
+}

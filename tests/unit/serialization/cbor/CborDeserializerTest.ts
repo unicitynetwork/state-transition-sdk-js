@@ -145,4 +145,16 @@ describe('CborDeserializer', () => {
     expect(() => CborDeserializer.decodeArray(HexConverter.decode('9E'))).toThrow('Reserved additional information 30');
     expect(() => CborDeserializer.decodeArray(HexConverter.decode('80F6'))).toThrow('Expected end of data');
   });
+
+  // PR #114 / issue #113: indefinite-length is now rejected for ARRAY and MAP too
+  // (it was already rejected for byte/text strings). 0x9F = indefinite array, 0xBF =
+  // indefinite map.
+  it('should reject indefinite-length array and map', () => {
+    expect(() => CborDeserializer.decodeArray(HexConverter.decode('9FFF'))).toThrow(
+      'Indefinite-length encoding not allowed',
+    );
+    expect(() => CborDeserializer.decodeMap(HexConverter.decode('BFFF'))).toThrow(
+      'Indefinite-length encoding not allowed',
+    );
+  });
 });

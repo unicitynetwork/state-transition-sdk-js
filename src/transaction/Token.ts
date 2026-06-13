@@ -163,6 +163,7 @@ export class Token {
   ): Promise<Token> {
     const result = await CertifiedTransferTransactionVerificationRule.verify(trustBase, predicateVerifier, transaction);
     if (result.status !== VerificationStatus.OK) {
+      console.log(result.toString());
       throw new VerificationError('Invalid transfer transaction', result);
     }
 

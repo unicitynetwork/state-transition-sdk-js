@@ -10,7 +10,11 @@ export default defineConfig(
   tsEslint.configs.recommendedTypeChecked,
   eslintConfigPrettier,
   eslintImport.flatConfigs.recommended,
-  globalIgnores(['tests/integration/docker/**']),
+  globalIgnores([
+    'tests/integration/docker/**',
+    // tsx loader-bootstrap shim for shard-load Worker thread; pure ESM, no TS to lint.
+    'tests/bdd/functional/support/ShardLoadMintWorker-bootstrap.mjs',
+  ]),
   {
     languageOptions: {
       ecmaVersion: 2018,
