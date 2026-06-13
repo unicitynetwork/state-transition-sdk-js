@@ -1,6 +1,7 @@
 import { IBuiltInPredicateVerifier } from './IBuiltInPredicateVerifier.js';
 import { RootTrustBase } from '../../../api/bft/RootTrustBase.js';
 import { DataHash } from '../../../crypto/hash/DataHash.js';
+import { TokenId } from '../../../transaction/TokenId.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
 import { EncodedPredicate } from '../../EncodedPredicate.js';
@@ -40,7 +41,7 @@ export class UnicityIdPredicateVerifier implements IBuiltInPredicateVerifier {
     const predicate = UnicityIdPredicate.fromPredicate(encodedPredicate);
     const decodedUnlockScript = await UnicityIdPredicateUnlockScript.decode(unlockScript);
 
-    const tokenId = await predicate.unicityId.toTokenId();
+    const tokenId = await TokenId.fromSalt(this.trustBase.networkId, await predicate.unicityId.toTokenSalt());
     if (!tokenId.equals(decodedUnlockScript.token.id)) {
       return new VerificationResult('UnicityIdPredicateVerifier', VerificationStatus.FAIL, 'Token ID mismatch.');
     }

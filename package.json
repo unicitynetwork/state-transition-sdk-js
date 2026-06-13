@@ -8,8 +8,8 @@
     "./lib/*": "./lib/*.js"
   },
   "scripts": {
-    "build": "tsc",
-    "build:check": "tsc --project tsconfig.eslint.json --noEmit",
+    "build": "tsc --project tsconfig.build.json",
+    "build:check": "tsc --noEmit",
     "lint": "eslint \"src/**/*\" \"tests/**/*\"",
     "lint:fix": "eslint \"src/**/*\" \"tests/**/*\" --fix",
     "test": "npm run-script test:unit",

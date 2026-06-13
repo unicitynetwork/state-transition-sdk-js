@@ -2,11 +2,11 @@ import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
-import { TokenId } from '../transaction/TokenId.js';
+import { TokenSalt } from '../transaction/TokenSalt.js';
 
 /**
  * Human-readable identifier (`@domain/name`) people use to send tokens.
- * The bound {@link TokenId} can be derived from it via {@link toTokenId}.
+ * The bound {@link TokenSalt} can be derived from it via {@link toTokenSalt}.
  */
 export class UnicityId {
   public constructor(
@@ -48,11 +48,11 @@ export class UnicityId {
   }
 
   /**
-   * Derive the {@link TokenId} bound to this unicity id.
+   * Derive the {@link TokenSalt} bound to this unicity id.
    *
-   * @returns {Promise<TokenId>} Derived token id.
+   * @returns {Promise<TokenSalt>} Derived token id.
    */
-  public async toTokenId(): Promise<TokenId> {
+  public async toTokenSalt(): Promise<TokenSalt> {
     const hash = await new DataHasher(HashAlgorithm.SHA256)
       .update(
         CborSerializer.encodeArray(
@@ -63,6 +63,6 @@ export class UnicityId {
       )
       .digest();
 
-    return new TokenId(hash.data);
+    return TokenSalt.fromBytes(hash.data);
   }
 }

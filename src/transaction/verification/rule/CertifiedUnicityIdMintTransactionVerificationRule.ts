@@ -34,6 +34,17 @@ export class CertifiedUnicityIdMintTransactionVerificationRule {
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];
 
+    if (!genesis.networkId.equals(trustBase.networkId)) {
+      results.push(new VerificationResult('MintNetworkMatchesTrustBaseRule', VerificationStatus.FAIL));
+      return new VerificationResult(
+        'CertifiedUnicityIdMintTransactionVerificationRule',
+        VerificationStatus.FAIL,
+        'Mint network does not match trust base.',
+        results,
+      );
+    }
+    results.push(new VerificationResult('MintNetworkMatchesTrustBaseRule', VerificationStatus.OK));
+
     if (issuerPublicKey !== null) {
       const expectedLockScript = EncodedPredicate.fromPredicate(SignaturePredicate.create(issuerPublicKey));
       if (!EncodedPredicate.equals(expectedLockScript, genesis.lockScript)) {

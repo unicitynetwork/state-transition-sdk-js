@@ -30,6 +30,7 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
 
       const unicityId = new UnicityId('testuser', 'unicity-labs/test');
       const unicityIdMintTransaction = await UnicityIdMintTransaction.create(
+        trustBase.networkId,
         SignaturePredicate.fromSigningService(unicityIdSigningService),
         targetPredicate,
         unicityId,
@@ -66,6 +67,8 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
         predicateVerifier,
         mintJustificationVerifier,
         aliceUnicityIdToken.genesis.targetPredicate,
+        null,
+        trustBase.networkId,
       );
 
       const bobToken = await transferToken(

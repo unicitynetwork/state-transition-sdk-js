@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "rootDir": "./src",
+    "rootDir": "./",
     "outDir": "./lib",
     "target": "es2022",
     "allowJs": true,
@@ -14,17 +14,17 @@
     "moduleResolution": "nodenext",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": false,
+    "noEmit": true,
     "declaration": true,
     "sourceMap": true,
     "types": ["jest", "node"]
   },
   "exclude": [
     "node_modules",
-    "lib",
-    "tests"
+    "lib"
   ],
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "tests/**/*.ts"
   ]
 }

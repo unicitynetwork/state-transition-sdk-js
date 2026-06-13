@@ -4,6 +4,7 @@ import { SigningService } from '../../crypto/secp256k1/SigningService.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
 import { ITransaction } from '../../transaction/ITransaction.js';
+import { TokenId } from '../../transaction/TokenId.js';
 import { UnicityIdToken } from '../../unicity-id/UnicityIdToken.js';
 import { IUnlockScript } from '../IUnlockScript.js';
 
@@ -42,7 +43,8 @@ export class UnicityIdPredicateUnlockScript implements IUnlockScript {
     signingService: SigningService,
   ): Promise<UnicityIdPredicateUnlockScript> {
     const predicate = UnicityIdPredicate.fromPredicate(transaction.lockScript);
-    if (!token.id.equals(await predicate.unicityId.toTokenId())) {
+    const tokenId = await TokenId.fromSalt(token.genesis.networkId, await predicate.unicityId.toTokenSalt());
+    if (!token.id.equals(tokenId)) {
       throw new Error('Invalid Unicity ID for transaction');
     }
 
