@@ -18,6 +18,7 @@ import { SignaturePredicateUnlockScript } from '../../../src/predicate/builtin/S
 import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
+import { StateMask } from '../../../src/transaction/StateMask.js';
 import { Token } from '../../../src/transaction/Token.js';
 import { MintJustificationVerifierService } from '../../../src/transaction/verification/MintJustificationVerifierService.js';
 import { HexConverter } from '../../../src/util/HexConverter.js';
@@ -65,7 +66,7 @@ describe('SplitBuilder Functional Test', () => {
 
     await expect(
       TokenSplit.split(token, TestPaymentData.decode, [
-        SplitTokenRequest.create(predicate, PaymentAssetCollection.create(assets[0])),
+        SplitTokenRequest.create(predicate, new TestPaymentData(PaymentAssetCollection.create(assets[0]))),
       ]),
     ).rejects.toThrow(TokenAssetCountMismatchError);
 
@@ -73,9 +74,11 @@ describe('SplitBuilder Functional Test', () => {
       TokenSplit.split(token, TestPaymentData.decode, [
         SplitTokenRequest.create(
           predicate,
-          PaymentAssetCollection.create(
-            assets[0],
-            new Asset(new AssetId(crypto.getRandomValues(new Uint8Array(10))), 400n),
+          new TestPaymentData(
+            PaymentAssetCollection.create(
+              assets[0],
+              new Asset(new AssetId(crypto.getRandomValues(new Uint8Array(10))), 400n),
+            ),
           ),
         ),
       ]),
@@ -83,13 +86,16 @@ describe('SplitBuilder Functional Test', () => {
 
     await expect(
       TokenSplit.split(token, TestPaymentData.decode, [
-        SplitTokenRequest.create(predicate, PaymentAssetCollection.create(assets[0], new Asset(assets[1].id, 1500n))),
+        SplitTokenRequest.create(
+          predicate,
+          new TestPaymentData(PaymentAssetCollection.create(assets[0], new Asset(assets[1].id, 1500n))),
+        ),
       ]),
     ).rejects.toThrow(TokenAssetValueMismatchError);
 
     const requests = [
-      SplitTokenRequest.create(predicate, PaymentAssetCollection.create(assets[0])),
-      SplitTokenRequest.create(predicate, PaymentAssetCollection.create(assets[1])),
+      SplitTokenRequest.create(predicate, new TestPaymentData(PaymentAssetCollection.create(assets[0]))),
+      SplitTokenRequest.create(predicate, new TestPaymentData(PaymentAssetCollection.create(assets[1]))),
     ];
     const result = await TokenSplit.split(token, TestPaymentData.decode, requests);
 
@@ -115,7 +121,7 @@ describe('SplitBuilder Functional Test', () => {
       const mintTransaction = await MintTransaction.create(
         splitToken.networkId,
         splitToken.recipient,
-        await new TestPaymentData(splitToken.assets).encode(),
+        await splitToken.paymentData.encode(),
         splitToken.tokenType,
         splitToken.salt,
         SplitMintJustification.create(token, splitToken.proofs).toCBOR(),
@@ -178,8 +184,10 @@ describe('SplitBuilder Functional Test', () => {
     );
 
     // Identical requests across all calls; only the burn mask determines reproducibility.
-    const requests = [SplitTokenRequest.create(predicate, PaymentAssetCollection.create(assets[0]))];
-    const burnStateMask = crypto.getRandomValues(new Uint8Array(32));
+    const requests = [
+      SplitTokenRequest.create(predicate, new TestPaymentData(PaymentAssetCollection.create(assets[0]))),
+    ];
+    const burnStateMask = StateMask.generate();
 
     const first = await TokenSplit.split(token, TestPaymentData.decode, requests, burnStateMask);
     const second = await TokenSplit.split(token, TestPaymentData.decode, requests, burnStateMask);
@@ -190,9 +198,7 @@ describe('SplitBuilder Functional Test', () => {
     // The default stays random — omitting the mask must not become deterministic.
     expect(HexConverter.encode(defaulted.burn.transaction.toCBOR())).not.toEqual(firstBurn);
 
-    // A mask of the wrong length is a caller bug — rejected before any work.
-    await expect(
-      TokenSplit.split(token, TestPaymentData.decode, requests, crypto.getRandomValues(new Uint8Array(31))),
-    ).rejects.toThrow(RangeError);
+    // A mask of the wrong length is a caller bug — the StateMask type rejects it at construction.
+    expect(() => StateMask.fromBytes(crypto.getRandomValues(new Uint8Array(31)))).toThrow();
   });
 });

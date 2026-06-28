@@ -5,6 +5,7 @@ import { TokenId } from './TokenId.js';
 import { TokenType } from './TokenType.js';
 import { MintJustificationVerifierService } from './verification/MintJustificationVerifierService.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
+import { NetworkId } from '../api/NetworkId.js';
 import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborError } from '../serialization/cbor/CborError.js';
@@ -40,6 +41,13 @@ export class Token {
    */
   public get latestTransaction(): ITransaction {
     return this._transactions.at(-1) ?? this.genesis;
+  }
+
+  /**
+   * @returns {NetworkId} Network identifier from the genesis transaction.
+   */
+  public get networkId(): NetworkId {
+    return this.genesis.networkId;
   }
 
   /**
@@ -166,7 +174,7 @@ export class Token {
       throw new VerificationError('Invalid transfer transaction', result);
     }
 
-    const transactions = this.transactions.slice();
+    const transactions = this._transactions.slice();
     transactions.push(transaction);
 
     return new Token(this.genesis, transactions);

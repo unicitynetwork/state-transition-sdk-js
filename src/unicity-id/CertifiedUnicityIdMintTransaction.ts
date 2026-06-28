@@ -10,6 +10,7 @@ import { PredicateVerifierService } from '../predicate/verification/PredicateVer
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { ITransaction } from '../transaction/ITransaction.js';
+import { StateMask } from '../transaction/StateMask.js';
 import { TokenId } from '../transaction/TokenId.js';
 import { TokenType } from '../transaction/TokenType.js';
 import {
@@ -65,9 +66,9 @@ export class CertifiedUnicityIdMintTransaction implements ITransaction {
   }
 
   /**
-   * @returns {Uint8Array} State mask of the inner transaction.
+   * @returns {StateMask} State mask of the inner transaction.
    */
-  public get stateMask(): Uint8Array {
+  public get stateMask(): StateMask {
     return this.transaction.stateMask;
   }
 

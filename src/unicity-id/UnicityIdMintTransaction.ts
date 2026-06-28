@@ -15,6 +15,7 @@ import { CborError } from '../serialization/cbor/CborError.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { ITransaction } from '../transaction/ITransaction.js';
 import { MintTransactionState } from '../transaction/MintTransactionState.js';
+import { StateMask } from '../transaction/StateMask.js';
 import { TokenId } from '../transaction/TokenId.js';
 import { TokenType } from '../transaction/TokenType.js';
 import { dedent } from '../util/StringUtils.js';
@@ -47,10 +48,10 @@ export class UnicityIdMintTransaction implements ITransaction {
   }
 
   /**
-   * @returns {Uint8Array} State mask used when computing the resulting state hash.
+   * @returns {StateMask} State mask used when computing the resulting state hash (the token identifier).
    */
-  public get stateMask(): Uint8Array {
-    return new Uint8Array(this.tokenId.bytes);
+  public get stateMask(): StateMask {
+    return StateMask.fromBytes(this.tokenId.bytes);
   }
 
   /**
@@ -130,7 +131,7 @@ export class UnicityIdMintTransaction implements ITransaction {
       .update(
         CborSerializer.encodeArray(
           CborSerializer.encodeByteString(this.sourceStateHash.imprint),
-          CborSerializer.encodeByteString(this.stateMask),
+          this.stateMask.toCBOR(),
         ),
       )
       .digest();

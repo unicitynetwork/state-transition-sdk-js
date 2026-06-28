@@ -1,5 +1,6 @@
 import { FinalizedBranch } from './FinalizedBranch.js';
 import { FinalizedLeafBranch } from './FinalizedLeafBranch.js';
+import { PendingNodeBranch } from './PendingNodeBranch.js';
 import { DataHash } from '../../crypto/hash/DataHash.js';
 import { HashAlgorithm } from '../../crypto/hash/HashAlgorithm.js';
 import { IDataHasher } from '../../crypto/hash/IDataHasher.js';
@@ -41,16 +42,8 @@ export class SparseMerkleTreeRootNode {
     }
 
     if (left != null && right != null) {
-      return new SparseMerkleTreeRootNode(
-        left,
-        right,
-        await factory
-          .create()
-          .update(new Uint8Array([0x01, 0x00]))
-          .update(left.hash.data)
-          .update(right.hash.data)
-          .digest(),
-      );
+      const node = await new PendingNodeBranch(1n, 0, left, right).finalize(factory);
+      return new SparseMerkleTreeRootNode(node.left, node.right, node.hash);
     }
 
     return new SparseMerkleTreeRootNode(null, null, new DataHash(HashAlgorithm.SHA256, new Uint8Array(32)));

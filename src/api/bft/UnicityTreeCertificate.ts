@@ -42,7 +42,7 @@ class HashStep {
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeArray(
       CborSerializer.encodeUnsignedInteger(this.key),
-      CborSerializer.encodeByteString(this.hash),
+      CborSerializer.encodeByteString(this._hash),
     );
   }
 
@@ -121,7 +121,7 @@ export class UnicityTreeCertificate {
       CborSerializer.encodeArray(
         CborSerializer.encodeUnsignedInteger(this.version),
         CborSerializer.encodeUnsignedInteger(this.partitionIdentifier),
-        CborSerializer.encodeArray(...this.steps.map((step) => step.toCBOR())),
+        CborSerializer.encodeArray(...this._steps.map((step) => step.toCBOR())),
       ),
     );
   }
@@ -136,7 +136,7 @@ export class UnicityTreeCertificate {
         Version: ${this.version}
         Partition Identifier: ${this.partitionIdentifier}
         Steps: [
-          ${this.steps.map((step) => step.toString()).join('\n')}
+          ${this._steps.map((step) => step.toString()).join('\n')}
         ]`;
   }
 }

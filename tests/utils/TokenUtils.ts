@@ -10,6 +10,7 @@ import { PredicateVerifierService } from '../../src/predicate/verification/Predi
 import { ICborSerializable } from '../../src/serialization/cbor/ICborSerializable.js';
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
 import { MintTransaction } from '../../src/transaction/MintTransaction.js';
+import { StateMask } from '../../src/transaction/StateMask.js';
 import { Token } from '../../src/transaction/Token.js';
 import { TokenSalt } from '../../src/transaction/TokenSalt.js';
 import { TokenType } from '../../src/transaction/TokenType.js';
@@ -74,9 +75,7 @@ export async function transferToken(
     throw new Error(`Token verification failed: ${result.status}`);
   }
 
-  const stateMask = crypto.getRandomValues(new Uint8Array(32));
-
-  const transaction = await TransferTransaction.create(token, recipient, stateMask);
+  const transaction = await TransferTransaction.create(token, recipient, StateMask.generate());
 
   return transferTokenWithTransaction(
     client,

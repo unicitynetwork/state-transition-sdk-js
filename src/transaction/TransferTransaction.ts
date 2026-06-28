@@ -1,5 +1,6 @@
 import { CertifiedTransferTransaction } from './CertifiedTransferTransaction.js';
 import { ITransaction } from './ITransaction.js';
+import { StateMask } from './StateMask.js';
 import { Token } from './Token.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { InclusionProof } from '../api/InclusionProof.js';
@@ -26,7 +27,7 @@ export class TransferTransaction implements ITransaction {
     public readonly sourceStateHash: DataHash,
     public readonly lockScript: EncodedPredicate,
     public readonly recipient: EncodedPredicate,
-    private readonly _stateMask: Uint8Array,
+    private readonly _stateMask: StateMask,
     private readonly _data: Uint8Array | null,
   ) {}
 
@@ -38,10 +39,10 @@ export class TransferTransaction implements ITransaction {
   }
 
   /**
-   * @returns {Uint8Array} Copy of the state mask.
+   * @returns {StateMask} The state mask.
    */
-  public get stateMask(): Uint8Array {
-    return new Uint8Array(this._stateMask);
+  public get stateMask(): StateMask {
+    return this._stateMask;
   }
 
   /**
@@ -56,17 +57,16 @@ export class TransferTransaction implements ITransaction {
    *
    * @param {Token} token Token being transferred (last transaction is used as the source).
    * @param {IPredicate} recipient Predicate that will lock the new state.
-   * @param {Uint8Array} stateMask State mask mixed into the new state hash.
+   * @param {StateMask} stateMask State mask mixed into the new state hash.
    * @param {Uint8Array|null} data Optional data payload.
    * @returns {Promise<TransferTransaction>} New transfer transaction.
    */
   public static async create(
     token: Token,
     recipient: IPredicate,
-    stateMask: Uint8Array,
+    stateMask: StateMask,
     data: Uint8Array | null = null,
   ): Promise<TransferTransaction> {
-    stateMask = new Uint8Array(stateMask);
     data = data ? new Uint8Array(data) : null;
 
     const transaction = token.latestTransaction;
@@ -102,7 +102,7 @@ export class TransferTransaction implements ITransaction {
     return TransferTransaction.create(
       token,
       EncodedPredicate.fromCBOR(data[1]),
-      CborDeserializer.decodeByteString(data[2]),
+      StateMask.fromCBOR(data[2]),
       CborDeserializer.decodeNullable(data[3], CborDeserializer.decodeByteString),
     );
   }
@@ -115,7 +115,7 @@ export class TransferTransaction implements ITransaction {
       .update(
         CborSerializer.encodeArray(
           CborSerializer.encodeByteString(this.sourceStateHash.imprint),
-          CborSerializer.encodeByteString(this._stateMask),
+          this._stateMask.toCBOR(),
         ),
       )
       .digest();
@@ -137,7 +137,7 @@ export class TransferTransaction implements ITransaction {
       CborSerializer.encodeArray(
         CborSerializer.encodeUnsignedInteger(this.version),
         this.recipient.toCBOR(),
-        CborSerializer.encodeByteString(this._stateMask),
+        this._stateMask.toCBOR(),
         CborSerializer.encodeNullable(this._data, CborSerializer.encodeByteString),
       ),
     );
@@ -170,7 +170,7 @@ export class TransferTransaction implements ITransaction {
         Lock Script: 
           ${this.lockScript.toString()}
         Recipient: ${this.recipient.toString()}
-        StateMask: ${HexConverter.encode(this._stateMask)}
+        StateMask: ${this._stateMask.toString()}
         Data: ${this._data ? HexConverter.encode(this._data) : 'null'}`;
   }
 }

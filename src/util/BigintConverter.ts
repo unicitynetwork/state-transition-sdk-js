@@ -26,17 +26,29 @@ export class BigintConverter {
   }
 
   /**
-   * Convert long to byte array
+   * Convert long to byte array.
    * @param {bigint} value long value
-   * @returns {Uint8Array} Array byte array
+   * @param {number} [length] Optional fixed output length; the result is left-padded with zero bytes.
+   * @returns {Uint8Array} Big-endian byte array, minimal or padded to `length`.
+   * @throws {RangeError} If `value` does not fit in `length` bytes.
    */
-  public static encode(value: bigint): Uint8Array {
+  public static encode(value: bigint, length?: number): Uint8Array {
     const result = [];
 
     for (let t = value; t > 0n; t >>= 8n) {
       result.unshift(Number(t & 0xffn));
     }
 
-    return new Uint8Array(result);
+    if (length == null) {
+      return new Uint8Array(result);
+    }
+
+    if (result.length > length) {
+      throw new RangeError(`Value does not fit in ${length} bytes.`);
+    }
+
+    const padded = new Uint8Array(length);
+    padded.set(result, length - result.length);
+    return padded;
   }
 }

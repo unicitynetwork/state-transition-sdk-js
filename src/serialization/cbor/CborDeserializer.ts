@@ -3,6 +3,7 @@ import { CborMap } from './CborMap.js';
 import { CborMapEntry } from './CborMapEntry.js';
 import { CborReader } from './CborReader.js';
 import { MajorType } from './MajorType.js';
+import { BigintConverter } from '../../util/BigintConverter.js';
 import { areUint8ArraysEqual } from '../../util/TypedArrayUtils.js';
 
 /**
@@ -42,6 +43,26 @@ export class CborDeserializer {
     reader.assertExhausted();
 
     return result;
+  }
+
+  /**
+   * Decode a minimally encoded big-endian CBOR byte string into a non-negative big integer.
+   *
+   * @param {Uint8Array} data CBOR bytes.
+   * @param {number} [maxByteLength] Optional maximum byte-string length.
+   * @returns {bigint} Decoded integer.
+   * @throws {CborError} If the encoding is non-minimal (leading zero byte) or exceeds `maxByteLength`.
+   */
+  public static decodeBigInteger(data: Uint8Array, maxByteLength?: number): bigint {
+    const bytes = CborDeserializer.decodeByteString(data);
+    if (bytes.length > 0 && bytes[0] === 0x00) {
+      throw new CborError('Integer byte string must be minimally encoded.');
+    }
+    if (maxByteLength != null && bytes.length > maxByteLength) {
+      throw new CborError(`Integer byte string must be at most ${maxByteLength} bytes.`);
+    }
+
+    return BigintConverter.decode(bytes);
   }
 
   /**

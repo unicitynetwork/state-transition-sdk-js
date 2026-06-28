@@ -5,7 +5,15 @@ import { HexConverter } from '../../util/HexConverter.js';
 
 /** Identifier for a asset. */
 export class AssetId {
+  public static readonly MAX_LENGTH = 128;
+  public static readonly MIN_LENGTH = 1;
+
   public constructor(private readonly _bytes: Uint8Array) {
+    if (_bytes.length < AssetId.MIN_LENGTH || _bytes.length > AssetId.MAX_LENGTH) {
+      throw new Error(
+        `AssetId must be between ${AssetId.MIN_LENGTH} and ${AssetId.MAX_LENGTH} bytes long, got ${_bytes.length}.`,
+      );
+    }
     this._bytes = new Uint8Array(_bytes);
   }
 

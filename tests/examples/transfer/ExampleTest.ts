@@ -12,6 +12,7 @@ import { PredicateVerifierService } from '../../../src/predicate/verification/Pr
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
+import { StateMask } from '../../../src/transaction/StateMask.js';
 import { Token } from '../../../src/transaction/Token.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
 import { TransferTransaction } from '../../../src/transaction/TransferTransaction.js';
@@ -76,7 +77,7 @@ it('Token transfer', async () => {
   const transferTransaction = await TransferTransaction.create(
     token,
     recipient,
-    crypto.getRandomValues(new Uint8Array(32)),
+    StateMask.generate(),
     CborSerializer.encodeTextString('My custom transfer data'),
   );
 

@@ -206,13 +206,13 @@ export class RootTrustBase {
       NetworkId: ${this.networkId.toString()},
       Epoch: ${this.epoch},
       EpochStartRound: ${this.epochStartRound},
-      RootNodes: [${this.rootNodes.map((node) => node.nodeId).join(', ')}],
+      RootNodes: [${this._rootNodes.map((node) => node.nodeId).join(', ')}],
       QuorumThreshold: ${this.quorumThreshold},
-      StateHash: ${HexConverter.encode(this.stateHash)},
-      ChangeRecordHash: ${this.changeRecordHash ? HexConverter.encode(this.changeRecordHash) : 'null'},
-      PreviousEntryHash: ${this.previousEntryHash ? HexConverter.encode(this.previousEntryHash) : 'null'},
+      StateHash: ${HexConverter.encode(this._stateHash)},
+      ChangeRecordHash: ${this._changeRecordHash ? HexConverter.encode(this._changeRecordHash) : 'null'},
+      PreviousEntryHash: ${this._previousEntryHash ? HexConverter.encode(this._previousEntryHash) : 'null'},
       Signatures: [
-        ${Array.from(this.signatures.entries())
+        ${Array.from(this._signatures.entries())
           .map(([id, sig]) => `${id}: ${HexConverter.encode(sig)}`)
           .join(', ')}
       ]`;

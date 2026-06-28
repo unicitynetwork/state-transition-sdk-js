@@ -151,8 +151,8 @@ export class UnicityCertificate {
       CborSerializer.encodeArray(
         CborSerializer.encodeUnsignedInteger(this.version),
         this.inputRecord.toCBOR(),
-        CborSerializer.encodeNullable(this.technicalRecordHash, CborSerializer.encodeByteString),
-        CborSerializer.encodeByteString(this.shardConfigurationHash),
+        CborSerializer.encodeNullable(this._technicalRecordHash, CborSerializer.encodeByteString),
+        CborSerializer.encodeByteString(this._shardConfigurationHash),
         this.shardTreeCertificate.toCBOR(),
         this.unicityTreeCertificate.toCBOR(),
         this.unicitySeal.toCBOR(),
@@ -169,8 +169,8 @@ export class UnicityCertificate {
       Unicity Certificate
         Version: ${this.version.toString()}
         ${this.inputRecord.toString()}
-        Technical Record Hash: ${this.technicalRecordHash ? HexConverter.encode(this.technicalRecordHash) : 'null'}
-        Shard Configuration Hash: ${HexConverter.encode(this.shardConfigurationHash)}
+        Technical Record Hash: ${this._technicalRecordHash ? HexConverter.encode(this._technicalRecordHash) : 'null'}
+        Shard Configuration Hash: ${HexConverter.encode(this._shardConfigurationHash)}
         ${this.shardTreeCertificate.toString()}
         ${this.unicityTreeCertificate.toString()}
         ${this.unicitySeal.toString()}`;

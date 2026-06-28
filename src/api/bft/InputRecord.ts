@@ -113,13 +113,13 @@ export class InputRecord {
         CborSerializer.encodeUnsignedInteger(this.version),
         CborSerializer.encodeUnsignedInteger(this.roundNumber),
         CborSerializer.encodeUnsignedInteger(this.epoch),
-        CborSerializer.encodeNullable(this.previousHash, CborSerializer.encodeByteString),
-        CborSerializer.encodeByteString(this.hash),
-        CborSerializer.encodeByteString(this.summaryValue),
+        CborSerializer.encodeNullable(this._previousHash, CborSerializer.encodeByteString),
+        CborSerializer.encodeByteString(this._hash),
+        CborSerializer.encodeByteString(this._summaryValue),
         CborSerializer.encodeUnsignedInteger(this.timestamp),
-        CborSerializer.encodeNullable(this.blockHash, CborSerializer.encodeByteString),
+        CborSerializer.encodeNullable(this._blockHash, CborSerializer.encodeByteString),
         CborSerializer.encodeUnsignedInteger(this.sumOfEarnedFees),
-        CborSerializer.encodeNullable(this.executedTransactionsHash, CborSerializer.encodeByteString),
+        CborSerializer.encodeNullable(this._executedTransactionsHash, CborSerializer.encodeByteString),
       ),
     );
   }

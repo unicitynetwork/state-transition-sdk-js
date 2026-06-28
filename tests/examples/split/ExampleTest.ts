@@ -76,15 +76,24 @@ it('Token splitting', async () => {
   const requests = [
     SplitTokenRequest.create(
       ownerPredicate,
-      PaymentAssetCollection.create(new Asset(new AssetId(textEncoder.encode('EUR')), 150n)),
+      new CustomPaymentData(
+        PaymentAssetCollection.create(new Asset(new AssetId(textEncoder.encode('EUR')), 150n)),
+        'split token',
+      ),
     ),
     SplitTokenRequest.create(
       ownerPredicate,
-      PaymentAssetCollection.create(new Asset(new AssetId(textEncoder.encode('EUR')), 150n)),
+      new CustomPaymentData(
+        PaymentAssetCollection.create(new Asset(new AssetId(textEncoder.encode('EUR')), 150n)),
+        'split token',
+      ),
     ),
     SplitTokenRequest.create(
       ownerPredicate,
-      PaymentAssetCollection.create(new Asset(new AssetId(textEncoder.encode('USD')), 500n)),
+      new CustomPaymentData(
+        PaymentAssetCollection.create(new Asset(new AssetId(textEncoder.encode('USD')), 500n)),
+        'split token',
+      ),
     ),
   ];
 
@@ -113,12 +122,10 @@ it('Token splitting', async () => {
 
   let i = 1;
   for (const splitToken of result.tokens) {
-    const splitPaymentData = new CustomPaymentData(splitToken.assets, 'split token');
-
     const mintTransaction = await MintTransaction.create(
       splitToken.networkId,
       splitToken.recipient,
-      await splitPaymentData.encode(),
+      await splitToken.paymentData.encode(),
       splitToken.tokenType,
       splitToken.salt,
       SplitMintJustification.create(burntToken, splitToken.proofs).toCBOR(),
