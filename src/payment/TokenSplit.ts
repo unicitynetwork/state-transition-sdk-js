@@ -8,6 +8,7 @@ import { SplitManifest } from './SplitManifest.js';
 import { SplitMintJustification } from './SplitMintJustification.js';
 import { SplitToken } from './SplitToken.js';
 import { SplitTokenRequest } from './SplitTokenRequest.js';
+import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { DataHasherFactory } from '../crypto/hash/DataHasherFactory.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
@@ -102,7 +103,7 @@ export class TokenSplit {
       throw new TokenAssetCountMismatchError();
     }
 
-    const roots: Uint8Array[] = [];
+    const roots: DataHash[] = [];
     const rootByAsset = new Map<string, SparseMerkleSumTreeRootNode>();
     for (const asset of sourceAssets) {
       const assetKey = HexConverter.encode(asset.id.bytes);
@@ -116,7 +117,7 @@ export class TokenSplit {
         throw new TokenAssetValueMismatchError(asset.id, asset.value, root.value);
       }
 
-      roots.push(root.hash.data);
+      roots.push(root.hash);
       rootByAsset.set(assetKey, root);
     }
 

@@ -1,3 +1,5 @@
+import { DataHash } from '../crypto/hash/DataHash.js';
+import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborError } from '../serialization/cbor/CborError.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
@@ -7,37 +9,35 @@ import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
  * per-asset sum-tree root hashes, positionally aligned with the source token's
  * assets in canonical order. The certified burn transfer carries the manifest as
  * its auxiliary data, and the burn reason is the SHA-256 of its canonical encoding.
+ *
+ * Roots are exposed as {@link DataHash} instances, so the digest length is
+ * enforced by the hash type. On the wire each root is encoded as its raw digest
+ * bytes (no algorithm imprint); decoding reconstructs SHA-256 hashes.
  */
 export class SplitManifest {
   public static readonly CBOR_TAG = 39046n;
 
-  private constructor(private readonly _roots: Uint8Array[]) {
-    this._roots = _roots.map((root) => new Uint8Array(root));
+  private constructor(private readonly _roots: DataHash[]) {
+    this._roots = _roots.slice();
   }
 
   /**
-   * @returns {Uint8Array[]} Copy of the per-asset RSMST root digests.
+   * @returns {DataHash[]} Copy of the per-asset RSMST root hashes.
    */
-  public get roots(): Uint8Array[] {
-    return this._roots.map((root) => new Uint8Array(root));
+  public get roots(): DataHash[] {
+    return this._roots.slice();
   }
 
   /**
-   * Create a SplitManifest from per-asset root digests.
+   * Create a SplitManifest from per-asset root hashes.
    *
-   * @param {Uint8Array[]} roots Raw 32-byte RSMST root digests in canonical source-asset order.
+   * @param {DataHash[]} roots RSMST root hashes in canonical source-asset order.
    * @returns {SplitManifest} New manifest.
-   * @throws {Error} If `roots` is empty or any root is not 32 bytes.
+   * @throws {Error} If `roots` is empty.
    */
-  public static create(roots: Uint8Array[]): SplitManifest {
+  public static create(roots: DataHash[]): SplitManifest {
     if (roots.length === 0) {
       throw new Error('Split manifest must contain at least one root.');
-    }
-
-    for (const root of roots) {
-      if (root.length !== 32) {
-        throw new Error('Each split manifest root must be a 32-byte digest.');
-      }
     }
 
     return new SplitManifest(roots);
@@ -58,11 +58,11 @@ export class SplitManifest {
 
     const roots = CborDeserializer.decodeArray(tag.data).map((root) => {
       const digest = CborDeserializer.decodeByteString(root);
-      if (digest.length !== 32) {
-        throw new CborError('Each split manifest root must be a 32-byte digest.');
+      if (digest.length !== HashAlgorithm.SHA256.length) {
+        throw new CborError('Each split manifest root must be a SHA-256 digest.');
       }
 
-      return digest;
+      return new DataHash(HashAlgorithm.SHA256, digest);
     });
 
     return SplitManifest.create(roots);
@@ -76,7 +76,7 @@ export class SplitManifest {
   public toCBOR(): Uint8Array {
     return CborSerializer.encodeTag(
       SplitManifest.CBOR_TAG,
-      CborSerializer.encodeArray(...this._roots.map((root) => CborSerializer.encodeByteString(root))),
+      CborSerializer.encodeArray(...this._roots.map((root) => CborSerializer.encodeByteString(root.data))),
     );
   }
 }

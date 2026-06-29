@@ -2,7 +2,6 @@ import { IPaymentData } from './IPaymentData.js';
 import { SplitManifest } from './SplitManifest.js';
 import { SplitMintJustification } from './SplitMintJustification.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
-import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { BurnPredicate } from '../predicate/builtin/BurnPredicate.js';
@@ -134,7 +133,7 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
         transaction.tokenId.bytes,
         leafData,
         asset.value,
-        new DataHash(HashAlgorithm.SHA256, root),
+        root,
         sourceAsset.value,
       );
       if (!isProofValid) {
