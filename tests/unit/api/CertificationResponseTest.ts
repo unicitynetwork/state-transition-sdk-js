@@ -1,5 +1,5 @@
 import { CertificationResponse, CertificationStatus } from '../../../src/api/CertificationResponse.js';
-import { InvalidJsonStructureError } from '../../../src/InvalidJsonStructureError.js';
+import { InvalidJsonStructureError } from '../../../src/serialization/json/InvalidJsonStructureError.js';
 
 describe('CertificationResponse', () => {
   it('should encode and decode JSON to exactly same object', () => {

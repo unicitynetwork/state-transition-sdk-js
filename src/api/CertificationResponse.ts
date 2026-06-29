@@ -1,4 +1,4 @@
-import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
+import { InvalidJsonStructureError } from '../serialization/json/InvalidJsonStructureError.js';
 
 /**
  * Possible results from the aggregator when submitting a certification request.
