@@ -4,23 +4,26 @@ import { HexConverter } from '../util/HexConverter.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 
 /**
- * 32-byte salt mixed with a network identifier to derive a {@link TokenId}.
+ * Variable-length salt (at least 128 bits of entropy) mixed with a network
+ * identifier to derive a {@link TokenId}.
  */
 export class TokenSalt {
   public static readonly LENGTH = 32;
+  public static readonly MIN_LENGTH = 16;
 
   private constructor(private readonly _bytes: Uint8Array) {}
 
   /**
-   * Wrap an existing 32-byte salt.
+   * Wrap an existing salt. The salt is variable-length but must carry at least
+   * 128 bits of entropy, so it must be at least {@link TokenSalt.MIN_LENGTH} bytes.
    *
-   * @param {Uint8Array} bytes Salt bytes; must be exactly 32 bytes.
+   * @param {Uint8Array} bytes Salt bytes; must be at least 16 bytes.
    * @returns {TokenSalt} New salt.
-   * @throws {Error} If `bytes` is not 32 bytes long.
+   * @throws {Error} If `bytes` is shorter than {@link TokenSalt.MIN_LENGTH}.
    */
   public static fromBytes(bytes: Uint8Array): TokenSalt {
-    if (bytes.length !== TokenSalt.LENGTH) {
-      throw new Error(`TokenSalt must be ${TokenSalt.LENGTH} bytes long, got ${bytes.length}.`);
+    if (bytes.length < TokenSalt.MIN_LENGTH) {
+      throw new Error(`TokenSalt must be at least ${TokenSalt.MIN_LENGTH} bytes (128 bits), got ${bytes.length}.`);
     }
     return new TokenSalt(new Uint8Array(bytes));
   }
