@@ -29,14 +29,19 @@ export class Signature implements ISignature {
    *
    * @param {Uint8Array} bytes 64 signature bytes followed by recovery byte.
    * @returns {Signature} Decoded signature.
-   * @throws {Error} If the input is not 65 bytes long.
+   * @throws {Error} If the input is not 65 bytes long or the recovery id is out of range (0–3).
    */
   public static decode(bytes: Uint8Array): Signature {
     if (bytes.length !== 65) {
       throw new Error('Signature must contain signature and recovery byte.');
     }
 
-    return new Signature(bytes.slice(0, -1), bytes[bytes.length - 1]);
+    const recovery = bytes[bytes.length - 1];
+    if (recovery > 3) {
+      throw new Error(`Invalid signature recovery id: ${recovery}.`);
+    }
+
+    return new Signature(bytes.slice(0, -1), recovery);
   }
 
   /**
