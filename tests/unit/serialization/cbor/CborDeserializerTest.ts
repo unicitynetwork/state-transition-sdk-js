@@ -145,4 +145,13 @@ describe('CborDeserializer', () => {
     expect(() => CborDeserializer.decodeArray(HexConverter.decode('9E'))).toThrow('Reserved additional information 30');
     expect(() => CborDeserializer.decodeArray(HexConverter.decode('80F6'))).toThrow('Expected end of data');
   });
+
+  it('should reject non-minimal big integer encodings', () => {
+    // CBOR byte strings: 4105 = [0x05], 40 = [] (zero), 420005 = [0x00, 0x05] (non-minimal).
+    expect(CborDeserializer.decodeBigInteger(HexConverter.decode('4105'))).toEqual(5n);
+    expect(CborDeserializer.decodeBigInteger(HexConverter.decode('40'))).toEqual(0n);
+    expect(() => CborDeserializer.decodeBigInteger(HexConverter.decode('420005'))).toThrow(
+      'Integer byte string must be minimally encoded',
+    );
+  });
 });
