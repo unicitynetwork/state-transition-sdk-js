@@ -10,6 +10,7 @@ import { PredicateVerifierService } from '../predicate/verification/PredicateVer
 import { CertifiedMintTransaction } from '../transaction/CertifiedMintTransaction.js';
 import { IMintJustificationVerifier } from '../transaction/verification/IMintJustificationVerifier.js';
 import { MintJustificationVerifierService } from '../transaction/verification/MintJustificationVerifierService.js';
+import { TokenIssuanceVerifierService } from '../transaction/verification/TokenIssuanceVerifierService.js';
 import { HexConverter } from '../util/HexConverter.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 import { VerificationResult } from '../verification/VerificationResult.js';
@@ -29,6 +30,7 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
     private readonly trustBase: RootTrustBase,
     private readonly predicateVerifier: PredicateVerifierService,
     private readonly decodePaymentData: (bytes: Uint8Array) => Promise<IPaymentData>,
+    private readonly tokenIssuanceVerifier: TokenIssuanceVerifierService,
   ) {}
 
   /**
@@ -68,6 +70,7 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
       this.trustBase,
       this.predicateVerifier,
       mintJustificationVerifier,
+      this.tokenIssuanceVerifier,
     );
     if (burntTokenResult.status !== VerificationStatus.OK) {
       return SplitMintJustificationVerifier.fail('Burnt source token verification failed.', [burntTokenResult]);

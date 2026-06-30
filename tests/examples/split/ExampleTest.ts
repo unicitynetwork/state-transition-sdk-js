@@ -21,6 +21,7 @@ import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../src/transaction/Token.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
 import { MintJustificationVerifierService } from '../../../src/transaction/verification/MintJustificationVerifierService.js';
+import { TokenIssuanceVerifierService } from '../../../src/transaction/verification/TokenIssuanceVerifierService.js';
 import { HexConverter } from '../../../src/util/HexConverter.js';
 import { waitInclusionProof } from '../../../src/util/InclusionProofUtils.js';
 import trustBaseJson from '../trust-base.json' with { type: 'json' };
@@ -33,8 +34,9 @@ it('Token splitting', async () => {
 
   const predicateVerifier = PredicateVerifierService.create();
   const mintJustificationVerifier = new MintJustificationVerifierService();
+  const tokenIssuanceVerifier = new TokenIssuanceVerifierService();
   mintJustificationVerifier.register(
-    new SplitMintJustificationVerifier(trustBase, predicateVerifier, CustomPaymentData.decode),
+    new SplitMintJustificationVerifier(trustBase, predicateVerifier, CustomPaymentData.decode, tokenIssuanceVerifier),
   );
 
   const ownerPrivateKey = HexConverter.decode(config.ownerPrivateKey);
@@ -66,6 +68,7 @@ it('Token splitting', async () => {
     trustBase,
     predicateVerifier,
     mintJustificationVerifier,
+    tokenIssuanceVerifier,
     await mintTransaction.toCertifiedTransaction(
       trustBase,
       predicateVerifier,
@@ -142,6 +145,7 @@ it('Token splitting', async () => {
       trustBase,
       predicateVerifier,
       mintJustificationVerifier,
+      tokenIssuanceVerifier,
       await mintTransaction.toCertifiedTransaction(
         trustBase,
         predicateVerifier,

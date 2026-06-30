@@ -4,6 +4,7 @@ import { ITransaction } from './ITransaction.js';
 import { TokenId } from './TokenId.js';
 import { TokenType } from './TokenType.js';
 import { MintJustificationVerifierService } from './verification/MintJustificationVerifierService.js';
+import { TokenIssuanceVerifierService } from './verification/TokenIssuanceVerifierService.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { NetworkId } from '../api/NetworkId.js';
 import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
@@ -107,6 +108,7 @@ export class Token {
    * @param {RootTrustBase} trustBase Root trust base used to verify the inclusion certificate.
    * @param {PredicateVerifierService} predicateVerifier Verifier for embedded predicates.
    * @param {MintJustificationVerifierService} mintJustificationVerifier Verifier for the mint justification.
+   * @param {TokenIssuanceVerifierService} tokenIssuanceVerifier Verifier for the token type's issuance policy.
    * @param {CertifiedMintTransaction} genesis Genesis mint transaction.
    * @returns {Promise<Token>} New token.
    * @throws {VerificationError} If the genesis does not verify.
@@ -115,10 +117,11 @@ export class Token {
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,
     mintJustificationVerifier: MintJustificationVerifierService,
+    tokenIssuanceVerifier: TokenIssuanceVerifierService,
     genesis: CertifiedMintTransaction,
   ): Promise<Token> {
     const token = new Token(genesis);
-    const result = await token.verify(trustBase, predicateVerifier, mintJustificationVerifier);
+    const result = await token.verify(trustBase, predicateVerifier, mintJustificationVerifier, tokenIssuanceVerifier);
     if (result.status !== VerificationStatus.OK) {
       throw new VerificationError('Invalid token genesis', result);
     }
@@ -186,18 +189,21 @@ export class Token {
    * @param {RootTrustBase} trustBase Root trust base used to verify inclusion certificates.
    * @param {PredicateVerifierService} predicateVerifier Verifier for embedded predicates.
    * @param {MintJustificationVerifierService} mintJustificationVerifier Verifier for the mint justification.
+   * @param {TokenIssuanceVerifierService} tokenIssuanceVerifier Verifier for the token type's issuance policy.
    * @returns {Promise<VerificationResult<VerificationStatus>>} Aggregated verification result.
    */
   public async verify(
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,
     mintJustificationVerifier: MintJustificationVerifierService,
+    tokenIssuanceVerifier: TokenIssuanceVerifierService,
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];
     const result = await CertifiedMintTransactionVerificationRule.verify(
       trustBase,
       predicateVerifier,
       mintJustificationVerifier,
+      tokenIssuanceVerifier,
       this.genesis,
     );
     results.push(result);

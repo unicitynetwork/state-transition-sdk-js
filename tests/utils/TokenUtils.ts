@@ -16,6 +16,7 @@ import { TokenSalt } from '../../src/transaction/TokenSalt.js';
 import { TokenType } from '../../src/transaction/TokenType.js';
 import { TransferTransaction } from '../../src/transaction/TransferTransaction.js';
 import { MintJustificationVerifierService } from '../../src/transaction/verification/MintJustificationVerifierService.js';
+import { TokenIssuanceVerifierService } from '../../src/transaction/verification/TokenIssuanceVerifierService.js';
 import { waitInclusionProof } from '../../src/util/InclusionProofUtils.js';
 import { VerificationStatus } from '../../src/verification/VerificationStatus.js';
 
@@ -24,6 +25,7 @@ export async function mintToken(
   trustBase: RootTrustBase,
   predicateVerifier: PredicateVerifierService,
   mintJustificationVerifier: MintJustificationVerifierService,
+  tokenIssuanceVerifier: TokenIssuanceVerifierService,
   recipient: IPredicate,
   data: Uint8Array | null = null,
   networkId: NetworkId = NetworkId.LOCAL,
@@ -51,6 +53,7 @@ export async function mintToken(
     trustBase,
     predicateVerifier,
     mintJustificationVerifier,
+    tokenIssuanceVerifier,
     await transaction.toCertifiedTransaction(
       trustBase,
       predicateVerifier,
@@ -64,12 +67,13 @@ export async function transferToken(
   trustBase: RootTrustBase,
   predicateVerifier: PredicateVerifierService,
   mintJustificationVerifier: MintJustificationVerifierService,
+  tokenIssuanceVerifier: TokenIssuanceVerifierService,
   tokenBytes: Uint8Array,
   recipient: IPredicate,
   signingService: SigningService,
 ): Promise<Token> {
   const token = await Token.fromCBOR(tokenBytes);
-  const result = await token.verify(trustBase, predicateVerifier, mintJustificationVerifier);
+  const result = await token.verify(trustBase, predicateVerifier, mintJustificationVerifier, tokenIssuanceVerifier);
 
   if (result.status !== VerificationStatus.OK) {
     throw new Error(`Token verification failed: ${result.status}`);

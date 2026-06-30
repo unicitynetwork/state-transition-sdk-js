@@ -17,6 +17,7 @@ import { Token } from '../../../src/transaction/Token.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
 import { TransferTransaction } from '../../../src/transaction/TransferTransaction.js';
 import { MintJustificationVerifierService } from '../../../src/transaction/verification/MintJustificationVerifierService.js';
+import { TokenIssuanceVerifierService } from '../../../src/transaction/verification/TokenIssuanceVerifierService.js';
 import { HexConverter } from '../../../src/util/HexConverter.js';
 import { waitInclusionProof } from '../../../src/util/InclusionProofUtils.js';
 import { VerificationStatus } from '../../../src/verification/VerificationStatus.js';
@@ -25,6 +26,7 @@ import trustBaseJson from '../trust-base.json' with { type: 'json' };
 async function receiveToken(client: StateTransitionClient, trustBase: RootTrustBase): Promise<string> {
   const predicateVerifier = PredicateVerifierService.create();
   const mintJustificationVerifier = new MintJustificationVerifierService();
+  const tokenIssuanceVerifier = new TokenIssuanceVerifierService();
 
   const ownerPrivateKey = HexConverter.decode(config.ownerPrivateKey);
   const ownerSigningService = new SigningService(ownerPrivateKey);
@@ -44,6 +46,7 @@ async function receiveToken(client: StateTransitionClient, trustBase: RootTrustB
     trustBase,
     predicateVerifier,
     mintJustificationVerifier,
+    tokenIssuanceVerifier,
     await mintTransaction.toCertifiedTransaction(
       trustBase,
       predicateVerifier,
@@ -60,6 +63,7 @@ it('Token transfer', async () => {
   const client = new StateTransitionClient(aggregatorClient);
   const predicateVerifier = PredicateVerifierService.create();
   const mintJustificationVerifier = new MintJustificationVerifierService();
+  const tokenIssuanceVerifier = new TokenIssuanceVerifierService();
 
   const ownerPrivateKey = HexConverter.decode(config.ownerPrivateKey);
   const ownerSigningService = new SigningService(ownerPrivateKey);
@@ -67,7 +71,7 @@ it('Token transfer', async () => {
   const tokenCBOR = HexConverter.decode(await receiveToken(client, trustBase));
 
   const token = await Token.fromCBOR(tokenCBOR);
-  const result = await token.verify(trustBase, predicateVerifier, mintJustificationVerifier);
+  const result = await token.verify(trustBase, predicateVerifier, mintJustificationVerifier, tokenIssuanceVerifier);
   if (result.status !== VerificationStatus.OK) {
     throw new Error(`Token verification failed: ${result.status}`);
   }

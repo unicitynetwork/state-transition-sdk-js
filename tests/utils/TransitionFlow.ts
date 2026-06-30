@@ -9,6 +9,7 @@ import { PredicateVerifierService } from '../../src/predicate/verification/Predi
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
 import { TokenType } from '../../src/transaction/TokenType.js';
 import { MintJustificationVerifierService } from '../../src/transaction/verification/MintJustificationVerifierService.js';
+import { TokenIssuanceVerifierService } from '../../src/transaction/verification/TokenIssuanceVerifierService.js';
 import { UnicityId } from '../../src/unicity-id/UnicityId.js';
 import { UnicityIdMintTransaction } from '../../src/unicity-id/UnicityIdMintTransaction.js';
 import { UnicityIdToken } from '../../src/unicity-id/UnicityIdToken.js';
@@ -25,6 +26,7 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
       const unicityIdSigningService = new SigningService(SigningService.generatePrivateKey());
       const predicateVerifier = PredicateVerifierService.create();
       const mintJustificationVerifier = new MintJustificationVerifierService();
+      const tokenIssuanceVerifier = new TokenIssuanceVerifierService();
 
       const targetPredicate = SignaturePredicate.create(ALICE_SIGNING_SERVICE.publicKey);
 
@@ -66,6 +68,7 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
         trustBase,
         predicateVerifier,
         mintJustificationVerifier,
+        tokenIssuanceVerifier,
         aliceUnicityIdToken.genesis.targetPredicate,
         null,
         trustBase.networkId,
@@ -76,6 +79,7 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
         trustBase,
         predicateVerifier,
         mintJustificationVerifier,
+        tokenIssuanceVerifier,
         aliceToken.toCBOR(),
         SignaturePredicate.create(BOB_SIGNING_SERVICE.publicKey),
         ALICE_SIGNING_SERVICE,
@@ -86,13 +90,16 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
         trustBase,
         predicateVerifier,
         mintJustificationVerifier,
+        tokenIssuanceVerifier,
         bobToken.toCBOR(),
         SignaturePredicate.create(CAROL_SIGNING_SERVICE.publicKey),
         BOB_SIGNING_SERVICE,
       );
 
       await expect(
-        carolToken.verify(trustBase, predicateVerifier, mintJustificationVerifier).then((result) => result.status),
+        carolToken
+          .verify(trustBase, predicateVerifier, mintJustificationVerifier, tokenIssuanceVerifier)
+          .then((result) => result.status),
       ).resolves.toEqual(VerificationStatus.OK);
     }, 30000);
   });

@@ -8,6 +8,7 @@ import { VerificationResult } from '../../../verification/VerificationResult.js'
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
 import { CertifiedMintTransaction } from '../../CertifiedMintTransaction.js';
 import { MintJustificationVerifierService } from '../MintJustificationVerifierService.js';
+import { TokenIssuanceVerifierService } from '../TokenIssuanceVerifierService.js';
 
 /**
  * Genesis verification rule.
@@ -19,6 +20,7 @@ export class CertifiedMintTransactionVerificationRule {
    * @param {RootTrustBase} trustBase Root trust base used to verify the inclusion proof.
    * @param {PredicateVerifierService} predicateVerifier Predicate verifier service.
    * @param {MintJustificationVerifierService} mintJustificationVerifier Verifier for the mint justification.
+   * @param {TokenIssuanceVerifierService} tokenIssuanceVerifier Verifier for the token type's issuance policy.
    * @param {CertifiedMintTransaction} genesis Certified mint transaction to verify.
    * @returns {Promise<VerificationResult<VerificationStatus>>} Verification outcome.
    */
@@ -26,6 +28,7 @@ export class CertifiedMintTransactionVerificationRule {
     trustBase: RootTrustBase,
     predicateVerifier: PredicateVerifierService,
     mintJustificationVerifier: MintJustificationVerifierService,
+    tokenIssuanceVerifier: TokenIssuanceVerifierService,
     genesis: CertifiedMintTransaction,
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];
@@ -66,6 +69,17 @@ export class CertifiedMintTransactionVerificationRule {
         'CertifiedMintTransactionVerificationRule',
         VerificationStatus.FAIL,
         `Inclusion proof verification failed: ${result.status?.toString()}`,
+        results,
+      );
+    }
+
+    result = await tokenIssuanceVerifier.verify(genesis);
+    results.push(result);
+    if (result.status !== VerificationStatus.OK) {
+      return new VerificationResult(
+        'CertifiedMintTransactionVerificationRule',
+        VerificationStatus.FAIL,
+        'Invalid token issuance',
         results,
       );
     }

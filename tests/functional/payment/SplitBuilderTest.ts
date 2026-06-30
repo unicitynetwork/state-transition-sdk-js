@@ -21,6 +21,7 @@ import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { StateMask } from '../../../src/transaction/StateMask.js';
 import { Token } from '../../../src/transaction/Token.js';
 import { MintJustificationVerifierService } from '../../../src/transaction/verification/MintJustificationVerifierService.js';
+import { TokenIssuanceVerifierService } from '../../../src/transaction/verification/TokenIssuanceVerifierService.js';
 import { HexConverter } from '../../../src/util/HexConverter.js';
 import { waitInclusionProof } from '../../../src/util/InclusionProofUtils.js';
 import { VerificationStatus } from '../../../src/verification/VerificationStatus.js';
@@ -33,8 +34,9 @@ describe('SplitBuilder Functional Test', () => {
     const client = new StateTransitionClient(aggregatorClient);
     const predicateVerifier = PredicateVerifierService.create();
     const mintJustificationVerifier = new MintJustificationVerifierService();
+    const tokenIssuanceVerifier = new TokenIssuanceVerifierService();
     mintJustificationVerifier.register(
-      new SplitMintJustificationVerifier(trustBase, predicateVerifier, TestPaymentData.decode),
+      new SplitMintJustificationVerifier(trustBase, predicateVerifier, TestPaymentData.decode, tokenIssuanceVerifier),
     );
 
     const signingService = new SigningService(SigningService.generatePrivateKey());
@@ -57,6 +59,7 @@ describe('SplitBuilder Functional Test', () => {
       trustBase,
       predicateVerifier,
       mintJustificationVerifier,
+      tokenIssuanceVerifier,
       await mintTransaction.toCertifiedTransaction(
         trustBase,
         predicateVerifier,
@@ -136,6 +139,7 @@ describe('SplitBuilder Functional Test', () => {
         trustBase,
         predicateVerifier,
         mintJustificationVerifier,
+        tokenIssuanceVerifier,
         await mintTransaction.toCertifiedTransaction(
           trustBase,
           predicateVerifier,
@@ -145,7 +149,7 @@ describe('SplitBuilder Functional Test', () => {
 
       await expect(
         Token.fromCBOR(mintedSplitToken.toCBOR())
-          .then((token) => token.verify(trustBase, predicateVerifier, mintJustificationVerifier))
+          .then((token) => token.verify(trustBase, predicateVerifier, mintJustificationVerifier, tokenIssuanceVerifier))
           .then((result) => result.status),
       ).resolves.toEqual(VerificationStatus.OK);
     }
@@ -157,8 +161,9 @@ describe('SplitBuilder Functional Test', () => {
     const client = new StateTransitionClient(aggregatorClient);
     const predicateVerifier = PredicateVerifierService.create();
     const mintJustificationVerifier = new MintJustificationVerifierService();
+    const tokenIssuanceVerifier = new TokenIssuanceVerifierService();
     mintJustificationVerifier.register(
-      new SplitMintJustificationVerifier(trustBase, predicateVerifier, TestPaymentData.decode),
+      new SplitMintJustificationVerifier(trustBase, predicateVerifier, TestPaymentData.decode, tokenIssuanceVerifier),
     );
 
     const signingService = new SigningService(SigningService.generatePrivateKey());
@@ -176,6 +181,7 @@ describe('SplitBuilder Functional Test', () => {
       trustBase,
       predicateVerifier,
       mintJustificationVerifier,
+      tokenIssuanceVerifier,
       await mintTransaction.toCertifiedTransaction(
         trustBase,
         predicateVerifier,
