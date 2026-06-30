@@ -5,6 +5,7 @@ import { InclusionProof } from '../../../api/InclusionProof.js';
 import { StateId } from '../../../api/StateId.js';
 import { DataHash } from '../../../crypto/hash/DataHash.js';
 import { HashAlgorithm } from '../../../crypto/hash/HashAlgorithm.js';
+import { EncodedPredicate } from '../../../predicate/EncodedPredicate.js';
 import { PredicateVerifierService } from '../../../predicate/verification/PredicateVerifierService.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
@@ -16,6 +17,7 @@ import { ITransaction } from '../../ITransaction.js';
 export enum InclusionProofVerificationStatus {
   INVALID_TRUSTBASE = 'INVALID_TRUSTBASE',
   MISSING_CERTIFICATION_DATA = 'MISSING_CERTIFICATION_DATA',
+  CERTIFICATION_DATA_MISMATCH = 'CERTIFICATION_DATA_MISMATCH',
   TRANSACTION_HASH_MISMATCH = 'TRANSACTION_HASH_MISMATCH',
   NOT_AUTHENTICATED = 'NOT_AUTHENTICATED',
   INCLUSION_CERTIFICATE_MISSING = 'INCLUSION_CERTIFICATE_MISSING',
@@ -62,6 +64,16 @@ export class InclusionProofVerificationRule {
       return new VerificationResult(
         'InclusionProofVerificationRule',
         InclusionProofVerificationStatus.TRANSACTION_HASH_MISMATCH,
+      );
+    }
+
+    if (
+      !EncodedPredicate.equals(certificationData.lockScript, transaction.lockScript) ||
+      !certificationData.sourceStateHash.equals(transaction.sourceStateHash)
+    ) {
+      return new VerificationResult(
+        'InclusionProofVerificationRule',
+        InclusionProofVerificationStatus.CERTIFICATION_DATA_MISMATCH,
       );
     }
 
