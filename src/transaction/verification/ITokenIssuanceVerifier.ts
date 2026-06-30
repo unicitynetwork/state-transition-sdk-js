@@ -1,7 +1,6 @@
-import { CertifiedMintTransaction } from '../CertifiedMintTransaction.js';
-import { TokenIssuanceVerifierService } from './TokenIssuanceVerifierService.js';
 import { VerificationResult } from '../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../verification/VerificationStatus.js';
+import { CertifiedMintTransaction } from '../CertifiedMintTransaction.js';
 import { TokenType } from '../TokenType.js';
 
 /**
@@ -23,11 +22,7 @@ export interface ITokenIssuanceVerifier {
    * Verify the genesis data and any application-level issuance policy.
    *
    * @param {CertifiedMintTransaction} transaction Genesis mint transaction to verify.
-   * @param {TokenIssuanceVerifierService} tokenIssuanceVerifierService Service available for recursive verification.
    * @returns {Promise<VerificationResult<VerificationStatus>>} Verification outcome.
    */
-  verify(
-    transaction: CertifiedMintTransaction,
-    tokenIssuanceVerifierService: TokenIssuanceVerifierService,
-  ): Promise<VerificationResult<VerificationStatus>>;
+  verify(transaction: CertifiedMintTransaction): Promise<VerificationResult<VerificationStatus>>;
 }

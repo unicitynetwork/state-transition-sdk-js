@@ -1,9 +1,8 @@
 import { InclusionProofVerificationRule, InclusionProofVerificationStatus } from './InclusionProofVerificationRule.js';
-import { RootTrustBase } from '../../../api/bft/RootTrustBase.js';
-import { PredicateVerifierService } from '../../../predicate/verification/PredicateVerifierService.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
 import { CertifiedTransferTransaction } from '../../CertifiedTransferTransaction.js';
+import { IVerificationContext } from '../IVerificationContext.js';
 
 /**
  * Transfer transaction verification rule.
@@ -12,20 +11,18 @@ export class CertifiedTransferTransactionVerificationRule {
   /**
    * Verify a certified transfer transaction.
    *
-   * @param {RootTrustBase} trustBase Root trust base.
-   * @param {PredicateVerifierService} predicateVerifier Predicate verifier service.
    * @param {CertifiedTransferTransaction} transaction Transfer transaction to verify.
+   * @param {IVerificationContext} verificationContext Shared verification context (trust base + registries).
    * @returns {Promise<VerificationResult<VerificationStatus>>} Verification outcome.
    */
   public static async verify(
-    trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifierService,
     transaction: CertifiedTransferTransaction,
+    verificationContext: IVerificationContext,
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];
     const result: VerificationResult<unknown> = await InclusionProofVerificationRule.verify(
-      trustBase,
-      predicateVerifier,
+      verificationContext.trustBase,
+      verificationContext.predicateVerifier,
       transaction.inclusionProof,
       transaction,
     );

@@ -1,16 +1,13 @@
 import { IPaymentData } from './IPaymentData.js';
 import { SplitManifest } from './SplitManifest.js';
 import { SplitMintJustification } from './SplitMintJustification.js';
-import { RootTrustBase } from '../api/bft/RootTrustBase.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { BurnPredicate } from '../predicate/builtin/BurnPredicate.js';
 import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
-import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CertifiedMintTransaction } from '../transaction/CertifiedMintTransaction.js';
 import { IMintJustificationVerifier } from '../transaction/verification/IMintJustificationVerifier.js';
-import { MintJustificationVerifierService } from '../transaction/verification/MintJustificationVerifierService.js';
-import { TokenIssuanceVerifierService } from '../transaction/verification/TokenIssuanceVerifierService.js';
+import { IVerificationContext } from '../transaction/verification/IVerificationContext.js';
 import { HexConverter } from '../util/HexConverter.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 import { VerificationResult } from '../verification/VerificationResult.js';
@@ -26,12 +23,7 @@ const RULE = 'SplitMintJustificationVerifier';
  * source amount (value conservation).
  */
 export class SplitMintJustificationVerifier implements IMintJustificationVerifier {
-  public constructor(
-    private readonly trustBase: RootTrustBase,
-    private readonly predicateVerifier: PredicateVerifierService,
-    private readonly decodePaymentData: (bytes: Uint8Array) => Promise<IPaymentData>,
-    private readonly tokenIssuanceVerifier: TokenIssuanceVerifierService,
-  ) {}
+  public constructor(private readonly decodePaymentData: (bytes: Uint8Array) => Promise<IPaymentData>) {}
 
   /**
    * @returns {bigint} CBOR tag this verifier handles.
@@ -52,7 +44,7 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
    */
   public async verify(
     transaction: CertifiedMintTransaction,
-    mintJustificationVerifier: MintJustificationVerifierService,
+    verificationContext: IVerificationContext,
   ): Promise<VerificationResult<VerificationStatus>> {
     if (!transaction.justification) {
       return SplitMintJustificationVerifier.fail('Transaction has no justification.');
@@ -66,12 +58,7 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
       );
     }
 
-    const burntTokenResult = await justification.token.verify(
-      this.trustBase,
-      this.predicateVerifier,
-      mintJustificationVerifier,
-      this.tokenIssuanceVerifier,
-    );
+    const burntTokenResult = await justification.token.verify(verificationContext);
     if (burntTokenResult.status !== VerificationStatus.OK) {
       return SplitMintJustificationVerifier.fail('Burnt source token verification failed.', [burntTokenResult]);
     }

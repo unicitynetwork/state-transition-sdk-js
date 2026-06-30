@@ -1,5 +1,6 @@
 import { CertifiedMintTransaction } from '../CertifiedMintTransaction.js';
 import { IMintJustificationVerifier } from './IMintJustificationVerifier.js';
+import { IVerificationContext } from './IVerificationContext.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { VerificationResult } from '../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../verification/VerificationStatus.js';
@@ -31,9 +32,13 @@ export class MintJustificationVerifierService {
    * Verify given mint justification with registered verifiers.
    *
    * @param {CertifiedMintTransaction} transaction Certified mint transaction whose justification to verify.
+   * @param {IVerificationContext} verificationContext Shared verification context for recursive verification.
    * @returns {Promise<VerificationResult<VerificationStatus>>} Verification outcome.
    */
-  public async verify(transaction: CertifiedMintTransaction): Promise<VerificationResult<VerificationStatus>> {
+  public async verify(
+    transaction: CertifiedMintTransaction,
+    verificationContext: IVerificationContext,
+  ): Promise<VerificationResult<VerificationStatus>> {
     const bytes = transaction.justification;
     if (!bytes) {
       return new VerificationResult('MintJustificationVerification', VerificationStatus.OK);
@@ -49,7 +54,7 @@ export class MintJustificationVerifierService {
       );
     }
 
-    const result = await verifier.verify(transaction, this);
+    const result = await verifier.verify(transaction, verificationContext);
     return new VerificationResult('MintJustificationVerification', result.status, '', [result]);
   }
 }

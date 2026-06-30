@@ -57,7 +57,7 @@ export class TokenIssuanceVerifierService {
       return new VerificationResult('TokenIssuanceVerification', VerificationStatus.OK);
     }
 
-    const result = await verifier.verify(transaction, this);
+    const result = await verifier.verify(transaction);
     return new VerificationResult('TokenIssuanceVerification', result.status, '', [result]);
   }
 }
