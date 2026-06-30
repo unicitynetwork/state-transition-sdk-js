@@ -32,6 +32,7 @@ export class JsonRpcHttpTransport {
       }),
       headers,
       method: 'POST',
+      redirect: 'error',
     });
 
     if (!response.ok) {
