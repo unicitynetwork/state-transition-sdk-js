@@ -48,6 +48,7 @@ export class JsonRpcHttpTransport {
       while (!result.done) {
         total += result.value.byteLength;
         if (total > maxBytes) {
+          await reader.cancel();
           throw new JsonRpcResponseError('JSON-RPC response exceeds the maximum allowed size.');
         }
         text += decoder.decode(result.value, { stream: true });

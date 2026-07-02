@@ -40,6 +40,12 @@ export class SplitManifest {
       throw new Error('Split manifest must contain at least one root.');
     }
 
+    for (const root of roots) {
+      if (root.algorithm !== HashAlgorithm.SHA256) {
+        throw new Error('Each split manifest root must be a SHA-256 hash.');
+      }
+    }
+
     return new SplitManifest(roots);
   }
 
