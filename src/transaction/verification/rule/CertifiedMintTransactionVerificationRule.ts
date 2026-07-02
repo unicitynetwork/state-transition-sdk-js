@@ -5,6 +5,7 @@ import { EncodedPredicate } from '../../../predicate/EncodedPredicate.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
 import { CertifiedMintTransaction } from '../../CertifiedMintTransaction.js';
+import type { Token } from '../../Token.js';
 import { IVerificationContext } from '../IVerificationContext.js';
 
 /**
@@ -16,11 +17,13 @@ export class CertifiedMintTransactionVerificationRule {
    *
    * @param {CertifiedMintTransaction} genesis Certified mint transaction to verify.
    * @param {IVerificationContext} verificationContext Shared verification context (trust base + registries).
+   * @param {(token: Token) => void} nestedTokenCollector Receives tokens embedded in the mint justification that the caller must verify.
    * @returns {Promise<VerificationResult<VerificationStatus>>} Verification outcome.
    */
   public static async verify(
     genesis: CertifiedMintTransaction,
     verificationContext: IVerificationContext,
+    nestedTokenCollector: (token: Token) => void,
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];
 
@@ -80,7 +83,7 @@ export class CertifiedMintTransactionVerificationRule {
       );
     }
 
-    result = await verificationContext.mintJustificationVerifier.verify(genesis, verificationContext);
+    result = await verificationContext.mintJustificationVerifier.verify(genesis, nestedTokenCollector);
     results.push(result);
     if (result.status !== VerificationStatus.OK) {
       return new VerificationResult(

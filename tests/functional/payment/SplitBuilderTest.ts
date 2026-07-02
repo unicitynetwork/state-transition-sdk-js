@@ -114,6 +114,7 @@ describe('SplitBuilder Functional Test', () => {
       verificationContext,
     );
 
+    const mintedSplitTokens: Token[] = [];
     for (const splitToken of result.tokens) {
       const mintTransaction = await MintTransaction.create(
         splitToken.networkId,
@@ -143,7 +144,64 @@ describe('SplitBuilder Functional Test', () => {
           .then((token) => token.verify(verificationContext))
           .then((result) => result.status),
       ).resolves.toEqual(VerificationStatus.OK);
+
+      mintedSplitTokens.push(mintedSplitToken);
     }
+
+    // Split a first-generation split output again: verifying the second-generation token walks the
+    // whole provenance chain iteratively (second-gen output -> burned first-gen split token ->
+    // burned original source token).
+    const firstGenToken = mintedSplitTokens[0];
+    const secondSplit = await TokenSplit.split(firstGenToken, TestPaymentData.decode, [
+      SplitTokenRequest.create(predicate, new TestPaymentData(PaymentAssetCollection.create(assets[0]))),
+    ]);
+
+    const secondBurnCertification = await client.submitCertificationRequest(
+      await CertificationData.fromTransaction(
+        secondSplit.burn.transaction,
+        await SignaturePredicateUnlockScript.create(secondSplit.burn.transaction, signingService),
+      ),
+    );
+    expect(secondBurnCertification.status).toEqual(CertificationStatus.SUCCESS);
+
+    const secondBurnToken = await firstGenToken.transfer(
+      await secondSplit.burn.transaction.toCertifiedTransaction(
+        trustBase,
+        predicateVerifier,
+        await waitInclusionProof(client, trustBase, predicateVerifier, secondSplit.burn.transaction),
+      ),
+      verificationContext,
+    );
+
+    const secondSplitToken = secondSplit.tokens[0];
+    const secondMintTransaction = await MintTransaction.create(
+      secondSplitToken.networkId,
+      secondSplitToken.recipient,
+      await secondSplitToken.paymentData.encode(),
+      secondSplitToken.tokenType,
+      secondSplitToken.salt,
+      SplitMintJustification.create(secondBurnToken, secondSplitToken.proofs).toCBOR(),
+    );
+
+    expect(
+      (await client.submitCertificationRequest(await CertificationData.fromMintTransaction(secondMintTransaction)))
+        .status,
+    ).toEqual(CertificationStatus.SUCCESS);
+
+    const secondGenToken = await Token.mint(
+      await secondMintTransaction.toCertifiedTransaction(
+        trustBase,
+        predicateVerifier,
+        await waitInclusionProof(client, trustBase, predicateVerifier, secondMintTransaction),
+      ),
+      verificationContext,
+    );
+
+    await expect(
+      Token.fromCBOR(secondGenToken.toCBOR())
+        .then((token) => token.verify(verificationContext))
+        .then((result) => result.status),
+    ).resolves.toEqual(VerificationStatus.OK);
   });
 
   it('should rebuild a byte-identical burn transaction from a caller-supplied burn state mask', async () => {

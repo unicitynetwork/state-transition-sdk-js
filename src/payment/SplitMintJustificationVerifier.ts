@@ -6,8 +6,8 @@ import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { BurnPredicate } from '../predicate/builtin/BurnPredicate.js';
 import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
 import { CertifiedMintTransaction } from '../transaction/CertifiedMintTransaction.js';
+import type { Token } from '../transaction/Token.js';
 import { IMintJustificationVerifier } from '../transaction/verification/IMintJustificationVerifier.js';
-import { IVerificationContext } from '../transaction/verification/IVerificationContext.js';
 import { HexConverter } from '../util/HexConverter.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 import { VerificationResult } from '../verification/VerificationResult.js';
@@ -16,11 +16,11 @@ import { VerificationStatus } from '../verification/VerificationStatus.js';
 const RULE = 'SplitMintJustificationVerifier';
 
 /**
- * Verifier for {@link SplitMintJustification} mint justifications. It recursively
- * verifies the burned source token, binds the burn to the split manifest,
- * recomputes the output's leaf data, and verifies every output asset against its
- * allocation proof — requiring each asset's reconstructed total to equal the
- * source amount (value conservation).
+ * Verifier for {@link SplitMintJustification} mint justifications. It reports the
+ * burned source token for caller verification, binds the burn to the split
+ * manifest, recomputes the output's leaf data, and verifies every output asset
+ * against its allocation proof — requiring each asset's reconstructed total to
+ * equal the source amount (value conservation).
  */
 export class SplitMintJustificationVerifier implements IMintJustificationVerifier {
   public constructor(private readonly decodePaymentData: (bytes: Uint8Array) => Promise<IPaymentData>) {}
@@ -44,7 +44,7 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
    */
   public async verify(
     transaction: CertifiedMintTransaction,
-    verificationContext: IVerificationContext,
+    nestedTokenCollector: (token: Token) => void,
   ): Promise<VerificationResult<VerificationStatus>> {
     if (!transaction.justification) {
       return SplitMintJustificationVerifier.fail('Transaction has no justification.');
@@ -58,10 +58,7 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
       );
     }
 
-    const burntTokenResult = await justification.token.verify(verificationContext);
-    if (burntTokenResult.status !== VerificationStatus.OK) {
-      return SplitMintJustificationVerifier.fail('Burnt source token verification failed.', [burntTokenResult]);
-    }
+    nestedTokenCollector(justification.token);
 
     const burnTransaction = justification.token.latestTransaction;
     if (!burnTransaction) {
