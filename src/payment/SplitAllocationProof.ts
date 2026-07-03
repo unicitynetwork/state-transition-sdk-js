@@ -110,9 +110,14 @@ export class SplitAllocationProof {
         throw new CborError('Sibling sum must be strictly positive.');
       }
 
+      const hashBytes = CborDeserializer.decodeByteString(fields[1]);
+      if (hashBytes.length !== HashAlgorithm.SHA256.length) {
+        throw new CborError('Sibling hash must be a SHA-256 digest.');
+      }
+
       siblings.push({
         depth,
-        hash: new DataHash(HashAlgorithm.SHA256, CborDeserializer.decodeByteString(fields[1])),
+        hash: new DataHash(HashAlgorithm.SHA256, hashBytes),
         sum,
       });
     }

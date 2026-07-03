@@ -13,6 +13,10 @@ describe('AggregatorClient', () => {
     expect(() => new AggregatorClient('http://example.com')).not.toThrow();
   });
 
+  it('should allow an API key over plaintext HTTP when insecure transport is enabled', () => {
+    expect(() => new AggregatorClient('http://localhost:3000', 'secret-key', true)).not.toThrow();
+  });
+
   it('should not expose the API key on inspection', () => {
     const client = new AggregatorClient('https://example.com', 'secret-key');
 

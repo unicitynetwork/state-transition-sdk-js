@@ -1,3 +1,4 @@
+import { VerificationStatus } from './VerificationStatus.js';
 import { dedent } from '../util/StringUtils.js';
 
 /**
@@ -15,6 +16,27 @@ export class VerificationResult<S> {
     public readonly results: VerificationResult<unknown>[] = [],
   ) {
     this.results = results.slice();
+  }
+
+  /**
+   * Aggregate child results into a single {@link VerificationStatus} result: OK
+   * when every child is OK, otherwise FAIL. The children are retained as the
+   * verification trace.
+   *
+   * @param {string} rule Rule name for the aggregate result.
+   * @param {VerificationResult<VerificationStatus>[]} results Child results to aggregate.
+   * @param {string} [message] Optional message for the aggregate result.
+   * @returns {VerificationResult<VerificationStatus>} Aggregated result.
+   */
+  public static fromResults(
+    rule: string,
+    results: VerificationResult<VerificationStatus>[],
+    message: string = '',
+  ): VerificationResult<VerificationStatus> {
+    const status = results.every((result) => result.status === VerificationStatus.OK)
+      ? VerificationStatus.OK
+      : VerificationStatus.FAIL;
+    return new VerificationResult(rule, status, message, results);
   }
 
   /**

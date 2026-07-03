@@ -69,9 +69,11 @@ export class TokenSplit {
 
     const trees = new Map<string, SparseMerkleSumTree>();
     const usedTokenIdList = new Set<string>();
+    const tokenIds: TokenId[] = [];
 
     for (const request of requests) {
       const tokenId = await TokenId.fromSalt(token.networkId, request.salt);
+      tokenIds.push(tokenId);
       const tokenIdKey = HexConverter.encode(tokenId.bytes);
       if (usedTokenIdList.has(tokenIdKey)) {
         throw new DuplicateSplitTokenIdError(tokenId.toString());
@@ -127,8 +129,9 @@ export class TokenSplit {
     const burnTransaction = await TransferTransaction.create(token, burnPredicate, burnStateMask, manifestBytes);
 
     const tokens: SplitToken[] = [];
-    for (const request of requests) {
-      const tokenId = await TokenId.fromSalt(token.networkId, request.salt);
+    for (let i = 0; i < requests.length; i++) {
+      const request = requests[i];
+      const tokenId = tokenIds[i];
       const proofs = request.paymentData.assets
         .toArray()
         .map((asset) =>

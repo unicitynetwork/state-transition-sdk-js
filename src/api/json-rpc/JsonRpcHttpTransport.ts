@@ -31,12 +31,12 @@ export class JsonRpcHttpTransport {
    *
    * @param {Response} response Fetch response.
    * @param {number} maxBytes Maximum allowed body size in bytes.
-   * @returns {Promise<string>} The decoded body.
+   * @returns {Promise<string>} The decoded body, or an empty string when the response has no body.
    * @throws {JsonRpcResponseError} If the body exceeds `maxBytes`.
    */
   private static async readBoundedText(response: Response, maxBytes: number): Promise<string> {
     if (!response.body) {
-      throw new JsonRpcResponseError('JSON-RPC response has no readable body.');
+      return '';
     }
 
     const reader = response.body.getReader();
@@ -106,18 +106,23 @@ export class JsonRpcHttpTransport {
     if (data.jsonrpc !== '2.0') {
       throw new JsonRpcResponseError(`Unsupported JSON-RPC version: ${String(data.jsonrpc)}.`);
     }
+
+    const hasResult = data.result !== undefined;
+    const hasError = data.error != null;
+    if (hasResult && hasError) {
+      throw new JsonRpcResponseError('JSON-RPC response must contain exactly one of result or error.');
+    }
+
+    if (data.error != null) {
+      throw new JsonRpcDataError(data.error);
+    }
+
     if (data.id !== id) {
       throw new JsonRpcResponseError(`JSON-RPC response id mismatch: expected ${id}, got ${String(data.id)}.`);
     }
 
-    const hasResult = data.result !== undefined;
-    const hasError = data.error !== undefined;
-    if (hasResult === hasError) {
+    if (!hasResult) {
       throw new JsonRpcResponseError('JSON-RPC response must contain exactly one of result or error.');
-    }
-
-    if (data.error) {
-      throw new JsonRpcDataError(data.error);
     }
 
     return data.result;

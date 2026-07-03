@@ -19,10 +19,12 @@ export class AggregatorClient implements IAggregatorClient {
    *
    * @param url Base URL of the aggregator JSON-RPC endpoint
    * @param key API key for authenticating
-   * @throws {Error} If an API key is supplied for a non-HTTPS URL.
+   * @param allowInsecureTransport When `true`, permit sending the API key over a non-HTTPS URL
+   *   (intended for local development and testing only).
+   * @throws {Error} If an API key is supplied for a non-HTTPS URL and `allowInsecureTransport` is `false`.
    */
-  public constructor(url: string, key: string | null = null) {
-    if (key != null && new URL(url).protocol !== 'https:') {
+  public constructor(url: string, key: string | null = null, allowInsecureTransport: boolean = false) {
+    if (key != null && !allowInsecureTransport && new URL(url).protocol !== 'https:') {
       throw new Error('API key must not be sent over plaintext HTTP; use an https URL.');
     }
 
