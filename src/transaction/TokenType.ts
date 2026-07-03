@@ -4,7 +4,15 @@ import { HexConverter } from '../util/HexConverter.js';
 
 /** Unique identifier describing the type/category of a token. */
 export class TokenType {
+  public static readonly MAX_LENGTH = 64;
+  public static readonly MIN_LENGTH = 1;
+
   public constructor(private readonly _bytes: Uint8Array) {
+    if (_bytes.length < TokenType.MIN_LENGTH || _bytes.length > TokenType.MAX_LENGTH) {
+      throw new Error(
+        `TokenType must be between ${TokenType.MIN_LENGTH} and ${TokenType.MAX_LENGTH} bytes, got ${_bytes.length}.`,
+      );
+    }
     this._bytes = new Uint8Array(_bytes);
   }
 
