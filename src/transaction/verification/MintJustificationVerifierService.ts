@@ -44,26 +44,34 @@ export class MintJustificationVerifierService {
       return new VerificationResult('MintJustificationVerification', VerificationStatus.OK);
     }
 
-    const tag = CborDeserializer.decodeTag(bytes).tag;
-    const verifier = this.verifiers.get(tag);
-    if (!verifier) {
+    try {
+      const tag = CborDeserializer.decodeTag(bytes).tag;
+      const verifier = this.verifiers.get(tag);
+      if (!verifier) {
+        return new VerificationResult(
+          'MintJustificationVerification',
+          VerificationStatus.FAIL,
+          `Unsupported mint justification tag: ${tag}.`,
+        );
+      }
+
+      const result = await verifier.verify(transaction, nestedTokenCollector);
+      if (result.status !== VerificationStatus.OK) {
+        return new VerificationResult(
+          'MintJustificationVerification',
+          VerificationStatus.FAIL,
+          `Verification failed for tag ${tag}.`,
+          [result],
+        );
+      }
+
+      return new VerificationResult('MintJustificationVerification', VerificationStatus.OK, '', [result]);
+    } catch (error) {
       return new VerificationResult(
         'MintJustificationVerification',
         VerificationStatus.FAIL,
-        `Unsupported mint justification tag: ${tag}.`,
+        `Mint justification verification failed with error: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
-
-    const result = await verifier.verify(transaction, nestedTokenCollector);
-    if (result.status !== VerificationStatus.OK) {
-      return new VerificationResult(
-        'MintJustificationVerification',
-        VerificationStatus.FAIL,
-        `Verification failed for tag ${tag}.`,
-        [result],
-      );
-    }
-
-    return new VerificationResult('MintJustificationVerification', VerificationStatus.OK, '', [result]);
   }
 }
