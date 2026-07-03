@@ -4,13 +4,16 @@ import { HexConverter } from '../util/HexConverter.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 
 /**
- * 32-byte random value mixed into a transfer's next state hash. Its randomness
- * makes the next state identifier unpredictable, preventing the Unicity Service
- * from linking consecutive states of the same token, and it MUST be sampled with
- * at least 128 bits of min-entropy.
+ * Variable-length random value mixed into a transfer's next state hash. Its
+ * randomness makes the next state identifier unpredictable, preventing the
+ * Unicity Service from linking consecutive states of the same token. Per the
+ * yellowpaper it MUST be sampled with at least 128 bits of min-entropy, so it is
+ * between {@link StateMask.MIN_LENGTH} and {@link StateMask.MAX_LENGTH} bytes.
  */
 export class StateMask {
   public static readonly LENGTH = 32;
+  public static readonly MAX_LENGTH = 64;
+  public static readonly MIN_LENGTH = 16;
 
   private constructor(private readonly _bytes: Uint8Array) {}
 
@@ -22,15 +25,19 @@ export class StateMask {
   }
 
   /**
-   * Wrap an existing 32-byte state mask.
+   * Wrap an existing state mask. It must carry at least 128 bits of entropy and
+   * stay within the upper bound, so it must be between {@link StateMask.MIN_LENGTH}
+   * and {@link StateMask.MAX_LENGTH} bytes.
    *
-   * @param {Uint8Array} bytes State mask bytes; must be exactly 32 bytes.
+   * @param {Uint8Array} bytes State mask bytes; must be 16 to 64 bytes.
    * @returns {StateMask} New state mask.
-   * @throws {Error} If `bytes` is not 32 bytes long.
+   * @throws {Error} If `bytes` is outside `[{@link StateMask.MIN_LENGTH}, {@link StateMask.MAX_LENGTH}]`.
    */
   public static fromBytes(bytes: Uint8Array): StateMask {
-    if (bytes.length !== StateMask.LENGTH) {
-      throw new Error(`StateMask must be ${StateMask.LENGTH} bytes long, got ${bytes.length}.`);
+    if (bytes.length < StateMask.MIN_LENGTH || bytes.length > StateMask.MAX_LENGTH) {
+      throw new Error(
+        `StateMask must be between ${StateMask.MIN_LENGTH} and ${StateMask.MAX_LENGTH} bytes, got ${bytes.length}.`,
+      );
     }
     return new StateMask(new Uint8Array(bytes));
   }

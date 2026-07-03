@@ -248,7 +248,8 @@ describe('SplitBuilder Functional Test', () => {
     // The default stays random — omitting the mask must not become deterministic.
     expect(HexConverter.encode(defaulted.burn.transaction.toCBOR())).not.toEqual(firstBurn);
 
-    // A mask of the wrong length is a caller bug — the StateMask type rejects it at construction.
-    expect(() => StateMask.fromBytes(crypto.getRandomValues(new Uint8Array(31)))).toThrow();
+    // A mask outside the permitted 16–64 byte range is a caller bug — StateMask rejects it at construction.
+    expect(() => StateMask.fromBytes(crypto.getRandomValues(new Uint8Array(StateMask.MIN_LENGTH - 1)))).toThrow();
+    expect(() => StateMask.fromBytes(crypto.getRandomValues(new Uint8Array(StateMask.MAX_LENGTH + 1)))).toThrow();
   });
 });
