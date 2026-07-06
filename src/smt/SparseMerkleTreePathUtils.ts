@@ -21,10 +21,16 @@ export function calculateCommonPath(path1: bigint, path2: bigint): CommonPath {
  * are set to zero.
  */
 export function pathToRegion(path: bigint, depth: number): Uint8Array {
-  const bits = path & ((1n << BigInt(depth)) - 1n);
   const region = new Uint8Array(32);
-  for (let j = 0; j * 8 < depth; j++) {
-    region[j] = Number((bits >> BigInt(8 * j)) & 0xffn);
+  const fullBytes = Math.floor(depth / 8);
+  const remainderBits = depth % 8;
+
+  let bits = path;
+  for (let j = 0; j < fullBytes; j++, bits >>= 8n) {
+    region[j] = Number(bits & 0xffn);
+  }
+  if (remainderBits > 0) {
+    region[fullBytes] = Number(bits & 0xffn) & ((1 << remainderBits) - 1);
   }
   return region;
 }
