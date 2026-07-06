@@ -43,7 +43,7 @@ export class SparseMerkleTree {
     const isRight = Number(path & 1n);
     const branchPromise = isRight ? this.right : this.left;
     const newBranchPromise = branchPromise.then((branch) =>
-      branch ? this.buildTree(branch, path, 0, key, data) : new PendingLeafBranch(path, key, data),
+      branch ? this.buildTree(branch, path, key, data) : new PendingLeafBranch(path, key, data),
     );
 
     if (isRight) {
@@ -74,18 +74,11 @@ export class SparseMerkleTree {
     return SparseMerkleTreeRootNode.create(left, right, this.factory);
   }
 
-  private buildTree(
-    branch: PendingBranch,
-    remainingPath: bigint,
-    depth: number,
-    key: Uint8Array,
-    data: Uint8Array,
-  ): PendingBranch {
-    const commonPath = calculateCommonPath(remainingPath, branch.path);
-    const commonPathLength = Number(commonPath.length);
-    const isRight = Number((remainingPath >> commonPath.length) & 1n);
+  private buildTree(branch: PendingBranch, keyPath: bigint, key: Uint8Array, data: Uint8Array): PendingBranch {
+    const commonPath = calculateCommonPath(keyPath, branch.path);
+    const isRight = Number((keyPath >> BigInt(commonPath.length)) & 1n);
 
-    if (commonPath.path === remainingPath) {
+    if (commonPath.path === keyPath) {
       throw new LeafInBranchError();
     }
 
@@ -95,30 +88,23 @@ export class SparseMerkleTree {
         throw new LeafOutOfBoundsError();
       }
 
-      const oldBranch = new PendingLeafBranch(branch.path >> commonPath.length, branch.key, branch.data);
-      const newBranch = new PendingLeafBranch(remainingPath >> commonPath.length, key, data);
+      const newBranch = new PendingLeafBranch(keyPath, key, data);
       return new PendingNodeBranch(
         commonPath.path,
-        depth + commonPathLength,
-        isRight ? oldBranch : newBranch,
-        isRight ? newBranch : oldBranch,
+        commonPath.length,
+        isRight ? branch : newBranch,
+        isRight ? newBranch : branch,
       );
     }
 
     // If node branch is split in the middle
     if (commonPath.path < branch.path) {
-      const newBranch = new PendingLeafBranch(remainingPath >> commonPath.length, key, data);
-      const oldBranch = new PendingNodeBranch(
-        branch.path >> commonPath.length,
-        branch.depth,
-        branch.left,
-        branch.right,
-      );
+      const newBranch = new PendingLeafBranch(keyPath, key, data);
       return new PendingNodeBranch(
         commonPath.path,
-        depth + commonPathLength,
-        isRight ? oldBranch : newBranch,
-        isRight ? newBranch : oldBranch,
+        commonPath.length,
+        isRight ? branch : newBranch,
+        isRight ? newBranch : branch,
       );
     }
 
@@ -127,14 +113,14 @@ export class SparseMerkleTree {
         branch.path,
         branch.depth,
         branch.left,
-        this.buildTree(branch.right, remainingPath >> commonPath.length, depth + commonPathLength, key, data),
+        this.buildTree(branch.right, keyPath, key, data),
       );
     }
 
     return new PendingNodeBranch(
       branch.path,
       branch.depth,
-      this.buildTree(branch.left, remainingPath >> commonPath.length, depth + commonPathLength, key, data),
+      this.buildTree(branch.left, keyPath, key, data),
       branch.right,
     );
   }

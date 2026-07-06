@@ -59,7 +59,7 @@ describe('Sparse Merkle Tree tests', function () {
     const root = await smt.calculateRoot();
 
     expect(root.hash.imprint).toStrictEqual(
-      HexConverter.decode('00000fbe49c19df8bbf8612951ea26c8b0c52088424ff48adacf56234fc567950e89'),
+      HexConverter.decode('0000cd23fc1265484a7173323cd862b85a61796b8e0af31149944a828e6c1734b846'),
     );
   });
 
@@ -101,6 +101,50 @@ describe('Sparse Merkle Tree tests', function () {
     // Empty root: create throws
     const emptyRoot = await new SparseMerkleTree(hashFactory).calculateRoot();
     expect(() => InclusionCertificate.create(emptyRoot, keys[0])).toThrow();
+  });
+
+  it('empty and single-leaf roots', async () => {
+    const hashFactory = new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher);
+
+    // Empty tree → all-zero root hash.
+    const emptyRoot = await new SparseMerkleTree(hashFactory).calculateRoot();
+    expect(emptyRoot.hash.data).toStrictEqual(new Uint8Array(32));
+
+    // Single leaf → root hash equals the leaf hash (no interior node, so no region involved).
+    const smt = new SparseMerkleTree(hashFactory);
+    const key = key32(0b10110010);
+    const value = new Uint8Array([9, 9, 9]);
+    await smt.addLeaf(key, value);
+    const root = await smt.calculateRoot();
+    const leaf = await new PendingLeafBranch(0n, key, value).finalize(hashFactory);
+    expect(root.hash.equals(leaf.hash)).toBe(true);
+  });
+
+  it('deep split at depth 255 verifies with region', async () => {
+    const hashFactory = new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher);
+    const smt = new SparseMerkleTree(hashFactory);
+
+    // Two keys identical except bit 255 (high bit of the last byte) → a single interior node at depth 255.
+    const a = new Uint8Array(32);
+    const b = new Uint8Array(32);
+    b[31] = 0x80;
+    const valueA = new Uint8Array(32);
+    valueA[0] = 1;
+    const valueB = new Uint8Array(32);
+    valueB[0] = 2;
+    await smt.addLeaf(a, valueA);
+    await smt.addLeaf(b, valueB);
+    const root = await smt.calculateRoot();
+
+    for (const [key, value] of [
+      [a, valueA],
+      [b, valueB],
+    ] as const) {
+      const cert = InclusionCertificate.create(root, key);
+      const stateId = StateId.fromCBOR(CborSerializer.encodeByteString(key));
+      const leafValue = new DataHash(HashAlgorithm.SHA256, value);
+      await expect(cert.verify(stateId, leafValue, root.hash)).resolves.toBe(true);
+    }
   });
 
   it('should handle concurrent addLeaf calls', async () => {
