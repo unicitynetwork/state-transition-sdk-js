@@ -15,10 +15,10 @@ export function calculateCommonPath(path1: bigint, path2: bigint): CommonPath {
 }
 
 /**
- * Region committed by an interior node (v6a): the node's `depth`-bit key prefix, packed into 32
- * bytes in the byte-order-preserving, LSB-in-byte convention. `path` is the absolute node/key path
- * (leading sentinel bit at `depth`); its low `depth` bits are the prefix. Bit `i` lives in byte
- * `⌊i/8⌋` least-significant-first, so the packing is little-endian.
+ * Region committed by an interior node: the `depth`-bit common prefix of all leaves in the node's
+ * sub-tree. The `i`th lowest bit of path will be the `i mod 8`th lowest bit in the `i div 8`th
+ * byte of the returned 32-byte array (so the packing is little-endian); the remaining bits of the array
+ * are set to zero.
  */
 export function pathToRegion(path: bigint, depth: number): Uint8Array {
   const bits = path & ((1n << BigInt(depth)) - 1n);
