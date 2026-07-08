@@ -19,6 +19,6 @@ export function createRootTrustBase(publicKey: Uint8Array): RootTrustBase {
     ],
     signatures: {},
     stateHash: '00',
-    version: '0',
+    version: '1',
   });
 }

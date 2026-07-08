@@ -1,6 +1,7 @@
 import { CertifiedMintTransaction } from './CertifiedMintTransaction.js';
 import { ITransaction } from './ITransaction.js';
 import { MintTransactionState } from './MintTransactionState.js';
+import { StateMask } from './StateMask.js';
 import { TokenId } from './TokenId.js';
 import { TokenSalt } from './TokenSalt.js';
 import { TokenType } from './TokenType.js';
@@ -57,10 +58,10 @@ export class MintTransaction implements ITransaction {
   }
 
   /**
-   * @returns {Uint8Array} State mask used when computing the resulting state hash.
+   * @returns {StateMask} State mask used when computing the resulting state hash (the token identifier).
    */
-  public get stateMask(): Uint8Array {
-    return new Uint8Array(this.tokenId.bytes);
+  public get stateMask(): StateMask {
+    return StateMask.fromBytes(this.tokenId.bytes);
   }
 
   /**
@@ -144,7 +145,7 @@ export class MintTransaction implements ITransaction {
       .update(
         CborSerializer.encodeArray(
           CborSerializer.encodeByteString(this.sourceStateHash.imprint),
-          CborSerializer.encodeByteString(this.stateMask),
+          this.stateMask.toCBOR(),
         ),
       )
       .digest();

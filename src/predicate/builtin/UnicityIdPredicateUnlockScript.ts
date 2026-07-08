@@ -70,6 +70,6 @@ export class UnicityIdPredicateUnlockScript implements IUnlockScript {
    * @inheritDoc
    */
   public encode(): Uint8Array {
-    return CborSerializer.encodeArray(CborSerializer.encodeByteString(this.unlockScript), this.token.toCBOR());
+    return CborSerializer.encodeArray(CborSerializer.encodeByteString(this._unlockScript), this.token.toCBOR());
   }
 }

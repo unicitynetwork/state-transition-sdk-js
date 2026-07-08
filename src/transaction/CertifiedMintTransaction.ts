@@ -1,5 +1,6 @@
 import { ITransaction } from './ITransaction.js';
 import { MintTransaction } from './MintTransaction.js';
+import { StateMask } from './StateMask.js';
 import { TokenId } from './TokenId.js';
 import { TokenSalt } from './TokenSalt.js';
 import { TokenType } from './TokenType.js';
@@ -79,9 +80,9 @@ export class CertifiedMintTransaction implements ITransaction {
   }
 
   /**
-   * @returns {Uint8Array} State mask of the inner transaction.
+   * @returns {StateMask} State mask of the inner transaction.
    */
-  public get stateMask(): Uint8Array {
+  public get stateMask(): StateMask {
     return this.transaction.stateMask;
   }
 

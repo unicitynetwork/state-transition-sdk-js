@@ -11,33 +11,35 @@ import { PendingLeafBranch } from '../../../../src/smt/radix/PendingLeafBranch.j
 import { SparseMerkleTree } from '../../../../src/smt/radix/SparseMerkleTree.js';
 import { HexConverter } from '../../../../src/util/HexConverter.js';
 
+/** RSMT keys are 32 bytes; build one from a single low byte so the trie structure is easy to reason about. */
+function key32(firstByte: number): Uint8Array {
+  const key = new Uint8Array(32);
+  key[0] = firstByte;
+  return key;
+}
+
 describe('Sparse Merkle Tree tests', function () {
-  const leavesSparse = [
-    new Uint8Array([0b10010000]),
-    new Uint8Array([0b00000000]),
-    new Uint8Array([0b00010000]),
-    new Uint8Array([0b10000000]),
-    new Uint8Array([0b01100000]),
-    new Uint8Array([0b00010100]),
-  ];
+  const leavesSparse = [0b10010000, 0b00000000, 0b00010000, 0b10000000, 0b01100000, 0b00010100].map(key32);
 
   it('tree should be half calculated', async () => {
     const hashFactory = new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher);
     const smt = new SparseMerkleTree(hashFactory);
 
-    void smt.addLeaf(new Uint8Array([0b10]), new Uint8Array([1, 2, 3]));
+    const key2 = key32(0b10);
+    const key3 = key32(0b11);
+    void smt.addLeaf(key2, new Uint8Array([1, 2, 3]));
     await smt.calculateRoot();
-    await smt.addLeaf(new Uint8Array([0b11]), new Uint8Array([1, 2, 3, 4]));
+    await smt.addLeaf(key3, new Uint8Array([1, 2, 3, 4]));
     const testSmt = smt as unknown as {
       left: Promise<{ hash: DataHash; path: bigint }>;
       right: Promise<{ path: bigint }>;
     };
     await expect(testSmt.left).resolves.toEqual(
-      await new PendingLeafBranch(0b100000010n, new Uint8Array([2]), new Uint8Array([1, 2, 3])).finalize(hashFactory),
+      await new PendingLeafBranch((1n << 256n) + 2n, key2, new Uint8Array([1, 2, 3])).finalize(hashFactory),
     );
 
     await expect(testSmt.right).resolves.toEqual(
-      new PendingLeafBranch(0b100000011n, new Uint8Array([3]), new Uint8Array([1, 2, 3, 4])),
+      new PendingLeafBranch((1n << 256n) + 3n, key3, new Uint8Array([1, 2, 3, 4])),
     );
   });
 
@@ -49,17 +51,15 @@ describe('Sparse Merkle Tree tests', function () {
       void smt.addLeaf(leavesSparse[i], textEncoder.encode(`value${i}`));
     }
 
-    await expect(smt.addLeaf(new Uint8Array([0b00000000]), textEncoder.encode('OnPath'))).rejects.toThrow(
+    // Re-adding an existing key lands inside an occupied branch.
+    await expect(smt.addLeaf(key32(0b00000000), textEncoder.encode('OnPath'))).rejects.toThrow(
       'Cannot add leaf inside branch.',
     );
-    await expect(
-      smt.addLeaf(new Uint8Array([0b00000000, 0b00000000]), textEncoder.encode('ThroughLeaf')),
-    ).rejects.toThrow('Cannot extend tree through leaf.');
 
     const root = await smt.calculateRoot();
 
     expect(root.hash.imprint).toStrictEqual(
-      HexConverter.decode('000008fabbfb859f0b47e389fb76ed1a2a1dca39b2ac4fb760e3544461feede55043'),
+      HexConverter.decode('00000fbe49c19df8bbf8612951ea26c8b0c52088424ff48adacf56234fc567950e89'),
     );
   });
 
@@ -67,13 +67,7 @@ describe('Sparse Merkle Tree tests', function () {
     const hashFactory = new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher);
     const smt = new SparseMerkleTree(hashFactory);
 
-    // Pad 1-byte leavesSparse keys to 32 bytes so they are compatible with StateId and DataHash
-    const keys = leavesSparse.map((k) => {
-      const padded = new Uint8Array(32);
-      padded.set(k);
-      return padded;
-    });
-
+    const keys = leavesSparse;
     const values = keys.map((_, i) => {
       const v = new Uint8Array(32);
       v[0] = i + 1;
@@ -87,8 +81,7 @@ describe('Sparse Merkle Tree tests', function () {
     const root = await smt.calculateRoot();
 
     // Non-inclusion: key not in tree → create throws
-    const missingKey = new Uint8Array(32);
-    missingKey[0] = 0b00110000;
+    const missingKey = key32(0b00110000);
     expect(root.has(missingKey)).toBe(false);
     expect(() => InclusionCertificate.create(root, missingKey)).toThrow();
 
@@ -114,19 +107,19 @@ describe('Sparse Merkle Tree tests', function () {
     const smt = new SparseMerkleTree(new DataHasherFactory(HashAlgorithm.SHA256, NodeDataHasher));
     const textEncoder = new TextEncoder();
 
-    void smt.addLeaf(new Uint8Array([0b00000000]), textEncoder.encode('A'));
-    void smt.addLeaf(new Uint8Array([0b00000001]), textEncoder.encode('B'));
+    void smt.addLeaf(key32(0b00000000), textEncoder.encode('A'));
+    void smt.addLeaf(key32(0b00000001), textEncoder.encode('B'));
     const root1 = smt.calculateRoot().then((root) => {
       expect(root.left).toBeInstanceOf(FinalizedLeafBranch);
       expect(root.right).toBeInstanceOf(FinalizedLeafBranch);
     });
-    void smt.addLeaf(new Uint8Array([0b00000010]), textEncoder.encode('C'));
+    void smt.addLeaf(key32(0b00000010), textEncoder.encode('C'));
     const root2 = smt.calculateRoot().then((root) => {
       expect(root.left).toBeInstanceOf(FinalizedNodeBranch);
       expect(root.right).toBeInstanceOf(FinalizedLeafBranch);
     });
 
-    void smt.addLeaf(new Uint8Array([0b00000011]), textEncoder.encode('D'));
+    void smt.addLeaf(key32(0b00000011), textEncoder.encode('D'));
     const root3 = smt.calculateRoot().then((root) => {
       expect(root.left).toBeInstanceOf(FinalizedNodeBranch);
       expect(root.right).toBeInstanceOf(FinalizedNodeBranch);

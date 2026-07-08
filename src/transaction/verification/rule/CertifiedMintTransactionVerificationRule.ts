@@ -1,13 +1,12 @@
 import { InclusionProofVerificationRule, InclusionProofVerificationStatus } from './InclusionProofVerificationRule.js';
-import { RootTrustBase } from '../../../api/bft/RootTrustBase.js';
 import { MintSigningService } from '../../../crypto/MintSigningService.js';
 import { SignaturePredicate } from '../../../predicate/builtin/SignaturePredicate.js';
 import { EncodedPredicate } from '../../../predicate/EncodedPredicate.js';
-import { PredicateVerifierService } from '../../../predicate/verification/PredicateVerifierService.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
 import { CertifiedMintTransaction } from '../../CertifiedMintTransaction.js';
-import { MintJustificationVerifierService } from '../MintJustificationVerifierService.js';
+import type { Token } from '../../Token.js';
+import { IVerificationContext } from '../IVerificationContext.js';
 
 /**
  * Genesis verification rule.
@@ -16,21 +15,19 @@ export class CertifiedMintTransactionVerificationRule {
   /**
    * Verify a certified mint genesis.
    *
-   * @param {RootTrustBase} trustBase Root trust base used to verify the inclusion proof.
-   * @param {PredicateVerifierService} predicateVerifier Predicate verifier service.
-   * @param {MintJustificationVerifierService} mintJustificationVerifier Verifier for the mint justification.
    * @param {CertifiedMintTransaction} genesis Certified mint transaction to verify.
+   * @param {IVerificationContext} verificationContext Shared verification context (trust base + registries).
+   * @param {(token: Token) => void} nestedTokenCollector Receives tokens embedded in the mint justification that the caller must verify.
    * @returns {Promise<VerificationResult<VerificationStatus>>} Verification outcome.
    */
   public static async verify(
-    trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifierService,
-    mintJustificationVerifier: MintJustificationVerifierService,
     genesis: CertifiedMintTransaction,
+    verificationContext: IVerificationContext,
+    nestedTokenCollector: (token: Token) => void,
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];
 
-    if (!genesis.networkId.equals(trustBase.networkId)) {
+    if (!genesis.networkId.equals(verificationContext.trustBase.networkId)) {
       results.push(new VerificationResult('MintNetworkMatchesTrustBaseRule', VerificationStatus.FAIL));
       return new VerificationResult(
         'CertifiedMintTransactionVerificationRule',
@@ -59,7 +56,12 @@ export class CertifiedMintTransactionVerificationRule {
       );
     }
 
-    result = await InclusionProofVerificationRule.verify(trustBase, predicateVerifier, genesis.inclusionProof, genesis);
+    result = await InclusionProofVerificationRule.verify(
+      verificationContext.trustBase,
+      verificationContext.predicateVerifier,
+      genesis.inclusionProof,
+      genesis,
+    );
     results.push(result);
     if (result.status !== InclusionProofVerificationStatus.OK) {
       return new VerificationResult(
@@ -70,7 +72,18 @@ export class CertifiedMintTransactionVerificationRule {
       );
     }
 
-    result = await mintJustificationVerifier.verify(genesis);
+    result = await verificationContext.tokenIssuanceVerifier.verify(genesis);
+    results.push(result);
+    if (result.status !== VerificationStatus.OK) {
+      return new VerificationResult(
+        'CertifiedMintTransactionVerificationRule',
+        VerificationStatus.FAIL,
+        'Invalid token issuance',
+        results,
+      );
+    }
+
+    result = await verificationContext.mintJustificationVerifier.verify(genesis, nestedTokenCollector);
     results.push(result);
     if (result.status !== VerificationStatus.OK) {
       return new VerificationResult(

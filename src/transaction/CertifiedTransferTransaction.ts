@@ -1,4 +1,5 @@
 import { ITransaction } from './ITransaction.js';
+import { StateMask } from './StateMask.js';
 import { Token } from './Token.js';
 import { TransferTransaction } from './TransferTransaction.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
@@ -53,9 +54,9 @@ export class CertifiedTransferTransaction implements ITransaction {
   }
 
   /**
-   * @returns {Uint8Array} State mask of the inner transaction.
+   * @returns {StateMask} State mask of the inner transaction.
    */
-  public get stateMask(): Uint8Array {
+  public get stateMask(): StateMask {
     return this.transaction.stateMask;
   }
 

@@ -1,16 +1,19 @@
 import { AssetId } from './AssetId.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
-import { BigintConverter } from '../../util/BigintConverter.js';
 
 /**
- * Asset id paired with a non-negative value.
+ * Asset id paired with a strictly positive value in the range `[1, 2^256)`.
  */
 export class Asset {
   public constructor(
     public readonly id: AssetId,
     private readonly _value: bigint,
-  ) {}
+  ) {
+    if (_value <= 0n || _value >= 1n << 256n) {
+      throw new Error('Asset value must be a positive 256-bit integer.');
+    }
+  }
 
   /**
    * @returns {bigint} Value held by this asset.
@@ -27,8 +30,7 @@ export class Asset {
    */
   public static fromCBOR(bytes: Uint8Array): Asset {
     const data = CborDeserializer.decodeArray(bytes, 2);
-
-    return new Asset(AssetId.fromCBOR(data[0]), BigintConverter.decode(CborDeserializer.decodeByteString(data[1])));
+    return new Asset(AssetId.fromCBOR(data[0]), CborDeserializer.decodeBigInteger(data[1], 32));
   }
 
   /**
@@ -37,9 +39,6 @@ export class Asset {
    * @returns {Uint8Array} CBOR bytes.
    */
   public toCBOR(): Uint8Array {
-    return CborSerializer.encodeArray(
-      this.id.toCBOR(),
-      CborSerializer.encodeByteString(BigintConverter.encode(this._value)),
-    );
+    return CborSerializer.encodeArray(this.id.toCBOR(), CborSerializer.encodeBigInteger(this._value));
   }
 }

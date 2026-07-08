@@ -116,37 +116,42 @@ export class CborReader {
    * Read a single complete CBOR data item (including nested arrays, maps,
    * and tags) without decoding it.
    *
+   * Parsed iteratively: CBOR serializes items contiguously in depth-first
+   * pre-order, so a flat counter of items still to consume replaces the call
+   * stack — deeply nested input cannot overflow the stack.
+   *
    * @returns {Uint8Array} CBOR bytes of the data item.
    */
   public readRawCbor(): Uint8Array {
-    if (this.position >= this.data.length) {
-      throw new CborError('Premature end of data.');
-    }
-
-    const majorType: MajorType = this.data[this.position] & CborReader.MAJOR_TYPE_MASK;
     const position = this.position;
-    const length = this.readLength(majorType);
-    switch (majorType) {
-      case MajorType.BYTE_STRING:
-      case MajorType.TEXT_STRING:
-        this.read(Number(length));
-        break;
-      case MajorType.ARRAY:
-        for (let i = 0; i < length; i++) {
-          this.readRawCbor();
-        }
-        break;
-      case MajorType.MAP:
-        for (let i = 0; i < length; i++) {
-          this.readRawCbor();
-          this.readRawCbor();
-        }
-        break;
-      case MajorType.TAG:
-        this.readRawCbor();
-        break;
-      default:
-        break;
+
+    let remaining = 1n;
+    while (remaining > 0n) {
+      remaining--;
+
+      if (this.position >= this.data.length) {
+        throw new CborError('Premature end of data.');
+      }
+
+      const majorType: MajorType = this.data[this.position] & CborReader.MAJOR_TYPE_MASK;
+      const length = this.readLength(majorType);
+      switch (majorType) {
+        case MajorType.BYTE_STRING:
+        case MajorType.TEXT_STRING:
+          this.read(Number(length));
+          break;
+        case MajorType.ARRAY:
+          remaining += length;
+          break;
+        case MajorType.MAP:
+          remaining += length * 2n;
+          break;
+        case MajorType.TAG:
+          remaining += 1n;
+          break;
+        default:
+          break;
+      }
     }
 
     return this.data.slice(position, this.position);

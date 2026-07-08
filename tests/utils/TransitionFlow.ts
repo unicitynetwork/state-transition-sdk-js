@@ -8,7 +8,7 @@ import { SignaturePredicateUnlockScript } from '../../src/predicate/builtin/Sign
 import { PredicateVerifierService } from '../../src/predicate/verification/PredicateVerifierService.js';
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
 import { TokenType } from '../../src/transaction/TokenType.js';
-import { MintJustificationVerifierService } from '../../src/transaction/verification/MintJustificationVerifierService.js';
+import { VerificationContext } from '../../src/transaction/verification/VerificationContext.js';
 import { UnicityId } from '../../src/unicity-id/UnicityId.js';
 import { UnicityIdMintTransaction } from '../../src/unicity-id/UnicityIdMintTransaction.js';
 import { UnicityIdToken } from '../../src/unicity-id/UnicityIdToken.js';
@@ -24,7 +24,7 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
     it('default successful flow', async () => {
       const unicityIdSigningService = new SigningService(SigningService.generatePrivateKey());
       const predicateVerifier = PredicateVerifierService.create();
-      const mintJustificationVerifier = new MintJustificationVerifierService();
+      const verificationContext = new VerificationContext(trustBase, predicateVerifier);
 
       const targetPredicate = SignaturePredicate.create(ALICE_SIGNING_SERVICE.publicKey);
 
@@ -63,9 +63,7 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
 
       const aliceToken = await mintToken(
         client,
-        trustBase,
-        predicateVerifier,
-        mintJustificationVerifier,
+        verificationContext,
         aliceUnicityIdToken.genesis.targetPredicate,
         null,
         trustBase.networkId,
@@ -73,9 +71,7 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
 
       const bobToken = await transferToken(
         client,
-        trustBase,
-        predicateVerifier,
-        mintJustificationVerifier,
+        verificationContext,
         aliceToken.toCBOR(),
         SignaturePredicate.create(BOB_SIGNING_SERVICE.publicKey),
         ALICE_SIGNING_SERVICE,
@@ -83,17 +79,15 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
 
       const carolToken = await transferToken(
         client,
-        trustBase,
-        predicateVerifier,
-        mintJustificationVerifier,
+        verificationContext,
         bobToken.toCBOR(),
         SignaturePredicate.create(CAROL_SIGNING_SERVICE.publicKey),
         BOB_SIGNING_SERVICE,
       );
 
-      await expect(
-        carolToken.verify(trustBase, predicateVerifier, mintJustificationVerifier).then((result) => result.status),
-      ).resolves.toEqual(VerificationStatus.OK);
+      await expect(carolToken.verify(verificationContext).then((result) => result.status)).resolves.toEqual(
+        VerificationStatus.OK,
+      );
     }, 30000);
   });
 };

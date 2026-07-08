@@ -1,3 +1,4 @@
+import { StateMask } from './StateMask.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
 
@@ -15,7 +16,7 @@ export interface ITransaction {
 
   readonly sourceStateHash: DataHash;
 
-  readonly stateMask: Uint8Array;
+  readonly stateMask: StateMask;
 
   /**
    * Compute the hash of the resulting state after applying this transaction.

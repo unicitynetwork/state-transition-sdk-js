@@ -12,17 +12,23 @@ import { HexConverter } from '../util/HexConverter.js';
  */
 export class AggregatorClient implements IAggregatorClient {
   private readonly transport: JsonRpcHttpTransport;
+  readonly #key: string | null;
 
   /**
    * Create a new client pointing to the given aggregator URL.
    *
    * @param url Base URL of the aggregator JSON-RPC endpoint
    * @param key API key for authenticating
+   * @param allowInsecureTransport When `true`, permit sending the API key over a non-HTTPS URL
+   *   (intended for local development and testing only).
+   * @throws {Error} If an API key is supplied for a non-HTTPS URL and `allowInsecureTransport` is `false`.
    */
-  public constructor(
-    url: string,
-    private readonly key: string | null = null,
-  ) {
+  public constructor(url: string, key: string | null = null, allowInsecureTransport: boolean = false) {
+    if (key != null && !allowInsecureTransport && new URL(url).protocol !== 'https:') {
+      throw new Error('API key must not be sent over plaintext HTTP; use an https URL.');
+    }
+
+    this.#key = key;
     this.transport = new JsonRpcHttpTransport(url);
   }
 
@@ -64,8 +70,8 @@ export class AggregatorClient implements IAggregatorClient {
     const request = await CertificationRequest.create(certificationData);
 
     const headers = new Headers([['X-State-ID', HexConverter.encode(request.stateId.data)]]);
-    if (this.key) {
-      headers.set('X-API-Key', this.key);
+    if (this.#key) {
+      headers.set('X-API-Key', this.#key);
     }
 
     const response = await this.transport.request(

@@ -12,7 +12,7 @@ import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
  * Globally unique identifier of a token.
  */
 export class TokenId {
-  public constructor(private readonly _bytes: Uint8Array) {
+  private constructor(private readonly _bytes: Uint8Array) {
     this._bytes = new Uint8Array(_bytes);
   }
 

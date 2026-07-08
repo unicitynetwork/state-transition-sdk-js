@@ -145,8 +145,8 @@ export class UnicitySeal {
           this.rootChainRoundNumber,
           this.epoch,
           this.timestamp,
-          this.previousHash,
-          this.hash,
+          this._previousHash,
+          this._hash,
           null,
         ).toCBOR(),
       )
@@ -167,9 +167,9 @@ export class UnicitySeal {
         CborSerializer.encodeUnsignedInteger(this.rootChainRoundNumber),
         CborSerializer.encodeUnsignedInteger(this.epoch),
         CborSerializer.encodeUnsignedInteger(this.timestamp),
-        CborSerializer.encodeNullable(this.previousHash, CborSerializer.encodeByteString),
-        CborSerializer.encodeByteString(this.hash),
-        CborSerializer.encodeNullable(this.signatures, (signatures) =>
+        CborSerializer.encodeNullable(this._previousHash, CborSerializer.encodeByteString),
+        CborSerializer.encodeByteString(this._hash),
+        CborSerializer.encodeNullable(this._signatures, (signatures) =>
           CborSerializer.encodeMap(
             new CborMap(
               Array.from(signatures.entries()).map(

@@ -1,4 +1,5 @@
-import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
+import { InvalidJsonStructureError } from '../../serialization/json/InvalidJsonStructureError.js';
+import { JsonError } from '../../serialization/json/JsonError.js';
 import { HexConverter } from '../../util/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
 import { NetworkId } from '../NetworkId.js';
@@ -55,7 +56,13 @@ export class RootTrustBaseNodeInfo {
     if (!RootTrustBaseNodeInfo.isJSON(input)) {
       throw new InvalidJsonStructureError();
     }
-    return new RootTrustBaseNodeInfo(input.nodeId, HexConverter.decode(input.sigKey), BigInt(input.stake));
+
+    const stake = BigInt(input.stake);
+    if (stake <= 0n) {
+      throw new JsonError('Each trust base root node must have positive stake.');
+    }
+
+    return new RootTrustBaseNodeInfo(input.nodeId, HexConverter.decode(input.sigKey), stake);
   }
 
   /**
@@ -65,6 +72,17 @@ export class RootTrustBaseNodeInfo {
    */
   public static isJSON(input: unknown): input is INodeInfoJson {
     return typeof input === 'object' && input !== null && 'nodeId' in input && 'sigKey' in input && 'stake' in input;
+  }
+
+  /**
+   * @returns {string} String representation of the node info.
+   */
+  public toString(): string {
+    return dedent`
+    RootTrustBaseNodeInfo:
+      NodeId: ${this.nodeId},
+      SigningKey: ${HexConverter.encode(this._signingKey)},
+      Stake: ${this.stakedAmount}`;
   }
 }
 
@@ -88,19 +106,20 @@ interface IRootTrustBaseJson {
  * Root trust base information.
  */
 export class RootTrustBase {
-  public constructor(
-    public readonly version: bigint,
+  private static readonly VERSION = 1n;
+
+  private constructor(
     public readonly networkId: NetworkId,
     public readonly epoch: bigint,
     public readonly epochStartRound: bigint,
-    public readonly _rootNodes: RootTrustBaseNodeInfo[],
+    public readonly _rootNodes: Map<string, RootTrustBaseNodeInfo>,
     public readonly quorumThreshold: bigint,
     public readonly _stateHash: Uint8Array,
     public readonly _changeRecordHash: Uint8Array | null,
     public readonly _previousEntryHash: Uint8Array | null,
     private readonly _signatures: Map<string, Uint8Array>,
   ) {
-    this._rootNodes = _rootNodes.slice();
+    this._rootNodes = new Map(_rootNodes);
     this._stateHash = new Uint8Array(_stateHash);
     this._changeRecordHash = _changeRecordHash ? new Uint8Array(_changeRecordHash) : null;
     this._previousEntryHash = _previousEntryHash ? new Uint8Array(_previousEntryHash) : null;
@@ -126,8 +145,8 @@ export class RootTrustBase {
   /**
    * Get the root nodes.
    */
-  public get rootNodes(): RootTrustBaseNodeInfo[] {
-    return this._rootNodes.slice();
+  public get rootNodes(): Map<string, RootTrustBaseNodeInfo> {
+    return new Map(this._rootNodes);
   }
 
   /**
@@ -147,6 +166,13 @@ export class RootTrustBase {
   }
 
   /**
+   * @returns {bigint} Wire-format version of the trust base.
+   */
+  public get version(): bigint {
+    return RootTrustBase.VERSION;
+  }
+
+  /**
    * Create a root trust base from JSON string.
    *
    * @param input JSON string
@@ -157,13 +183,42 @@ export class RootTrustBase {
       throw new InvalidJsonStructureError();
     }
 
+    const version = BigInt(input.version);
+    if (version !== RootTrustBase.VERSION) {
+      throw new JsonError(`Unsupported RootTrustBase version: ${version}`);
+    }
+
+    const rootNodes = new Map<string, RootTrustBaseNodeInfo>();
+    const signingKeys = new Set<string>();
+    for (const node of input.rootNodes) {
+      const info = RootTrustBaseNodeInfo.fromJSON(node);
+      if (rootNodes.has(info.nodeId)) {
+        throw new JsonError(`Duplicate trust base node id: ${info.nodeId}`);
+      }
+
+      const signingKey = HexConverter.encode(info.signingKey);
+      if (signingKeys.has(signingKey)) {
+        throw new JsonError('Duplicate trust base signing key.');
+      }
+      signingKeys.add(signingKey);
+      rootNodes.set(info.nodeId, info);
+    }
+
+    if (rootNodes.size === 0) {
+      throw new JsonError('Trust base must contain at least one root node.');
+    }
+
+    const quorumThreshold = BigInt(input.quorumThreshold);
+    if (quorumThreshold <= 0n || quorumThreshold > BigInt(rootNodes.size)) {
+      throw new JsonError('Trust base quorum threshold must be between 1 and the root node count.');
+    }
+
     return new RootTrustBase(
-      BigInt(input.version),
       NetworkId.fromId(input.networkId),
       BigInt(input.epoch),
       BigInt(input.epochStartRound),
-      input.rootNodes.map((node) => RootTrustBaseNodeInfo.fromJSON(node)),
-      BigInt(input.quorumThreshold),
+      rootNodes,
+      quorumThreshold,
       HexConverter.decode(input.stateHash),
       input.changeRecordHash ? HexConverter.decode(input.changeRecordHash) : null,
       input.previousEntryHash ? HexConverter.decode(input.previousEntryHash) : null,
@@ -206,13 +261,15 @@ export class RootTrustBase {
       NetworkId: ${this.networkId.toString()},
       Epoch: ${this.epoch},
       EpochStartRound: ${this.epochStartRound},
-      RootNodes: [${this.rootNodes.map((node) => node.nodeId).join(', ')}],
+      RootNodes: [${Array.from(this._rootNodes.values())
+        .map((node) => node.toString())
+        .join(', ')}],
       QuorumThreshold: ${this.quorumThreshold},
-      StateHash: ${HexConverter.encode(this.stateHash)},
-      ChangeRecordHash: ${this.changeRecordHash ? HexConverter.encode(this.changeRecordHash) : 'null'},
-      PreviousEntryHash: ${this.previousEntryHash ? HexConverter.encode(this.previousEntryHash) : 'null'},
+      StateHash: ${HexConverter.encode(this._stateHash)},
+      ChangeRecordHash: ${this._changeRecordHash ? HexConverter.encode(this._changeRecordHash) : 'null'},
+      PreviousEntryHash: ${this._previousEntryHash ? HexConverter.encode(this._previousEntryHash) : 'null'},
       Signatures: [
-        ${Array.from(this.signatures.entries())
+        ${Array.from(this._signatures.entries())
           .map(([id, sig]) => `${id}: ${HexConverter.encode(sig)}`)
           .join(', ')}
       ]`;

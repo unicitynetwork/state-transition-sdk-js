@@ -1,6 +1,7 @@
 import { CborError } from './CborError.js';
 import { CborMap } from './CborMap.js';
 import { MajorType } from './MajorType.js';
+import { BigintConverter } from '../../util/BigintConverter.js';
 
 /**
  * Static helpers that encode TypeScript values to canonical CBOR bytes
@@ -31,6 +32,16 @@ export class CborSerializer {
       ...lengthBytes,
       ...data,
     ]);
+  }
+
+  /**
+   * Encode a non-negative big integer as a minimally encoded big-endian CBOR byte string.
+   *
+   * @param {bigint} value Non-negative integer.
+   * @returns {Uint8Array} CBOR bytes.
+   */
+  public static encodeBigInteger(value: bigint): Uint8Array {
+    return CborSerializer.encodeByteString(BigintConverter.encode(value));
   }
 
   /**

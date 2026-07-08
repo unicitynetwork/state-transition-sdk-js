@@ -3,9 +3,8 @@ import { CertifiedTransferTransaction } from './CertifiedTransferTransaction.js'
 import { ITransaction } from './ITransaction.js';
 import { TokenId } from './TokenId.js';
 import { TokenType } from './TokenType.js';
-import { MintJustificationVerifierService } from './verification/MintJustificationVerifierService.js';
-import { RootTrustBase } from '../api/bft/RootTrustBase.js';
-import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
+import { IVerificationContext } from './verification/IVerificationContext.js';
+import { NetworkId } from '../api/NetworkId.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborError } from '../serialization/cbor/CborError.js';
 import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
@@ -40,6 +39,13 @@ export class Token {
    */
   public get latestTransaction(): ITransaction {
     return this._transactions.at(-1) ?? this.genesis;
+  }
+
+  /**
+   * @returns {NetworkId} Network identifier from the genesis transaction.
+   */
+  public get networkId(): NetworkId {
+    return this.genesis.networkId;
   }
 
   /**
@@ -96,21 +102,17 @@ export class Token {
   /**
    * Create a Token from a verified genesis mint transaction.
    *
-   * @param {RootTrustBase} trustBase Root trust base used to verify the inclusion certificate.
-   * @param {PredicateVerifierService} predicateVerifier Verifier for embedded predicates.
-   * @param {MintJustificationVerifierService} mintJustificationVerifier Verifier for the mint justification.
    * @param {CertifiedMintTransaction} genesis Genesis mint transaction.
+   * @param {IVerificationContext} verificationContext Shared verification context (trust base + registries).
    * @returns {Promise<Token>} New token.
    * @throws {VerificationError} If the genesis does not verify.
    */
   public static async mint(
-    trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifierService,
-    mintJustificationVerifier: MintJustificationVerifierService,
     genesis: CertifiedMintTransaction,
+    verificationContext: IVerificationContext,
   ): Promise<Token> {
     const token = new Token(genesis);
-    const result = await token.verify(trustBase, predicateVerifier, mintJustificationVerifier);
+    const result = await token.verify(verificationContext);
     if (result.status !== VerificationStatus.OK) {
       throw new VerificationError('Invalid token genesis', result);
     }
@@ -150,23 +152,21 @@ export class Token {
   /**
    * Append token with certified transfer transaction.
    *
-   * @param {RootTrustBase} trustBase Root trust base used to verify the inclusion certificate.
-   * @param {PredicateVerifierService} predicateVerifier Verifier for embedded predicates.
    * @param {CertifiedTransferTransaction} transaction Transfer transaction to apply.
+   * @param {IVerificationContext} verificationContext Shared verification context (trust base + registries).
    * @returns {Promise<Token>} Updated token including the new transaction.
    * @throws {VerificationError} If the transfer transaction does not verify.
    */
   public async transfer(
-    trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifierService,
     transaction: CertifiedTransferTransaction,
+    verificationContext: IVerificationContext,
   ): Promise<Token> {
-    const result = await CertifiedTransferTransactionVerificationRule.verify(trustBase, predicateVerifier, transaction);
+    const result = await CertifiedTransferTransactionVerificationRule.verify(transaction, verificationContext);
     if (result.status !== VerificationStatus.OK) {
       throw new VerificationError('Invalid transfer transaction', result);
     }
 
-    const transactions = this.transactions.slice();
+    const transactions = this._transactions.slice();
     transactions.push(transaction);
 
     return new Token(this.genesis, transactions);
@@ -175,53 +175,81 @@ export class Token {
   /**
    * Verify the genesis and every transfer in this token.
    *
-   * @param {RootTrustBase} trustBase Root trust base used to verify inclusion certificates.
-   * @param {PredicateVerifierService} predicateVerifier Verifier for embedded predicates.
-   * @param {MintJustificationVerifierService} mintJustificationVerifier Verifier for the mint justification.
+   * Tokens embedded in a mint justification (such as the burned source token of
+   * a split) are collected during verification and verified iteratively from a
+   * worklist rather than recursively, so an arbitrarily long provenance chain is
+   * walked without recursion. Each verified token contributes its own child
+   * result.
+   *
+   * @param {IVerificationContext} verificationContext Shared verification context (trust base + registries).
    * @returns {Promise<VerificationResult<VerificationStatus>>} Aggregated verification result.
    */
-  public async verify(
-    trustBase: RootTrustBase,
-    predicateVerifier: PredicateVerifierService,
-    mintJustificationVerifier: MintJustificationVerifierService,
-  ): Promise<VerificationResult<VerificationStatus>> {
+  public async verify(verificationContext: IVerificationContext): Promise<VerificationResult<VerificationStatus>> {
+    const pending: Token[] = [this];
+    const collectNestedToken = (token: Token): void => {
+      pending.push(token);
+    };
+
     const results: VerificationResult<unknown>[] = [];
-    const result = await CertifiedMintTransactionVerificationRule.verify(
-      trustBase,
-      predicateVerifier,
-      mintJustificationVerifier,
-      this.genesis,
-    );
-    results.push(result);
-    if (result.status !== VerificationStatus.OK) {
-      return new VerificationResult('TokenVerification', VerificationStatus.FAIL, '', results);
-    }
+    for (let tokenIndex = 0; tokenIndex < pending.length; tokenIndex++) {
+      const token = pending[tokenIndex];
+      const rule = `Token[${tokenIndex}:${token.id.toString()}]`;
 
-    const transferResults: VerificationResult<VerificationStatus>[] = [];
-    for (let i = 0; i < this._transactions.length; i++) {
-      const transaction = this._transactions[i];
-      const result = await CertifiedTransferTransactionVerificationRule.verify(
-        trustBase,
-        predicateVerifier,
-        transaction,
+      const tokenResults: VerificationResult<unknown>[] = [];
+      const result = await CertifiedMintTransactionVerificationRule.verify(
+        token.genesis,
+        verificationContext,
+        collectNestedToken,
       );
-      transferResults.push(result);
-
+      tokenResults.push(result);
       if (result.status !== VerificationStatus.OK) {
         results.push(
-          new VerificationResult(
-            'TokenTransferVerification',
-            VerificationStatus.FAIL,
-            `Transaction[${i}] verification failed.`,
-            transferResults,
-          ),
+          new VerificationResult(rule, VerificationStatus.FAIL, 'Genesis verification failed', tokenResults),
         );
-
-        return new VerificationResult('TokenVerification', VerificationStatus.FAIL, '', results);
+        return new VerificationResult(
+          'TokenVerification',
+          VerificationStatus.FAIL,
+          `${rule} verification failed`,
+          results,
+        );
       }
-    }
 
-    results.push(new VerificationResult('TokenTransferVerification', VerificationStatus.OK, ``, transferResults));
+      const transferResults: VerificationResult<VerificationStatus>[] = [];
+      for (let i = 0; i < token._transactions.length; i++) {
+        const transaction = token._transactions[i];
+        const transferResult = await CertifiedTransferTransactionVerificationRule.verify(
+          transaction,
+          verificationContext,
+        );
+        transferResults.push(transferResult);
+
+        if (transferResult.status !== VerificationStatus.OK) {
+          tokenResults.push(
+            new VerificationResult('TokenTransferVerification', VerificationStatus.FAIL, '', transferResults),
+          );
+          results.push(
+            new VerificationResult(
+              rule,
+              VerificationStatus.FAIL,
+              `Transaction[${i}] verification failed`,
+              tokenResults,
+            ),
+          );
+
+          return new VerificationResult(
+            'TokenVerification',
+            VerificationStatus.FAIL,
+            `${rule} verification failed`,
+            results,
+          );
+        }
+      }
+
+      tokenResults.push(
+        new VerificationResult('TokenTransferVerification', VerificationStatus.OK, '', transferResults),
+      );
+      results.push(new VerificationResult(rule, VerificationStatus.OK, '', tokenResults));
+    }
 
     return new VerificationResult('TokenVerification', VerificationStatus.OK, '', results);
   }

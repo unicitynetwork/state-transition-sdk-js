@@ -21,6 +21,7 @@ import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../src/transaction/Token.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
 import { MintJustificationVerifierService } from '../../../src/transaction/verification/MintJustificationVerifierService.js';
+import { VerificationContext } from '../../../src/transaction/verification/VerificationContext.js';
 import { HexConverter } from '../../../src/util/HexConverter.js';
 import { waitInclusionProof } from '../../../src/util/InclusionProofUtils.js';
 import trustBaseJson from '../trust-base.json' with { type: 'json' };
@@ -33,9 +34,8 @@ it('Token splitting', async () => {
 
   const predicateVerifier = PredicateVerifierService.create();
   const mintJustificationVerifier = new MintJustificationVerifierService();
-  mintJustificationVerifier.register(
-    new SplitMintJustificationVerifier(trustBase, predicateVerifier, CustomPaymentData.decode),
-  );
+  mintJustificationVerifier.register(new SplitMintJustificationVerifier(CustomPaymentData.decode));
+  const verificationContext = new VerificationContext(trustBase, predicateVerifier, mintJustificationVerifier);
 
   const ownerPrivateKey = HexConverter.decode(config.ownerPrivateKey);
   const ownerSigningService = new SigningService(ownerPrivateKey);
@@ -63,28 +63,35 @@ it('Token splitting', async () => {
   }
 
   const token = await Token.mint(
-    trustBase,
-    predicateVerifier,
-    mintJustificationVerifier,
     await mintTransaction.toCertifiedTransaction(
       trustBase,
       predicateVerifier,
       await waitInclusionProof(client, trustBase, predicateVerifier, mintTransaction),
     ),
+    verificationContext,
   );
 
   const requests = [
     SplitTokenRequest.create(
       ownerPredicate,
-      PaymentAssetCollection.create(new Asset(new AssetId(textEncoder.encode('EUR')), 150n)),
+      new CustomPaymentData(
+        PaymentAssetCollection.create(new Asset(new AssetId(textEncoder.encode('EUR')), 150n)),
+        'split token',
+      ),
     ),
     SplitTokenRequest.create(
       ownerPredicate,
-      PaymentAssetCollection.create(new Asset(new AssetId(textEncoder.encode('EUR')), 150n)),
+      new CustomPaymentData(
+        PaymentAssetCollection.create(new Asset(new AssetId(textEncoder.encode('EUR')), 150n)),
+        'split token',
+      ),
     ),
     SplitTokenRequest.create(
       ownerPredicate,
-      PaymentAssetCollection.create(new Asset(new AssetId(textEncoder.encode('USD')), 500n)),
+      new CustomPaymentData(
+        PaymentAssetCollection.create(new Asset(new AssetId(textEncoder.encode('USD')), 500n)),
+        'split token',
+      ),
     ),
   ];
 
@@ -102,23 +109,20 @@ it('Token splitting', async () => {
   }
 
   const burntToken = await token.transfer(
-    trustBase,
-    predicateVerifier,
     await result.burn.transaction.toCertifiedTransaction(
       trustBase,
       predicateVerifier,
       await waitInclusionProof(client, trustBase, predicateVerifier, result.burn.transaction),
     ),
+    verificationContext,
   );
 
   let i = 1;
   for (const splitToken of result.tokens) {
-    const splitPaymentData = new CustomPaymentData(splitToken.assets, 'split token');
-
     const mintTransaction = await MintTransaction.create(
       splitToken.networkId,
       splitToken.recipient,
-      await splitPaymentData.encode(),
+      await splitToken.paymentData.encode(),
       splitToken.tokenType,
       splitToken.salt,
       SplitMintJustification.create(burntToken, splitToken.proofs).toCBOR(),
@@ -132,14 +136,12 @@ it('Token splitting', async () => {
     }
 
     const mintedSplitToken = await Token.mint(
-      trustBase,
-      predicateVerifier,
-      mintJustificationVerifier,
       await mintTransaction.toCertifiedTransaction(
         trustBase,
         predicateVerifier,
         await waitInclusionProof(client, trustBase, predicateVerifier, mintTransaction),
       ),
+      verificationContext,
     );
 
     console.log(`Token[${i++}]: `, HexConverter.encode(mintedSplitToken.toCBOR()), '\n');

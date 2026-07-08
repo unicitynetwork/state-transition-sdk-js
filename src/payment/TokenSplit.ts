@@ -1,23 +1,26 @@
 import { DuplicateSplitTokenIdError } from './error/DuplicateSplitTokenIdError.js';
+import { TokenAssetCountMismatchError } from './error/TokenAssetCountMismatchError.js';
 import { TokenAssetMissingError } from './error/TokenAssetMissingError.js';
+import { TokenAssetValueMismatchError } from './error/TokenAssetValueMismatchError.js';
 import { IPaymentData } from './IPaymentData.js';
+import { SplitAllocationProof } from './SplitAllocationProof.js';
+import { SplitManifest } from './SplitManifest.js';
+import { SplitMintJustification } from './SplitMintJustification.js';
+import { SplitToken } from './SplitToken.js';
+import { SplitTokenRequest } from './SplitTokenRequest.js';
+import { DataHash } from '../crypto/hash/DataHash.js';
 import { DataHasher } from '../crypto/hash/DataHasher.js';
 import { DataHasherFactory } from '../crypto/hash/DataHasherFactory.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
-import { HexConverter } from '../util/HexConverter.js';
-import { TokenAssetValueMismatchError } from './error/TokenAssetValueMismatchError.js';
-import { SplitAssetProof } from './SplitAssetProof.js';
-import { SplitToken } from './SplitToken.js';
-import { SplitTokenRequest } from './SplitTokenRequest.js';
-import { SparseMerkleTree } from '../smt/plain/SparseMerkleTree.js';
-import { SparseMerkleSumTree } from '../smt/sum/SparseMerkleSumTree.js';
-import { SparseMerkleSumTreeRootNode } from '../smt/sum/SparseMerkleSumTreeRootNode.js';
+import { BurnPredicate } from '../predicate/builtin/BurnPredicate.js';
+import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
+import { SparseMerkleSumTree } from '../smt/radixsum/SparseMerkleSumTree.js';
+import { SparseMerkleSumTreeRootNode } from '../smt/radixsum/SparseMerkleSumTreeRootNode.js';
+import { StateMask } from '../transaction/StateMask.js';
 import { Token } from '../transaction/Token.js';
 import { TokenId } from '../transaction/TokenId.js';
 import { TransferTransaction } from '../transaction/TransferTransaction.js';
-import { AssetId } from './asset/AssetId.js';
-import { TokenAssetCountMismatchError } from './error/TokenAssetCountMismatchError.js';
-import { BurnPredicate } from '../predicate/builtin/BurnPredicate.js';
+import { HexConverter } from '../util/HexConverter.js';
 
 /**
  * Result of splitting a token.
@@ -31,16 +34,18 @@ export interface ISplit {
 }
 
 /**
- * Token splitting.
+ * Token splitting. Burns the source token and prepares value-conserving output
+ * mints, building one radix sparse Merkle sum tree per source asset so that, for
+ * each asset, the outputs provably sum to the source amount.
  */
 export class TokenSplit {
   /**
    * Split a token into new outputs.
    *
-   * @param {Token} token Source token to split.
+   * @param {Token} token Source token to split (the token being burned).
    * @param {(bytes: Uint8Array) => Promise<IPaymentData>} decodePaymentData Decoder for the source token's payment data.
-   * @param {SplitTokenRequest[]} requests Per-output mint requests.
-   * @param {Uint8Array} [burnStateMask] State mask for the burn transaction. Defaults to a random
+   * @param {SplitTokenRequest[]} requests Per-output mint requests; each carries its own payment data.
+   * @param {StateMask} [burnStateMask] State mask for the burn transaction. Defaults to a random
    *   value; callers needing a crash-resumable (re-buildable) split supply a deterministically
    *   derived mask so the identical burn transaction can be reconstructed after a failure.
    * @returns {Promise<ISplit>} Burn transaction and split tokens ready to mint.
@@ -49,92 +54,94 @@ export class TokenSplit {
     token: Token,
     decodePaymentData: (bytes: Uint8Array) => Promise<IPaymentData>,
     requests: SplitTokenRequest[],
-    burnStateMask?: Uint8Array,
+    burnStateMask: StateMask = StateMask.generate(),
   ): Promise<ISplit> {
-    if (burnStateMask !== undefined && burnStateMask.length !== 32) {
-      throw new RangeError('The burnStateMask must be exactly 32 bytes long.');
-    }
-    const hasher = new DataHasherFactory(HashAlgorithm.SHA256, DataHasher);
-    const trees = new Map<string, [AssetId, SparseMerkleSumTree]>();
-    const networkId = token.genesis.networkId;
+    const factory = new DataHasherFactory(HashAlgorithm.SHA256, DataHasher);
 
-    const requestsWithTokenId = new Map<bigint, [SplitTokenRequest, TokenId]>();
-    for (const request of requests) {
-      const tokenId = await TokenId.fromSalt(networkId, request.salt);
-      const tokenIdPath = tokenId.toBitString().toBigInt();
-      if (requestsWithTokenId.has(tokenIdPath)) {
-        throw new DuplicateSplitTokenIdError(tokenId.toString());
-      }
-      requestsWithTokenId.set(tokenIdPath, [request, tokenId]);
-
-      for (const asset of request.assets.toArray()) {
-        const key = HexConverter.encode(asset.id.bytes);
-        let tree = trees.get(key)?.[1];
-        if (!tree) {
-          tree = new SparseMerkleSumTree(hasher);
-          trees.set(key, [asset.id, tree]);
-        }
-
-        await tree.addLeaf(tokenIdPath, asset.id.bytes, asset.value);
-      }
-    }
-
-    const paymentDataBytes = token.genesis.data;
-    const paymentData = paymentDataBytes ? await decodePaymentData(paymentDataBytes) : null;
-    if (paymentData == null) {
+    if (token.genesis.data == null) {
       throw new Error('Payment data is missing.');
     }
 
-    const assets = paymentData.assets;
+    const sourcePayment = await decodePaymentData(token.genesis.data);
 
-    if (trees.size !== assets.size()) {
+    const sourceAssets = sourcePayment.assets.toArray();
+    const sourceAssetKeys = new Set(sourceAssets.map((asset) => HexConverter.encode(asset.id.bytes)));
+
+    const trees = new Map<string, SparseMerkleSumTree>();
+    const usedTokenIdList = new Set<string>();
+    const tokenIds: TokenId[] = [];
+
+    for (const request of requests) {
+      const tokenId = await TokenId.fromSalt(token.networkId, request.salt);
+      tokenIds.push(tokenId);
+      const tokenIdKey = HexConverter.encode(tokenId.bytes);
+      if (usedTokenIdList.has(tokenIdKey)) {
+        throw new DuplicateSplitTokenIdError(tokenId.toString());
+      }
+      usedTokenIdList.add(tokenIdKey);
+
+      const recipient = EncodedPredicate.fromPredicate(request.recipient);
+      const data = await request.paymentData.encode();
+      const assets = request.paymentData.assets.toArray();
+
+      const leafData = await SplitMintJustification.calculateLeafData(token, recipient, request.salt, tokenId, data);
+
+      for (const asset of assets) {
+        const assetKey = HexConverter.encode(asset.id.bytes);
+        if (!sourceAssetKeys.has(assetKey)) {
+          throw new TokenAssetMissingError(asset.id);
+        }
+
+        let tree = trees.get(assetKey);
+        if (!tree) {
+          tree = new SparseMerkleSumTree(factory);
+          trees.set(assetKey, tree);
+        }
+        await tree.addLeaf(tokenId.bytes, leafData, asset.value);
+      }
+    }
+
+    if (trees.size !== sourceAssets.length) {
       throw new TokenAssetCountMismatchError();
     }
 
-    const aggregationTree = new SparseMerkleTree(hasher);
-    const assetTreeRoots = new Map<string, SparseMerkleSumTreeRootNode>();
-    for (const [assetId, tree] of trees.values()) {
-      const tokenAsset = assets.get(assetId);
-      if (tokenAsset == null) {
-        throw new TokenAssetMissingError(assetId);
+    const roots: DataHash[] = [];
+    const rootByAsset = new Map<string, SparseMerkleSumTreeRootNode>();
+    for (const asset of sourceAssets) {
+      const assetKey = HexConverter.encode(asset.id.bytes);
+      const tree = trees.get(assetKey);
+      if (!tree) {
+        throw new TokenAssetMissingError(asset.id);
       }
 
       const root = await tree.calculateRoot();
-      if (root.value !== tokenAsset.value) {
-        throw new TokenAssetValueMismatchError(assetId, tokenAsset.value, root.value);
+      if (root.value !== asset.value) {
+        throw new TokenAssetValueMismatchError(asset.id, asset.value, root.value);
       }
 
-      assetTreeRoots.set(HexConverter.encode(assetId.bytes), root);
-      await aggregationTree.addLeaf(assetId.toBitString().toBigInt(), root.hash.imprint);
+      roots.push(root.hash);
+      rootByAsset.set(assetKey, root);
     }
 
-    const aggregationRoot = await aggregationTree.calculateRoot();
-    const burnPredicate = BurnPredicate.create(aggregationRoot.hash.imprint);
-    const burnTransaction = await TransferTransaction.create(
-      token,
-      burnPredicate,
-      burnStateMask ?? crypto.getRandomValues(new Uint8Array(32)),
-    );
+    const manifestBytes = SplitManifest.create(roots).toCBOR();
+    const burnReason = (await new DataHasher(HashAlgorithm.SHA256).update(manifestBytes).digest()).data;
+    const burnPredicate = BurnPredicate.create(burnReason);
+    const burnTransaction = await TransferTransaction.create(token, burnPredicate, burnStateMask, manifestBytes);
 
-    const tokens: SplitToken[] = Array.from(requestsWithTokenId.values()).map(
-      ([request, tokenId]) =>
-        new SplitToken(
-          networkId,
-          request.recipient,
-          request.tokenType,
-          request.salt,
-          request.assets,
-          request.assets
-            .toArray()
-            .map((asset) =>
-              SplitAssetProof.create(
-                asset.id,
-                aggregationRoot.getPath(asset.id.toBitString().toBigInt()),
-                assetTreeRoots.get(HexConverter.encode(asset.id.bytes))!.getPath(tokenId.toBitString().toBigInt()),
-              ),
-            ),
-        ),
-    );
+    const tokens: SplitToken[] = [];
+    for (let i = 0; i < requests.length; i++) {
+      const request = requests[i];
+      const tokenId = tokenIds[i];
+      const proofs = request.paymentData.assets
+        .toArray()
+        .map((asset) =>
+          SplitAllocationProof.create(rootByAsset.get(HexConverter.encode(asset.id.bytes))!, tokenId.bytes),
+        );
+
+      tokens.push(
+        new SplitToken(token.networkId, request.recipient, token.type, request.salt, request.paymentData, proofs),
+      );
+    }
 
     return {
       burn: {

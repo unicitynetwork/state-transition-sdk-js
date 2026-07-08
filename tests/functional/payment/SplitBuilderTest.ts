@@ -18,8 +18,10 @@ import { SignaturePredicateUnlockScript } from '../../../src/predicate/builtin/S
 import { PredicateVerifierService } from '../../../src/predicate/verification/PredicateVerifierService.js';
 import { StateTransitionClient } from '../../../src/StateTransitionClient.js';
 import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
+import { StateMask } from '../../../src/transaction/StateMask.js';
 import { Token } from '../../../src/transaction/Token.js';
 import { MintJustificationVerifierService } from '../../../src/transaction/verification/MintJustificationVerifierService.js';
+import { VerificationContext } from '../../../src/transaction/verification/VerificationContext.js';
 import { HexConverter } from '../../../src/util/HexConverter.js';
 import { waitInclusionProof } from '../../../src/util/InclusionProofUtils.js';
 import { VerificationStatus } from '../../../src/verification/VerificationStatus.js';
@@ -32,9 +34,8 @@ describe('SplitBuilder Functional Test', () => {
     const client = new StateTransitionClient(aggregatorClient);
     const predicateVerifier = PredicateVerifierService.create();
     const mintJustificationVerifier = new MintJustificationVerifierService();
-    mintJustificationVerifier.register(
-      new SplitMintJustificationVerifier(trustBase, predicateVerifier, TestPaymentData.decode),
-    );
+    mintJustificationVerifier.register(new SplitMintJustificationVerifier(TestPaymentData.decode));
+    const verificationContext = new VerificationContext(trustBase, predicateVerifier, mintJustificationVerifier);
 
     const signingService = new SigningService(SigningService.generatePrivateKey());
     const predicate = SignaturePredicate.fromSigningService(signingService);
@@ -53,19 +54,17 @@ describe('SplitBuilder Functional Test', () => {
     expect(response.status).toEqual(CertificationStatus.SUCCESS);
 
     let token = await Token.mint(
-      trustBase,
-      predicateVerifier,
-      mintJustificationVerifier,
       await mintTransaction.toCertifiedTransaction(
         trustBase,
         predicateVerifier,
         await waitInclusionProof(client, trustBase, predicateVerifier, mintTransaction),
       ),
+      verificationContext,
     );
 
     await expect(
       TokenSplit.split(token, TestPaymentData.decode, [
-        SplitTokenRequest.create(predicate, PaymentAssetCollection.create(assets[0])),
+        SplitTokenRequest.create(predicate, new TestPaymentData(PaymentAssetCollection.create(assets[0]))),
       ]),
     ).rejects.toThrow(TokenAssetCountMismatchError);
 
@@ -73,9 +72,11 @@ describe('SplitBuilder Functional Test', () => {
       TokenSplit.split(token, TestPaymentData.decode, [
         SplitTokenRequest.create(
           predicate,
-          PaymentAssetCollection.create(
-            assets[0],
-            new Asset(new AssetId(crypto.getRandomValues(new Uint8Array(10))), 400n),
+          new TestPaymentData(
+            PaymentAssetCollection.create(
+              assets[0],
+              new Asset(new AssetId(crypto.getRandomValues(new Uint8Array(10))), 400n),
+            ),
           ),
         ),
       ]),
@@ -83,13 +84,16 @@ describe('SplitBuilder Functional Test', () => {
 
     await expect(
       TokenSplit.split(token, TestPaymentData.decode, [
-        SplitTokenRequest.create(predicate, PaymentAssetCollection.create(assets[0], new Asset(assets[1].id, 1500n))),
+        SplitTokenRequest.create(
+          predicate,
+          new TestPaymentData(PaymentAssetCollection.create(assets[0], new Asset(assets[1].id, 1500n))),
+        ),
       ]),
     ).rejects.toThrow(TokenAssetValueMismatchError);
 
     const requests = [
-      SplitTokenRequest.create(predicate, PaymentAssetCollection.create(assets[0])),
-      SplitTokenRequest.create(predicate, PaymentAssetCollection.create(assets[1])),
+      SplitTokenRequest.create(predicate, new TestPaymentData(PaymentAssetCollection.create(assets[0]))),
+      SplitTokenRequest.create(predicate, new TestPaymentData(PaymentAssetCollection.create(assets[1]))),
     ];
     const result = await TokenSplit.split(token, TestPaymentData.decode, requests);
 
@@ -102,20 +106,20 @@ describe('SplitBuilder Functional Test', () => {
     expect(response.status).toEqual(CertificationStatus.SUCCESS);
 
     token = await token.transfer(
-      trustBase,
-      predicateVerifier,
       await result.burn.transaction.toCertifiedTransaction(
         trustBase,
         predicateVerifier,
         await waitInclusionProof(client, trustBase, predicateVerifier, result.burn.transaction),
       ),
+      verificationContext,
     );
 
+    const mintedSplitTokens: Token[] = [];
     for (const splitToken of result.tokens) {
       const mintTransaction = await MintTransaction.create(
         splitToken.networkId,
         splitToken.recipient,
-        await new TestPaymentData(splitToken.assets).encode(),
+        await splitToken.paymentData.encode(),
         splitToken.tokenType,
         splitToken.salt,
         SplitMintJustification.create(token, splitToken.proofs).toCBOR(),
@@ -127,22 +131,77 @@ describe('SplitBuilder Functional Test', () => {
       expect(response.status).toEqual(CertificationStatus.SUCCESS);
 
       const mintedSplitToken = await Token.mint(
-        trustBase,
-        predicateVerifier,
-        mintJustificationVerifier,
         await mintTransaction.toCertifiedTransaction(
           trustBase,
           predicateVerifier,
           await waitInclusionProof(client, trustBase, predicateVerifier, mintTransaction),
         ),
+        verificationContext,
       );
 
       await expect(
         Token.fromCBOR(mintedSplitToken.toCBOR())
-          .then((token) => token.verify(trustBase, predicateVerifier, mintJustificationVerifier))
+          .then((token) => token.verify(verificationContext))
           .then((result) => result.status),
       ).resolves.toEqual(VerificationStatus.OK);
+
+      mintedSplitTokens.push(mintedSplitToken);
     }
+
+    // Split a first-generation split output again: verifying the second-generation token walks the
+    // whole provenance chain iteratively (second-gen output -> burned first-gen split token ->
+    // burned original source token).
+    const firstGenToken = mintedSplitTokens[0];
+    const secondSplit = await TokenSplit.split(firstGenToken, TestPaymentData.decode, [
+      SplitTokenRequest.create(predicate, new TestPaymentData(PaymentAssetCollection.create(assets[0]))),
+    ]);
+
+    const secondBurnCertification = await client.submitCertificationRequest(
+      await CertificationData.fromTransaction(
+        secondSplit.burn.transaction,
+        await SignaturePredicateUnlockScript.create(secondSplit.burn.transaction, signingService),
+      ),
+    );
+    expect(secondBurnCertification.status).toEqual(CertificationStatus.SUCCESS);
+
+    const secondBurnToken = await firstGenToken.transfer(
+      await secondSplit.burn.transaction.toCertifiedTransaction(
+        trustBase,
+        predicateVerifier,
+        await waitInclusionProof(client, trustBase, predicateVerifier, secondSplit.burn.transaction),
+      ),
+      verificationContext,
+    );
+
+    const secondSplitToken = secondSplit.tokens[0];
+    const secondMintTransaction = await MintTransaction.create(
+      secondSplitToken.networkId,
+      secondSplitToken.recipient,
+      await secondSplitToken.paymentData.encode(),
+      secondSplitToken.tokenType,
+      secondSplitToken.salt,
+      SplitMintJustification.create(secondBurnToken, secondSplitToken.proofs).toCBOR(),
+    );
+
+    expect(
+      (await client.submitCertificationRequest(await CertificationData.fromMintTransaction(secondMintTransaction)))
+        .status,
+    ).toEqual(CertificationStatus.SUCCESS);
+
+    const secondGenToken = await Token.mint(
+      await secondMintTransaction.toCertifiedTransaction(
+        trustBase,
+        predicateVerifier,
+        await waitInclusionProof(client, trustBase, predicateVerifier, secondMintTransaction),
+      ),
+      verificationContext,
+    );
+
+    await expect(
+      Token.fromCBOR(secondGenToken.toCBOR())
+        .then((token) => token.verify(verificationContext))
+        .then((result) => result.status),
+    ).resolves.toEqual(VerificationStatus.OK);
   });
 
   it('should rebuild a byte-identical burn transaction from a caller-supplied burn state mask', async () => {
@@ -151,9 +210,8 @@ describe('SplitBuilder Functional Test', () => {
     const client = new StateTransitionClient(aggregatorClient);
     const predicateVerifier = PredicateVerifierService.create();
     const mintJustificationVerifier = new MintJustificationVerifierService();
-    mintJustificationVerifier.register(
-      new SplitMintJustificationVerifier(trustBase, predicateVerifier, TestPaymentData.decode),
-    );
+    mintJustificationVerifier.register(new SplitMintJustificationVerifier(TestPaymentData.decode));
+    const verificationContext = new VerificationContext(trustBase, predicateVerifier, mintJustificationVerifier);
 
     const signingService = new SigningService(SigningService.generatePrivateKey());
     const predicate = SignaturePredicate.fromSigningService(signingService);
@@ -167,19 +225,19 @@ describe('SplitBuilder Functional Test', () => {
     expect(response.status).toEqual(CertificationStatus.SUCCESS);
 
     const token = await Token.mint(
-      trustBase,
-      predicateVerifier,
-      mintJustificationVerifier,
       await mintTransaction.toCertifiedTransaction(
         trustBase,
         predicateVerifier,
         await waitInclusionProof(client, trustBase, predicateVerifier, mintTransaction),
       ),
+      verificationContext,
     );
 
     // Identical requests across all calls; only the burn mask determines reproducibility.
-    const requests = [SplitTokenRequest.create(predicate, PaymentAssetCollection.create(assets[0]))];
-    const burnStateMask = crypto.getRandomValues(new Uint8Array(32));
+    const requests = [
+      SplitTokenRequest.create(predicate, new TestPaymentData(PaymentAssetCollection.create(assets[0]))),
+    ];
+    const burnStateMask = StateMask.generate();
 
     const first = await TokenSplit.split(token, TestPaymentData.decode, requests, burnStateMask);
     const second = await TokenSplit.split(token, TestPaymentData.decode, requests, burnStateMask);
@@ -190,9 +248,8 @@ describe('SplitBuilder Functional Test', () => {
     // The default stays random — omitting the mask must not become deterministic.
     expect(HexConverter.encode(defaulted.burn.transaction.toCBOR())).not.toEqual(firstBurn);
 
-    // A mask of the wrong length is a caller bug — rejected before any work.
-    await expect(
-      TokenSplit.split(token, TestPaymentData.decode, requests, crypto.getRandomValues(new Uint8Array(31))),
-    ).rejects.toThrow(RangeError);
+    // A mask outside the permitted 16–64 byte range is a caller bug — StateMask rejects it at construction.
+    expect(() => StateMask.fromBytes(crypto.getRandomValues(new Uint8Array(StateMask.MIN_LENGTH - 1)))).toThrow();
+    expect(() => StateMask.fromBytes(crypto.getRandomValues(new Uint8Array(StateMask.MAX_LENGTH + 1)))).toThrow();
   });
 });

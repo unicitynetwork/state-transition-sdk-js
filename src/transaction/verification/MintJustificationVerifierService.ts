@@ -1,4 +1,5 @@
 import { CertifiedMintTransaction } from '../CertifiedMintTransaction.js';
+import type { Token } from '../Token.js';
 import { IMintJustificationVerifier } from './IMintJustificationVerifier.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { VerificationResult } from '../../verification/VerificationResult.js';
@@ -28,28 +29,49 @@ export class MintJustificationVerifierService {
   }
 
   /**
-   * Verify given mint justification with registered verifiers.
+   * Verify the given mint justification with the registered verifier for its tag.
    *
    * @param {CertifiedMintTransaction} transaction Certified mint transaction whose justification to verify.
+   * @param {(token: Token) => void} nestedTokenCollector Receives tokens embedded in the justification that the caller must verify.
    * @returns {Promise<VerificationResult<VerificationStatus>>} Verification outcome.
    */
-  public async verify(transaction: CertifiedMintTransaction): Promise<VerificationResult<VerificationStatus>> {
+  public async verify(
+    transaction: CertifiedMintTransaction,
+    nestedTokenCollector: (token: Token) => void,
+  ): Promise<VerificationResult<VerificationStatus>> {
     const bytes = transaction.justification;
     if (!bytes) {
       return new VerificationResult('MintJustificationVerification', VerificationStatus.OK);
     }
 
-    const tag = CborDeserializer.decodeTag(bytes).tag;
-    const verifier = this.verifiers.get(tag);
-    if (!verifier) {
+    try {
+      const tag = CborDeserializer.decodeTag(bytes).tag;
+      const verifier = this.verifiers.get(tag);
+      if (!verifier) {
+        return new VerificationResult(
+          'MintJustificationVerification',
+          VerificationStatus.FAIL,
+          `Unsupported mint justification tag: ${tag}.`,
+        );
+      }
+
+      const result = await verifier.verify(transaction, nestedTokenCollector);
+      if (result.status !== VerificationStatus.OK) {
+        return new VerificationResult(
+          'MintJustificationVerification',
+          VerificationStatus.FAIL,
+          `Verification failed for tag ${tag}.`,
+          [result],
+        );
+      }
+
+      return new VerificationResult('MintJustificationVerification', VerificationStatus.OK, '', [result]);
+    } catch (error) {
       return new VerificationResult(
         'MintJustificationVerification',
         VerificationStatus.FAIL,
-        `Unsupported mint justification tag: ${tag}.`,
+        `Mint justification verification failed with error: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
-
-    const result = await verifier.verify(transaction, this);
-    return new VerificationResult('MintJustificationVerification', result.status, '', [result]);
   }
 }

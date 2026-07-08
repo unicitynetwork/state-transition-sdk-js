@@ -1,26 +1,29 @@
 import { IPaymentData } from './IPaymentData.js';
+import { SplitManifest } from './SplitManifest.js';
 import { SplitMintJustification } from './SplitMintJustification.js';
-import { RootTrustBase } from '../api/bft/RootTrustBase.js';
+import { DataHasher } from '../crypto/hash/DataHasher.js';
+import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { BurnPredicate } from '../predicate/builtin/BurnPredicate.js';
 import { EncodedPredicate } from '../predicate/EncodedPredicate.js';
-import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { CertifiedMintTransaction } from '../transaction/CertifiedMintTransaction.js';
+import type { Token } from '../transaction/Token.js';
 import { IMintJustificationVerifier } from '../transaction/verification/IMintJustificationVerifier.js';
-import { MintJustificationVerifierService } from '../transaction/verification/MintJustificationVerifierService.js';
 import { HexConverter } from '../util/HexConverter.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 import { VerificationResult } from '../verification/VerificationResult.js';
 import { VerificationStatus } from '../verification/VerificationStatus.js';
 
+const RULE = 'SplitMintJustificationVerifier';
+
 /**
- * Verifier for {@link SplitMintJustification} mint justifications.
+ * Verifier for {@link SplitMintJustification} mint justifications. It reports the
+ * burned source token for caller verification, binds the burn to the split
+ * manifest, recomputes the output's leaf data, and verifies every output asset
+ * against its allocation proof — requiring each asset's reconstructed total to
+ * equal the source amount (value conservation).
  */
 export class SplitMintJustificationVerifier implements IMintJustificationVerifier {
-  public constructor(
-    private readonly trustBase: RootTrustBase,
-    private readonly predicateVerifier: PredicateVerifierService,
-    private readonly decodePaymentData: (bytes: Uint8Array) => Promise<IPaymentData>,
-  ) {}
+  public constructor(private readonly decodePaymentData: (bytes: Uint8Array) => Promise<IPaymentData>) {}
 
   /**
    * @returns {bigint} CBOR tag this verifier handles.
@@ -29,163 +32,106 @@ export class SplitMintJustificationVerifier implements IMintJustificationVerifie
     return SplitMintJustification.CBOR_TAG;
   }
 
+  private static fail(
+    message: string,
+    results: VerificationResult<unknown>[] = [],
+  ): VerificationResult<VerificationStatus> {
+    return new VerificationResult(RULE, VerificationStatus.FAIL, message, results);
+  }
+
   /**
    * @inheritDoc
    */
   public async verify(
     transaction: CertifiedMintTransaction,
-    mintJustificationVerifier: MintJustificationVerifierService,
+    nestedTokenCollector: (token: Token) => void,
   ): Promise<VerificationResult<VerificationStatus>> {
-    const justificationBytes = transaction.justification;
-    if (!justificationBytes) {
-      return new VerificationResult(
-        'SplitMintJustificationVerifier',
-        VerificationStatus.FAIL,
-        'Transaction has no justification.',
-        [],
-      );
+    if (!transaction.justification) {
+      return SplitMintJustificationVerifier.fail('Transaction has no justification.');
     }
 
-    const justification = await SplitMintJustification.fromCBOR(justificationBytes);
-    const paymentDataBytes = transaction.data;
-    const paymentData = paymentDataBytes ? await this.decodePaymentData(paymentDataBytes) : null;
-
-    if (paymentData?.assets == null) {
-      return new VerificationResult(
-        'SplitMintJustificationVerifier',
-        VerificationStatus.FAIL,
-        'Assets data is missing.',
-        [],
-      );
-    }
+    const justification = await SplitMintJustification.fromCBOR(transaction.justification);
 
     if (!transaction.networkId.equals(justification.token.genesis.networkId)) {
-      return new VerificationResult(
-        'SplitMintJustificationVerifier',
-        VerificationStatus.FAIL,
+      return SplitMintJustificationVerifier.fail(
         `Network identifier mismatch: mint is on ${transaction.networkId.toString()}, source token is on ${justification.token.genesis.networkId.toString()}.`,
-        [],
       );
     }
 
-    const tokenVerificationResult = await justification.token.verify(
-      this.trustBase,
-      this.predicateVerifier,
-      mintJustificationVerifier,
+    nestedTokenCollector(justification.token);
+
+    const burnTransaction = justification.token.transactions.at(-1);
+    if (!burnTransaction) {
+      return SplitMintJustificationVerifier.fail('Burned source token does not end in a certified transfer.');
+    }
+
+    if (!burnTransaction.data) {
+      return SplitMintJustificationVerifier.fail('Burn transfer has no manifest.');
+    }
+    const roots = SplitManifest.fromCBOR(burnTransaction.data).roots;
+
+    const burnReason = await new DataHasher(HashAlgorithm.SHA256).update(burnTransaction.data).digest();
+    const expectedRecipient = EncodedPredicate.fromPredicate(BurnPredicate.create(burnReason.data));
+    if (!EncodedPredicate.equals(burnTransaction.recipient, expectedRecipient)) {
+      return SplitMintJustificationVerifier.fail('Burn transfer recipient does not match the manifest hash.');
+    }
+
+    if (!areUint8ArraysEqual(transaction.tokenType.bytes, justification.token.type.bytes)) {
+      return SplitMintJustificationVerifier.fail('Output token type does not match the source token type.');
+    }
+
+    const sourceTokenPaymentData = justification.token.genesis.data
+      ? await this.decodePaymentData(justification.token.genesis.data)
+      : null;
+    if (sourceTokenPaymentData?.assets.size() !== roots.length) {
+      return SplitMintJustificationVerifier.fail('Manifest root count does not match the source asset count.');
+    }
+
+    const paymentData = transaction.data ? await this.decodePaymentData(transaction.data) : null;
+    const proofs = justification.proofs;
+    if (proofs.length !== paymentData?.assets.size()) {
+      return SplitMintJustificationVerifier.fail('Allocation proof count does not match the output asset count.');
+    }
+
+    const leafData = await SplitMintJustification.calculateLeafData(
+      justification.token,
+      transaction.recipient,
+      transaction.salt,
+      transaction.tokenId,
+      transaction.data,
     );
-    if (tokenVerificationResult.status !== VerificationStatus.OK) {
-      return new VerificationResult(
-        'SplitMintJustificationVerifier',
-        VerificationStatus.FAIL,
-        'Burn token verification failed.',
-        [tokenVerificationResult],
-      );
-    }
 
-    if (paymentData.assets.size() !== justification.proofs.length) {
-      return new VerificationResult(
-        'SplitMintJustificationVerifier',
-        VerificationStatus.FAIL,
-        'Total amount of assets differ in token and proofs.',
-        [],
-      );
-    }
+    const assets = paymentData.assets.toArray();
 
-    const validatedAssets = new Set<string>();
-    const burntTokenLastTransaction = justification.token.transactions.at(-1);
-    const root = justification.proofs.at(0)?.aggregationPath.root;
-    for (const proof of justification.proofs) {
-      const assetIdKey = HexConverter.encode(proof.assetId.bytes);
-      if (validatedAssets.has(assetIdKey)) {
-        return new VerificationResult(
-          'SplitMintJustificationVerifier',
-          VerificationStatus.FAIL,
-          `Duplicate split proof for asset id ${proof.assetId.toString()}.`,
-          [],
+    const rootByAssetKey = new Map(
+      sourceTokenPaymentData.assets
+        .toArray()
+        .map((asset, index) => [HexConverter.encode(asset.id.bytes), roots[index]] as const),
+    );
+
+    const results = await Promise.all(
+      assets.map(async (asset, i) => {
+        const sourceAsset = sourceTokenPaymentData.assets.get(asset.id);
+        const root = rootByAssetKey.get(HexConverter.encode(asset.id.bytes));
+        if (sourceAsset == null || root == null) {
+          return SplitMintJustificationVerifier.fail(`Asset ${asset.id.toString()} is absent from the source token.`);
+        }
+
+        const isValid = await proofs[i].verify(
+          transaction.tokenId.bytes,
+          leafData,
+          asset.value,
+          root,
+          sourceAsset.value,
         );
-      }
+        if (!isValid) {
+          return SplitMintJustificationVerifier.fail(`Allocation proof failed for asset ${asset.id.toString()}.`);
+        }
 
-      const aggregationPathResult = await proof.aggregationPath.verify(proof.assetId.toBitString().toBigInt());
-      if (!aggregationPathResult.isSuccessful) {
-        return new VerificationResult(
-          'SplitMintJustificationVerifier',
-          VerificationStatus.FAIL,
-          `Aggregation path verification failed for asset: ${proof.assetId.toString()}`,
-          [],
-        );
-      }
+        return new VerificationResult<VerificationStatus>(RULE, VerificationStatus.OK);
+      }),
+    );
 
-      const assetTreePathResult = await proof.assetTreePath.verify(transaction.tokenId.toBitString().toBigInt());
-      if (!assetTreePathResult.isSuccessful) {
-        return new VerificationResult(
-          'SplitMintJustificationVerifier',
-          VerificationStatus.FAIL,
-          `Asset tree path verification failed for token: ${transaction.tokenId.toString()}`,
-          [],
-        );
-      }
-
-      if (!proof.aggregationPath.root.equals(root)) {
-        return new VerificationResult(
-          'SplitMintJustificationVerifier',
-          VerificationStatus.FAIL,
-          'Current proof is not derived from the same asset tree as other proofs.',
-        );
-      }
-
-      if (!areUint8ArraysEqual(proof.assetTreePath.root.imprint, proof.aggregationPath.steps.at(0)?.data)) {
-        return new VerificationResult(
-          'SplitMintJustificationVerifier',
-          VerificationStatus.FAIL,
-          'Asset tree root does not match aggregation path leaf.',
-          [],
-        );
-      }
-
-      const amount = paymentData.assets.get(proof.assetId)?.value;
-      if (amount == null) {
-        return new VerificationResult(
-          'SplitMintJustificationVerifier',
-          VerificationStatus.FAIL,
-          `Asset id ${proof.assetId.toString()} not found in asset data.`,
-          [],
-        );
-      }
-
-      if (proof.assetTreePath.steps.at(0)?.value !== amount) {
-        return new VerificationResult(
-          'SplitMintJustificationVerifier',
-          VerificationStatus.FAIL,
-          `Asset amount for asset id ${proof.assetId.toString()} does not match asset tree leaf.`,
-          [],
-        );
-      }
-
-      const recipient = burntTokenLastTransaction ? burntTokenLastTransaction.recipient : null;
-      const expectedRecipient = EncodedPredicate.fromPredicate(
-        BurnPredicate.create(proof.aggregationPath.root.imprint),
-      );
-      if (!EncodedPredicate.equals(recipient, expectedRecipient)) {
-        return new VerificationResult(
-          'SplitMintJustificationVerifier',
-          VerificationStatus.FAIL,
-          'Aggregation path root does not match burn predicate.',
-          [],
-        );
-      }
-
-      validatedAssets.add(assetIdKey);
-    }
-
-    if (validatedAssets.size !== paymentData.assets.size()) {
-      return new VerificationResult(
-        'SplitMintJustificationVerifier',
-        VerificationStatus.FAIL,
-        'Some asset proofs are missing from the token.',
-        [],
-      );
-    }
-
-    return new VerificationResult('SplitMintJustificationVerifier', VerificationStatus.OK);
+    return VerificationResult.fromResults(RULE, results);
   }
 }

@@ -27,12 +27,16 @@ export class SparseMerkleTree {
   /**
    * Add a leaf to the tree.
    *
-   * @param {Uint8Array} key Leaf key.
-   * @param {Uint8Array} data Leaf data bytes.
+   * @param {Uint8Array} key 32-byte leaf key.
+   * @param {Uint8Array} data Leaf data bytes (arbitrary length).
    * @returns {Promise<void>} Resolves when the leaf has been inserted.
+   * @throws {Error} If the key is not 32 bytes.
    */
   public async addLeaf(key: Uint8Array, data: Uint8Array): Promise<void> {
-    // TODO: Add length check
+    if (key.length !== 32) {
+      throw new Error('Key must be 32 bytes long.');
+    }
+
     data = new Uint8Array(data);
     key = new Uint8Array(key);
     const path = BitString.fromBytesReversedLSB(key).toBigInt();
@@ -75,7 +79,7 @@ export class SparseMerkleTree {
     remainingPath: bigint,
     depth: number,
     key: Uint8Array,
-    value: Uint8Array,
+    data: Uint8Array,
   ): PendingBranch {
     const commonPath = calculateCommonPath(remainingPath, branch.path);
     const commonPathLength = Number(commonPath.length);
@@ -92,7 +96,7 @@ export class SparseMerkleTree {
       }
 
       const oldBranch = new PendingLeafBranch(branch.path >> commonPath.length, branch.key, branch.data);
-      const newBranch = new PendingLeafBranch(remainingPath >> commonPath.length, key, value);
+      const newBranch = new PendingLeafBranch(remainingPath >> commonPath.length, key, data);
       return new PendingNodeBranch(
         commonPath.path,
         depth + commonPathLength,
@@ -103,7 +107,7 @@ export class SparseMerkleTree {
 
     // If node branch is split in the middle
     if (commonPath.path < branch.path) {
-      const newBranch = new PendingLeafBranch(remainingPath >> commonPath.length, key, value);
+      const newBranch = new PendingLeafBranch(remainingPath >> commonPath.length, key, data);
       const oldBranch = new PendingNodeBranch(
         branch.path >> commonPath.length,
         branch.depth,
@@ -123,14 +127,14 @@ export class SparseMerkleTree {
         branch.path,
         branch.depth,
         branch.left,
-        this.buildTree(branch.right, remainingPath >> commonPath.length, depth + commonPathLength, key, value),
+        this.buildTree(branch.right, remainingPath >> commonPath.length, depth + commonPathLength, key, data),
       );
     }
 
     return new PendingNodeBranch(
       branch.path,
       branch.depth,
-      this.buildTree(branch.left, remainingPath >> commonPath.length, depth + commonPathLength, key, value),
+      this.buildTree(branch.left, remainingPath >> commonPath.length, depth + commonPathLength, key, data),
       branch.right,
     );
   }

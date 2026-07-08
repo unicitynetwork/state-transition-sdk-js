@@ -51,7 +51,7 @@ export class InclusionCertificate {
       const sibling = isRight ? node.left : node.right;
 
       if (sibling != null) {
-        bitmap[Math.floor(node.depth / 8)] |= 1 << node.depth % 8;
+        bitmap[Math.floor(node.depth / 8)] |= 1 << (node.depth % 8);
         siblings.push(sibling.hash);
       }
 
@@ -102,6 +102,62 @@ export class InclusionCertificate {
   }
 
   /**
+   * Reconstruct the sparse Merkle tree root hash for this certificate by hashing
+   * from the leaf upward.
+   *
+   * @param {StateId} leafKey Leaf key.
+   * @param {DataHash} leafValue Leaf value hash.
+   * @returns {Promise<DataHash>} Reconstructed root hash.
+   * @throws {Error} If the certificate siblings do not match the bitmap.
+   */
+  public async calculateRoot(leafKey: StateId, leafValue: DataHash): Promise<DataHash> {
+    const key = leafKey.data;
+    const value = leafValue.data;
+
+    let hash = await new DataHasher(HashAlgorithm.SHA256)
+      .update(new Uint8Array([0x00]))
+      .update(key)
+      .update(value)
+      .digest();
+
+    const keyPath = BitString.fromBytesReversedLSB(key).toBigInt();
+    const bitmapPath = BitString.fromBytesReversedLSB(this.bitmap).toBigInt();
+
+    let position = this.siblings.length;
+    for (let depth = InclusionCertificate.MAX_DEPTH; depth >= 0; depth--) {
+      if (!((bitmapPath >> BigInt(depth)) & 1n)) continue;
+
+      position -= 1;
+      if (position < 0) {
+        throw new Error('Inclusion certificate has fewer siblings than its bitmap requires.');
+      }
+
+      const sibling = this.siblings[position];
+
+      let left: Uint8Array, right: Uint8Array;
+      if ((keyPath >> BigInt(depth)) & 1n) {
+        left = sibling.data;
+        right = hash.data;
+      } else {
+        left = hash.data;
+        right = sibling.data;
+      }
+
+      hash = await new DataHasher(HashAlgorithm.SHA256)
+        .update(new Uint8Array([0x01, depth]))
+        .update(left)
+        .update(right)
+        .digest();
+    }
+
+    if (position !== 0) {
+      throw new Error('Inclusion certificate has more siblings than its bitmap requires.');
+    }
+
+    return hash;
+  }
+
+  /**
    * @returns {Uint8Array} Encoded certificate bytes.
    */
   public encode(): Uint8Array {
@@ -138,43 +194,11 @@ export class InclusionCertificate {
    * @returns {Promise<boolean>} True if the path is valid.
    */
   public async verify(leafKey: StateId, leafValue: DataHash, expectedRootHash: DataHash): Promise<boolean> {
-    const key = leafKey.data;
-    const value = leafValue.data;
-
-    let hash = await new DataHasher(HashAlgorithm.SHA256)
-      .update(new Uint8Array([0x00]))
-      .update(key)
-      .update(value)
-      .digest();
-
-    const keyPath = BitString.fromBytesReversedLSB(key).toBigInt();
-    const bitmapPath = BitString.fromBytesReversedLSB(this.bitmap).toBigInt();
-
-    let position = this.siblings.length;
-    for (let depth = InclusionCertificate.MAX_DEPTH; depth >= 0; depth--) {
-      if (!((bitmapPath >> BigInt(depth)) & 1n)) continue;
-
-      position -= 1;
-      if (position < 0) return false;
-
-      const sibling = this.siblings[position];
-
-      let left: Uint8Array, right: Uint8Array;
-      if ((keyPath >> BigInt(depth)) & 1n) {
-        left = sibling.data;
-        right = hash.data;
-      } else {
-        left = hash.data;
-        right = sibling.data;
-      }
-
-      hash = await new DataHasher(HashAlgorithm.SHA256)
-        .update(new Uint8Array([0x01, depth]))
-        .update(left)
-        .update(right)
-        .digest();
+    try {
+      const root = await this.calculateRoot(leafKey, leafValue);
+      return root.equals(expectedRootHash);
+    } catch {
+      return false;
     }
-
-    return position === 0 && hash.equals(expectedRootHash);
   }
 }
