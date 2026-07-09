@@ -14,9 +14,6 @@ describe('SplitAllocationProof', () => {
     return d;
   }
 
-  // Golden cross-implementation vector shared with the Rust SDK (rsmst `golden_two_leaf_root`).
-  // Keys 0x00..01 (byte 31 = 1) and all-zero first differ at bit 248, so the root bifurcates at
-  // depth 248. The root hash pins the yellowpaper leaf/node hashing byte-for-byte across SDKs.
   it('calculates the root and inclusion proof correctly', async () => {
     const keyA = new Uint8Array(32);
     keyA[31] = 0x01;
@@ -28,7 +25,7 @@ describe('SplitAllocationProof', () => {
     const root = await tree.calculateRoot();
 
     expect(HexConverter.encode(root.hash.data)).toEqual(
-      '8edbd116cc67ca16dfd3b7852a11bdbc7048d446c5ce7f112d6476c28c6b5a96',
+      '42e8d38b002c192bb7a6f121692f55b46626f68b6e9ca59b7f638aecfb4632b1',
     );
     expect(root.value).toEqual(30n);
 

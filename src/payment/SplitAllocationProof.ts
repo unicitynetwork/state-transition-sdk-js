@@ -7,8 +7,8 @@ import { CborSerializer } from '../serialization/cbor/CborSerializer.js';
 import { FinalizedBranch } from '../smt/radixsum/FinalizedBranch.js';
 import { FinalizedLeafBranch } from '../smt/radixsum/FinalizedLeafBranch.js';
 import { SparseMerkleSumTreeRootNode } from '../smt/radixsum/SparseMerkleSumTreeRootNode.js';
+import { getBitAtDepth } from '../smt/SparseMerkleTreePathUtils.js';
 import { BigintConverter } from '../util/BigintConverter.js';
-import { BitString } from '../util/BitString.js';
 import { HexConverter } from '../util/HexConverter.js';
 import { dedent } from '../util/StringUtils.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
@@ -54,7 +54,6 @@ export class SplitAllocationProof {
    * @throws {Error} If the key is not present in the tree.
    */
   public static create(root: SparseMerkleSumTreeRootNode, key: Uint8Array): SplitAllocationProof {
-    const keyPath = BitString.fromBytesReversedLSB(key).toBigInt();
     const siblings: ISibling[] = [];
 
     let node: FinalizedBranch | SparseMerkleSumTreeRootNode | null = root;
@@ -68,7 +67,7 @@ export class SplitAllocationProof {
         return new SplitAllocationProof(siblings);
       }
 
-      const isRight: number = Number((keyPath >> BigInt(node.depth)) & 1n);
+      const isRight = getBitAtDepth(key, node.depth);
       const sibling = isRight ? node.left : node.right;
       if (sibling != null) {
         siblings.push({ depth: node.depth, hash: sibling.hash, sum: sibling.value });
@@ -148,7 +147,8 @@ export class SplitAllocationProof {
       throw new Error('Data must be 32 bytes long.');
     }
 
-    const keyPath = BitString.fromBytesReversedLSB(key).toBigInt();
+    key = new Uint8Array(key);
+    data = new Uint8Array(data);
 
     let hash = await new DataHasher(HashAlgorithm.SHA256)
       .update(new Uint8Array([0x10]))
@@ -164,7 +164,7 @@ export class SplitAllocationProof {
         throw new Error('Reconstructed sum overflows 256 bits.');
       }
 
-      const isRight = Number((keyPath >> BigInt(sibling.depth)) & 1n);
+      const isRight = getBitAtDepth(key, sibling.depth);
       const left = isRight ? { hash: sibling.hash, value: sibling.sum } : { hash, value: sum };
       const right = isRight ? { hash, value: sum } : { hash: sibling.hash, value: sibling.sum };
 

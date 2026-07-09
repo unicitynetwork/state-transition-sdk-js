@@ -5,6 +5,7 @@ import { IDataHasherFactory } from '../../crypto/hash/IDataHasherFactory.js';
 import { BigintConverter } from '../../util/BigintConverter.js';
 import { HexConverter } from '../../util/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
+import { bitsToString } from '../SparseMerkleTreePathUtils.js';
 
 /**
  * Finalized leaf in a radix sparse Merkle sum tree. The leaf hash is
@@ -12,8 +13,7 @@ import { dedent } from '../../util/StringUtils.js';
  * big-endian encoding of the leaf amount.
  */
 export class FinalizedLeafBranch {
-  public constructor(
-    public readonly path: bigint,
+  private constructor(
     private readonly _key: Uint8Array,
     private readonly _data: Uint8Array,
     public readonly value: bigint,
@@ -38,6 +38,15 @@ export class FinalizedLeafBranch {
   }
 
   /**
+   * Routing key: the leaf's own key, read bit-by-bit during tree construction.
+   *
+   * @returns {Uint8Array} Copy of the routing key.
+   */
+  public get path(): Uint8Array {
+    return this._key.slice();
+  }
+
+  /**
    * Hash a {@link PendingLeafBranch} into a finalized leaf.
    *
    * @param {IDataHasherFactory<IDataHasher>} factory Hasher factory.
@@ -51,7 +60,6 @@ export class FinalizedLeafBranch {
     const key = leaf.key;
     const data = leaf.data;
 
-    // u256(value): 32-byte big-endian, left-padded.
     const value = BigintConverter.encode(leaf.value, 32);
 
     const hash = await factory
@@ -62,7 +70,7 @@ export class FinalizedLeafBranch {
       .update(value)
       .digest();
 
-    return new FinalizedLeafBranch(leaf.path, key, data, leaf.value, hash);
+    return new FinalizedLeafBranch(key, data, leaf.value, hash);
   }
 
   /**
@@ -77,7 +85,7 @@ export class FinalizedLeafBranch {
    */
   public toString(): string {
     return dedent`
-      FinalizedLeaf[${this.path.toString(2)}]
+      FinalizedLeaf[${bitsToString(this._key, this._key.length * 8)}]
         Key: ${HexConverter.encode(this._key)}
         Data: ${HexConverter.encode(this._data)}
         Value: ${this.value}

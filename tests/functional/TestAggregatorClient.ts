@@ -48,7 +48,7 @@ export class TestAggregatorClient implements IAggregatorClient {
    * @inheritDoc
    */
   public async getInclusionProof(stateId: StateId): Promise<InclusionProofResponse> {
-    const path = BitString.fromBytesReversedLSB(stateId.data).toBigInt();
+    const path = BitString.fromBytesBigEndian(stateId.data).toBigInt();
     const root = await this.smt.calculateRoot();
 
     if (!this.requests.has(path)) {
@@ -91,7 +91,7 @@ export class TestAggregatorClient implements IAggregatorClient {
       return CertificationResponse.create(CertificationStatus.SIGNATURE_VERIFICATION_FAILED);
     }
 
-    const path = BitString.fromBytesReversedLSB(stateId.data).toBigInt();
+    const path = BitString.fromBytesBigEndian(stateId.data).toBigInt();
     if (!this.requests.has(path)) {
       const leafValue = certificationData.transactionHash;
       await this.smt.addLeaf(stateId.data, leafValue.data);

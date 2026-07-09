@@ -5,6 +5,7 @@ import { IDataHasher } from '../../crypto/hash/IDataHasher.js';
 import { IDataHasherFactory } from '../../crypto/hash/IDataHasherFactory.js';
 import { BigintConverter } from '../../util/BigintConverter.js';
 import { dedent } from '../../util/StringUtils.js';
+import { bitsToString } from '../SparseMerkleTreePathUtils.js';
 
 /**
  * Finalized interior node in a radix sparse Merkle sum tree. The node hash is
@@ -12,14 +13,21 @@ import { dedent } from '../../util/StringUtils.js';
  * sum is `vL + vR`, computed with a checked 256-bit addition.
  */
 export class FinalizedNodeBranch {
-  public constructor(
-    public readonly path: bigint,
+  private constructor(
+    private readonly _path: Uint8Array,
     public readonly depth: number,
     public readonly left: FinalizedBranch,
     public readonly right: FinalizedBranch,
     public readonly value: bigint,
     public readonly hash: DataHash,
   ) {}
+
+  /**
+   * @returns {Uint8Array} Copy of the node's committed region (its `depth`-bit prefix, suffix zeroed).
+   */
+  public get path(): Uint8Array {
+    return this._path.slice();
+  }
 
   /**
    * Hash a {@link PendingNodeBranch} into a finalized node.
@@ -67,7 +75,7 @@ export class FinalizedNodeBranch {
    */
   public toString(): string {
     return dedent`
-      Node[${this.path.toString(2)}]
+      Node[${bitsToString(this.path, this.depth)}]
         Hash: ${this.hash.toString()}
         Depth: ${this.depth}
         Value: ${this.value}

@@ -4,17 +4,20 @@ import { IDataHasher } from '../../crypto/hash/IDataHasher.js';
 import { IDataHasherFactory } from '../../crypto/hash/IDataHasherFactory.js';
 import { HexConverter } from '../../util/HexConverter.js';
 import { dedent } from '../../util/StringUtils.js';
+import { bitsToString } from '../SparseMerkleTreePathUtils.js';
 
 /**
  * Finalized leaf in a radix sparse Merkle tree.
  */
 export class FinalizedLeafBranch {
-  public constructor(
-    public readonly path: bigint,
+  private constructor(
     private readonly _key: Uint8Array,
     private readonly _data: Uint8Array,
     public readonly hash: DataHash,
-  ) {}
+  ) {
+    this._key = new Uint8Array(_key);
+    this._data = new Uint8Array(_data);
+  }
 
   /**
    * @returns {Uint8Array} Copy of the leaf data bytes.
@@ -27,6 +30,15 @@ export class FinalizedLeafBranch {
    * @returns {Uint8Array} Copy of the leaf key bytes.
    */
   public get key(): Uint8Array {
+    return this._key.slice();
+  }
+
+  /**
+   * Routing key: the leaf's own key, read bit-by-bit during tree construction.
+   *
+   * @returns {Uint8Array} Copy of the routing key.
+   */
+  public get path(): Uint8Array {
     return this._key.slice();
   }
 
@@ -51,7 +63,7 @@ export class FinalizedLeafBranch {
       .update(data)
       .digest();
 
-    return new FinalizedLeafBranch(leaf.path, key, data, hash);
+    return new FinalizedLeafBranch(key, data, hash);
   }
 
   /**
@@ -66,7 +78,7 @@ export class FinalizedLeafBranch {
    */
   public toString(): string {
     return dedent`
-      FinalizedLeaf[${this.path.toString(2)}]
+      FinalizedLeaf[${bitsToString(this._key, this._key.length * 8)}]
         Key: ${HexConverter.encode(this._key)}
         Data: ${HexConverter.encode(this._data)}
         Hash: ${this.hash.toString()}`;
