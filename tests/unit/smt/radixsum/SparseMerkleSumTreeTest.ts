@@ -56,6 +56,11 @@ describe('Radix Sparse Merkle Sum Tree', () => {
     );
   });
 
+  it('rejects a duplicate key', async () => {
+    const tree = await build([leaves[0]]);
+    await expect(tree.addLeaf(leaves[0].key, leaves[0].data, leaves[0].value)).rejects.toThrow('Leaf already exists.');
+  });
+
   it('produces an empty proof for a single-leaf tree', async () => {
     const root = await (await build([leaves[0]])).calculateRoot();
     const proof = SplitAllocationProof.create(root, leaves[0].key);

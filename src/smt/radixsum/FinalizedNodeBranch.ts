@@ -1,11 +1,12 @@
 import { FinalizedBranch } from './FinalizedBranch.js';
+import { PendingBranch } from './PendingBranch.js';
 import { PendingNodeBranch } from './PendingNodeBranch.js';
 import { DataHash } from '../../crypto/hash/DataHash.js';
 import { IDataHasher } from '../../crypto/hash/IDataHasher.js';
 import { IDataHasherFactory } from '../../crypto/hash/IDataHasherFactory.js';
 import { BigintConverter } from '../../util/BigintConverter.js';
 import { dedent } from '../../util/StringUtils.js';
-import { bitsToString } from '../SparseMerkleTreePathUtils.js';
+import { bitsToString, commonPrefixLength } from '../SparseMerkleTreePathUtils.js';
 
 /**
  * Finalized interior node in a radix sparse Merkle sum tree. The node hash is
@@ -64,6 +65,16 @@ export class FinalizedNodeBranch {
   }
 
   /**
+   * Depth at which `key` diverges from this node's committed region, capped at the node's own depth.
+   *
+   * @param {Uint8Array} key Key being inserted.
+   * @returns {number} Common-prefix depth.
+   */
+  public calculateSplitDepth(key: Uint8Array): number {
+    return commonPrefixLength(key, this._path, this.depth);
+  }
+
+  /**
    * @returns {Promise<FinalizedNodeBranch>} This branch (already finalized).
    */
   public finalize(): Promise<FinalizedNodeBranch> {
@@ -81,5 +92,25 @@ export class FinalizedNodeBranch {
         Value: ${this.value}
         Left: ${this.left.toString()}
         Right: ${this.right.toString()}`;
+  }
+
+  /**
+   * Derive a pending node with `left` as its left child, reusing this node's committed region.
+   *
+   * @param {PendingBranch} left Replacement left child.
+   * @returns {PendingNodeBranch} New pending node.
+   */
+  public withLeftBranch(left: PendingBranch): PendingNodeBranch {
+    return PendingNodeBranch.create(this._path, this.depth, left, this.right);
+  }
+
+  /**
+   * Derive a pending node with `right` as its right child, reusing this node's committed region.
+   *
+   * @param {PendingBranch} right Replacement right child.
+   * @returns {PendingNodeBranch} New pending node.
+   */
+  public withRightBranch(right: PendingBranch): PendingNodeBranch {
+    return PendingNodeBranch.create(this._path, this.depth, this.left, right);
   }
 }

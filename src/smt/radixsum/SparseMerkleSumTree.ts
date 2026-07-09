@@ -7,7 +7,7 @@ import { SparseMerkleSumTreeRootNode } from './SparseMerkleSumTreeRootNode.js';
 import { IDataHasher } from '../../crypto/hash/IDataHasher.js';
 import { IDataHasherFactory } from '../../crypto/hash/IDataHasherFactory.js';
 import { LeafExistsError } from '../LeafExistsError.js';
-import { commonPrefixLength, getBitAtDepth, regionFromKey } from '../SparseMerkleTreePathUtils.js';
+import { getBitAtDepth, regionFromKey } from '../SparseMerkleTreePathUtils.js';
 
 /**
  * Radix sparse Merkle sum tree. It reuses the radix sparse Merkle tree structure
@@ -86,15 +86,15 @@ export class SparseMerkleSumTree {
 
   private buildTree(branch: PendingBranch, key: Uint8Array, data: Uint8Array, value: bigint): PendingBranch {
     if (branch instanceof PendingLeafBranch || branch instanceof FinalizedLeafBranch) {
-      const depth = commonPrefixLength(key, branch.path, 256);
-      if (depth === 256) {
+      const depth = branch.calculateSplitDepth(key);
+      if (depth === branch.depth) {
         throw new LeafExistsError();
       }
 
       // If a leaf must be split from the middle
       const isRight = getBitAtDepth(key, depth);
       const newBranch = new PendingLeafBranch(key, data, value);
-      return new PendingNodeBranch(
+      return PendingNodeBranch.create(
         regionFromKey(key, depth),
         depth,
         isRight ? branch : newBranch,
@@ -102,13 +102,13 @@ export class SparseMerkleSumTree {
       );
     }
 
-    const depth = commonPrefixLength(key, branch.path, branch.depth);
+    const depth = branch.calculateSplitDepth(key);
     const isRight = getBitAtDepth(key, depth);
 
     // If node branch is split in the middle
     if (depth < branch.depth) {
       const newBranch = new PendingLeafBranch(key, data, value);
-      return new PendingNodeBranch(
+      return PendingNodeBranch.create(
         regionFromKey(key, depth),
         depth,
         isRight ? branch : newBranch,
@@ -118,19 +118,9 @@ export class SparseMerkleSumTree {
 
     // Key belongs inside current node
     if (isRight) {
-      return new PendingNodeBranch(
-        branch.path,
-        branch.depth,
-        branch.left,
-        this.buildTree(branch.right, key, data, value),
-      );
+      return branch.withRightBranch(this.buildTree(branch.right, key, data, value));
     }
 
-    return new PendingNodeBranch(
-      branch.path,
-      branch.depth,
-      this.buildTree(branch.left, key, data, value),
-      branch.right,
-    );
+    return branch.withLeftBranch(this.buildTree(branch.left, key, data, value));
   }
 }

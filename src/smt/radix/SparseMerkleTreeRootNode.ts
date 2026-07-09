@@ -41,7 +41,7 @@ export class SparseMerkleTreeRootNode {
     }
 
     if (left != null && right != null) {
-      const node = await new PendingNodeBranch(new Uint8Array(32), 0, left, right).finalize(factory);
+      const node = await PendingNodeBranch.create(new Uint8Array(32), 0, left, right).finalize(factory);
       return new SparseMerkleTreeRootNode(node.left, node.right, node.hash);
     }
 

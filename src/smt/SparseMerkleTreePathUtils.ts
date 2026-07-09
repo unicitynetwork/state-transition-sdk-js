@@ -42,7 +42,6 @@ export function regionFromKey(key: Uint8Array, depth: number): Uint8Array {
  * bit of `data[0]` (`data[0] & 0x80`) and depth 255 is the least significant bit of `data[31]`.
  */
 export function getBitAtDepth(data: Uint8Array, depth: number): number {
-  depth = Number(depth);
   if (!Number.isInteger(depth) || depth < 0 || depth >= data.length * 8) {
     throw new Error(`Depth ${depth} is out of bounds for a ${data.length}-byte value.`);
   }
