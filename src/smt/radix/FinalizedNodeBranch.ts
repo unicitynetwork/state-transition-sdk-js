@@ -4,6 +4,7 @@ import { DataHash } from '../../crypto/hash/DataHash.js';
 import { IDataHasher } from '../../crypto/hash/IDataHasher.js';
 import { IDataHasherFactory } from '../../crypto/hash/IDataHasherFactory.js';
 import { dedent } from '../../util/StringUtils.js';
+import { pathToRegion } from '../SparseMerkleTreePathUtils.js';
 
 /**
  * Finalized interior node in a radix sparse Merkle tree.
@@ -32,6 +33,7 @@ export class FinalizedNodeBranch {
     const hash = await factory
       .create()
       .update(new Uint8Array([0x01, node.depth]))
+      .update(pathToRegion(node.path, node.depth))
       .update(left.hash.data)
       .update(right.hash.data)
       .digest();

@@ -5,6 +5,7 @@ import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { FinalizedBranch } from '../smt/radix/FinalizedBranch.js';
 import { FinalizedLeafBranch } from '../smt/radix/FinalizedLeafBranch.js';
 import { SparseMerkleTreeRootNode } from '../smt/radix/SparseMerkleTreeRootNode.js';
+import { pathToRegion } from '../smt/SparseMerkleTreePathUtils.js';
 import { BitString } from '../util/BitString.js';
 import { HexConverter } from '../util/HexConverter.js';
 import { dedent } from '../util/StringUtils.js';
@@ -145,6 +146,7 @@ export class InclusionCertificate {
 
       hash = await new DataHasher(HashAlgorithm.SHA256)
         .update(new Uint8Array([0x01, depth]))
+        .update(pathToRegion(keyPath, depth))
         .update(left)
         .update(right)
         .digest();
