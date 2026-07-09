@@ -50,7 +50,7 @@ export class InclusionCertificate {
       const sibling = isRight ? node.left : node.right;
 
       if (sibling != null) {
-        bitmap[Math.floor(node.depth / 8)] |= 0x80 >> (node.depth % 8);
+        bitmap[node.depth >> 3] |= 0x80 >> (node.depth & 7);
         siblings.push(sibling.hash);
       }
 

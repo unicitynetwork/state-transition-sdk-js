@@ -5,11 +5,22 @@
  * branch (its stored region is only meaningful up to that depth).
  */
 export function commonPrefixLength(a: Uint8Array, b: Uint8Array, maxDepth: number): number {
-  let length = 0;
-  while (length < maxDepth && getBitAtDepth(a, length) === getBitAtDepth(b, length)) {
-    length += 1;
+  const fullBytes = maxDepth >> 3;
+  for (let i = 0; i < fullBytes; i++) {
+    if (a[i] !== b[i]) {
+      return (i << 3) + Math.clz32(a[i] ^ b[i]) - 24;
+    }
   }
-  return length;
+
+  const remainderBits = maxDepth & 7;
+  if (remainderBits > 0) {
+    const diff = (a[fullBytes] ^ b[fullBytes]) & (0xff << (8 - remainderBits));
+    if (diff !== 0) {
+      return (fullBytes << 3) + Math.clz32(diff) - 24;
+    }
+  }
+
+  return maxDepth;
 }
 
 /**
@@ -17,8 +28,8 @@ export function commonPrefixLength(a: Uint8Array, b: Uint8Array, maxDepth: numbe
  */
 export function regionFromKey(key: Uint8Array, depth: number): Uint8Array {
   const region = new Uint8Array(32);
-  const fullBytes = Math.floor(depth / 8);
-  const remainderBits = depth % 8;
+  const fullBytes = depth >> 3;
+  const remainderBits = depth & 7;
   region.set(key.subarray(0, fullBytes));
   if (remainderBits > 0) {
     region[fullBytes] = key[fullBytes] & ((0xff << (8 - remainderBits)) & 0xff);
@@ -35,8 +46,8 @@ export function getBitAtDepth(data: Uint8Array, depth: number): number {
   if (!Number.isInteger(depth) || depth < 0 || depth >= data.length * 8) {
     throw new Error(`Depth ${depth} is out of bounds for a ${data.length}-byte value.`);
   }
-  const byteIndex = Math.floor(depth / 8);
-  const bitInByte = depth % 8;
+  const byteIndex = depth >> 3;
+  const bitInByte = depth & 7;
   return (data[byteIndex] >> (7 - bitInByte)) & 1;
 }
 
@@ -48,8 +59,8 @@ export function bitsToString(data: Uint8Array, length: number): string {
   if (!Number.isInteger(length) || length < 0 || length > data.length * 8) {
     throw new Error(`Length ${length} is out of bounds for a ${data.length}-byte value.`);
   }
-  const fullBytes = Math.floor(length / 8);
-  const remainderBits = length % 8;
+  const fullBytes = length >> 3;
+  const remainderBits = length & 7;
   let bits = '';
   for (let i = 0; i < fullBytes; i++) {
     bits += data[i].toString(2).padStart(8, '0');
