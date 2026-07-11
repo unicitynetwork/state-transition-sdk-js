@@ -152,6 +152,6 @@ export class SigningService implements ISigningService<Signature> {
    * @returns {Promise<boolean>} True if the signature verifies.
    */
   public verify(hash: DataHash, signature: Signature): Promise<boolean> {
-    return SigningService.verify(hash, signature.bytes, this._publicKey);
+    return SigningService.verifyWithPublicKey(hash, signature, this._publicKey);
   }
 }
