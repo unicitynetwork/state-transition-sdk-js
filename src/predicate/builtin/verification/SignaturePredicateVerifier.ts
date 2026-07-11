@@ -1,7 +1,6 @@
 import { DataHash } from '../../../crypto/hash/DataHash.js';
 import { DataHasher } from '../../../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../../../crypto/hash/HashAlgorithm.js';
-import { Signature } from '../../../crypto/secp256k1/Signature.js';
 import { SigningService } from '../../../crypto/secp256k1/SigningService.js';
 import { CborSerializer } from '../../../serialization/cbor/CborSerializer.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
@@ -10,6 +9,7 @@ import { EncodedPredicate } from '../../EncodedPredicate.js';
 import { SignaturePredicate } from '../SignaturePredicate.js';
 import { IBuiltInPredicateVerifier } from './IBuiltInPredicateVerifier.js';
 import { BuiltInPredicateType } from '../BuiltInPredicateType.js';
+import { SignaturePredicateUnlockScript } from '../SignaturePredicateUnlockScript.js';
 
 /**
  * Verifier for {@link SignaturePredicate}: recomputes the
@@ -26,9 +26,10 @@ export class SignaturePredicateVerifier implements IBuiltInPredicateVerifier {
     encodedPredicate: EncodedPredicate,
     sourceStateHash: DataHash,
     transactionHash: DataHash,
-    unlockScript: Uint8Array,
+    unlockScriptBytes: Uint8Array,
   ): Promise<VerificationResult<VerificationStatus>> {
     const predicate = SignaturePredicate.fromPredicate(encodedPredicate);
+    const unlockScript = SignaturePredicateUnlockScript.decode(unlockScriptBytes);
 
     const result = await SigningService.verifyWithPublicKey(
       await new DataHasher(HashAlgorithm.SHA256)
@@ -39,7 +40,7 @@ export class SignaturePredicateVerifier implements IBuiltInPredicateVerifier {
           ),
         )
         .digest(),
-      Signature.decode(unlockScript).bytes,
+      unlockScript.signature,
       predicate.publicKey,
     );
 

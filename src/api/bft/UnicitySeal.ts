@@ -1,6 +1,7 @@
 import { DataHash } from '../../crypto/hash/DataHash.js';
 import { DataHasher } from '../../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../../crypto/hash/HashAlgorithm.js';
+import { Signature } from '../../crypto/secp256k1/Signature.js';
 import { SigningService } from '../../crypto/secp256k1/SigningService.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { CborError } from '../../serialization/cbor/CborError.js';
@@ -25,7 +26,7 @@ export class UnicitySeal {
     public readonly timestamp: bigint,
     private readonly _previousHash: Uint8Array | null,
     private readonly _hash: Uint8Array,
-    private readonly _signatures: Map<string, Uint8Array> | null,
+    private readonly _signatures: Map<string, Signature> | null,
   ) {}
 
   /**
@@ -43,12 +44,10 @@ export class UnicitySeal {
   }
 
   /**
-   * @returns {Map<string, Uint8Array>|null} Copy of the signer-to-signature map, or `null` if absent.
+   * @returns {Map<string, Signature>|null} Copy of the signer-to-signature map, or `null` if absent.
    */
-  public get signatures(): Map<string, Uint8Array> | null {
-    return this._signatures
-      ? new Map(Array.from(this._signatures.entries()).map(([key, value]) => [key, new Uint8Array(value)]))
-      : null;
+  public get signatures(): Map<string, Signature> | null {
+    return this._signatures ? new Map(this._signatures) : null;
   }
 
   /**
@@ -93,9 +92,9 @@ export class UnicitySeal {
       new Map(
         (await Promise.all(
           Array.from(signers.entries()).map(([key, signingService]) =>
-            signingService.sign(hash).then((signature) => [key, signature.encode()]),
+            signingService.sign(hash).then((signature) => [key, signature]),
           ),
-        )) as [string, Uint8Array][],
+        )) as [string, Signature][],
       ),
     );
   }
@@ -128,7 +127,7 @@ export class UnicitySeal {
       new Map(
         CborDeserializer.decodeMap(data[7]).map((entry) => [
           CborDeserializer.decodeTextString(entry.key),
-          CborDeserializer.decodeByteString(entry.value),
+          Signature.fromCBOR(entry.value),
         ]),
       ),
     );
@@ -173,8 +172,7 @@ export class UnicitySeal {
           CborSerializer.encodeMap(
             new CborMap(
               Array.from(signatures.entries()).map(
-                ([key, value]) =>
-                  new CborMapEntry(CborSerializer.encodeTextString(key), CborSerializer.encodeByteString(value)),
+                ([key, signature]) => new CborMapEntry(CborSerializer.encodeTextString(key), signature.toCBOR()),
               ),
             ),
           ),
@@ -199,7 +197,7 @@ export class UnicitySeal {
         Hash: ${HexConverter.encode(this._hash)}
         Signatures: [
           ${Array.from(this._signatures?.entries() ?? [])
-            .map(([key, value]) => `${key}: ${HexConverter.encode(value)}`)
+            .map(([key, value]) => `${key}: ${value.toString()}`)
             .join('\n')}
         ]`;
   }

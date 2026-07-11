@@ -1,4 +1,5 @@
 import { DataHash } from '../../../../crypto/hash/DataHash.js';
+import { Signature } from '../../../../crypto/secp256k1/Signature.js';
 import { SigningService } from '../../../../crypto/secp256k1/SigningService.js';
 import { VerificationResult } from '../../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../../verification/VerificationStatus.js';
@@ -53,7 +54,7 @@ export class UnicitySealQuorumSignaturesVerificationRule {
   private static async verifySignature(
     trustBase: RootTrustBase,
     nodeId: string,
-    signature: Uint8Array,
+    signature: Signature,
     hash: DataHash,
   ): Promise<VerificationResult<VerificationStatus>> {
     const node = trustBase.rootNodes.get(nodeId) ?? null;
@@ -65,7 +66,7 @@ export class UnicitySealQuorumSignaturesVerificationRule {
       );
     }
 
-    const result = await SigningService.verifyWithPublicKey(hash, signature.slice(0, -1), node.signingKey);
+    const result = await SigningService.verifyWithPublicKey(hash, signature, node.signingKey);
     if (!result) {
       return new VerificationResult(
         `SignatureVerificationRule[${nodeId}]`,

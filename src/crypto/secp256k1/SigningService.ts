@@ -2,6 +2,7 @@ import { secp256k1 } from '@noble/curves/secp256k1.js';
 
 import { ISigningService } from '../ISigningService.js';
 import { Signature } from './Signature.js';
+import { areUint8ArraysEqual } from '../../util/TypedArrayUtils.js';
 import { DataHash } from '../hash/DataHash.js';
 
 /**
@@ -62,24 +63,6 @@ export class SigningService implements ISigningService<Signature> {
   }
 
   /**
-   * Recover the public key from the signature's recovery byte and verify the
-   * signature against `hash`.
-   *
-   * @param {DataHash} hash Hash that was signed.
-   * @param {Signature} signature Recoverable signature.
-   * @returns {Promise<boolean>} True if the signature verifies.
-   */
-  public static verifySignatureWithRecoveredPublicKey(hash: DataHash, signature: Signature): Promise<boolean> {
-    const publicKey = secp256k1.Signature.fromBytes(
-      new Uint8Array([signature.recovery, ...signature.bytes]),
-      'recovered',
-    )
-      .recoverPublicKey(hash.data)
-      .toBytes();
-    return SigningService.verifyWithPublicKey(hash, signature.bytes, publicKey);
-  }
-
-  /**
    * Verify secp256k1 signature against the given public key.
    *
    * @param {DataHash} hash Signed hash.
@@ -87,8 +70,67 @@ export class SigningService implements ISigningService<Signature> {
    * @param {Uint8Array} publicKey Compressed public key.
    * @returns {Promise<boolean>} True if the signature verifies.
    */
-  public static verifyWithPublicKey(hash: DataHash, signature: Uint8Array, publicKey: Uint8Array): Promise<boolean> {
+  public static verify(hash: DataHash, signature: Uint8Array, publicKey: Uint8Array): Promise<boolean> {
     return Promise.resolve(secp256k1.verify(signature, hash.data, publicKey, { format: 'compact', prehash: false }));
+  }
+
+  /**
+   * Verify a recoverable signature against an expected public key.
+   *
+   * Unlike {@link verify}, this binds the signature's recovery byte: the
+   * public key is recovered from the signature and must equal `publicKey`,
+   * so a tampered recovery byte fails verification.
+   *
+   * @param {DataHash} hash Signed hash.
+   * @param {Signature} signature Recoverable signature.
+   * @param {Uint8Array} publicKey Expected compressed public key.
+   * @returns {Promise<boolean>} True if the signature verifies and the
+   *   recovered public key matches `publicKey`.
+   */
+  public static verifyWithPublicKey(hash: DataHash, signature: Signature, publicKey: Uint8Array): Promise<boolean> {
+    const expectedPublicKey = new Uint8Array(publicKey);
+    if (!areUint8ArraysEqual(expectedPublicKey, SigningService.recoverPublicKey(hash, signature))) {
+      return Promise.resolve(false);
+    }
+
+    return SigningService.verify(hash, signature.bytes, expectedPublicKey);
+  }
+
+  /**
+   * Recover the public key from the signature's recovery byte and verify the
+   * signature against `hash`. The recovered key defines the signer's identity;
+   * no expected key is supplied.
+   *
+   * @param {DataHash} hash Hash that was signed.
+   * @param {Signature} signature Recoverable signature.
+   * @returns {Promise<boolean>} True if the signature verifies.
+   */
+  public static verifyWithRecoveredPublicKey(hash: DataHash, signature: Signature): Promise<boolean> {
+    const recoveredPublicKey = SigningService.recoverPublicKey(hash, signature);
+    if (recoveredPublicKey === null) {
+      return Promise.resolve(false);
+    }
+
+    return SigningService.verify(hash, signature.bytes, recoveredPublicKey);
+  }
+
+  /**
+   * Recover the compressed public key that produced `signature` over `hash`,
+   * using the signature's recovery byte.
+   *
+   * @param {DataHash} hash Hash that was signed.
+   * @param {Signature} signature Recoverable signature.
+   * @returns {Uint8Array|null} Recovered compressed public key, or `null` if the
+   *   signature is not recoverable (e.g. `r`/`s` out of range).
+   */
+  private static recoverPublicKey(hash: DataHash, signature: Signature): Uint8Array | null {
+    try {
+      return secp256k1.Signature.fromBytes(new Uint8Array([signature.recovery, ...signature.bytes]), 'recovered')
+        .recoverPublicKey(hash.data)
+        .toBytes();
+    } catch {
+      return null;
+    }
   }
 
   /**
@@ -110,6 +152,6 @@ export class SigningService implements ISigningService<Signature> {
    * @returns {Promise<boolean>} True if the signature verifies.
    */
   public verify(hash: DataHash, signature: Signature): Promise<boolean> {
-    return SigningService.verifyWithPublicKey(hash, signature.bytes, this._publicKey);
+    return SigningService.verify(hash, signature.bytes, this._publicKey);
   }
 }
