@@ -5,16 +5,15 @@ import { DataHash } from '../../crypto/hash/DataHash.js';
 import { HashAlgorithm } from '../../crypto/hash/HashAlgorithm.js';
 import { IDataHasher } from '../../crypto/hash/IDataHasher.js';
 import { IDataHasherFactory } from '../../crypto/hash/IDataHasherFactory.js';
-import { BitString } from '../../util/BitString.js';
 import { dedent } from '../../util/StringUtils.js';
 import { areUint8ArraysEqual } from '../../util/TypedArrayUtils.js';
+import { getBitAtDepth } from '../SparseMerkleTreePathUtils.js';
 
 /**
  * Sparse Merkle Tree root node implementation.
  */
 export class SparseMerkleTreeRootNode {
   public readonly depth = 0;
-  public readonly path = 1n;
 
   private constructor(
     public readonly left: FinalizedBranch | null,
@@ -42,7 +41,7 @@ export class SparseMerkleTreeRootNode {
     }
 
     if (left != null && right != null) {
-      const node = await new PendingNodeBranch(1n, 0, left, right).finalize(factory);
+      const node = await PendingNodeBranch.create(new Uint8Array(32), 0, left, right).finalize(factory);
       return new SparseMerkleTreeRootNode(node.left, node.right, node.hash);
     }
 
@@ -56,7 +55,6 @@ export class SparseMerkleTreeRootNode {
    * @returns {boolean} True if the key is present.
    */
   public has(key: Uint8Array): boolean {
-    const keyPath = BitString.fromBytesReversedLSB(key).toBigInt();
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     let node: FinalizedBranch | SparseMerkleTreeRootNode | null = this;
     while (node != null) {
@@ -64,7 +62,7 @@ export class SparseMerkleTreeRootNode {
         return areUint8ArraysEqual(node.key, key);
       }
 
-      const isRight: bigint = (keyPath >> BigInt(node.depth)) & 1n;
+      const isRight = getBitAtDepth(key, node.depth);
       node = isRight ? node.right : node.left;
     }
 

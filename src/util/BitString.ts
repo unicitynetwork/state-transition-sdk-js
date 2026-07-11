@@ -28,24 +28,13 @@ export class BitString {
   }
 
   /**
-   * Create a BitString for LSB-first tree routing with reversed byte order.
-   * Bigint bit 0 = bit 0 (LSB) of data[0], matching getBitAtDepth LSB convention.
+   * Create a BitString for spec-compliant big-endian tree routing, where bigint
+   * bit `i` is the big-endian bit at depth `i` (depth 0 = `data[0] & 0x80`).
    *
    * @param {Uint8Array} data Input bytes.
    * @returns {BitString} New bit string.
    */
-  public static fromBytesReversedLSB(data: Uint8Array): BitString {
-    return new BitString(new Uint8Array(data).reverse());
-  }
-
-  /**
-   * Create a BitString for MSB-first tree routing with reversed byte order.
-   * Bigint bit 0 = bit 7 (MSB) of data[0], matching getBitAtDepth MSB convention.
-   *
-   * @param {Uint8Array} data Input bytes.
-   * @returns {BitString} New bit string.
-   */
-  public static fromBytesReversedMSB(data: Uint8Array): BitString {
+  public static fromBytesBigEndian(data: Uint8Array): BitString {
     return new BitString(
       new Uint8Array(data)
         .map(

@@ -5,8 +5,7 @@ import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { FinalizedBranch } from '../smt/radix/FinalizedBranch.js';
 import { FinalizedLeafBranch } from '../smt/radix/FinalizedLeafBranch.js';
 import { SparseMerkleTreeRootNode } from '../smt/radix/SparseMerkleTreeRootNode.js';
-import { pathToRegion } from '../smt/SparseMerkleTreePathUtils.js';
-import { BitString } from '../util/BitString.js';
+import { getBitAtDepth, regionFromKey } from '../smt/SparseMerkleTreePathUtils.js';
 import { HexConverter } from '../util/HexConverter.js';
 import { dedent } from '../util/StringUtils.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
@@ -36,7 +35,6 @@ export class InclusionCertificate {
 
     const siblings: DataHash[] = [];
     const bitmap = new Uint8Array(InclusionCertificate.BITMAP_SIZE);
-    const keyPath = BitString.fromBytesReversedLSB(key).toBigInt();
 
     while (node != null) {
       if (node instanceof FinalizedLeafBranch) {
@@ -47,12 +45,12 @@ export class InclusionCertificate {
         return new InclusionCertificate(bitmap, siblings);
       }
 
-      const isRight: bigint = (keyPath >> BigInt(node.depth)) & 1n;
+      const isRight = getBitAtDepth(key, node.depth);
 
       const sibling = isRight ? node.left : node.right;
 
       if (sibling != null) {
-        bitmap[Math.floor(node.depth / 8)] |= 1 << (node.depth % 8);
+        bitmap[node.depth >> 3] |= 0x80 >> (node.depth & 7);
         siblings.push(sibling.hash);
       }
 
@@ -121,12 +119,9 @@ export class InclusionCertificate {
       .update(value)
       .digest();
 
-    const keyPath = BitString.fromBytesReversedLSB(key).toBigInt();
-    const bitmapPath = BitString.fromBytesReversedLSB(this.bitmap).toBigInt();
-
     let position = this.siblings.length;
     for (let depth = InclusionCertificate.MAX_DEPTH; depth >= 0; depth--) {
-      if (!((bitmapPath >> BigInt(depth)) & 1n)) continue;
+      if (!getBitAtDepth(this.bitmap, depth)) continue;
 
       position -= 1;
       if (position < 0) {
@@ -136,7 +131,7 @@ export class InclusionCertificate {
       const sibling = this.siblings[position];
 
       let left: Uint8Array, right: Uint8Array;
-      if ((keyPath >> BigInt(depth)) & 1n) {
+      if (getBitAtDepth(key, depth)) {
         left = sibling.data;
         right = hash.data;
       } else {
@@ -146,7 +141,7 @@ export class InclusionCertificate {
 
       hash = await new DataHasher(HashAlgorithm.SHA256)
         .update(new Uint8Array([0x01, depth]))
-        .update(pathToRegion(keyPath, depth))
+        .update(regionFromKey(key, depth))
         .update(left)
         .update(right)
         .digest();

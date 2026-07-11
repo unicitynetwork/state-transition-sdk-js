@@ -13,7 +13,6 @@ import { dedent } from '../../util/StringUtils.js';
  */
 export class SparseMerkleSumTreeRootNode {
   public readonly depth = 0;
-  public readonly path = 1n;
 
   private constructor(
     public readonly left: FinalizedBranch | null,
@@ -43,7 +42,7 @@ export class SparseMerkleSumTreeRootNode {
     }
 
     if (left != null && right != null) {
-      const node = await new PendingNodeBranch(1n, 0, left, right).finalize(factory);
+      const node = await PendingNodeBranch.create(new Uint8Array(32), 0, left, right).finalize(factory);
       return new SparseMerkleSumTreeRootNode(node.left, node.right, node.value, node.hash);
     }
 

@@ -1,15 +1,13 @@
 import { FinalizedBranch } from './FinalizedBranch.js';
 import { FinalizedLeafBranch } from './FinalizedLeafBranch.js';
-import { LeafInBranchError } from '../LeafInBranchError.js';
-import { LeafOutOfBoundsError } from '../LeafOutOfBoundsError.js';
+import { LeafExistsError } from '../LeafExistsError.js';
 import { PendingBranch } from './PendingBranch.js';
 import { PendingLeafBranch } from './PendingLeafBranch.js';
 import { PendingNodeBranch } from './PendingNodeBranch.js';
-import { calculateCommonPath } from '../SparseMerkleTreePathUtils.js';
+import { getBitAtDepth, regionFromKey } from '../SparseMerkleTreePathUtils.js';
 import { SparseMerkleTreeRootNode } from './SparseMerkleTreeRootNode.js';
 import { IDataHasher } from '../../crypto/hash/IDataHasher.js';
 import { IDataHasherFactory } from '../../crypto/hash/IDataHasherFactory.js';
-import { BitString } from '../../util/BitString.js';
 
 /**
  * Sparse Merkle Tree implementation.
@@ -39,11 +37,10 @@ export class SparseMerkleTree {
 
     data = new Uint8Array(data);
     key = new Uint8Array(key);
-    const path = BitString.fromBytesReversedLSB(key).toBigInt();
-    const isRight = Number(path & 1n);
+    const isRight = getBitAtDepth(key, 0);
     const branchPromise = isRight ? this.right : this.left;
     const newBranchPromise = branchPromise.then((branch) =>
-      branch ? this.buildTree(branch, path, key, data) : new PendingLeafBranch(path, key, data),
+      branch ? this.buildTree(branch, key, data) : new PendingLeafBranch(key, data),
     );
 
     if (isRight) {
@@ -74,54 +71,43 @@ export class SparseMerkleTree {
     return SparseMerkleTreeRootNode.create(left, right, this.factory);
   }
 
-  private buildTree(branch: PendingBranch, keyPath: bigint, key: Uint8Array, data: Uint8Array): PendingBranch {
-    const commonPath = calculateCommonPath(keyPath, branch.path);
-    const isRight = Number((keyPath >> BigInt(commonPath.length)) & 1n);
-
-    if (commonPath.path === keyPath) {
-      throw new LeafInBranchError();
-    }
-
-    // If a leaf must be split from the middle
+  private buildTree(branch: PendingBranch, key: Uint8Array, data: Uint8Array): PendingBranch {
     if (branch instanceof PendingLeafBranch || branch instanceof FinalizedLeafBranch) {
-      if (commonPath.path === branch.path) {
-        throw new LeafOutOfBoundsError();
+      const depth = branch.calculateSplitDepth(key);
+      if (depth === branch.depth) {
+        throw new LeafExistsError();
       }
 
-      const newBranch = new PendingLeafBranch(keyPath, key, data);
-      return new PendingNodeBranch(
-        commonPath.path,
-        commonPath.length,
+      // If a leaf must be split from the middle
+      const isRight = getBitAtDepth(key, depth);
+      const newBranch = new PendingLeafBranch(key, data);
+      return PendingNodeBranch.create(
+        regionFromKey(key, depth),
+        depth,
         isRight ? branch : newBranch,
         isRight ? newBranch : branch,
       );
     }
+
+    const depth = branch.calculateSplitDepth(key);
+    const isRight = getBitAtDepth(key, depth);
 
     // If node branch is split in the middle
-    if (commonPath.path < branch.path) {
-      const newBranch = new PendingLeafBranch(keyPath, key, data);
-      return new PendingNodeBranch(
-        commonPath.path,
-        commonPath.length,
+    if (depth < branch.depth) {
+      const newBranch = new PendingLeafBranch(key, data);
+      return PendingNodeBranch.create(
+        regionFromKey(key, depth),
+        depth,
         isRight ? branch : newBranch,
         isRight ? newBranch : branch,
       );
     }
 
+    // Key belongs inside current node
     if (isRight) {
-      return new PendingNodeBranch(
-        branch.path,
-        branch.depth,
-        branch.left,
-        this.buildTree(branch.right, keyPath, key, data),
-      );
+      return branch.withRightBranch(this.buildTree(branch.right, key, data));
     }
 
-    return new PendingNodeBranch(
-      branch.path,
-      branch.depth,
-      this.buildTree(branch.left, keyPath, key, data),
-      branch.right,
-    );
+    return branch.withLeftBranch(this.buildTree(branch.left, key, data));
   }
 }
