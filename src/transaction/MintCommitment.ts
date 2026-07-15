@@ -1,5 +1,4 @@
 import { Commitment } from './Commitment.js';
-import { IMintTransactionReason } from './IMintTransactionReason.js';
 import { InclusionProof } from './InclusionProof.js';
 import { MintTransaction } from './MintTransaction.js';
 import { MintTransactionData } from './MintTransactionData.js';
@@ -8,23 +7,20 @@ import { RequestId } from '../api/RequestId.js';
 import { MintSigningService } from '../sign/MintSigningService.js';
 
 /**
- * Commitment representing a submitted transaction.
- * @typeParam R The type of the mint transaction reason.
+ * Commitment representing a submitted mint transaction.
  */
-export class MintCommitment<R extends IMintTransactionReason> extends Commitment<MintTransactionData<R>> {
-  private constructor(requestId: RequestId, transactionData: MintTransactionData<R>, authenticator: Authenticator) {
+export class MintCommitment extends Commitment<MintTransactionData> {
+  private constructor(requestId: RequestId, transactionData: MintTransactionData, authenticator: Authenticator) {
     super(requestId, transactionData, authenticator);
   }
 
   /**
    * Create mint commitment from transaction data.
    *
-   * @param {MintTransactionData<R>} data mint transaction data
+   * @param {MintTransactionData} data mint transaction data
    * @return mint commitment
    */
-  public static async create<R extends IMintTransactionReason>(
-    data: MintTransactionData<R>,
-  ): Promise<MintCommitment<R>> {
+  public static async create(data: MintTransactionData): Promise<MintCommitment> {
     const signingService = await MintSigningService.create(data.tokenId);
 
     const transactionHash = await data.calculateHash();
@@ -41,7 +37,7 @@ export class MintCommitment<R extends IMintTransactionReason> extends Commitment
    * @param {InclusionProof} inclusionProof Commitment inclusion proof
    * @return mint transaction
    */
-  public toTransaction(inclusionProof: InclusionProof): MintTransaction<R> {
-    return new MintTransaction<R>(this.transactionData, inclusionProof);
+  public toTransaction(inclusionProof: InclusionProof): MintTransaction {
+    return new MintTransaction(this.transactionData, inclusionProof);
   }
 }

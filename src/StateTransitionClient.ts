@@ -32,9 +32,7 @@ export class StateTransitionClient {
    * @returns Commitment ready for inclusion proof retrieval
    * @throws Error if aggregator rejects
    */
-  public async submitMintCommitment<R extends IMintTransactionReason>(
-    commitment: MintCommitment<R>,
-  ): Promise<SubmitCommitmentResponse> {
+  public async submitMintCommitment(commitment: MintCommitment): Promise<SubmitCommitmentResponse> {
     return this.client.submitCommitment(
       commitment.requestId,
       await commitment.transactionData.calculateHash(),
@@ -80,13 +78,13 @@ export class StateTransitionClient {
    * @param {Token} nametags    A list of tokens used as nametags in the transaction.
    * @return The updated token after applying the transaction.
    */
-  public finalizeTransaction<R extends IMintTransactionReason>(
+  public finalizeTransaction(
     trustBase: RootTrustBase,
-    token: Token<R>,
+    token: Token,
     state: TokenState,
     transaction: TransferTransaction,
-    nametags: Token<IMintTransactionReason>[] = [],
-  ): Promise<Token<R>> {
+    nametags: Token[] = [],
+  ): Promise<Token> {
     return token.update(trustBase, state, transaction, nametags);
   }
 
@@ -129,7 +127,7 @@ export class StateTransitionClient {
    */
   public async isTokenStateSpent(
     trustBase: RootTrustBase,
-    token: Token<IMintTransactionReason>,
+    token: Token,
     publicKey: Uint8Array,
   ): Promise<boolean> {
     const pk = new Uint8Array(publicKey);

@@ -1,17 +1,16 @@
-import { MintTransaction } from './MintTransaction.js';
-import { VerificationResult } from '../verification/VerificationResult.js';
+import { ReasonTypeId } from './ReasonTypeId.js';
 
 /**
  * Mint transaction reason.
+ * Verification is delegated to app-specific SDKs.
  */
 export interface IMintTransactionReason {
   /**
-   * Verify mint reason for genesis.
+   * Get the type identifier for this reason.
    *
-   * @param genesis Genesis to verify against
-   * @return verification result
+   * @return reason type ID
    */
-  verify(genesis: MintTransaction<IMintTransactionReason>): Promise<VerificationResult>;
+  getTypeId(): ReasonTypeId;
 
   /**
    * Convert mint transaction reason to CBOR bytes.

@@ -1,4 +1,3 @@
-import { IMintTransactionReason } from './IMintTransactionReason.js';
 import { IInclusionProofJson, InclusionProof, InclusionProofVerificationStatus } from './InclusionProof.js';
 import { IMintTransactionDataJson, MintTransactionData } from './MintTransactionData.js';
 import { MintTransactionState } from './MintTransactionState.js';
@@ -20,15 +19,14 @@ export interface IMintTransactionJson {
 
 /**
  * Mint transaction.
- *
- * @param <R> mint reason
+ * Reason verification is delegated to app-specific SDKs.
  */
-export class MintTransaction<R extends IMintTransactionReason> extends Transaction<MintTransactionData<R>> {
-  public constructor(data: MintTransactionData<R>, inclusionProof: InclusionProof) {
+export class MintTransaction extends Transaction<MintTransactionData> {
+  public constructor(data: MintTransactionData, inclusionProof: InclusionProof) {
     super(data, inclusionProof);
   }
 
-  public static async fromCBOR(bytes: Uint8Array): Promise<MintTransaction<IMintTransactionReason>> {
+  public static async fromCBOR(bytes: Uint8Array): Promise<MintTransaction> {
     const data = CborDeserializer.readArray(bytes);
 
     return new MintTransaction(await MintTransactionData.fromCBOR(data[0]), InclusionProof.fromCBOR(data[1]));
@@ -38,7 +36,7 @@ export class MintTransaction<R extends IMintTransactionReason> extends Transacti
     return typeof input === 'object' && input !== null && 'data' in input && 'inclusionProof' in input;
   }
 
-  public static async /**/ fromJSON(input: unknown): Promise<MintTransaction<IMintTransactionReason>> {
+  public static async fromJSON(input: unknown): Promise<MintTransaction> {
     if (!MintTransaction.isJSON(input)) {
       throw new InvalidJsonStructureError();
     }
@@ -71,14 +69,6 @@ export class MintTransaction<R extends IMintTransactionReason> extends Transacti
 
     if (!(await this.inclusionProof.authenticator.verify(this.inclusionProof.transactionHash))) {
       return new VerificationResult(VerificationResultCode.FAIL, 'Authenticator verification failed.');
-    }
-
-    const reasonVerificationResult =
-      (await this.data.reason?.verify(this)) ?? new VerificationResult(VerificationResultCode.OK);
-    if (!reasonVerificationResult.isSuccessful) {
-      return new VerificationResult(VerificationResultCode.FAIL, 'Mint reason verification', [
-        reasonVerificationResult,
-      ]);
     }
 
     const inclusionProofVerificationResult = await this.inclusionProof.verify(

@@ -32,7 +32,7 @@ export interface ITokenJson {
 /**
  * In-memory representation of a token including its transaction history.
  */
-export class Token<R extends IMintTransactionReason> {
+export class Token {
   /**
    * Create a new token instance.
    * @param state Current state of the token including state data and unlock predicate
@@ -43,9 +43,9 @@ export class Token<R extends IMintTransactionReason> {
    */
   private constructor(
     public readonly state: TokenState,
-    public readonly genesis: MintTransaction<R>,
+    public readonly genesis: MintTransaction,
     private readonly _transactions: TransferTransaction[] = [],
-    private readonly _nametagTokens: Token<IMintTransactionReason>[] = [],
+    private readonly _nametagTokens: Token[] = [],
     public readonly version: string = TOKEN_VERSION,
   ) {
     this._nametagTokens = _nametagTokens.slice();
@@ -72,7 +72,7 @@ export class Token<R extends IMintTransactionReason> {
   }
 
   /** Nametag tokens associated with this token. */
-  public get nametagTokens(): Token<IMintTransactionReason>[] {
+  public get nametagTokens(): Token[] {
     return this._nametagTokens.slice();
   }
 
@@ -87,7 +87,7 @@ export class Token<R extends IMintTransactionReason> {
    * @param bytes CBOR bytes
    * @return token
    */
-  public static async fromCBOR(bytes: Uint8Array): Promise<Token<IMintTransactionReason>> {
+  public static async fromCBOR(bytes: Uint8Array): Promise<Token> {
     const data = CborDeserializer.readArray(bytes);
 
     const version = CborDeserializer.readTextString(data[0]);
@@ -118,7 +118,7 @@ export class Token<R extends IMintTransactionReason> {
     );
   }
 
-  public static async fromJSON(input: unknown): Promise<Token<IMintTransactionReason>> {
+  public static async fromJSON(input: unknown): Promise<Token> {
     if (!Token.isJSON(input)) {
       throw new InvalidJsonStructureError();
     }
@@ -141,12 +141,12 @@ export class Token<R extends IMintTransactionReason> {
    * @param nametags    nametags associated with transaction
    * @return token
    */
-  public static async mint<R extends IMintTransactionReason>(
+  public static async mint(
     trustBase: RootTrustBase,
     state: TokenState,
-    transaction: MintTransaction<R>,
-    nametags: Token<IMintTransactionReason>[] = [],
-  ): Promise<Token<R>> {
+    transaction: MintTransaction,
+    nametags: Token[] = [],
+  ): Promise<Token> {
     const token = new Token(state, transaction, [], nametags);
     const result = await token.verify(trustBase);
     if (!result.isSuccessful) {
@@ -169,8 +169,8 @@ export class Token<R extends IMintTransactionReason> {
     trustBase: RootTrustBase,
     state: TokenState,
     transaction: TransferTransaction,
-    nametags: Token<IMintTransactionReason>[] = [],
-  ): Promise<Token<R>> {
+    nametags: Token[] = [],
+  ): Promise<Token> {
     let result = await transaction.verify(trustBase, this);
 
     if (!result.isSuccessful) {

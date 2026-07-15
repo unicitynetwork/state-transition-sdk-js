@@ -7,20 +7,23 @@ import { ITokenJson, Token } from '../Token.js';
 import { ISplitMintReasonProofJson, SplitMintReasonProof } from './SplitMintReasonProof.js';
 import { InvalidJsonStructureError } from '../../InvalidJsonStructureError.js';
 import { IMintTransactionReason } from '../../transaction/IMintTransactionReason.js';
-import { MintReasonType } from '../../transaction/MintReasonType.js';
+import { MintReasonFactory } from '../../transaction/MintReasonFactory.js';
 import { MintTransaction } from '../../transaction/MintTransaction.js';
+import { ReasonTypeId } from '../../transaction/ReasonTypeId.js';
 import { VerificationResult } from '../../verification/VerificationResult.js';
 import { VerificationResultCode } from '../../verification/VerificationResultCode.js';
 
 export interface ISplitMintReasonJson {
-  type: MintReasonType.TOKEN_SPLIT;
-  token: ITokenJson;
   proofs: ISplitMintReasonProofJson[];
+  token: ITokenJson;
+  typeId: string;
 }
 
 export class SplitMintReason implements IMintTransactionReason {
+  public static TYPE_ID: ReasonTypeId;
+
   public constructor(
-    public readonly token: Token<IMintTransactionReason>,
+    public readonly token: Token,
     private readonly _proofs: SplitMintReasonProof[],
   ) {
     this._proofs = _proofs.slice();
@@ -28,6 +31,10 @@ export class SplitMintReason implements IMintTransactionReason {
 
   public get proofs(): SplitMintReasonProof[] {
     return this._proofs.slice();
+  }
+
+  public getTypeId(): ReasonTypeId {
+    return SplitMintReason.TYPE_ID;
   }
 
   /**
@@ -60,7 +67,16 @@ export class SplitMintReason implements IMintTransactionReason {
     );
   }
 
-  public async verify(transaction: MintTransaction<IMintTransactionReason>): Promise<VerificationResult> {
+  /**
+   * Verify split mint reason against a mint transaction.
+   *
+   * NOTE: This verification method is preserved for future use in app-specific SDKs (e.g., coinbase SDK).
+   * It is not called by the base state-transition-sdk as reason verification is delegated to app-specific implementations.
+   *
+   * @param transaction Mint transaction to verify against
+   * @return verification result
+   */
+  public async verify(transaction: MintTransaction): Promise<VerificationResult> {
     if (transaction.data.coinData == null) {
       return Promise.resolve(new VerificationResult(VerificationResultCode.FAIL, 'Coin data is missing.'));
     }
@@ -140,7 +156,16 @@ export class SplitMintReason implements IMintTransactionReason {
     return {
       proofs: this._proofs.map((proof) => proof.toJSON()),
       token: this.token.toJSON(),
-      type: MintReasonType.TOKEN_SPLIT,
+      typeId: this.getTypeId().toJSON(),
     };
   }
 }
+
+// Initialize TYPE_ID and register with factory
+(async (): Promise<void> => {
+  SplitMintReason.TYPE_ID = await ReasonTypeId.fromString('TOKEN_SPLIT');
+  MintReasonFactory.register(SplitMintReason.TYPE_ID, {
+    fromCBOR: SplitMintReason.fromCBOR,
+    fromJSON: SplitMintReason.fromJSON,
+  });
+})();

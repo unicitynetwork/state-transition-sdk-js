@@ -49,7 +49,7 @@ class TokenRequest {
  */
 class TokenSplit {
   public constructor(
-    private readonly token: Token<IMintTransactionReason>,
+    private readonly token: Token,
     private readonly aggregationRoot: SparseMerkleTreeRootNode,
     private readonly coinRoots: Map<string, SparseMerkleSumTreeRootNode>,
     private readonly tokens: TokenRequest[],
@@ -86,7 +86,7 @@ class TokenSplit {
   public async createSplitMintCommitments(
     trustBase: RootTrustBase,
     burnTransaction: TransferTransaction,
-  ): Promise<MintCommitment<IMintTransactionReason>[]> {
+  ): Promise<MintCommitment[]> {
     const burnedToken = await this.token.update(
       trustBase,
       new TokenState(new BurnPredicate(this.token.id, this.token.type, this.aggregationRoot.hash), null),
@@ -94,8 +94,22 @@ class TokenSplit {
     );
 
     return Promise.all(
-      this.tokens.map((request) =>
-        MintTransactionData.create(
+      this.tokens.map(async (request) => {
+        const splitReason = new SplitMintReason(
+          burnedToken,
+          request.coinData!.coins.map(
+            ([coinId]) =>
+              new SplitMintReasonProof(
+                coinId,
+                this.aggregationRoot.getPath(coinId.toBitString().toBigInt()),
+                this.coinRoots.get(coinId.toJSON())!.getPath(request.id.toBitString().toBigInt()),
+              ),
+          ),
+        );
+
+        const reasons = new Map<string, IMintTransactionReason>([[splitReason.getTypeId().toHexString(), splitReason]]);
+
+        return MintTransactionData.create(
           request.id,
           request.type,
           request.data,
@@ -103,19 +117,9 @@ class TokenSplit {
           request.recipient,
           request.salt,
           request.recipientDataHash,
-          new SplitMintReason(
-            burnedToken,
-            request.coinData!.coins.map(
-              ([coinId]) =>
-                new SplitMintReasonProof(
-                  coinId,
-                  this.aggregationRoot.getPath(coinId.toBitString().toBigInt()),
-                  this.coinRoots.get(coinId.toJSON())!.getPath(request.id.toBitString().toBigInt()),
-                ),
-            ),
-          ),
-        ).then((data) => MintCommitment.create(data)),
-      ),
+          reasons,
+        ).then((data) => MintCommitment.create(data));
+      }),
     );
   }
 }
@@ -158,7 +162,7 @@ export class TokenSplitBuilder {
    * @param token token to be used for split
    * @return token split object for submitting info
    */
-  public async build(token: Token<IMintTransactionReason>): Promise<TokenSplit> {
+  public async build(token: Token): Promise<TokenSplit> {
     const trees = new Map<string, [CoinId, SparseMerkleSumTree]>();
 
     for (const data of this.tokens.values()) {

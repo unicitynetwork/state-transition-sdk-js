@@ -1,5 +1,7 @@
 import { IMintTransactionReason } from './IMintTransactionReason.js';
+import { MintReasonFactory } from './MintReasonFactory.js';
 import { MintTransactionState } from './MintTransactionState.js';
+import { ReasonTypeId } from './ReasonTypeId.js';
 import { AddressFactory } from '../address/AddressFactory.js';
 import { IAddress } from '../address/IAddress.js';
 import { DataHash } from '../hash/DataHash.js';
@@ -8,7 +10,6 @@ import { HashAlgorithm } from '../hash/HashAlgorithm.js';
 import { InvalidJsonStructureError } from '../InvalidJsonStructureError.js';
 import { CborDeserializer } from '../serializer/cbor/CborDeserializer.js';
 import { CborSerializer } from '../serializer/cbor/CborSerializer.js';
-import { SplitMintReason } from '../token/fungible/SplitMintReason.js';
 import { TokenCoinData, TokenCoinDataJson } from '../token/fungible/TokenCoinData.js';
 import { TokenId } from '../token/TokenId.js';
 import { TokenType } from '../token/TokenType.js';
@@ -18,20 +19,20 @@ import { dedent } from '../util/StringUtils.js';
 const textEncoder = new TextEncoder();
 
 export interface IMintTransactionDataJson {
+  readonly coinData: TokenCoinDataJson | null;
+  readonly reasons: { [typeIdHex: string]: unknown } | null;
+  readonly recipient: string;
+  readonly recipientDataHash: string | null;
+  readonly salt: string;
+  readonly tokenData: string | null;
   readonly tokenId: string;
   readonly tokenType: string;
-  readonly tokenData: string | null;
-  readonly coinData: TokenCoinDataJson | null;
-  readonly recipient: string;
-  readonly salt: string;
-  readonly recipientDataHash: string | null;
-  readonly reason: unknown | null;
 }
 
 /**
  * Data object describing a token mint operation.
  */
-export class MintTransactionData<R extends IMintTransactionReason> {
+export class MintTransactionData {
   /**
    * @param tokenId     Token identifier
    * @param tokenType   Token type identifier
@@ -41,7 +42,7 @@ export class MintTransactionData<R extends IMintTransactionReason> {
    * @param recipient   Address of the first owner
    * @param _salt       Random salt used to derive predicates
    * @param recipientDataHash    Optional metadata hash
-   * @param reason      Optional reason object
+   * @param reasons     Map of reason type IDs to reason objects
    */
   private constructor(
     public readonly tokenId: TokenId,
@@ -52,7 +53,7 @@ export class MintTransactionData<R extends IMintTransactionReason> {
     public readonly recipient: IAddress,
     private readonly _salt: Uint8Array,
     public readonly recipientDataHash: DataHash | null,
-    public readonly reason: R | null,
+    public readonly reasons: Map<string, IMintTransactionReason> | null,
   ) {}
 
   /** Immutable token data used for the mint. */
@@ -65,7 +66,7 @@ export class MintTransactionData<R extends IMintTransactionReason> {
     return new Uint8Array(this._salt);
   }
 
-  public static async create<R extends IMintTransactionReason>(
+  public static async create(
     tokenId: TokenId,
     tokenType: TokenType,
     tokenData: Uint8Array | null,
@@ -73,8 +74,8 @@ export class MintTransactionData<R extends IMintTransactionReason> {
     recipient: IAddress,
     salt: Uint8Array,
     recipientDataHash: DataHash | null,
-    reason: R | null,
-  ): Promise<MintTransactionData<R>> {
+    reasons: Map<string, IMintTransactionReason> | null,
+  ): Promise<MintTransactionData> {
     const _tokenData = tokenData ? new Uint8Array(tokenData) : null;
     const _salt = new Uint8Array(salt);
 
@@ -87,7 +88,7 @@ export class MintTransactionData<R extends IMintTransactionReason> {
       recipient,
       _salt,
       recipientDataHash,
-      reason,
+      reasons,
     );
   }
 
@@ -97,7 +98,7 @@ export class MintTransactionData<R extends IMintTransactionReason> {
     recipient: IAddress,
     salt: Uint8Array,
     targetAddress: IAddress,
-  ): Promise<MintTransactionData<IMintTransactionReason>> {
+  ): Promise<MintTransactionData> {
     return MintTransactionData.create(
       await TokenId.fromNameTag(name),
       tokenType,
@@ -116,8 +117,23 @@ export class MintTransactionData<R extends IMintTransactionReason> {
    * @param bytes CBOR bytes
    * @return mint transaction data
    */
-  public static async fromCBOR(bytes: Uint8Array): Promise<MintTransactionData<IMintTransactionReason>> {
+  public static async fromCBOR(bytes: Uint8Array): Promise<MintTransactionData> {
     const data = CborDeserializer.readArray(bytes);
+
+    // Deserialize reasons using factory
+    const reasonsArray = data[7] ? CborDeserializer.readArray(data[7]) : null;
+    const reasons = reasonsArray
+      ? new Map(
+          await Promise.all(
+            reasonsArray.map(async (entry) => {
+              const [typeIdBytes, reasonBytes] = CborDeserializer.readArray(entry);
+              const typeId = ReasonTypeId.fromCBOR(typeIdBytes);
+              const reason = await MintReasonFactory.fromCBOR(typeId, reasonBytes);
+              return [typeId.toHexString(), reason] as [string, IMintTransactionReason];
+            }),
+          ),
+        )
+      : null;
 
     return MintTransactionData.create(
       TokenId.fromCBOR(data[0]),
@@ -127,7 +143,7 @@ export class MintTransactionData<R extends IMintTransactionReason> {
       await AddressFactory.createAddress(CborDeserializer.readTextString(data[4])),
       CborDeserializer.readByteString(data[5]),
       CborDeserializer.readOptional(data[6], DataHash.fromCBOR),
-      await CborDeserializer.readOptional(data[7], SplitMintReason.fromCBOR),
+      reasons,
     );
   }
 
@@ -142,10 +158,22 @@ export class MintTransactionData<R extends IMintTransactionReason> {
     );
   }
 
-  public static async fromJSON(input: unknown): Promise<MintTransactionData<IMintTransactionReason>> {
+  public static async fromJSON(input: unknown): Promise<MintTransactionData> {
     if (!MintTransactionData.isJSON(input)) {
       throw new InvalidJsonStructureError();
     }
+
+    // Deserialize reasons using factory
+    const reasons = input.reasons
+      ? new Map(
+          await Promise.all(
+            Object.entries(input.reasons).map(async ([typeIdHex, reasonJson]) => {
+              const reason = await MintReasonFactory.fromJSON(typeIdHex, reasonJson);
+              return [typeIdHex, reason] as [string, IMintTransactionReason];
+            }),
+          ),
+        )
+      : null;
 
     return MintTransactionData.create(
       TokenId.fromJSON(input.tokenId),
@@ -155,7 +183,7 @@ export class MintTransactionData<R extends IMintTransactionReason> {
       await AddressFactory.createAddress(input.recipient),
       HexConverter.decode(input.salt),
       input.recipientDataHash ? DataHash.fromJSON(input.recipientDataHash) : null,
-      input.reason ? await SplitMintReason.fromJSON(input.reason) : null,
+      reasons,
     );
   }
 
@@ -173,14 +201,27 @@ export class MintTransactionData<R extends IMintTransactionReason> {
       CborSerializer.encodeTextString(this.recipient.address),
       CborSerializer.encodeByteString(this.salt),
       CborSerializer.encodeOptional(this.recipientDataHash, (hash) => hash.toCBOR()),
-      CborSerializer.encodeOptional(this.reason, (reason) => reason!.toCBOR()),
+      CborSerializer.encodeOptional(
+        this.reasons,
+        (reasons) =>
+          CborSerializer.encodeArray(
+            ...Array.from(reasons.entries()).map(([typeIdHex, reason]) =>
+              CborSerializer.encodeArray(
+                CborSerializer.encodeByteString(ReasonTypeId.fromJSON(typeIdHex).toBytes()),
+                reason.toCBOR(),
+              ),
+            ),
+          ),
+      ),
     );
   }
 
   public toJSON(): IMintTransactionDataJson {
     return {
       coinData: this.coinData?.toJSON() ?? null,
-      reason: this.reason?.toJSON() ?? null,
+      reasons: this.reasons
+        ? Object.fromEntries(Array.from(this.reasons.entries()).map(([typeIdHex, reason]) => [typeIdHex, reason.toJSON()]))
+        : null,
       recipient: this.recipient.address,
       recipientDataHash: this.recipientDataHash?.toJSON() ?? null,
       salt: HexConverter.encode(this.salt),
@@ -192,15 +233,31 @@ export class MintTransactionData<R extends IMintTransactionReason> {
 
   /**
    * Calculate mint transaction hash.
+   * Note: Reasons are EXCLUDED from the hash calculation.
    *
    * @return transaction hash.
    */
   public calculateHash(): Promise<DataHash> {
-    return new DataHasher(HashAlgorithm.SHA256).update(this.toCBOR()).digest();
+    // Encode only the first 7 fields (excluding reasons) for hash calculation
+    const hashData = CborSerializer.encodeArray(
+      this.tokenId.toCBOR(),
+      this.tokenType.toCBOR(),
+      CborSerializer.encodeOptional(this.tokenData, CborSerializer.encodeByteString),
+      CborSerializer.encodeOptional(this.coinData, (coins) => coins.toCBOR()),
+      CborSerializer.encodeTextString(this.recipient.address),
+      CborSerializer.encodeByteString(this.salt),
+      CborSerializer.encodeOptional(this.recipientDataHash, (hash) => hash.toCBOR()),
+    );
+    return new DataHasher(HashAlgorithm.SHA256).update(hashData).digest();
   }
 
   /** Convert instance to readable string */
   public toString(): string {
+    const reasonsStr = this.reasons
+      ? Array.from(this.reasons.entries())
+          .map(([typeId, reason]) => `${typeId}: ${reason.toString()}`)
+          .join(', ')
+      : null;
     return dedent`
       MintTransactionData:
         Token ID: ${this.tokenId.toString()}
@@ -210,6 +267,6 @@ export class MintTransactionData<R extends IMintTransactionReason> {
         Recipient: ${this.recipient}
         Salt: ${HexConverter.encode(this.salt)}
         Data: ${this.recipientDataHash?.toString() ?? null}
-        Reason: ${this.reason?.toString() ?? null}`;
+        Reasons: ${reasonsStr}`;
   }
 }

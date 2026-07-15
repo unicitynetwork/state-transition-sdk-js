@@ -3,7 +3,6 @@ import { ISerializablePredicate } from './ISerializablePredicate.js';
 import { RootTrustBase } from '../bft/RootTrustBase.js';
 import { DataHash } from '../hash/DataHash.js';
 import { Token } from '../token/Token.js';
-import { IMintTransactionReason } from '../transaction/IMintTransactionReason.js';
 import { TransferTransaction } from '../transaction/TransferTransaction.js';
 
 /**
@@ -38,9 +37,5 @@ export interface IPredicate extends ISerializablePredicate {
    * @param transaction current transaction
    * @return true if successful
    */
-  verify(
-    trustBase: RootTrustBase,
-    token: Token<IMintTransactionReason>,
-    transaction: TransferTransaction,
-  ): Promise<boolean>;
+  verify(trustBase: RootTrustBase, token: Token, transaction: TransferTransaction): Promise<boolean>;
 }
