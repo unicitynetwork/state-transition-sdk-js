@@ -1,6 +1,6 @@
 {
   "name": "@unicitylabs/state-transition-sdk",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Generic State Transition Flow engine for value-carrier agents",
   "type": "module",
   "exports": {
@@ -41,22 +41,17 @@
   "devDependencies": {
     "@babel/preset-env": "8.0.2",
     "@babel/preset-typescript": "8.0.1",
-    "@eslint/js": "9.39.4",
+    "@eslint/js": "9.39.5",
     "@types/jest": "30.0.0",
     "@types/node": "22.13.14",
     "babel-jest": "30.4.1",
-    "eslint": "9.39.4",
+    "eslint": "9.39.5",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-import": "2.32.0",
     "eslint-plugin-prettier": "5.5.6",
     "globals": "17.7.0",
     "jest": "30.4.2",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.62.0"
-  },
-  "overrides": {
-    "@istanbuljs/load-nyc-config": {
-      "js-yaml": "5.1.0"
-    }
+    "typescript-eslint": "8.65.0"
   }
 }
