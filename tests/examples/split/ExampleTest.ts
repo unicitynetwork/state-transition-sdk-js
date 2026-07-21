@@ -21,6 +21,7 @@ import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { Token } from '../../../src/transaction/Token.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
 import { MintJustificationVerifierService } from '../../../src/transaction/verification/MintJustificationVerifierService.js';
+import { TokenIssuanceVerifierService } from '../../../src/transaction/verification/TokenIssuanceVerifierService.js';
 import { VerificationContext } from '../../../src/transaction/verification/VerificationContext.js';
 import { HexConverter } from '../../../src/util/HexConverter.js';
 import { waitInclusionProof } from '../../../src/util/InclusionProofUtils.js';
@@ -35,7 +36,12 @@ it('Token splitting', async () => {
   const predicateVerifier = PredicateVerifierService.create();
   const mintJustificationVerifier = new MintJustificationVerifierService();
   mintJustificationVerifier.register(new SplitMintJustificationVerifier(CustomPaymentData.decode));
-  const verificationContext = new VerificationContext(trustBase, predicateVerifier, mintJustificationVerifier);
+  const verificationContext = new VerificationContext(
+    trustBase,
+    predicateVerifier,
+    mintJustificationVerifier,
+    new TokenIssuanceVerifierService(false),
+  );
 
   const ownerPrivateKey = HexConverter.decode(config.ownerPrivateKey);
   const ownerSigningService = new SigningService(ownerPrivateKey);

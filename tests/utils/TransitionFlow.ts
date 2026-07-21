@@ -4,6 +4,8 @@ import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
 import { SignaturePredicate } from '../../src/predicate/builtin/SignaturePredicate.js';
 import { PredicateVerifierService } from '../../src/predicate/verification/PredicateVerifierService.js';
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
+import { MintJustificationVerifierService } from '../../src/transaction/verification/MintJustificationVerifierService.js';
+import { TokenIssuanceVerifierService } from '../../src/transaction/verification/TokenIssuanceVerifierService.js';
 import { VerificationContext } from '../../src/transaction/verification/VerificationContext.js';
 import { VerificationStatus } from '../../src/verification/VerificationStatus.js';
 
@@ -15,7 +17,12 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
   describe('Transition', () => {
     it('default successful flow', async () => {
       const predicateVerifier = PredicateVerifierService.create();
-      const verificationContext = new VerificationContext(trustBase, predicateVerifier);
+      const verificationContext = new VerificationContext(
+        trustBase,
+        predicateVerifier,
+        new MintJustificationVerifierService(),
+        new TokenIssuanceVerifierService(false),
+      );
 
       const targetPredicate = SignaturePredicate.create(ALICE_SIGNING_SERVICE.publicKey);
 

@@ -21,6 +21,7 @@ import { MintTransaction } from '../../../src/transaction/MintTransaction.js';
 import { StateMask } from '../../../src/transaction/StateMask.js';
 import { Token } from '../../../src/transaction/Token.js';
 import { MintJustificationVerifierService } from '../../../src/transaction/verification/MintJustificationVerifierService.js';
+import { TokenIssuanceVerifierService } from '../../../src/transaction/verification/TokenIssuanceVerifierService.js';
 import { VerificationContext } from '../../../src/transaction/verification/VerificationContext.js';
 import { HexConverter } from '../../../src/util/HexConverter.js';
 import { waitInclusionProof } from '../../../src/util/InclusionProofUtils.js';
@@ -35,7 +36,12 @@ describe('SplitBuilder Functional Test', () => {
     const predicateVerifier = PredicateVerifierService.create();
     const mintJustificationVerifier = new MintJustificationVerifierService();
     mintJustificationVerifier.register(new SplitMintJustificationVerifier(TestPaymentData.decode));
-    const verificationContext = new VerificationContext(trustBase, predicateVerifier, mintJustificationVerifier);
+    const verificationContext = new VerificationContext(
+      trustBase,
+      predicateVerifier,
+      mintJustificationVerifier,
+      new TokenIssuanceVerifierService(false),
+    );
 
     const signingService = new SigningService(SigningService.generatePrivateKey());
     const predicate = SignaturePredicate.fromSigningService(signingService);
@@ -211,7 +217,12 @@ describe('SplitBuilder Functional Test', () => {
     const predicateVerifier = PredicateVerifierService.create();
     const mintJustificationVerifier = new MintJustificationVerifierService();
     mintJustificationVerifier.register(new SplitMintJustificationVerifier(TestPaymentData.decode));
-    const verificationContext = new VerificationContext(trustBase, predicateVerifier, mintJustificationVerifier);
+    const verificationContext = new VerificationContext(
+      trustBase,
+      predicateVerifier,
+      mintJustificationVerifier,
+      new TokenIssuanceVerifierService(false),
+    );
 
     const signingService = new SigningService(SigningService.generatePrivateKey());
     const predicate = SignaturePredicate.fromSigningService(signingService);

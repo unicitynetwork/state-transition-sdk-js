@@ -18,7 +18,7 @@ export class TokenIssuanceVerifierService {
    *
    * @param {boolean} rejectUnregisteredTypes When true, reject any token whose type has no registered issuance verifier.
    */
-  public constructor(private readonly rejectUnregisteredTypes: boolean = false) {}
+  public constructor(private readonly rejectUnregisteredTypes: boolean = true) {}
 
   /**
    * Register a policy for its declared token type.
