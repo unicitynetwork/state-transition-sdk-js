@@ -7,8 +7,8 @@ import { VerificationStatus } from '../../verification/VerificationStatus.js';
 /**
  * Registry that dispatches token verification to the right
  * {@link ITokenIssuanceVerifier} based on the token's type. A token type with no
- * registered verifier is accepted, unless `rejectUnregisteredTypes` is set, in
- * which case it is rejected.
+ * registered verifier is rejected by default, and only accepted when
+ * `rejectUnregisteredTypes` is explicitly set to `false`.
  */
 export class TokenIssuanceVerifierService {
   private readonly verifiers: Map<string, ITokenIssuanceVerifier> = new Map();
