@@ -16,12 +16,12 @@ function createTokenIssuanceVerifier(status: VerificationStatus): ITokenIssuance
 }
 
 describe('TokenIssuanceVerifierService', () => {
-  it('should accept an unregistered token type by default', async () => {
-    expect((await new TokenIssuanceVerifierService().verify(genesis)).status).toBe(VerificationStatus.OK);
+  it('should reject an unregistered token type by default', async () => {
+    expect((await new TokenIssuanceVerifierService().verify(genesis)).status).toBe(VerificationStatus.FAIL);
   });
 
-  it('should reject an unregistered token type when fail-closed', async () => {
-    expect((await new TokenIssuanceVerifierService(true).verify(genesis)).status).toBe(VerificationStatus.FAIL);
+  it('should accept an unregistered token type when fail-open', async () => {
+    expect((await new TokenIssuanceVerifierService(false).verify(genesis)).status).toBe(VerificationStatus.OK);
   });
 
   it('should run the registered verifier for a token type', async () => {

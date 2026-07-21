@@ -16,6 +16,8 @@ import { StateMask } from '../../../src/transaction/StateMask.js';
 import { Token } from '../../../src/transaction/Token.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
 import { TransferTransaction } from '../../../src/transaction/TransferTransaction.js';
+import { MintJustificationVerifierService } from '../../../src/transaction/verification/MintJustificationVerifierService.js';
+import { TokenIssuanceVerifierService } from '../../../src/transaction/verification/TokenIssuanceVerifierService.js';
 import { VerificationContext } from '../../../src/transaction/verification/VerificationContext.js';
 import { HexConverter } from '../../../src/util/HexConverter.js';
 import { waitInclusionProof } from '../../../src/util/InclusionProofUtils.js';
@@ -24,7 +26,12 @@ import trustBaseJson from '../trust-base.json' with { type: 'json' };
 
 async function receiveToken(client: StateTransitionClient, trustBase: RootTrustBase): Promise<string> {
   const predicateVerifier = PredicateVerifierService.create();
-  const verificationContext = new VerificationContext(trustBase, predicateVerifier);
+  const verificationContext = new VerificationContext(
+    trustBase,
+    predicateVerifier,
+    new MintJustificationVerifierService(),
+    new TokenIssuanceVerifierService(false),
+  );
 
   const ownerPrivateKey = HexConverter.decode(config.ownerPrivateKey);
   const ownerSigningService = new SigningService(ownerPrivateKey);
@@ -57,7 +64,12 @@ it('Token transfer', async () => {
   const trustBase = RootTrustBase.fromJSON(trustBaseJson);
   const client = new StateTransitionClient(aggregatorClient);
   const predicateVerifier = PredicateVerifierService.create();
-  const verificationContext = new VerificationContext(trustBase, predicateVerifier);
+  const verificationContext = new VerificationContext(
+    trustBase,
+    predicateVerifier,
+    new MintJustificationVerifierService(),
+    new TokenIssuanceVerifierService(false),
+  );
 
   const ownerPrivateKey = HexConverter.decode(config.ownerPrivateKey);
   const ownerSigningService = new SigningService(ownerPrivateKey);

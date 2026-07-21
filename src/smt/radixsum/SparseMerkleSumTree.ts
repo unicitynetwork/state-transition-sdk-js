@@ -70,11 +70,11 @@ export class SparseMerkleSumTree {
    * @returns A promise that resolves to the SumTreeRootNode representing the root of the tree.
    */
   public async calculateRoot(): Promise<SparseMerkleSumTreeRootNode> {
-    this.left = this.left.then(
-      (branch): Promise<FinalizedBranch | null> => (branch ? branch.finalize(this.factory) : Promise.resolve(null)),
+    this.left = this.left.then((branch): Promise<FinalizedBranch | null> =>
+      branch ? branch.finalize(this.factory) : Promise.resolve(null),
     );
-    this.right = this.right?.then(
-      (branch): Promise<FinalizedBranch | null> => (branch ? branch.finalize(this.factory) : Promise.resolve(null)),
+    this.right = this.right?.then((branch): Promise<FinalizedBranch | null> =>
+      branch ? branch.finalize(this.factory) : Promise.resolve(null),
     );
     const [left, right] = await Promise.all([
       this.left as Promise<FinalizedBranch | null>,
