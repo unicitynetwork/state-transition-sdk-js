@@ -81,8 +81,9 @@ export class InclusionProofVerificationRule {
     }
 
     // A leaf cannot postdate the round that certified it, and consensus signs that timestamp.
-    // One-sided: it does not detect back-dating. See README.md, "Request deadlines are enforced by
-    // the service, not by verification".
+    // This only bounds the recorded reference time: the service chooses it, and the proof
+    // authenticates that value, not when the leaf was created. A back-dated leaf can pass both
+    // this check and the deadline check above; timely admission still depends on the service.
     if (referenceTime > inclusionProof.unicityCertificate.inputRecord.timestamp) {
       return new VerificationResult(
         'InclusionProofVerificationRule',
