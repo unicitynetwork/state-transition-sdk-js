@@ -453,3 +453,21 @@ function generateRecipientPubkeyAddr()
 ```
 
 These interfaces provide the foundation for implementing the Unicity Token Transaction Protocol in client applications.
+
+## 11. TypeScript SDK Signature Reference
+
+This section describes the current SDK's secp256k1 signature encoding for implementers of interoperable software. Applications should use the SDK's signing and verification APIs.
+
+The raw recoverable signature is 65 bytes, encoded as `R || S || V`:
+
+| Field | Length | Encoding |
+| --- | --- | --- |
+| `R` | 32 bytes | Unsigned big-endian ECDSA scalar. |
+| `S` | 32 bytes | Unsigned big-endian ECDSA scalar; verification requires low-S form. |
+| `V` | 1 byte | Recovery ID, accepted range `0`–`3`. |
+
+Public keys use the 33-byte compressed secp256k1 representation. `Signature.encode()` produces the raw bytes above; `Signature.toCBOR()` wraps them in a CBOR byte string.
+
+`SigningService.sign(hash)` signs the supplied `DataHash` bytes without hashing them again. The caller constructs the protocol-specific digest first: for `SignaturePredicateUnlockScript.create`, this is SHA-256 over the CBOR array of the source-state hash bytes and transaction hash bytes. Verification recovers the public key from the digest and recoverable signature, checks it against the expected key, and rejects high-S signatures.
+
+The implementation is authoritative: see [Signature](./src/crypto/secp256k1/Signature.ts), [SigningService](./src/crypto/secp256k1/SigningService.ts), [signature verification](./src/crypto/secp256k1/Secp256k1SignatureVerifier.ts), and [signature predicate unlocking](./src/predicate/builtin/SignaturePredicateUnlockScript.ts).

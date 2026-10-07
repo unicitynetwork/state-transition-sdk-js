@@ -1,318 +1,154 @@
-# State Transition SDK
+# Unicity State Transition SDK
 
-## Overview
+Build applications that mint, transfer, and verify digital assets on the Unicity Network. This **TypeScript/JavaScript** SDK gives you control over tokens, ownership rules, and payments, with cryptographic verification built in.
 
-The State Transition SDK is a TypeScript library that provides an off-chain token transaction framework. Tokens are managed, stored, and transferred off-chain with only cryptographic commitments published on-chain, ensuring privacy while preventing double-spending through single-spend proofs.
-This is a low-level SDK, that supports transferring tokens, making payments, and splitting tokens.
-In this system, tokens are self-contained entities containing complete transaction history and cryptographic proofs attesting to their current state (ownership, value, etc.). State transitions are verified through consultation with blockchain infrastructure (Unicity) to produce proof of single spend.
+Unicity combines private, off-chain token transactions with network-backed protection against double-spending. Token data stays with the parties you share it with, while unicity proofs let recipients verify that assets are spent only once. The network is designed to scale horizontally as demand grows.
 
-### Key Features
-
-- **Off-chain Privacy**: Cryptographic commitments contain no information about tokens, their state, or transaction nature
-- **Horizontal Scalability**: Millions of transaction commitments per block capability
-- **Zero-Knowledge Transactions**: Observers cannot determine if commitments refer to token transactions or other processes
-- **Offline Transaction Support**: Create and serialize transactions without network connectivity
-- **TypeScript Support**: Full type safety and modern development experience
-- **Modular Architecture**: Pluggable address schemes, predicates, and token types
+- **Create digital assets:** mint tokens with your own types and application data payload.
+- **Move value:** transfer tokens and split fungible tokens for payments.
+- **Verify locally:** validate token history and unicity proofs against the compact trust base.
+- **Build your way:** choose ownership predicates, issuance policies, storage, and delivery channels.
+- **Use TypeScript throughout:** work with typed SDK objects for signing, verification, and serialization.
 
 ## Installation
+
+Requires Node.js 22 or later for Node.js applications. The SDK is also usable in browser applications.
 
 ```bash
 npm install @unicitylabs/state-transition-sdk
 ```
 
-## Upgrading to 3.0
+Import SDK classes from their `lib/...` paths, as shown below; the package has no root export.
 
-### 3.0.1 changes API that 3.0.0 shipped
+## Unicity Network
 
-3.0.1 is a corrective release: 3.0.0 was published but not adopted, and rather
-than carry its rough edges forward the release fixes them in place. It is not a
-drop-in patch.
+Mainnet is live. Start with testnet2, for production use the mainnet gateway and matching trust base.
 
-| Change | What breaks |
-|---|---|
-| `TransferTransaction.fromCBOR(bytes, token)` | now `(bytes, sourceStateHash, lockScript)`, and synchronous |
-| `CertifiedTransferTransaction.fromCBOR(bytes, token)` | the same |
-| `TransferTransaction.expiresAtFromCBOR` | removed; decode the transaction and read `expiresAt` |
-| `new InclusionProofResponse(...)` | replaced by `InclusionProofResponse.certified` / `.notCertified` |
-| `new InclusionProof(...)` | every field is now required; a proof describes a certified leaf |
-| `InclusionProof.getCertificationData` / `getReferenceTime` | no longer nullable |
-| `InclusionProofVerificationStatus` | `MISSING_CERTIFICATION_DATA`, `MISSING_REFERENCE_TIME`, `INCOMPLETE_INCLUSION_PROOF` and `INCLUSION_CERTIFICATE_MISSING` removed — none can occur now that a proof is complete by construction |
+| Network | Gateway | Network ID | Trust base |
+| --- | --- | --- | --- |
+| Mainnet | `https://gateway.mainnet.unicity.network` | `1` | [JSON](https://raw.githubusercontent.com/unicitynetwork/unicity-ids/main/bft-trustbase.mainnet.json) |
+| Testnet2 | `https://gateway.testnet2.unicity.network` | `4` | [JSON](https://raw.githubusercontent.com/unicitynetwork/unicity-ids/main/bft-trustbase.testnet2.json) |
 
-The wire formats are unchanged from 3.0.0, so tokens and proofs move between the
-two versions; only the API moved.
+Pass your gateway API key as the second argument to `AggregatorClient`. The shared public testnet2 demo key is `sk_ddc3cfcc001e4a28ac3fad7407f99590` ([source](https://github.com/unicity-sphere/sphere-sdk/blob/main/README.md#api-key)). Shared capacity may be limited; use your own key for sustained testing. Use your own mainnet key obtained from https://sphere.unicity.network/ and keep it secure.
 
+### First connection
 
-3.0 changes the formats the SDK shares with the Unicity Service, so it is not
-interoperable with 2.x in either direction. There is no migration path for
-tokens already in circulation.
+Download the testnet2 trust base once into your working directory:
 
-**Tokens minted by 2.x cannot be loaded.** `Token.VERSION` is now 2, and
-`Token.fromCBOR` rejects an older token with `Unsupported Token version: 1`.
-`MintTransaction`, `TransferTransaction` and `CertificationData` moved to
-version 2 with it. Affected tokens have to be re-minted.
+```bash
+curl --fail --location --output bft-trustbase.testnet2.json \
+  https://raw.githubusercontent.com/unicitynetwork/unicity-ids/main/bft-trustbase.testnet2.json
+```
 
-**A 3.0 client needs an aggregator that speaks the new protocol**, at
-`ghcr.io/unicitynetwork/aggregator-go:sha-ae08165` or later. The certified leaf
-value is now `SHA-256(CBOR([transactionHash, referenceTime]))` rather than the
-transaction hash alone, so proofs from a 2.x-era service do not verify here, and
-a 2.x client cannot verify proofs from a current one.
+Save this as `connect.mjs` and run `node connect.mjs`:
 
-**Requests carry a deadline.** `MintTransaction.create`, `TransferTransaction.create`
-and `TokenSplit.split` take an optional `expiresAt`; see
-[Request deadlines](#request-deadlines) below.
+```js
+import { readFile } from 'node:fs/promises';
+import { AggregatorClient } from '@unicitylabs/state-transition-sdk/lib/api/AggregatorClient.js';
+import { RootTrustBase } from '@unicitylabs/state-transition-sdk/lib/api/bft/RootTrustBase.js';
+import { StateId } from '@unicitylabs/state-transition-sdk/lib/api/StateId.js';
+import { SigningService } from '@unicitylabs/state-transition-sdk/lib/crypto/secp256k1/SigningService.js';
+import { SignaturePredicate } from '@unicitylabs/state-transition-sdk/lib/predicate/builtin/SignaturePredicate.js';
+import { StateTransitionClient } from '@unicitylabs/state-transition-sdk/lib/StateTransitionClient.js';
+import { MintTransaction } from '@unicitylabs/state-transition-sdk/lib/transaction/MintTransaction.js';
 
-Compile-time breaks for anyone building on the verification internals:
+const aggregator = new AggregatorClient(
+  'https://gateway.testnet2.unicity.network',
+  'sk_ddc3cfcc001e4a28ac3fad7407f99590', // Public testnet2 key
+);
+const client = new StateTransitionClient(aggregator);
 
-| Change | What breaks |
-|---|---|
-| `InclusionProofVerificationRule.verify` no longer takes `referenceTime` | it is read from the inclusion proof instead |
-| `InclusionProofVerificationStatus.REFERENCE_TIME_MISMATCH` removed | replaced by `REFERENCE_TIME_AFTER_ROUND` and `INCOMPLETE_INCLUSION_PROOF` |
-| Certified mint and transfer CBOR is 2 elements, was 3 | the reference time is no longer stored beside the proof that carries it |
-| `expiresAt` is validated at the factories | a negative, zero or over-wide deadline now throws instead of failing later inside CBOR encoding |
+const trustBase = RootTrustBase.fromJSON(
+  JSON.parse(await readFile('bft-trustbase.testnet2.json', 'utf8')),
+);
 
-## Quick Start
+// Prepare a fresh state to query; no transaction is submitted.
+const recipient = SignaturePredicate.fromSigningService(SigningService.generate());
+const transaction = await MintTransaction.create(trustBase.networkId, recipient);
+const response = await client.getInclusionProof(await StateId.fromTransaction(transaction));
 
-End-to-end runnable examples live under [`tests/examples/`](./tests/examples):
+console.log('Network ID:', trustBase.networkId.id);
+console.log('State certified:', response.inclusionProof !== null);
+```
 
-- Mint: [`tests/examples/mint/ExampleTest.ts`](./tests/examples/mint/ExampleTest.ts)
-- Transfer: [`tests/examples/transfer/ExampleTest.ts`](./tests/examples/transfer/ExampleTest.ts)
-- Split: [`tests/examples/split/ExampleTest.ts`](./tests/examples/split/ExampleTest.ts)
+This read-only probe should print `State certified: false` for the fresh state. It checks connectivity; it does not verify a token.
 
-Tokens are shipped between parties as CBOR — use `token.toCBOR()` on the sender side and `Token.fromCBOR(bytes)` on the receiver side.
+The trust base identifies the Consensus Layer (BFT Core) instance. Pin a trusted copy in your application for production. Use `trustBase.networkId` when creating tokens so they match your gateway; testnet2 is network ID `4` (`NetworkId.TESTNET` is `2`). For offline construction, use `NetworkId.fromId(4)`.
 
-## Core Components
+## Work with tokens
 
-### StateTransitionClient
+The SDK handles cryptography and token encoding. Your application manages keys, stores tokens, and delivers them to recipients over your chosen transport.
 
-A thin client over the aggregator. As a consumer you'll typically:
+| Task | SDK entry points | Repository example |
+| --- | --- | --- |
+| Mint a token | `MintTransaction.create()`, `Token.mint()` | [Mint](./tests/examples/mint/ExampleTest.ts) |
+| Transfer ownership | `TransferTransaction.create()`, `token.transfer()` | [Transfer](./tests/examples/transfer/ExampleTest.ts) |
+| Split a fungible token | `TokenSplit.split()` | [Split](./tests/examples/split/ExampleTest.ts) |
+| Verify a received token | `token.verify(verificationContext)` | [Receive and verify](./tests/examples/transfer/ExampleTest.ts) |
 
-1. Build a `MintTransaction` or `TransferTransaction`.
-2. Submit its `CertificationData` and wait for an inclusion proof.
-3. Turn it into a certified transaction and apply it to a `Token` (`Token.mint` / `token.transfer`).
-4. Call `token.verify(...)` on the receiving side.
+For minting and transfers, create the transaction, submit its `CertificationData` with `client.submitCertificationRequest()`, and check the response status. Obtain the verified unicity proof with the standalone `waitInclusionProof(client, trustBase, predicateVerifier, unicityCertificateVerifier, transaction)` function from `@unicitylabs/state-transition-sdk/lib/util/InclusionProofUtils.js`, then use `transaction.toCertifiedTransaction()` and `Token.mint()` or `token.transfer()` to produce the updated token. These API methods use the name `InclusionProof` for the proof object.
 
-`StateTransitionClient` covers step 2 only:
+The linked examples are tests in a repository checkout, not files shipped in the npm package. Their helper imports and permissive issuance policies are for demonstrations. To adapt them:
 
-- `submitCertificationRequest()` - Submit a commitment to the aggregator
-- `getInclusionProof()` - Retrieve an inclusion proof for a state id
+- Change the gateway to the network's HTTPS URL and pass the key as the second argument to `new AggregatorClient(...)` in the example source; `config.json` has no API-key field. Do not add a key while keeping the local HTTP URL.
+- Load the matching trust base and replace `NetworkId.LOCAL` with `trustBase.networkId`.
+- Replace `new TokenIssuanceVerifierService(false)` with `new TokenIssuanceVerifierService()` and register your application's issuance verifier for each accepted token type. The demo setting accepts unregistered types without an issuance-policy check.
 
-### Request deadlines
+For transfers, obtain the recipient's ownership predicate through your application's address or delivery channel before creating the transaction.
 
-Every certification request carries an exclusive deadline. Supply one as
-`expiresAt`, in Unix seconds, and the Unicity Service admits the request only to
-a round whose reference time is strictly below it:
+### Store, send, and receive
+
+Use `token.toCBOR()` to save or send a token, and `Token.fromCBOR(bytes)` to load it. Verify received tokens with your application's `VerificationContext` before accepting them:
 
 ```ts
-const transaction = await MintTransaction.create(networkId, recipient, {
-  expiresAt: BigInt(Math.floor(Date.now() / 1000)) + 3600n,
-});
+import { Token } from '@unicitylabs/state-transition-sdk/lib/transaction/Token.js';
+import { VerificationStatus } from '@unicitylabs/state-transition-sdk/lib/verification/VerificationStatus.js';
+
+// `bytes` comes from your storage or transport; see the examples for context setup.
+const receivedToken = await Token.fromCBOR(bytes);
+const result = await receivedToken.verify(verificationContext);
+if (result.status !== VerificationStatus.OK) {
+  throw new Error(`Token verification failed: ${result.status}`);
+}
 ```
 
-The value is a wall-clock instant in **Unix seconds**, not a round number or
-block height, and it is compared against the round's reference time — which is
-the timestamp of the consensus seal, i.e. the root chain's clock, not yours. The
-two can differ by seconds, so leave enough margin to absorb the skew and the
-time a request spends queued. Hour-scale deadlines are unaffected; second-scale
-ones are not.
+## Security
 
-Omit it, or pass `null`, and the service derives a deadline from consensus time
-instead. That suits a caller with no trustworthy clock: the assigned value is
-service metadata, never recorded in the leaf and never re-checked by a later
-verifier, so it does not have to be agreed on in advance.
+Unicity Proofs provide independently verifiable evidence of certified state transitions being unique, backed by the network's Byzantine fault tolerant consensus. Together with ownership verification, they protect against double-spending without publishing token contents to a public ledger.
 
-An explicit deadline is different — the transaction hash commits to it, so it
-travels with the token and every verifier re-checks it against the reference
-time the leaf was created under. Submitting after it has passed is answered with
-`CertificationStatus.REQUEST_EXPIRED`; a service that has not yet been given a
-consensus reference time answers `SERVICE_NOT_READY`.
-
-See [Security Features](#security-features) for what a deadline does and does
-not guarantee.
-
-### Transaction Flow
-
-1. **Minting**: Create new tokens
-2. **Transfer**: Submit state transitions between owners
-
-#### Transfer flow
-
-Prerequisites
-Recipient knows some info about token, like token type for generating address.
-
-```text
-A[Start]
-A --> B[Recipient Generates Predicate]
-B --> C[Recipient Shares Predicate with Sender]
-C --> D[Sender Creates Transaction]
-D --> E[Sender Submits Transaction]
-E --> F[Sender Retrieves Inclusion Proof]
-F --> G[Sender Creates Certified Transaction]
-G --> H[Sender Updates Token with Certified Transaction]
-H --> I[Sender Sends Token to Recipient]
-I --> J[End]
-```
-
-## Architecture
-
-### Token Structure
-
-A `Token` is a self-contained, CBOR-serializable record that bundles its genesis with an ordered transfer history:
-
-- `genesis`: a `CertifiedMintTransaction` (a `MintTransaction` plus its `InclusionProof`). The mint transaction carries `networkId`, `tokenId`, `tokenType`, `salt`, `recipient`, optional `justification`, optional `data`, and `expiresAt`, an exclusive request deadline in Unix seconds that is `null` when the Unicity Service assigns the deadline instead.
-- `transactions`: an ordered list of `CertifiedTransferTransaction` entries, each wrapping a `TransferTransaction` (recipient, state mask, optional data, and `expiresAt`) with its `InclusionProof`.
-
-See [`src/transaction/Token.ts`](./src/transaction/Token.ts) for the authoritative shape.
-
-### Privacy Model
-- **Commitment-based**: Only cryptographic commitments published on-chain
-- **Self-contained**: Tokens include complete transaction history
-- **Zero-knowledge**: No information leaked about token or transaction details
-- **Minimal footprint**: Blockchain only stores commitment hashes
-
-### Security Features
-- **Double-spend prevention**: Enforced through inclusion proofs
-- **Cryptographic verification**: All state transitions cryptographically verified
-- **Predicate flexibility**: Multiple ownership models supported
-- **Provenance tracking**: Complete audit trail in token history
-
-#### Request deadlines are enforced by the service, not by verification
-
-A request may carry an exclusive deadline (`expiresAt`), and the Unicity Service
-only admits it to a round whose reference time is strictly below that deadline.
-Verification re-checks the deadline against the reference time the leaf reports,
-and rejects a leaf claiming to postdate the round that certified it.
-
-Neither check establishes *when* the leaf was created. The reference time is
-chosen by the service, and the inclusion proof authenticates the value it chose
-rather than the moment it chose it: a service that receives a request after its
-deadline can insert the leaf later and record a pre-deadline reference time in
-it, and every client-side check still passes. Closing that would need signed
-evidence of the creation round, which an inclusion proof does not currently
-carry.
-
-So treat `expiresAt` as an instruction to an honest service — the guarantee that
-a late request is dropped rather than executed — and not as something a verifier
-can prove after the fact. It is not a defence against a service that is itself
-dishonest; that case is covered by consensus over the aggregator, not by this
-field.
+Use the SDK's verification APIs with the correct network trust base and your application's token issuance policies. A token's cryptographic validity and whether your application accepts its issuer are separate checks; register accepted token types with `TokenIssuanceVerifierService`. Keep private keys and token backups secure, and check that received tokens belong to the intended recipient.
 
 ## Development
 
-### Building
+From a repository checkout:
 
 ```bash
+npm ci
 npm run build
-```
-
-### Testing
-
-Run the default suite (unit + functional tests):
-
-```bash
 npm test
-```
-
-Run the example flows (requires a reachable aggregator; URL is read from each example's `config.json`):
-
-```bash
-npm run test:examples
-```
-
-Run the integration suite. It owns the aggregator it talks to: Testcontainers
-starts the stack in [`tests/integration/docker`](./tests/integration/docker) — a
-BFT root node, mongodb, redis and a pinned aggregator build — waits for
-consensus to certify a round, and tears it down when the run ends. Nothing
-external is involved and there is nothing to set up:
-
-```bash
-npm run test:integration
-```
-
-The chain starts empty every run, and the aggregator is published on an
-ephemeral port, so concurrent runs and CI jobs cannot collide. There is
-deliberately no way to point this suite at an aggregator it did not start — a
-run that could be aimed elsewhere would not be exercising the compose file it
-exists to test. Pointing the SDK at a service someone else is running is what
-the e2e suite below is for.
-
-This is where the wire formats get checked. Certification data, the transaction
-encodings, the inclusion proof and the reference-time-bound leaf value are all
-shared with the service, and the fake aggregator in `tests/functional` derives
-them with the very code under test — only a real service can tell whether the
-two still agree.
-
-Run the end-to-end suite against a deployed network. Unlike the integration
-suite this one has no service of its own, so point it at an endpoint and supply
-the matching trust base:
-
-```bash
-AGGREGATOR_URL=https://gateway.testnet2.unicity.network \
-TRUST_BASE_PATH=/path/to/trust-base.json \
-AGGREGATOR_API_KEY=<key, if the endpoint requires one> \
-npm run test:e2e
-```
-
-The integration suite runs in CI; the e2e suite does not, since it needs a live
-network to be pointed at.
-
-### Linting
-
-Lint all code (source and tests):
-```bash
 npm run lint
 ```
 
-Lint with auto-fix:
+Additional test suites:
+
+- `npm run test:examples` — mint, transfer, and split examples; requires the local aggregator configured in each example's `config.json` and the matching `tests/examples/trust-base.json`.
+- `npm run test:integration` — starts an isolated network with Testcontainers; requires Docker.
+- `npm run test:e2e` — exercises a deployed network using the configuration below.
+
 ```bash
-npm run lint:fix
+AGGREGATOR_URL=https://gateway.testnet2.unicity.network \
+TRUST_BASE_PATH=/path/to/bft-trustbase.testnet2.json \
+AGGREGATOR_API_KEY=sk_ddc3cfcc001e4a28ac3fad7407f99590 \
+npm run test:e2e
 ```
 
-## Network Configuration
+## Resources
 
-- **Test gateway**: `https://gateway.testnet2.unicity.network`. It fronts a sharded aggregator, so a
-  plain `AggregatorClient` pointed at that one URL is enough. `certification_request` requires an API
-  key (`AggregatorClient`'s second argument); reading inclusion proofs does not.
-- **Trust base**: network-specific, and the network the SDK mints on is taken from it
-  (`trustBase.networkId`), so the trust base and the gateway must belong to the same network.
-- **Network identifiers**: `NetworkId.MAINNET`, `NetworkId.TESTNET` and `NetworkId.LOCAL` are the
-  named constants; any other id a trust base carries resolves through `NetworkId.fromId()`.
-- **Token type**: caller-supplied; use `TokenType.generate()` or construct from explicit bytes
-
-## Unicity Signature Standard
-
-The Unicity Network uses a standardized signature format to ensure data integrity and cryptographic proof of ownership. All cryptographic operations use the **`secp256k1`** elliptic curve, **SHA-256** hashing, and **33-byte compressed public keys**.
-
-The standard is designed for efficiency and broad compatibility across different programming environments, including Node.js, browsers, and Go.
-
-### Signature Format
-
-A Unicity signature is a **65-byte** array, structured as the concatenation of three components: `[R || S || V]`.
-
-| Component    | Size (bytes) | Offset | Description                                                                                                   |
-| :----------- | :------------- | :----- | :------------------------------------------------------------------------------------------------------------ |
-| **R**        | 32             | 0      | The `R` value of the ECDSA signature.                                                                         |
-| **S**        | 32             | 32     | The `S` value of the ECDSA signature.                                                                         |
-| **V**        | 1              | 64     | The **recovery ID** (`0` or `1`). This value allows for the recovery of the public key directly from the signature. |
-
-### Process Overview
-
-**1. Signing**
-The raw message data is first hashed using **SHA-256**. The resulting 32-byte hash is then signed using the signer's 32-byte `secp256k1` private key to produce the 65-byte signature.
-
-**2. Verification**
-The verifier hashes the original message using **SHA-256**. Using this hash and the signature, the verifier recovers the public key. The recovered key is then serialized into the compressed format and compared byte-for-byte against the expected **33-byte compressed public key** to confirm validity.
+- [Unicity Network](https://github.com/unicitynetwork/)
+- [Repository examples](./tests/examples)
+- [Protocol documentation](./unicity-token-protocol-spec.md)
+- [Report an issue](https://github.com/unicitynetwork/state-transition-sdk-js/issues)
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Support
-
-- **Repository**: [GitHub](https://github.com/unicitynetwork/state-transition-sdk-js)
-- **Issues**: [GitHub Issues](https://github.com/unicitynetwork/state-transition-sdk-js/issues)
-- **Gateway API**: `https://gateway.testnet2.unicity.network`
-
----
-
-**Note**: This SDK is part of the Unicity ecosystem. For production use, ensure you understand the security implications and test thoroughly in the testnet environment.
+[MIT](./LICENSE)

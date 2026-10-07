@@ -29,7 +29,7 @@
     "README.md"
   ],
   "author": "cryptohog",
-  "license": "ISC",
+  "license": "MIT",
   "homepage": "https://unicitynetwork.github.io/state-transition-sdk-js/",
   "engines": {
     "node": ">=22"
