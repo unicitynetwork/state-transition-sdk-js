@@ -1,0 +1,10 @@
+{
+  "base": "shards-4",
+  "description": "leaves are not in canonical order",
+  "stage": "consolidate",
+  "outcome": "invalid_input",
+  "changedFiles": [
+    "partition-view.cbor",
+    "responses.json"
+  ]
+}

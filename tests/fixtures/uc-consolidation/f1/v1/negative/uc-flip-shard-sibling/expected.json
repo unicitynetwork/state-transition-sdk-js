@@ -1,0 +1,9 @@
+{
+  "base": "shards-4",
+  "description": "sibling hash of the shard authentication path changed",
+  "stage": "consolidate",
+  "outcome": "invalid_input",
+  "changedFiles": [
+    "responses.json"
+  ]
+}

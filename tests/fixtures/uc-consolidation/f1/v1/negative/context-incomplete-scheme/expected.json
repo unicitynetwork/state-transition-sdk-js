@@ -1,0 +1,9 @@
+{
+  "base": "shards-4",
+  "description": "trusted topology does not cover the whole shard tree",
+  "stage": "policy",
+  "outcome": "invalid_input",
+  "changedFiles": [
+    "context.json"
+  ]
+}

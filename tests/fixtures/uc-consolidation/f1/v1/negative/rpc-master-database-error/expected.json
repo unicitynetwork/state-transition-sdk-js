@@ -1,0 +1,15 @@
+{
+  "base": "shards-4",
+  "description": "master batch call failed with a JSON-RPC error: Database error",
+  "stage": "rpc",
+  "outcome": "infrastructure",
+  "rpc": {
+    "role": "master",
+    "shard": "00",
+    "code": -32004,
+    "retryable": true
+  },
+  "changedFiles": [
+    "responses.json"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "base": "shards-4",
+  "description": "original request expired at its reference time",
+  "stage": "evidence",
+  "outcome": "expired",
+  "changedFiles": [
+    "requests.json"
+  ]
+}

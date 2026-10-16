@@ -1,0 +1,9 @@
+{
+  "base": "shards-4",
+  "description": "evidence newer than the master seal",
+  "stage": "consolidate",
+  "outcome": "stale",
+  "changedFiles": [
+    "requests.json"
+  ]
+}

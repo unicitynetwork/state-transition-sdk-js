@@ -1,0 +1,9 @@
+{
+  "base": "shards-4",
+  "description": "transaction hash of the proof's certification data changed (request unchanged)",
+  "stage": "consolidate",
+  "outcome": "binding_mismatch",
+  "changedFiles": [
+    "responses.json"
+  ]
+}

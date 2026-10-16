@@ -26,6 +26,21 @@ export enum CertificationStatus {
   REQUEST_EXPIRED = 'REQUEST_EXPIRED',
   /** The service has not obtained a consensus reference time yet. */
   SERVICE_NOT_READY = 'SERVICE_NOT_READY',
+  /**
+   * Sent by a server that has compared the queued request with this one and found them identical (a harmless
+   * resubmission): the same signed request is held, wait for its proof as after `SUCCESS`. The SDK never infers this
+   * from an error, see {@link CertificationStatus.STATE_ID_QUEUED}.
+   */
+  ALREADY_SUBMITTED = 'ALREADY_SUBMITTED',
+  /**
+   * Classified by this SDK, never sent by a server: the aggregator's queue rejected the submission because a request
+   * for this state id is already queued (a duplicate key error on the state id). **That request may not be this one**:
+   * the queue's only uniqueness is the state id, so a different transaction for the same state is rejected in the same
+   * way, and the queued one will be certified instead. Nothing about this submission was accepted. Wait for the proof
+   * and compare it with the transaction (`waitInclusionProof` fails with `InclusionProofConflictError` when the
+   * certified request is another one); do not treat it as sent.
+   */
+  STATE_ID_QUEUED = 'STATE_ID_QUEUED',
 }
 
 /**
@@ -47,6 +62,31 @@ export class CertificationResponse {
   /** The aggregator's status string. Known values are enumerated in {@link CertificationStatus};
    * compare against those members. Unknown strings are preserved as-is. */
   public constructor(public readonly status: string) {}
+
+  /**
+   * @returns {boolean} True for `SUCCESS` and for `ALREADY_SUBMITTED` (a server confirmed that this very request is
+   *   already held): in both cases the submission is accepted and the next step is waiting for the inclusion proof.
+   *   False for `STATE_ID_QUEUED`: a request for the state id is queued, possibly another one.
+   */
+  public get isAccepted(): boolean {
+    return this.status === String(CertificationStatus.SUCCESS) || this.isAlreadySubmitted;
+  }
+
+  /**
+   * @returns {boolean} True if a server confirmed that it already held this request (see
+   *   {@link CertificationStatus.ALREADY_SUBMITTED}).
+   */
+  public get isAlreadySubmitted(): boolean {
+    return this.status === String(CertificationStatus.ALREADY_SUBMITTED);
+  }
+
+  /**
+   * @returns {boolean} True if the submission was rejected because a request for the same state id is already queued,
+   *   which may be a different transaction (see {@link CertificationStatus.STATE_ID_QUEUED}). Not accepted.
+   */
+  public get isStateIdQueued(): boolean {
+    return this.status === String(CertificationStatus.STATE_ID_QUEUED);
+  }
 
   /**
    * Create a new certification response.

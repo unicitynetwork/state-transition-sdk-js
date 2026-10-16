@@ -1,0 +1,10 @@
+{
+  "base": "shards-4",
+  "description": "leaves cover only part of the shard tree (a shard replaced by a deeper one)",
+  "stage": "consolidate",
+  "outcome": "invalid_input",
+  "changedFiles": [
+    "partition-view.cbor",
+    "responses.json"
+  ]
+}

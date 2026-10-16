@@ -1,0 +1,9 @@
+{
+  "base": "shards-4",
+  "description": "null entry in the partition path of an original proof",
+  "stage": "evidence",
+  "outcome": "invalid_input",
+  "changedFiles": [
+    "requests.json"
+  ]
+}

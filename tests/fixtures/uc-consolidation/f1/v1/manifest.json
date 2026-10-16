@@ -1,0 +1,1072 @@
+{
+  "corpus": "uc-consolidation",
+  "version": 1,
+  "generator": {
+    "command": "UC_FIXTURE_AGGREGATOR_COMMIT=$(git rev-parse HEAD) go run ./cmd/gen-uc-consolidation-fixtures -out testdata/uc-consolidation/v1",
+    "toolchain": "go1.27.2",
+    "commits": {
+      "aggregator-go": "d6d8fad4b76d6c436b1a86d7fd962e62d0ef337e",
+      "bft-core": "8b05d19f564f",
+      "bft-go-base": "8e08f74f29fa"
+    },
+    "modules": {
+      "github.com/unicitynetwork/bft-core": "v1.1.1-0.20261015121647-8b05d19f564f",
+      "github.com/unicitynetwork/bft-go-base": "v1.1.1-0.20261015113011-8e08f74f29fa"
+    }
+  },
+  "limits": {
+    "maxInputRecordBytes": 1024,
+    "maxPartitionViewBytes": 16384,
+    "maxPartitionViewLeaves": 8,
+    "maxShardIdBits": 256,
+    "maxSummaryValueBytes": 256
+  },
+  "notes": [
+    "uint64 values in JSON are decimal strings; CBOR and proofs are lowercase hex or .cbor files",
+    "a case directory holds the files of testdata layout; a negative directory holds only the complete mutated files plus expected.json naming its base case",
+    "evaluation order: view_codec (partition view alone, extra check), policy (trusted context), evidence (authenticate originals, R_min), rpc (classify failed batch calls: availability is not an integrity failure), consolidate",
+    "producer.json replays the root chain blocks byte for byte (bft-core rootchain/testutils/ucfixture)",
+    "seal signatures are deterministic secp256k1 with public test keys; no production credentials"
+  ],
+  "cases": [
+    {
+      "name": "shards-1",
+      "kind": "positive",
+      "outcome": "ok",
+      "description": "single shard partition: empty shard ID, trivial view, two partitions in the root tree"
+    },
+    {
+      "name": "shards-4",
+      "kind": "positive",
+      "outcome": "ok",
+      "description": "four shards; the master and one peer participate (fewer participants than shards), several transactions per shard, older peer seal"
+    },
+    {
+      "name": "shards-8",
+      "kind": "positive",
+      "outcome": "ok",
+      "description": "eight shards; master and three peers participate with different transaction counts"
+    },
+    {
+      "name": "shards-4-timeout-unchanged",
+      "kind": "positive",
+      "outcome": "ok",
+      "description": "changed and unchanged leaves under one seal: a timeout (technical record changes, input record repeated), an empty block record, a new write and an unchanged peer"
+    },
+    {
+      "name": "large-values",
+      "kind": "positive",
+      "outcome": "ok",
+      "description": "uint64 values above the JS safe integer range in timestamps, reference times and fees"
+    },
+    {
+      "name": "witness-alt",
+      "kind": "positive",
+      "outcome": "ok",
+      "description": "same content as shards-4 with the master seal signed by another valid quorum subset"
+    },
+    {
+      "name": "nil-vs-empty",
+      "kind": "positive",
+      "outcome": "ok",
+      "description": "nil versus empty executed transactions hash in the input records"
+    },
+    {
+      "name": "negative/view-missing-shard",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "a shard of the partition is missing from the view"
+    },
+    {
+      "name": "negative/view-duplicate-shard",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "a shard appears twice, another is missing"
+    },
+    {
+      "name": "negative/view-extra-shard",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "a shard outside the admitted topology is added to the view"
+    },
+    {
+      "name": "negative/view-overlapping-prefix",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "a leaf for a shard which is a prefix of another admitted shard"
+    },
+    {
+      "name": "negative/view-incomplete-prefix-coverage",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "leaves cover only part of the shard tree (a shard replaced by a deeper one)"
+    },
+    {
+      "name": "negative/context-incomplete-scheme",
+      "kind": "negative",
+      "stage": "policy",
+      "outcome": "invalid_input",
+      "description": "trusted topology does not cover the whole shard tree"
+    },
+    {
+      "name": "negative/context-overlapping-scheme",
+      "kind": "negative",
+      "stage": "policy",
+      "outcome": "invalid_input",
+      "description": "trusted topology with overlapping shard prefixes"
+    },
+    {
+      "name": "negative/context-network-mismatch",
+      "kind": "negative",
+      "stage": "policy",
+      "outcome": "incompatible_lineage",
+      "description": "declared network of the trusted context differs from the installed authority"
+    },
+    {
+      "name": "negative/view-input-record-version",
+      "kind": "negative",
+      "stage": "view_codec",
+      "outcome": "rejected",
+      "description": "unsupported input record version in a leaf"
+    },
+    {
+      "name": "negative/seal-version",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "unsupported unicity seal version in the enclosing UC"
+    },
+    {
+      "name": "negative/view-reordered",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "leaves are not in canonical order"
+    },
+    {
+      "name": "negative/view-wrong-partition",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "view of another partition"
+    },
+    {
+      "name": "negative/view-wrong-version",
+      "kind": "negative",
+      "stage": "view_codec",
+      "outcome": "rejected",
+      "description": "unsupported view version"
+    },
+    {
+      "name": "negative/view-version-zero",
+      "kind": "negative",
+      "stage": "view_codec",
+      "outcome": "rejected",
+      "description": "version zero is not defaulted"
+    },
+    {
+      "name": "negative/view-truncated",
+      "kind": "negative",
+      "stage": "view_codec",
+      "outcome": "rejected",
+      "description": "truncated CBOR"
+    },
+    {
+      "name": "negative/view-trailing-bytes",
+      "kind": "negative",
+      "stage": "view_codec",
+      "outcome": "rejected",
+      "description": "bytes after the view"
+    },
+    {
+      "name": "negative/view-malformed-end-marker",
+      "kind": "negative",
+      "stage": "view_codec",
+      "outcome": "rejected",
+      "description": "shard ID bit string without end marker"
+    },
+    {
+      "name": "negative/view-over-limit-leaves",
+      "kind": "negative",
+      "stage": "view_codec",
+      "outcome": "rejected",
+      "description": "more leaves than the admission limit"
+    },
+    {
+      "name": "negative/view-over-limit-size",
+      "kind": "negative",
+      "stage": "view_codec",
+      "outcome": "rejected",
+      "description": "view larger than the admission limit"
+    },
+    {
+      "name": "negative/view-flip-round",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "committed input record field changed in the view leaf"
+    },
+    {
+      "name": "negative/view-flip-epoch",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "committed input record field changed in the view leaf"
+    },
+    {
+      "name": "negative/view-flip-previous-hash",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "committed input record field changed in the view leaf"
+    },
+    {
+      "name": "negative/view-flip-state-hash",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "committed input record field changed in the view leaf"
+    },
+    {
+      "name": "negative/view-flip-summary-value",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "committed input record field changed in the view leaf"
+    },
+    {
+      "name": "negative/view-flip-timestamp",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "committed input record field changed in the view leaf"
+    },
+    {
+      "name": "negative/view-flip-block-hash",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "committed input record field changed in the view leaf"
+    },
+    {
+      "name": "negative/view-flip-fees",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "committed input record field changed in the view leaf"
+    },
+    {
+      "name": "negative/view-flip-et-hash",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "committed input record field changed in the view leaf"
+    },
+    {
+      "name": "negative/view-flip-tr-hash",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "TRHash of a leaf changed"
+    },
+    {
+      "name": "negative/view-flip-shard-conf-hash",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "ShardConfHash of a leaf differs from the admitted configuration"
+    },
+    {
+      "name": "negative/uc-flip-partition-path-hash",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "sibling hash of the partition authentication path changed"
+    },
+    {
+      "name": "negative/uc-swap-partition-certificate",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "partition certificate of another partition"
+    },
+    {
+      "name": "negative/uc-flip-shard-sibling",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "sibling hash of the shard authentication path changed"
+    },
+    {
+      "name": "negative/seal-hash",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "seal field changed without re-signing: hash"
+    },
+    {
+      "name": "negative/seal-round",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "unauthenticated",
+      "description": "seal field changed without re-signing: round"
+    },
+    {
+      "name": "negative/seal-network",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "unauthenticated",
+      "description": "seal field changed without re-signing: network"
+    },
+    {
+      "name": "negative/seal-epoch",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "unauthenticated",
+      "description": "seal field changed without re-signing: epoch"
+    },
+    {
+      "name": "negative/seal-timestamp",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "unauthenticated",
+      "description": "seal field changed without re-signing: timestamp"
+    },
+    {
+      "name": "negative/seal-previous-hash",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "unauthenticated",
+      "description": "seal field changed without re-signing: previous-hash"
+    },
+    {
+      "name": "negative/seal-signature-bytes",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "unauthenticated",
+      "description": "seal field changed without re-signing: signature-bytes"
+    },
+    {
+      "name": "negative/seal-signatures-missing",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "seal field changed without re-signing: signatures-missing"
+    },
+    {
+      "name": "negative/seal-signatures-below-quorum",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "unauthenticated",
+      "description": "seal field changed without re-signing: signatures-below-quorum"
+    },
+    {
+      "name": "negative/seal-signature-alien-key",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "unauthenticated",
+      "description": "seal field changed without re-signing: signature-alien-key"
+    },
+    {
+      "name": "negative/context-wrong-config-participant",
+      "kind": "negative",
+      "stage": "evidence",
+      "outcome": "incompatible_lineage",
+      "description": "admitted configuration hash of a participant differs"
+    },
+    {
+      "name": "negative/context-wrong-partition",
+      "kind": "negative",
+      "stage": "evidence",
+      "outcome": "incompatible_lineage",
+      "description": "policy partition differs from the evidence"
+    },
+    {
+      "name": "negative/trust-base-other-authority",
+      "kind": "negative",
+      "stage": "evidence",
+      "outcome": "unauthenticated",
+      "description": "trusted authority of other keys"
+    },
+    {
+      "name": "negative/trust-base-other-network",
+      "kind": "negative",
+      "stage": "evidence",
+      "outcome": "unauthenticated",
+      "description": "same keys under another network"
+    },
+    {
+      "name": "negative/trust-base-other-epoch",
+      "kind": "negative",
+      "stage": "evidence",
+      "outcome": "unauthenticated",
+      "description": "same keys in another epoch"
+    },
+    {
+      "name": "negative/rmin-unknown",
+      "kind": "negative",
+      "stage": "evidence",
+      "outcome": "unavailable",
+      "description": "no original evidence: R_min is unknown"
+    },
+    {
+      "name": "negative/rmin-master-stale",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "stale",
+      "description": "evidence newer than the master seal"
+    },
+    {
+      "name": "negative/evidence-reference-time",
+      "kind": "negative",
+      "stage": "evidence",
+      "outcome": "binding_mismatch",
+      "description": "original proof with a lowered reference time"
+    },
+    {
+      "name": "negative/evidence-reference-time-after-target",
+      "kind": "negative",
+      "stage": "evidence",
+      "outcome": "reference_time_after_target",
+      "description": "original proof with a reference time later than its own record timestamp"
+    },
+    {
+      "name": "negative/evidence-missing-for-request",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "incompatible_lineage",
+      "description": "a consolidated request has no authenticated original evidence"
+    },
+    {
+      "name": "negative/evidence-duplicate",
+      "kind": "negative",
+      "stage": "evidence",
+      "outcome": "invalid_input",
+      "description": "the same original evidence twice"
+    },
+    {
+      "name": "negative/evidence-null-path-step",
+      "kind": "negative",
+      "stage": "evidence",
+      "outcome": "invalid_input",
+      "description": "null entry in the partition path of an original proof"
+    },
+    {
+      "name": "negative/uc-null-partition-path-step",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "null entry in the partition path of the enclosing UC"
+    },
+    {
+      "name": "negative/view-absent",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "unavailable",
+      "description": "master response without partition view"
+    },
+    {
+      "name": "negative/proof-missing",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "a requested proof is missing"
+    },
+    {
+      "name": "negative/proof-unrequested",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "invalid_input",
+      "description": "a proof nobody requested"
+    },
+    {
+      "name": "negative/proof-duplicate",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "binding_mismatch",
+      "description": "the same proof twice instead of two proofs"
+    },
+    {
+      "name": "negative/proof-reordered",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "binding_mismatch",
+      "description": "proofs not in request order"
+    },
+    {
+      "name": "negative/proof-wrong-leaf-value",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "binding_mismatch",
+      "description": "transaction hash of the proof's certification data changed (request unchanged)"
+    },
+    {
+      "name": "negative/request-differs-from-evidence",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "incompatible_lineage",
+      "description": "request whose certification data differs from the authenticated original"
+    },
+    {
+      "name": "negative/proof-wrong-reference-time",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "binding_mismatch",
+      "description": "reference time lowered by one"
+    },
+    {
+      "name": "negative/proof-reference-time-after-target",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "reference_time_after_target",
+      "description": "reference time later than the target timestamp"
+    },
+    {
+      "name": "negative/proof-wrong-expiry",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "binding_mismatch",
+      "description": "expiry of the proof differs from the request"
+    },
+    {
+      "name": "negative/evidence-expired",
+      "kind": "negative",
+      "stage": "evidence",
+      "outcome": "expired",
+      "description": "original request expired at its reference time"
+    },
+    {
+      "name": "negative/request-wrong-state-id",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "incompatible_lineage",
+      "description": "request with another state ID, not covered by the evidence"
+    },
+    {
+      "name": "negative/proof-wrong-certificate",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "binding_mismatch",
+      "description": "certificate of another request (path does not fold to the target root)"
+    },
+    {
+      "name": "negative/peer-root-substitution",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "binding_mismatch",
+      "description": "peer proofs of an older state root instead of the root of the view"
+    },
+    {
+      "name": "negative/peer-proof-of-other-shard",
+      "kind": "negative",
+      "stage": "consolidate",
+      "outcome": "binding_mismatch",
+      "description": "peer response carries the master's proofs"
+    },
+    {
+      "name": "negative/rpc-master-view-not-retained",
+      "kind": "negative",
+      "stage": "rpc",
+      "outcome": "unavailable",
+      "description": "master batch call failed with a JSON-RPC error: Proof unavailable"
+    },
+    {
+      "name": "negative/rpc-master-no-finalized-view",
+      "kind": "negative",
+      "stage": "rpc",
+      "outcome": "unavailable",
+      "description": "master batch call failed with a JSON-RPC error: Proof unavailable"
+    },
+    {
+      "name": "negative/rpc-master-partition-view-unavailable",
+      "kind": "negative",
+      "stage": "rpc",
+      "outcome": "unavailable",
+      "description": "master batch call failed with a JSON-RPC error: Proof unavailable"
+    },
+    {
+      "name": "negative/rpc-master-state-pending",
+      "kind": "negative",
+      "stage": "rpc",
+      "outcome": "unavailable",
+      "description": "master batch call failed with a JSON-RPC error: Proof unavailable"
+    },
+    {
+      "name": "negative/rpc-master-state-expired",
+      "kind": "negative",
+      "stage": "rpc",
+      "outcome": "unavailable",
+      "description": "master batch call failed with a JSON-RPC error: Proof unavailable"
+    },
+    {
+      "name": "negative/rpc-master-state-unknown",
+      "kind": "negative",
+      "stage": "rpc",
+      "outcome": "unavailable",
+      "description": "master batch call failed with a JSON-RPC error: Proof unavailable"
+    },
+    {
+      "name": "negative/rpc-master-unsupported-configuration",
+      "kind": "negative",
+      "stage": "rpc",
+      "outcome": "unsupported",
+      "description": "master batch call failed with a JSON-RPC error: Proof unavailable"
+    },
+    {
+      "name": "negative/rpc-master-busy-active-requests",
+      "kind": "negative",
+      "stage": "rpc",
+      "outcome": "busy",
+      "description": "master batch call failed with a JSON-RPC error: Concurrency limit exceeded"
+    },
+    {
+      "name": "negative/rpc-master-busy-pinned-views",
+      "kind": "negative",
+      "stage": "rpc",
+      "outcome": "busy",
+      "description": "master batch call failed with a JSON-RPC error: Concurrency limit exceeded"
+    },
+    {
+      "name": "negative/rpc-master-busy-retention-budget",
+      "kind": "negative",
+      "stage": "rpc",
+      "outcome": "busy",
+      "description": "master batch call failed with a JSON-RPC error: Concurrency limit exceeded"
+    },
+    {
+      "name": "negative/rpc-master-busy-deadline",
+      "kind": "negative",
+      "stage": "rpc",
+      "outcome": "busy",
+      "description": "master batch call failed with a JSON-RPC error: Concurrency limit exceeded"
+    },
+    {
+      "name": "negative/rpc-master-busy-bare",
+      "kind": "negative",
+      "stage": "rpc",
+      "outcome": "busy",
+      "description": "master batch call failed with a JSON-RPC error: Concurrency limit exceeded"
+    },
+    {
+      "name": "negative/rpc-master-limit-state-count",
+      "kind": "negative",
+      "stage": "rpc",
+      "outcome": "limit_exceeded",
+      "description": "master batch call failed with a JSON-RPC error: Limit exceeded"
+    },
+    {
+      "name": "negative/rpc-master-limit-request-bytes",
+      "kind": "negative",
+      "stage": "rpc",
+      "outcome": "limit_exceeded",
+      "description": "master batch call failed with a JSON-RPC error: Limit exceeded"
+    },
+    {
+      "name": "negative/rpc-master-limit-response-bytes",
+      "kind": "negative",
+      "stage": "rpc",
+      "outcome": "limit_exceeded",
+      "description": "master batch call failed with a JSON-RPC error: Limit exceeded"
+    },
+    {
+      "name": "negative/rpc-master-invalid-duplicate-state-id",
+      "kind": "negative",
+      "stage": "rpc",
+      "outcome": "invalid_request",
+      "description": "master batch call failed with a JSON-RPC error: Invalid params"
+    },
+    {
+      "name": "negative/rpc-master-invalid-wrong-shard",
+      "kind": "negative",
+      "stage": "rpc",
+      "outcome": "invalid_request",
+      "description": "master batch call failed with a JSON-RPC error: Invalid params"
+    },
+    {
+      "name": "negative/rpc-master-method-not-found",
+      "kind": "negative",
+      "stage": "rpc",
+      "outcome": "unsupported_method",
+      "description": "master batch call failed with a JSON-RPC error: Method not found"
+    },
+    {
+      "name": "negative/rpc-master-database-error",
+      "kind": "negative",
+      "stage": "rpc",
+      "outcome": "infrastructure",
+      "description": "master batch call failed with a JSON-RPC error: Database error"
+    },
+    {
+      "name": "negative/rpc-peer-view-not-retained",
+      "kind": "negative",
+      "stage": "rpc",
+      "outcome": "unavailable",
+      "description": "peer batch call failed with a JSON-RPC error: Proof unavailable"
+    },
+    {
+      "name": "negative/rpc-peer-state-not-in-root",
+      "kind": "negative",
+      "stage": "rpc",
+      "outcome": "unavailable",
+      "description": "peer batch call failed with a JSON-RPC error: Proof unavailable"
+    },
+    {
+      "name": "negative/rpc-peer-busy-pinned-views",
+      "kind": "negative",
+      "stage": "rpc",
+      "outcome": "busy",
+      "description": "peer batch call failed with a JSON-RPC error: Concurrency limit exceeded"
+    },
+    {
+      "name": "negative/rpc-peer-limit-response-bytes",
+      "kind": "negative",
+      "stage": "rpc",
+      "outcome": "limit_exceeded",
+      "description": "peer batch call failed with a JSON-RPC error: Limit exceeded"
+    },
+    {
+      "name": "negative/rpc-peer-unsupported-configuration",
+      "kind": "negative",
+      "stage": "rpc",
+      "outcome": "unsupported",
+      "description": "peer batch call failed with a JSON-RPC error: Proof unavailable"
+    }
+  ],
+  "sha256": {
+    "large-values/context.json": "8fe30f7ebb7e09e89a61a6bcc944e8045371e69c081cd0f396b9913387799b58",
+    "large-values/expected.json": "edd5a259a6af22a33e3d86e971e72d9be6d0633ad6c960d83b4cb4e28cfa58bd",
+    "large-values/partition-view.cbor": "d0184ff216d4c8dc107a73752a74c692016683a88c75cbf9a9a412c1034f98a0",
+    "large-values/producer.json": "875393c85ea53a335e6891a3865930b38caabc79c3af1311257822584acef125",
+    "large-values/requests.json": "c5305e5d5755e7b51c516eb3dec2a29bbbac19511c30474c4d48cd741e2d606c",
+    "large-values/response-v1.cbor": "1ba4dedaf9752cf12a3247bb48891fd7407e476f5680e75497bec3bdd2595af5",
+    "large-values/response-v2.cbor": "a2780afef506972e3478ccc88247fd3c4b4c5e08bb69be3a5916e14937468ed8",
+    "large-values/responses.json": "53a80367abed8d2bee3bf68365f8cb1ec0e2a6b277ec212016a139bf81c87d4d",
+    "large-values/shard-configs/0.cbor": "078b168a16c0317b8a6f6de6e7a413690888a021faa22f571ab2f0f44012b1a6",
+    "large-values/shard-configs/1.cbor": "f1874ba0f9bba20b6349cf8439e53df836f142b55651e785c4899263c6c06d30",
+    "large-values/trust-base.cbor": "a2909914b7a076efbeb839650f273ade6802f236970461c5dcb19dcbdd204446",
+    "large-values/ucs/0.cbor": "b602e0ced43ddb9899fe95524df130065ab11dab18aedfb1b4a6ada471971076",
+    "large-values/ucs/1.cbor": "64d0e6c9a5e8405127fc6920f9bf5a740582b4ecfe1118c2344be2b4cc8e89a4",
+    "negative/context-incomplete-scheme/context.json": "1be9867e17d0c5deca8245c3847a8f6bff1276fc7eabb86a3f4d6af25f19af25",
+    "negative/context-incomplete-scheme/expected.json": "8f45a6ba0470a4350e2bb1957f8425a3fa398fc5ab5c43c1124e220409b2b1b1",
+    "negative/context-network-mismatch/context.json": "bc83f972e817f563cf614a4e1b1f708f7d73fa36b165f026633103034ea15c9b",
+    "negative/context-network-mismatch/expected.json": "86946a50a10bdef5a2987c30080cfa3ccada956e9d13285d6b0112a29f0d479e",
+    "negative/context-overlapping-scheme/context.json": "e85606e66e29a05e1dc6c86d9ea5586f1b6dbed3e37f58b4522dadb59e64d2db",
+    "negative/context-overlapping-scheme/expected.json": "44785ce76c5ed3ebae2182b0cd1ea2948634d4c4c00dc0a1c6d63b8ba394579c",
+    "negative/context-wrong-config-participant/context.json": "ecaa1c6170cabed54b9edd0e892fd2a6c0410c2cd4f0960e1e758d65f32129b3",
+    "negative/context-wrong-config-participant/expected.json": "e94a83918e1f6294986d9692cd260fc848552a80dcd5b0dfe9a5720d5f5fc4ab",
+    "negative/context-wrong-partition/context.json": "ed579ee924bf7aa0afc49f0e36ef459258065e33a8b64d365d850fb41bab1c34",
+    "negative/context-wrong-partition/expected.json": "04e59d3ea67f0bc4cfc6ca0e5cf43d9a0fc84d37e9c1eab7c6bce5a1ac69616f",
+    "negative/evidence-duplicate/expected.json": "416f36af3e9817475cb2261e34274bb367ba0915db8c23c90c28c9aea05eb4ed",
+    "negative/evidence-duplicate/requests.json": "d747124537b4105c4f836e640991f638bf5aa05e8e5fe19ac6c688854a7c6eed",
+    "negative/evidence-expired/expected.json": "4555cc633973d6015a9f841cc9aee340a294b17ca057a0fa21628c74c587e64e",
+    "negative/evidence-expired/requests.json": "9999b32ecfc1583541a6d50064f8695e684cab91b44fa0885841fe46e96b0b34",
+    "negative/evidence-missing-for-request/expected.json": "2eba4c9273c2eb4285a5de827c6a5935213ef070e8e5642291cd9459364572bc",
+    "negative/evidence-missing-for-request/requests.json": "f5da008a59c9d784ebb4fdcbc8d39cd4b800c87923b1b839bc0ec1d23db47b13",
+    "negative/evidence-null-path-step/expected.json": "7f74e90e489a3f05ace8f8e16a7edb2d34dc80d41e166059bc98af1480cbaa16",
+    "negative/evidence-null-path-step/requests.json": "6bedcb7413ec61dc6cec81cf967d41367713726d831733cda849eba8bc36e287",
+    "negative/evidence-reference-time-after-target/expected.json": "617d171d3b892ad57159456d8e05f9cdb4f8fabd31c3f030b3175e17a26e5b03",
+    "negative/evidence-reference-time-after-target/requests.json": "94554bcbb56c23bf65de344ccb7d5a5cab4c09316090115b39a5b11f91680fae",
+    "negative/evidence-reference-time/expected.json": "12d9e2caadf34d44092f5a45036b3972c3d759fc419b57a16fc765b5e53af471",
+    "negative/evidence-reference-time/requests.json": "bfe8c4f8be5266b524dcda04c4e31d736ee815f3660def6e4ffffb5033a95ccd",
+    "negative/peer-proof-of-other-shard/expected.json": "72dfb1a06c5faeeabd73a04829678bdc5b1ea688f7988a35cbce56559cb9cf40",
+    "negative/peer-proof-of-other-shard/responses.json": "b9c13deaffdd372a1431c253c31d9621de95769197a9886d726494a8957cb0b4",
+    "negative/peer-root-substitution/expected.json": "13e295d5346a4d3286d2e3ad8e5e0bfe672c4744df9d7d70efe593b94289fb74",
+    "negative/peer-root-substitution/responses.json": "d4f3b59c02e45181335e4e8a2122e8b8471f3a1e6fcd0b7cb8eb5283104d3584",
+    "negative/proof-duplicate/expected.json": "015e5379f7ab082515c555a88637590650aefbc936fe756358e7df831dab0731",
+    "negative/proof-duplicate/responses.json": "edf609f901545501f1dd1ff3b87fa08a56ce5909fb7714cf049df1f52297cd7f",
+    "negative/proof-missing/expected.json": "facf624af3ace547bbb8819feb1ea99824393819ac2685f617263b979f171945",
+    "negative/proof-missing/responses.json": "c5cf40115775b6d334a9dea8b5f8dfb9279ff4660f3fce4803bcea31d6f8d26e",
+    "negative/proof-reference-time-after-target/expected.json": "619c8d48445b6dd2d720eb15fe01fb0a8b7fabe7a9fc9c8044faaced3306302a",
+    "negative/proof-reference-time-after-target/responses.json": "49787adb27d4a206633f231631415c19ef40a25c6293e68302d9493ed5fccf9b",
+    "negative/proof-reordered/expected.json": "c87bb6c477785f9aa72941ad60bacb3352277abddd98ac37e5787d42a085f754",
+    "negative/proof-reordered/responses.json": "16cbf4c4b357d6f15e2d0ca60c60614ef29f7bae2bda4543cc249b1af7a3b7ad",
+    "negative/proof-unrequested/expected.json": "63a215a86768db8bb10cd2110bc8e98afeead1f192cf2f2525a28342ca6f6040",
+    "negative/proof-unrequested/responses.json": "5eb495af5b9d58d134d07fb5a1aed3073a1f5b42ce82cffa66123cb045b0527d",
+    "negative/proof-wrong-certificate/expected.json": "6637901707b78853c801c1425c9d7496ef34d0034165110ebce2b0d18e6d0b06",
+    "negative/proof-wrong-certificate/responses.json": "b2cc226ca1c88592767bc156cd2f5e4ceb89850ecf11d2dc2cd71541d7086709",
+    "negative/proof-wrong-expiry/expected.json": "4b363ba1d87cc141baf81b1ab9ed07006004291d444fa286106b62fa9a6a4b9e",
+    "negative/proof-wrong-expiry/responses.json": "d292c0e630fef75c1a883447c10fea0184231bed2eb5096356436d2c553b6400",
+    "negative/proof-wrong-leaf-value/expected.json": "82a4d545f84d7b5a75ef92320a537dbc79efd364c6b68c1b15b3203ed5f5ecb3",
+    "negative/proof-wrong-leaf-value/responses.json": "eb5ad40d7c4cf821ad2f28179039063cc43e0e35663c687b5e2c0168803b0969",
+    "negative/proof-wrong-reference-time/expected.json": "2c3ba272194391b9870cf6f6153d326deac8cbaddd636acfc569181b91383789",
+    "negative/proof-wrong-reference-time/responses.json": "e46f920c54d31a128621b0eed0db428c63a87a2e5985e8662304a3f8bd87518a",
+    "negative/request-differs-from-evidence/expected.json": "988c4e31d602bd252ca5118e494b61a6697b57d38e606855e88d2f7ba163e012",
+    "negative/request-differs-from-evidence/requests.json": "2f11509c51cbba8dc2530fd9670281145206abaf292f59b5ed194684f62fe78f",
+    "negative/request-wrong-state-id/expected.json": "6e4d399ee948ce53b83a3c76974a96b594260c1889f3e86d0b98a752195e443d",
+    "negative/request-wrong-state-id/requests.json": "4a4b59f6f38d73b2142158fcb6f7dfeb84a1ec0aa5074a1bfb1ae4965493757c",
+    "negative/rmin-master-stale/expected.json": "346d7bc296c33b88105596d02d858f37501466bdbd14a59fc84c2a5fc235ba16",
+    "negative/rmin-master-stale/requests.json": "2d3a391f249be4d1dddbbc739d806ad215961eb5f81ddb9ffc4a35ef7d9bb2fb",
+    "negative/rmin-unknown/expected.json": "0bd4be14c35caac49d32033a80f7d3ec22972cb98bba89b1f382960c7ea6b393",
+    "negative/rmin-unknown/requests.json": "5e97af7d3d2682f2b60a098c300595864fe2db816a0dd74eb246f4e1f564a891",
+    "negative/rpc-master-busy-active-requests/expected.json": "b598c5f8a340885b204f0d15f5e6705d9c84d3dd840892c99ee5125001824675",
+    "negative/rpc-master-busy-active-requests/responses.json": "837cfbcff99f542c7250f5dc3d8b6e584d558a58a7ff187bd99c96eb4900f43c",
+    "negative/rpc-master-busy-bare/expected.json": "097beb25bf4fbc200588bc8b7d7b18a39e26d0ebe44ea297f1f8683f1d1d5826",
+    "negative/rpc-master-busy-bare/responses.json": "f672c5e74d0b4f813fb5a9e49cb809af7c2f98b6d539995470d2868574910325",
+    "negative/rpc-master-busy-deadline/expected.json": "521f273ff30c9fe9355927a0fdad631165ee44387e5fa0ee83ff11ed75ec8781",
+    "negative/rpc-master-busy-deadline/responses.json": "5b2e1674e3f9e49f1bf7dbf9d7141d3712b9fedc9e60e68b1e6cc1f383f6151d",
+    "negative/rpc-master-busy-pinned-views/expected.json": "780b8a8a9f1be018947576125e781c57587e3db129ca07eb685636efe9e33b3b",
+    "negative/rpc-master-busy-pinned-views/responses.json": "a8c658f688175a35466f5dc98ec014fdadfbb06d93eef7b4a363c82027413b57",
+    "negative/rpc-master-busy-retention-budget/expected.json": "7b008da8e2c5399ecfe26a21d178a90baa3240e7b11c2e4ac3d2079cf7899aaa",
+    "negative/rpc-master-busy-retention-budget/responses.json": "5fe1e6b9a96477f4acc18284639d1957f2d9cc50a79fd18decbcc1e829755d2b",
+    "negative/rpc-master-database-error/expected.json": "ee1a7996b7bfd56498d726c37316d4e5fda3a5668a717f93b0186fd2a312f14d",
+    "negative/rpc-master-database-error/responses.json": "290279c77dc857dc482b906960e57f22ab8fce657bf70ffb289ce03940e11976",
+    "negative/rpc-master-invalid-duplicate-state-id/expected.json": "e541473560e8270b03758ba7d412c52deb0c6dbfba39b6b3bedbc436834e8ab5",
+    "negative/rpc-master-invalid-duplicate-state-id/responses.json": "5b402cb789cea30a9632cf88ddebe6c3dafaed5699d7c734193520e1ecb11864",
+    "negative/rpc-master-invalid-wrong-shard/expected.json": "fed3cc212aae21d62176633470a980b4c05a2c8af9fa32e2fd2e91dfc4b0ee38",
+    "negative/rpc-master-invalid-wrong-shard/responses.json": "4a6f7f6d714152d0cf4bdcf0813e51339d80a79e28b662f6bef606e6a5291fbc",
+    "negative/rpc-master-limit-request-bytes/expected.json": "dbc93a5ab97d237c4f2a8e6dc88b780a518d2a8561ecae1e7bbdc3b47b7888b2",
+    "negative/rpc-master-limit-request-bytes/responses.json": "f79fe949d7c68205617caf075cd73671a251f668d5780f2f4a5b3cc41a6d96b9",
+    "negative/rpc-master-limit-response-bytes/expected.json": "1a062189a600fe7db4e666e40a04755ba33206d4bdbca74062b81ae270b7df87",
+    "negative/rpc-master-limit-response-bytes/responses.json": "bf7199abc418be9bef3200106a85fcd5425ec9620ed557981f155ad886a4bff8",
+    "negative/rpc-master-limit-state-count/expected.json": "764cbe602c95cdc4dcc23cc782c70f80cfa5e95ecf5b0de41dff8643706c4a5e",
+    "negative/rpc-master-limit-state-count/responses.json": "49257be757c0cf80883fb420352f93167f256e879194cd221219b0beeb92682e",
+    "negative/rpc-master-method-not-found/expected.json": "7896e118a556ad082fbae16803a85494414b2aee2b03348a63a39479988f0e00",
+    "negative/rpc-master-method-not-found/responses.json": "d0b1b8653df24305e1ae1554aedd4962c4b84e611386636426d0fcf587469a32",
+    "negative/rpc-master-no-finalized-view/expected.json": "91294f9df0bee1456ba5b0695e5d64290dcb48edcc4f01e2f9538e8faa2385a4",
+    "negative/rpc-master-no-finalized-view/responses.json": "1bb8669d397b3ac2ca243694c79cca80b0ec7664838a3266293958bd8441fb65",
+    "negative/rpc-master-partition-view-unavailable/expected.json": "4f3c3050626a31049025d5fe37738170039f62dc63f0dc456999de57c029fde9",
+    "negative/rpc-master-partition-view-unavailable/responses.json": "a2480bcc6f63331260a5a64ae812aa8a88c021f1be5bfca489e2d42e13229b05",
+    "negative/rpc-master-state-expired/expected.json": "c98dc80ec49a4b4e685a05d27ecceac7c728cb89202522065f8ecdca24146e52",
+    "negative/rpc-master-state-expired/responses.json": "e196010921d17d180ef4a5af363ab9db8ece81946e4fead6d2efaacbe4084900",
+    "negative/rpc-master-state-pending/expected.json": "2765d603cbd7f30eb8568371a9c0c080c5c42a3a091526b8d7fbd277fb5af145",
+    "negative/rpc-master-state-pending/responses.json": "e831631496c40f779aa7fbd7c38dea27b3162b16a3c44b7de6cefdddb07f51b4",
+    "negative/rpc-master-state-unknown/expected.json": "9053bfd7f3650cb35e5bb5e8c4b6033bf7373ec369c420ffc065b75e17cc665e",
+    "negative/rpc-master-state-unknown/responses.json": "24db8435581739e541f590060da6257b26cccbb1d53908ba912f914df87b3346",
+    "negative/rpc-master-unsupported-configuration/expected.json": "ce39148715340a02919efd98020139e59afdcd506015c7851ee04b699fe776d7",
+    "negative/rpc-master-unsupported-configuration/responses.json": "23c8058f5c561e545e6c0e01ef5ee6a5fa9d506ebefa86ac11678018ae758ff9",
+    "negative/rpc-master-view-not-retained/expected.json": "6fe231251720efb7d82ce600ca345badc1307e5c678fedeaa1379aadfb4e1d5e",
+    "negative/rpc-master-view-not-retained/responses.json": "166dcd678ef385d53430f36ba4b376e1b557c9a8ee5249bc85443e562bf1dca8",
+    "negative/rpc-peer-busy-pinned-views/expected.json": "56fab02a8212fbc3f95afb6115036b92726f2cd7f2a483648c0f5229890511b7",
+    "negative/rpc-peer-busy-pinned-views/responses.json": "ef9780704f23553a001a4d5f934f13391c615d2205cab08e6ec351e2b003d5ad",
+    "negative/rpc-peer-limit-response-bytes/expected.json": "e5df898a4bbe3d21c99079797f7670f94a1cd3e94c340f3f30647064ac028975",
+    "negative/rpc-peer-limit-response-bytes/responses.json": "f28b4a2ec5e82d9a043d93b4a22f7d2329ed083f9410b876de85d4ec2d49f0b7",
+    "negative/rpc-peer-state-not-in-root/expected.json": "40eb1a02aa095aa05fa5cfaf1e31c146914b59462de81fa1b8f5264029b6c05a",
+    "negative/rpc-peer-state-not-in-root/responses.json": "06c5a62a6d2651d41fd5e2af82b4fc0d8734c3f8fd904e2cb528cfe7282e43a6",
+    "negative/rpc-peer-unsupported-configuration/expected.json": "15e53b24316bbd5c0ea958c6b8cfa233209597b5fa22d7c319a527ee93519a9c",
+    "negative/rpc-peer-unsupported-configuration/responses.json": "1b9fdfa93476685f67eababca1dabc63b9d36931c0e93b5a61ca1d2fd9220ef7",
+    "negative/rpc-peer-view-not-retained/expected.json": "4f20e9c11b64cf7be3c365d682c9ddd8f75048b00e848b150d80d99b36a97a3a",
+    "negative/rpc-peer-view-not-retained/responses.json": "7d909571e42dfc01d3ea33fb07f103518d781582719d09d51dda6e8edf56179a",
+    "negative/seal-epoch/expected.json": "a6545e42ce3e0dc79d76f272e8e2f315c5044ca65d19f6fb8e31676203655401",
+    "negative/seal-epoch/responses.json": "aa6096c4d909854dad7475f72f6e32a067aaa081b30986f2d82b6d3ddc7f67be",
+    "negative/seal-hash/expected.json": "76ae534b3377e82c63886b4958dd7f6544828912a6de2e47141c89a00084e1a1",
+    "negative/seal-hash/responses.json": "573d0bc84bdc1c775e7675f7e77f4b1acf064157d3d8e18f2c3e98a85055befe",
+    "negative/seal-network/expected.json": "7305251715eed0918e1d60e2a003d22fcd461d80ac2c3547bcefd2d22b05d4d2",
+    "negative/seal-network/responses.json": "64906afdb3d2093b0ed9207bbe6e47d7fe6eadb7e1492b243a00f548ac8bc037",
+    "negative/seal-previous-hash/expected.json": "473e9f4a25b01eace77d5324d0cb5b2197f2177256600046213e886db39f4ba9",
+    "negative/seal-previous-hash/responses.json": "9a958b80484218128d739e97a218dc44440feec6e6820f88d9cda3597535d496",
+    "negative/seal-round/expected.json": "1063580967c6f8a97cee0fe96d4be6cafae6b5ac331dc77f2522eb80fc15c813",
+    "negative/seal-round/responses.json": "bad468a75cb2da9feef22185a100320a12515ca27e55f43678e858fa084ae31a",
+    "negative/seal-signature-alien-key/expected.json": "1fa08507ac4e58dffff7ab3248f5efe960e8546d7538bbf5382cf287f906cc4b",
+    "negative/seal-signature-alien-key/responses.json": "f64b9b886f6b6f63f6910b92e94e4d9e2505abd0a56ca211103a2b4549bc8611",
+    "negative/seal-signature-bytes/expected.json": "3ebae00e985c482fe97d8719d5197c1e4abae27b059aa7e0b2059a246fa800e2",
+    "negative/seal-signature-bytes/responses.json": "cadbaf75ab0f14c4667ccc5b7656f8666a77ce91828d8ace37e70fd0407fb6cd",
+    "negative/seal-signatures-below-quorum/expected.json": "6be39880448dffc6a9e0768ea1a28e9bce405812e953692cf76b858a8a8bd522",
+    "negative/seal-signatures-below-quorum/responses.json": "b17451dbeb4fc94d1ab8ba88c92fd262e8321878f4076aca205d17c50be90cb0",
+    "negative/seal-signatures-missing/expected.json": "629bf4be1a9786a94586b08cce03dd47e49d6104f81eac5758541482e5186aa6",
+    "negative/seal-signatures-missing/responses.json": "a598d3994bb65cbdb9984c7447437bffc8781d11b222096e1f8c4b6a9344b538",
+    "negative/seal-timestamp/expected.json": "9ad6c02d40a0ef9f609778c1183bc57cb0f3836abd1adca0e503b271fcb923d1",
+    "negative/seal-timestamp/responses.json": "8c9589d203e9755a96bbbdd6f4a2bc2eebbcf61ca6a3e73b3b6a0abd7fd72769",
+    "negative/seal-version/expected.json": "2e12038b407a32070134b9e2dba58194c27cd20fd5c262e06449fdb6f1bbe48e",
+    "negative/seal-version/responses.json": "6f930427df9f0d18b105abe3d6512aa89fe385df699a63afc4b9429b8ab9f852",
+    "negative/trust-base-other-authority/expected.json": "38f9615aa28a283f3f46ee83ba415880fc7c29b2398c2c098327867cb34ec16e",
+    "negative/trust-base-other-authority/trust-base.cbor": "22eecdb90df3cc7b7d522ebe950e9de1d1a497049ab2698a1d1c9f36430e5278",
+    "negative/trust-base-other-epoch/expected.json": "4fdd13594aab8af8f9a443a16a9f28b79d696f20c9c039081889d91eed664b19",
+    "negative/trust-base-other-epoch/trust-base.cbor": "40d8223f44a3d0adccda98a75d372265cd45a7a1e20bf0f8e8d589829919b691",
+    "negative/trust-base-other-network/context.json": "bc83f972e817f563cf614a4e1b1f708f7d73fa36b165f026633103034ea15c9b",
+    "negative/trust-base-other-network/expected.json": "68caf48f6ad686ac4470f8495744519a681525aee2530a33eaa7e01dbc1d8034",
+    "negative/trust-base-other-network/trust-base.cbor": "f3bb14b06515e037ddadd2449f27f52269ed853c84085e2f64b6e28fe25b3ea7",
+    "negative/uc-flip-partition-path-hash/expected.json": "3adc9884968da13cb905483be36c8643f7c0c9a123ae2a93c03ebfb30dbb4e37",
+    "negative/uc-flip-partition-path-hash/responses.json": "d117fb5d024cbbddd135a645e06920b92ff5e5e1d46411562af02d164894928a",
+    "negative/uc-flip-shard-sibling/expected.json": "acded80fd24b362a496866e4819ea3d2ece406030b9c03ae9735466bbaaffe03",
+    "negative/uc-flip-shard-sibling/responses.json": "a5dbc92de11150c21dcb17e3571ac91f1c5dc8fc46e330bb10a87ec53cdfedf9",
+    "negative/uc-null-partition-path-step/expected.json": "20e3a54faacfe5fd97c4a70d941c640f7dadcab9a493d769e5529500cfd89ce2",
+    "negative/uc-null-partition-path-step/responses.json": "d87318f24c91e7afc9d788b4291434266d663eda2b3f608fa47f3271abbbf202",
+    "negative/uc-swap-partition-certificate/expected.json": "7fd2ed1525e2ede014eef9019f57ec2f1f36dab12934f4da58e5639e03b63ef9",
+    "negative/uc-swap-partition-certificate/responses.json": "3d2e9d4db54a70918a8033ca046497d162d85769afc8e946588f4e7aa6dc08b1",
+    "negative/view-absent/expected.json": "f97e99c4677623ec572613f6a824391b50cbd4a3d90da386b96ee726a5da0c1e",
+    "negative/view-absent/responses.json": "d3ed185f100ed5b67415ef08cec93a542c0f9d016cbe51f62aabe175f0c025dc",
+    "negative/view-duplicate-shard/expected.json": "3d51a6659acec6d0cdc75fd13c6d37beb5c20726c1c50e28a4a0cd778c408ac5",
+    "negative/view-duplicate-shard/partition-view.cbor": "0f2980425967473f4e4845e31b8b2e8b77b01607dab7be011af363009d2e4bd8",
+    "negative/view-duplicate-shard/responses.json": "33c917141eb85996ecd439eaee2120d20ce51f9af2b15a4df79d05cfac8e7ed3",
+    "negative/view-extra-shard/expected.json": "3f9c4195822d46e0b638f4f4b807c5753afcba8a242a3193a12c7c55225d51d6",
+    "negative/view-extra-shard/partition-view.cbor": "cb89e108ca790ddd0510f3505aedf5acbeffabd43312b6809d205a85e77f1648",
+    "negative/view-extra-shard/responses.json": "2a9b08233937cba4cf0f4cabc368f896948b1014ac315b72f95aed657ba46773",
+    "negative/view-flip-block-hash/expected.json": "9890f69eef8e96d76d9e1b0cd094bf1c33a2713fb0c5bfa1d7b77baefb7bfa68",
+    "negative/view-flip-block-hash/partition-view.cbor": "8c2dab2a312add9ab2c6c998ad0488e7e1ff506c47d3bd6d723c09f1fdc4ed4c",
+    "negative/view-flip-block-hash/responses.json": "68005d8f3b32838170d3df6369f8d820e77897b30a068e614d0c7f9b64e5f2e4",
+    "negative/view-flip-epoch/expected.json": "9890f69eef8e96d76d9e1b0cd094bf1c33a2713fb0c5bfa1d7b77baefb7bfa68",
+    "negative/view-flip-epoch/partition-view.cbor": "3b6ad6f70e2aab16c4aa099290459d82ca2e6018eb3b82dc8ea90d45d2031d28",
+    "negative/view-flip-epoch/responses.json": "212e607ae1bff0ddfb4127b0648ce331a86bd52e20db96574c53b725a3b38acc",
+    "negative/view-flip-et-hash/expected.json": "9890f69eef8e96d76d9e1b0cd094bf1c33a2713fb0c5bfa1d7b77baefb7bfa68",
+    "negative/view-flip-et-hash/partition-view.cbor": "c146b35544eac42aa4e6b7365f1a4779ad616ae1491ddc751bd17a6a51ece8ff",
+    "negative/view-flip-et-hash/responses.json": "64a842dcc59eb4d180319506c807843e134e45834c017d754a6e2f6dfea5699b",
+    "negative/view-flip-fees/expected.json": "9890f69eef8e96d76d9e1b0cd094bf1c33a2713fb0c5bfa1d7b77baefb7bfa68",
+    "negative/view-flip-fees/partition-view.cbor": "10571bcd6b6f73f280f0b7b2478e7336a5c9269fef21a10768664fe117710a01",
+    "negative/view-flip-fees/responses.json": "cd33bb5865a394f9e3e6ca95cc87f80c4cbe6a23399abb02ed864c119da06249",
+    "negative/view-flip-previous-hash/expected.json": "9890f69eef8e96d76d9e1b0cd094bf1c33a2713fb0c5bfa1d7b77baefb7bfa68",
+    "negative/view-flip-previous-hash/partition-view.cbor": "58343da1810cdf9ba9d89a236d14bda22236405815d68e1f0110949ca7fc0428",
+    "negative/view-flip-previous-hash/responses.json": "80a1cc3561ab5cb26d4dd4a54c6040445631fbf32585cf8b96d86036f6808ecc",
+    "negative/view-flip-round/expected.json": "9890f69eef8e96d76d9e1b0cd094bf1c33a2713fb0c5bfa1d7b77baefb7bfa68",
+    "negative/view-flip-round/partition-view.cbor": "2f0d01e26c48bcb3efd3e4900e836d518844b521e899543cf727bdc8e715dad9",
+    "negative/view-flip-round/responses.json": "9edee4e4131c5208f73770698a5b7e0216eb74f670ca6fb4234898df32248115",
+    "negative/view-flip-shard-conf-hash/expected.json": "cf39ad20bf8998ad1046eaa6489c56ea46176bd0649db0ea5e7eff791334ed72",
+    "negative/view-flip-shard-conf-hash/partition-view.cbor": "7400b8ca9f20136320920907f69087f7f8feb93fcd39526a62068f093ea625c1",
+    "negative/view-flip-shard-conf-hash/responses.json": "2a717485f4dd03067c4627db4743d473948cba31cb5f330fb31cd6caae18a09d",
+    "negative/view-flip-state-hash/expected.json": "9890f69eef8e96d76d9e1b0cd094bf1c33a2713fb0c5bfa1d7b77baefb7bfa68",
+    "negative/view-flip-state-hash/partition-view.cbor": "c24d10b6da3506710b9d8c147db1063ebcc9490fd7ff41c816b95c4d00f3d1a0",
+    "negative/view-flip-state-hash/responses.json": "14f916fc35ce90aaa3e14f02586b35af2a402a84f961591a38a4a51c2dae6ff0",
+    "negative/view-flip-summary-value/expected.json": "9890f69eef8e96d76d9e1b0cd094bf1c33a2713fb0c5bfa1d7b77baefb7bfa68",
+    "negative/view-flip-summary-value/partition-view.cbor": "4d08b3bd3b0214fdb44787433de3d956f13d84d33a05c4a38ecd50bd99283efd",
+    "negative/view-flip-summary-value/responses.json": "4093edb6161cd08bda38cbf142ef364580227f9b59e322635b7bede38fe6c466",
+    "negative/view-flip-timestamp/expected.json": "9890f69eef8e96d76d9e1b0cd094bf1c33a2713fb0c5bfa1d7b77baefb7bfa68",
+    "negative/view-flip-timestamp/partition-view.cbor": "7812ba5ba40b9b9f7666104903564cc476113ccfba7522135fe8cf6565a527d2",
+    "negative/view-flip-timestamp/responses.json": "05b7f41b778d90a1148223fa5919c5add083a142901af98a35fcd57c6c7f08a5",
+    "negative/view-flip-tr-hash/expected.json": "91ca25179269dfb008340cd37210230939a69eb08996d942c60660712583f636",
+    "negative/view-flip-tr-hash/partition-view.cbor": "05932c014fdeab5bd0d0e0fc583e95006914b7db9069439e7e4e736c7728ebf1",
+    "negative/view-flip-tr-hash/responses.json": "040482ffe48390fa617abec4abc8aa3438c1264664ff046cba2029d8672c6f16",
+    "negative/view-incomplete-prefix-coverage/expected.json": "588c17a729c4ac687854ce226c029cafb06eede26a6f312a616f5cf8c898c1be",
+    "negative/view-incomplete-prefix-coverage/partition-view.cbor": "eb5cae55e3303ed1fb6e6bd56f5e11c36dfdee0f61dc5338da638630966e8e8d",
+    "negative/view-incomplete-prefix-coverage/responses.json": "478ca8fc9910a6fc95934e65cffc036506170f7d69f66289f10e86403feab96c",
+    "negative/view-input-record-version/expected.json": "0691bf858bc316ece278b36edb8c9f08a94c705f426f309268fc1c051a07efef",
+    "negative/view-input-record-version/partition-view.cbor": "6d2dccaac9fb8800e910e60f9558e3227604ccb9121910fc41b324d9945d3808",
+    "negative/view-input-record-version/responses.json": "7200eda82621e5eb8f1e59cd83f2843a31758d2396fb791afb5d29514a894a10",
+    "negative/view-malformed-end-marker/expected.json": "202d1681b7b3cad67ec1e99710d8d28239d571235d617b48aae9bf4b56404994",
+    "negative/view-malformed-end-marker/partition-view.cbor": "c4ae6311bde765b31a6ad0968a2bf3aef926e9e73cfa18516d7289b736aa527a",
+    "negative/view-malformed-end-marker/responses.json": "b8fd9908c66021cbe0e14d9aa2e628980eceb6622f0718e5f0691d3dc4f18aa0",
+    "negative/view-missing-shard/expected.json": "c8c085b49541b59050ceffb2bae63bfd6a56735aebfa5acda037047a025d0903",
+    "negative/view-missing-shard/partition-view.cbor": "9c8e3af43bc6dd5ec17f11d68d67747fc97877e6d25aff6779bdd9a9fa065215",
+    "negative/view-missing-shard/responses.json": "64b7782228b9ea64abdb6e2fccf2b11deddde609e18e9bee50382246e1ee2a48",
+    "negative/view-over-limit-leaves/expected.json": "18a8f86b117b16ff31fc083ae505ab56acde2675a797df9d0a6e6ea73cec1140",
+    "negative/view-over-limit-leaves/partition-view.cbor": "62aaf2c83c3adaef5a8a6cd23b1acdbdf98f84f6fd698c3e78d0843f1e64af3a",
+    "negative/view-over-limit-leaves/responses.json": "6bc9488e1e5ddfb600266e37da4d849d2302d387d5baef36c7d380040d42023f",
+    "negative/view-over-limit-size/expected.json": "27d161ca6fdf12325e5bdc25b4d6ec214b44ec933867e2984dda44b2bb126937",
+    "negative/view-over-limit-size/partition-view.cbor": "1eb84daf5a1728c4834c1c30215e63102c2afa86d4cc958bb277fcf918e62bef",
+    "negative/view-over-limit-size/responses.json": "ed2f0ff16254f85bb597ef0cfeab5656d8f617080f3e6ee3222034a12532f3aa",
+    "negative/view-overlapping-prefix/expected.json": "f399476e03cfa820c500e8f73fb9008b3d23189f7fe84c8b88e30a7fd347920e",
+    "negative/view-overlapping-prefix/partition-view.cbor": "aaf50b759c61884751caf9b6eec63a314ea88e1a4cc890a66aed4a2b522d1403",
+    "negative/view-overlapping-prefix/responses.json": "8146314f37c079d97fe700e6ece5d584b2f97acda31deeb2fb5f9ce1f883d0ca",
+    "negative/view-reordered/expected.json": "13377d732ff802d8ff9a68ccca37e83510e500b3193faf1c2770eb048e537a04",
+    "negative/view-reordered/partition-view.cbor": "c78d06e33f04cd473fd8907a93477f775a4b100a957344c1805fdbb60063508a",
+    "negative/view-reordered/responses.json": "08bef5a6ef70835e297a03bd344229f00f959b77c54a45e777656ae2dc354ad8",
+    "negative/view-trailing-bytes/expected.json": "e4b8b691c34ceaca2087b0d5f98b0db8732898cec29eb3bfe2404de6096ad562",
+    "negative/view-trailing-bytes/partition-view.cbor": "6454d0ac65398153dfdf13e3f75ae0f183a2686a0213052c0c8fde7615e7586c",
+    "negative/view-trailing-bytes/responses.json": "a5a2b78dfc21dda540cf93c179884e56f0829e4b48890d0179d8e48bd19c4bac",
+    "negative/view-truncated/expected.json": "ca2a5a8199941bb9de8edb7ea5809663d18fd6c469f7b72ffb51251f694d7b94",
+    "negative/view-truncated/partition-view.cbor": "d325a4b7eaae233643104f25e27b5eaf694892e4f08cc7778f680cac17b2bd09",
+    "negative/view-truncated/responses.json": "304b5c1a2669a42c3965a2eab29d957e0f962c023c0b6233bab9a9c62361332e",
+    "negative/view-version-zero/expected.json": "fa0e03a23c0dbc29e25d27d230cadb162206b3b9a1ac3ce754059688fc0ac2b3",
+    "negative/view-version-zero/partition-view.cbor": "fed7434868ee7f428f24d1e80ee8b6d1a301f3db1801b52a5039638fd0fa8ed6",
+    "negative/view-version-zero/responses.json": "ef78f1257f3bcf44ac8b88d529944666244c0be491e4135fc705b45a2af2a60d",
+    "negative/view-wrong-partition/expected.json": "1e1dfb2d25bae039487da482666825edd641e768485d7131a20f52f35414c83a",
+    "negative/view-wrong-partition/partition-view.cbor": "cc3603e4540e7d361e1010ad76c187a148621a62f9c18e8a9052aac629590f43",
+    "negative/view-wrong-partition/responses.json": "828f8f4920d78511b005668a5491cb64623f53a1465477c619cea513b0edefa9",
+    "negative/view-wrong-version/expected.json": "b8e8a2ab259619098d370cf2b9979191f60bff7774c3198e1840bb10e92aa9e7",
+    "negative/view-wrong-version/partition-view.cbor": "c66de4c7f28b6db7d68cdac270d7c441b8a66a14366d30bf92c6d64565e65057",
+    "negative/view-wrong-version/responses.json": "d9d34c63f175fb7e074ce94c6bc884550c2800814e0b898436189f77dcfd818f",
+    "nil-vs-empty/context.json": "71128f3b7e19eaa156f0d0596e08a923457558a6e6e882497a6b8a78868ad5e8",
+    "nil-vs-empty/expected.json": "3c66f83cd988b729c2afbbe78907b9b15a62b4683d8569810dd5051d02e45ac7",
+    "nil-vs-empty/partition-view.cbor": "433c5ed97f56c5fe588a871218346604837dfbcec1d622a17b7d4f7e9a013eb9",
+    "nil-vs-empty/producer.json": "bcfe993a9fb8a2dfa5cd6cbd7cbaf6071667e016dfa5fb79ac439be7796fb383",
+    "nil-vs-empty/requests.json": "a00491c679ccb5a6f2098cc4c358d948955b47b9b4d0c833901ba3a972582f18",
+    "nil-vs-empty/response-v1.cbor": "3d52ef70b854f9c26fb257c3d842f9909ae76e0bc8b20c55ea8c90c7dcf1552a",
+    "nil-vs-empty/response-v2.cbor": "7715472abc872d036568b98b7da279b9566ae8cf82bb8bef3d06e331e70885c6",
+    "nil-vs-empty/responses.json": "9f65498e44d04e95925d8a99b323f02b0940c4f98d18775e0bf28fae354eefde",
+    "nil-vs-empty/shard-configs/0.cbor": "078b168a16c0317b8a6f6de6e7a413690888a021faa22f571ab2f0f44012b1a6",
+    "nil-vs-empty/shard-configs/1.cbor": "f1874ba0f9bba20b6349cf8439e53df836f142b55651e785c4899263c6c06d30",
+    "nil-vs-empty/trust-base.cbor": "a2909914b7a076efbeb839650f273ade6802f236970461c5dcb19dcbdd204446",
+    "nil-vs-empty/ucs/0.cbor": "5f06992146fcb523d9f7d44a531bf306aac830bf0c73aa3b68bee7694654161c",
+    "nil-vs-empty/ucs/1.cbor": "c1aae52fb23d00a3d9149fbbc84b92dcb57cf00799624f0c9c11dd1fec993d0f",
+    "shards-1/context.json": "c1910f2047218ec03ee33a429dc868511aa55135289e64821cf3453b0ed96067",
+    "shards-1/expected.json": "224e287a5e5b07a856af74343d9169ecf1147ce180dda0333f6d23cc163a817a",
+    "shards-1/partition-view.cbor": "644ecd09f38235ea4b06691eb7ab621cd4e412b9b0d926bf0f10066b958b98a4",
+    "shards-1/producer.json": "49caa64617f69de92f04a0359eb90e03a1c38f23dcb50c57530d2a6ddc71af3e",
+    "shards-1/requests.json": "c2100867a251f696d0655e0af75b8eae331f20b3f0e8f07a3539f44d4b98422b",
+    "shards-1/response-v1.cbor": "133b1a4ecc0fa35d303f5f9314a8a96905861e03984335bb7910e1264dabfa14",
+    "shards-1/response-v2.cbor": "9162eedfa30ffdcc805d0e13705325aabf3823317fb5417a7a49ebf9095d516d",
+    "shards-1/responses.json": "538f4e3dd8a6021fb3dc04b370c470fd9a017b4b8b35d80edd70de9243d2ef8c",
+    "shards-1/shard-configs/root.cbor": "095c96ce597132d746178c22286192f70315477c24b09f34f9a5695a89856319",
+    "shards-1/trust-base.cbor": "a2909914b7a076efbeb839650f273ade6802f236970461c5dcb19dcbdd204446",
+    "shards-1/ucs/root.cbor": "ba96d3ede8d5c5c824c1f7ff38ad3a9ce6b1fa73699455dc7f9addf90829ef23",
+    "shards-4-timeout-unchanged/context.json": "3138a31544432881c5a0e8d1b51b33910bfaa83cb1e209666152e171724b26d4",
+    "shards-4-timeout-unchanged/expected.json": "7e675b8178ad62392acda7c46625a6ef85493c2714e4daa8a4900877fed2f00a",
+    "shards-4-timeout-unchanged/partition-view.cbor": "4a17e7173e113cb78b53cab2a1c32c10ae21379e122aabddb3dc3dab5f8b1984",
+    "shards-4-timeout-unchanged/producer.json": "22b6ff861d33d799c473ffbdfa401eb5ab4ec1a1f18080189332b31e56b9cd42",
+    "shards-4-timeout-unchanged/requests.json": "6dbfdc64ea7b44c1938e6c99b9ba93967b82e8ff634a7f99cfe4c93d4e96bd53",
+    "shards-4-timeout-unchanged/response-v1.cbor": "5ac92d9b5e4a3517da9277c7547d94c127af9af916accda0ac9cd0cc3c80a364",
+    "shards-4-timeout-unchanged/response-v2.cbor": "3cd51807df21264186a501d44ebaec2c9500b43fa8db322ce71ba2beed9e4991",
+    "shards-4-timeout-unchanged/responses.json": "a7cf0250838f201121f17527712d06d32180e8fcf0f5dec6495e34d2cb116f22",
+    "shards-4-timeout-unchanged/shard-configs/00.cbor": "726a15dee13c6401ad84f0a6a93da53cce112ca51723143e896be290f67b9113",
+    "shards-4-timeout-unchanged/shard-configs/01.cbor": "710263183cc7094043787bba8250e7e2a5779cf69afd4d3e70c322b0bd606723",
+    "shards-4-timeout-unchanged/shard-configs/10.cbor": "673ae5a5f776d70aa2ebb57bbf24f7324cf74fe83e26279f04c1ba67bc6342f6",
+    "shards-4-timeout-unchanged/shard-configs/11.cbor": "66378e1d0478d4f43f5a028e7f2497bf87a752c043ff70711993dd26490b232b",
+    "shards-4-timeout-unchanged/trust-base.cbor": "a2909914b7a076efbeb839650f273ade6802f236970461c5dcb19dcbdd204446",
+    "shards-4-timeout-unchanged/ucs/00.cbor": "3575b56e56b42fdfcd660f38d30b153c187426a63725f118cecb621ec670650b",
+    "shards-4-timeout-unchanged/ucs/01.cbor": "0496d0fa2976178379fc038437e8e5384d5959fa45f021921da64cb66651b88d",
+    "shards-4-timeout-unchanged/ucs/10.cbor": "51ebb920a402539a57c5462074b3eedb1d706a57eb56c7cea0b68a3c467f81c4",
+    "shards-4-timeout-unchanged/ucs/11.cbor": "5d5d46dae2468799774b933627125563af74f38355ac3a27b54262e9dec033de",
+    "shards-4/context.json": "3ac0dec622539671f32c622031282c428a20f7bdb07df3542b92ef8bdf94e5de",
+    "shards-4/expected.json": "193feb65f63cd92acf779e7385423f0ebc0a8be4c73f445a3e6b5c22c430fe65",
+    "shards-4/partition-view.cbor": "84155261b7f2a4e8bf16474caba49f8e9ddc279718f5ed873ced423aa901357d",
+    "shards-4/producer.json": "9154490b223bf658cd1c1cd66440a78b24c14633e200f1bc46e285e049e28fcc",
+    "shards-4/requests.json": "a0117013c0d4ced0e579f097b0c86f5013599f772a74cc08a29acc67461041f6",
+    "shards-4/response-v1.cbor": "19b90a65832c417594a0d9eb6c81fe5bf7227e107f471b375f16aea0ee912b9f",
+    "shards-4/response-v2.cbor": "0f7bfdc69e7a91ab4004d4796030fb0e6171e123a7f3e6a8ca05e69d4e79d867",
+    "shards-4/responses.json": "cfa79dc8e8fad5a268a92a9c582bc321a910d216f9c82a5a7a3bd1cd14d2d2f4",
+    "shards-4/shard-configs/00.cbor": "726a15dee13c6401ad84f0a6a93da53cce112ca51723143e896be290f67b9113",
+    "shards-4/shard-configs/01.cbor": "710263183cc7094043787bba8250e7e2a5779cf69afd4d3e70c322b0bd606723",
+    "shards-4/shard-configs/10.cbor": "673ae5a5f776d70aa2ebb57bbf24f7324cf74fe83e26279f04c1ba67bc6342f6",
+    "shards-4/shard-configs/11.cbor": "66378e1d0478d4f43f5a028e7f2497bf87a752c043ff70711993dd26490b232b",
+    "shards-4/trust-base.cbor": "a2909914b7a076efbeb839650f273ade6802f236970461c5dcb19dcbdd204446",
+    "shards-4/ucs/00.cbor": "a1c258e8fab3ec757f0b91d5588da70fc1f89c7f48342297436c037dab623954",
+    "shards-4/ucs/01.cbor": "45192632e658c828a17ea49dd75b490385a141ef2ee0b689af4e0f06d916712d",
+    "shards-4/ucs/10.cbor": "571da13fe671456ad36100b97faf45b8deeb52dc1866066047bdb0eb7127dc90",
+    "shards-4/ucs/11.cbor": "f7f85958783c8c4a2495d3f9f265e4eee1122dbb9d7471bd99760c82af386339",
+    "shards-8/context.json": "f071f9a74ee030a2d9be1ff046fdc8aa92d0c2481aec693b7cb458eeb9096ef8",
+    "shards-8/expected.json": "dcdde1f50e7c35125ebf8757d0147f1d576f38cf5cb7380bb53c47f1d631b69c",
+    "shards-8/partition-view.cbor": "30047bbdaf25985a0aef030655e8a987eacd310a36d9ce6809b9a033134e99f1",
+    "shards-8/producer.json": "67c49e5587b7c79bf3141825db52d4213c27e450caea0b13301242ba5ce63af5",
+    "shards-8/requests.json": "8b7d732d459b72c17a37abb7b40a5f73f5b4dc0124738afb19d59a3deeda1f49",
+    "shards-8/response-v1.cbor": "ca2a782baa23c6e9409cf6b516b4a7e94a8e22f0096eecaf85f63583ab32b2fa",
+    "shards-8/response-v2.cbor": "06e469271806b8e590195a012f9621b198bbcbd0f1bc46625f2fe3a7f1de175c",
+    "shards-8/responses.json": "87676baa83cdc95cf7b968a5aeb1b4bd352bfa859e6bf08537919a53fb644399",
+    "shards-8/shard-configs/000.cbor": "7b546bf26cd40be86f1573cfe70d581de5caefe676a9c9913771e0687910476c",
+    "shards-8/shard-configs/001.cbor": "dd30cc7882eb585c1c4143a3469802bc56b5f584ac9fe1133e6065031b3cfebd",
+    "shards-8/shard-configs/010.cbor": "0424ff67988fa5c8e957bac153544e46b0a297a7b781e20146923fa6ee66fab7",
+    "shards-8/shard-configs/011.cbor": "85f7041e8a136d1c3384027f5b45aeb6a6c446e912dbdae015516e7156f57a0d",
+    "shards-8/shard-configs/100.cbor": "495520135ab27cd871a04ca2a52039faccaa28ba6be27503d44f4833b6167909",
+    "shards-8/shard-configs/101.cbor": "0029f76e5f004a7e9a39af9822dbf5c277cf606236ed75b420642520889beb53",
+    "shards-8/shard-configs/110.cbor": "6b38f88126e00c08a9f92f24efff5b8a113d6549388b2667da750c6c02e23e3d",
+    "shards-8/shard-configs/111.cbor": "df210317d7de119c411b92bed46b3aa9c3e1fb3a8cdd870bf2556e8c5fec9c15",
+    "shards-8/trust-base.cbor": "a2909914b7a076efbeb839650f273ade6802f236970461c5dcb19dcbdd204446",
+    "shards-8/ucs/000.cbor": "29c1215829e9314c1da7cc97f1c295da31237efdc47e120354d8af198a14bc39",
+    "shards-8/ucs/001.cbor": "a4273bfe51c6fa976957ccb5ed150670221ae3fc8d9817353f58efe701e7069a",
+    "shards-8/ucs/010.cbor": "439b2d8a5353112bb82e0ed626ce3aaca07b84d52b8be479aa3eddfec907101a",
+    "shards-8/ucs/011.cbor": "4171da5ac59b586002a32ad24d308b10de222b6cef53077ea94ca717174ab885",
+    "shards-8/ucs/100.cbor": "cb1019de691826ec0c89e79a26db263717444c987ad0f43b2c5fed0cc746df68",
+    "shards-8/ucs/101.cbor": "3fd55db17caab070466ddef3c15e6fc7bee160a230c09832f6ff70fe26dfd754",
+    "shards-8/ucs/110.cbor": "17ae2ee24356ffe8b4482b73c14415d588c34180a2f5c1ae65af6b880f4a3b6a",
+    "shards-8/ucs/111.cbor": "d4a59be7befea46f06398cd5437f07f414a1c2f7b7fc5994bb933b0ab9d0844c",
+    "witness-alt/context.json": "3ac0dec622539671f32c622031282c428a20f7bdb07df3542b92ef8bdf94e5de",
+    "witness-alt/expected.json": "482c97b33396c4cea147af2abc57fe2a75ed41308328048f29ad33374978031e",
+    "witness-alt/partition-view.cbor": "84155261b7f2a4e8bf16474caba49f8e9ddc279718f5ed873ced423aa901357d",
+    "witness-alt/producer.json": "7dc79fa0bc7f4a968316ec27d185b40c83d93b4ced0f2da61fa99aaa83ccc05a",
+    "witness-alt/requests.json": "a0117013c0d4ced0e579f097b0c86f5013599f772a74cc08a29acc67461041f6",
+    "witness-alt/response-v1.cbor": "23502a5e29cd2b23e2ad635b0a6367585a368d29c037b0eacbd007e15b7d2b34",
+    "witness-alt/response-v2.cbor": "4e0aef6d5a91f3a184d04212bbe2cf657e38d5e078dfafd5162090b5bada128f",
+    "witness-alt/responses.json": "ddc474101e8725ef858369e6bba6d3fd5be116b73416847960a1fb279eca2bb3",
+    "witness-alt/shard-configs/00.cbor": "726a15dee13c6401ad84f0a6a93da53cce112ca51723143e896be290f67b9113",
+    "witness-alt/shard-configs/01.cbor": "710263183cc7094043787bba8250e7e2a5779cf69afd4d3e70c322b0bd606723",
+    "witness-alt/shard-configs/10.cbor": "673ae5a5f776d70aa2ebb57bbf24f7324cf74fe83e26279f04c1ba67bc6342f6",
+    "witness-alt/shard-configs/11.cbor": "66378e1d0478d4f43f5a028e7f2497bf87a752c043ff70711993dd26490b232b",
+    "witness-alt/trust-base.cbor": "a2909914b7a076efbeb839650f273ade6802f236970461c5dcb19dcbdd204446",
+    "witness-alt/ucs/00.cbor": "9bfe8960a4ca598a973cc4343c94d360138cc614871b066047d4d59c44ad7f5f",
+    "witness-alt/ucs/01.cbor": "737c50774420e729660250c78b9d19838bc6420439b94321245178e08c571295",
+    "witness-alt/ucs/10.cbor": "d92210efcd3836c86c372f1e321d7dd4654be2c02295d246d35118ec240da297",
+    "witness-alt/ucs/11.cbor": "286a0e5417688e9bd29f8b3fcd5f574db13d5302371764561bb4b0c71e1ac035"
+  }
+}

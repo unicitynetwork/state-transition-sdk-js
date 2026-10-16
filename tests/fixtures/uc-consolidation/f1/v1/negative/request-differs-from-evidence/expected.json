@@ -1,0 +1,9 @@
+{
+  "base": "shards-4",
+  "description": "request whose certification data differs from the authenticated original",
+  "stage": "consolidate",
+  "outcome": "incompatible_lineage",
+  "changedFiles": [
+    "requests.json"
+  ]
+}

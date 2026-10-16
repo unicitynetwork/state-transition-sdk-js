@@ -1,0 +1,359 @@
+{
+  "spec": [
+    "Each signature counted toward a unicity seal quorum is exactly 65 bytes r[32]||s[32]||v[1] over SHA-256 of the seal's signature-free CBOR.",
+    "1 \u003c= r,s \u003c n; low-S (s \u003c= n/2); v in 0..3 (no 27/28, no EIP-155).",
+    "One recover-and-compare: Q' = r^-1(sR - zG) with x = r + (v\u003e\u003e1)*n (x \u003c p required), R = lift(x, parity v\u00261), z = digest mod n (digests 0 and \u003e= n allowed); reject on failed lift/identity. No separate ECDSA verification.",
+    "The public key recovered from (hash, r, s, v) must equal the trusted key of the claimed node ID; a range check on v is not enough.",
+    "A signature that does not conform contributes zero votes. The seal is accepted iff the stake of conforming signatures from distinct admitted node IDs reaches the quorum threshold.",
+    "64-byte compact r||s signatures are not canonical seal signatures."
+  ],
+  "primitive": {
+    "publicKeyCompressed": "0214c102d7aabe907e3764c9fbe78d4f5fa8aba604143ec235919b9fe70caa152e",
+    "messageHashSha256": "b2fea1db454518400328491efc1799ddbd66af44797ae17e7f932bd6ac830254",
+    "messageUtf8": "unicity o3 recovery fixture",
+    "vectors": [
+      {
+        "name": "valid",
+        "signature": "d4b3b5a758d5abea0f9e3d273611972298dcc512e9b27f508a91d0adb1c87c69651f05686ba415f41b1b6acbeee336c95e1e2a9b378ba16509d15d0c07332a3d01",
+        "accept": true,
+        "note": "r||s||v as produced by the signer"
+      },
+      {
+        "name": "recovery-id-0",
+        "signature": "d4b3b5a758d5abea0f9e3d273611972298dcc512e9b27f508a91d0adb1c87c69651f05686ba415f41b1b6acbeee336c95e1e2a9b378ba16509d15d0c07332a3d00",
+        "accept": false,
+        "note": "same r,s; only v changed"
+      },
+      {
+        "name": "recovery-id-2",
+        "signature": "d4b3b5a758d5abea0f9e3d273611972298dcc512e9b27f508a91d0adb1c87c69651f05686ba415f41b1b6acbeee336c95e1e2a9b378ba16509d15d0c07332a3d02",
+        "accept": false,
+        "note": "same r,s; only v changed"
+      },
+      {
+        "name": "recovery-id-3",
+        "signature": "d4b3b5a758d5abea0f9e3d273611972298dcc512e9b27f508a91d0adb1c87c69651f05686ba415f41b1b6acbeee336c95e1e2a9b378ba16509d15d0c07332a3d03",
+        "accept": false,
+        "note": "same r,s; only v changed"
+      },
+      {
+        "name": "recovery-id-4",
+        "signature": "d4b3b5a758d5abea0f9e3d273611972298dcc512e9b27f508a91d0adb1c87c69651f05686ba415f41b1b6acbeee336c95e1e2a9b378ba16509d15d0c07332a3d04",
+        "accept": false,
+        "note": "same r,s; only v changed"
+      },
+      {
+        "name": "recovery-id-27",
+        "signature": "d4b3b5a758d5abea0f9e3d273611972298dcc512e9b27f508a91d0adb1c87c69651f05686ba415f41b1b6acbeee336c95e1e2a9b378ba16509d15d0c07332a3d1b",
+        "accept": false,
+        "note": "same r,s; only v changed"
+      },
+      {
+        "name": "recovery-id-28",
+        "signature": "d4b3b5a758d5abea0f9e3d273611972298dcc512e9b27f508a91d0adb1c87c69651f05686ba415f41b1b6acbeee336c95e1e2a9b378ba16509d15d0c07332a3d1c",
+        "accept": false,
+        "note": "same r,s; only v changed"
+      },
+      {
+        "name": "recovery-id-31",
+        "signature": "d4b3b5a758d5abea0f9e3d273611972298dcc512e9b27f508a91d0adb1c87c69651f05686ba415f41b1b6acbeee336c95e1e2a9b378ba16509d15d0c07332a3d1f",
+        "accept": false,
+        "note": "same r,s; only v changed"
+      },
+      {
+        "name": "recovery-id-255",
+        "signature": "d4b3b5a758d5abea0f9e3d273611972298dcc512e9b27f508a91d0adb1c87c69651f05686ba415f41b1b6acbeee336c95e1e2a9b378ba16509d15d0c07332a3dff",
+        "accept": false,
+        "note": "same r,s; only v changed"
+      },
+      {
+        "name": "recovery-id-xor-1",
+        "signature": "d4b3b5a758d5abea0f9e3d273611972298dcc512e9b27f508a91d0adb1c87c69651f05686ba415f41b1b6acbeee336c95e1e2a9b378ba16509d15d0c07332a3d00",
+        "accept": false,
+        "note": "stays in range but recovers another key"
+      },
+      {
+        "name": "high-s-flipped-parity",
+        "signature": "d4b3b5a758d5abea0f9e3d273611972298dcc512e9b27f508a91d0adb1c87c699ae0fa97945bea0be4e49534111cc9355c90b24b77bcfed6b6010180c903170400",
+        "accept": false,
+        "note": "(r, n-s, v^1): valid ECDSA, non-canonical"
+      },
+      {
+        "name": "high-s-same-v",
+        "signature": "d4b3b5a758d5abea0f9e3d273611972298dcc512e9b27f508a91d0adb1c87c699ae0fa97945bea0be4e49534111cc9355c90b24b77bcfed6b6010180c903170401",
+        "accept": false
+      },
+      {
+        "name": "compact-64",
+        "signature": "d4b3b5a758d5abea0f9e3d273611972298dcc512e9b27f508a91d0adb1c87c69651f05686ba415f41b1b6acbeee336c95e1e2a9b378ba16509d15d0c07332a3d",
+        "accept": false,
+        "note": "no recovery id: not a canonical seal signature"
+      },
+      {
+        "name": "truncated-63",
+        "signature": "d4b3b5a758d5abea0f9e3d273611972298dcc512e9b27f508a91d0adb1c87c69651f05686ba415f41b1b6acbeee336c95e1e2a9b378ba16509d15d0c07332a",
+        "accept": false
+      },
+      {
+        "name": "extended-66",
+        "signature": "d4b3b5a758d5abea0f9e3d273611972298dcc512e9b27f508a91d0adb1c87c69651f05686ba415f41b1b6acbeee336c95e1e2a9b378ba16509d15d0c07332a3d0100",
+        "accept": false
+      },
+      {
+        "name": "empty",
+        "signature": "",
+        "accept": false
+      },
+      {
+        "name": "r-zero",
+        "signature": "0000000000000000000000000000000000000000000000000000000000000000651f05686ba415f41b1b6acbeee336c95e1e2a9b378ba16509d15d0c07332a3d01",
+        "accept": false
+      },
+      {
+        "name": "s-zero",
+        "signature": "d4b3b5a758d5abea0f9e3d273611972298dcc512e9b27f508a91d0adb1c87c69000000000000000000000000000000000000000000000000000000000000000001",
+        "accept": false
+      },
+      {
+        "name": "s-equals-n",
+        "signature": "d4b3b5a758d5abea0f9e3d273611972298dcc512e9b27f508a91d0adb1c87c69fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd036414101",
+        "accept": false
+      },
+      {
+        "name": "r-equals-n",
+        "signature": "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141651f05686ba415f41b1b6acbeee336c95e1e2a9b378ba16509d15d0c07332a3d01",
+        "accept": false
+      }
+    ]
+  },
+  "recovery": [
+    {
+      "name": "v2-recovers-trusted-key",
+      "publicKeyCompressed": "02ad802f2145df548ce1fc418b851cb32669c5a6bb939e6caf744de90310f8f1ff",
+      "digest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "signature": "0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000102",
+      "accept": true,
+      "note": "r=2,s=1,z=0: x=r+n lifts to a curve point; valid ID 2 must be accepted"
+    },
+    {
+      "name": "v3-recovers-trusted-key",
+      "publicKeyCompressed": "03ad802f2145df548ce1fc418b851cb32669c5a6bb939e6caf744de90310f8f1ff",
+      "digest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "signature": "0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000103",
+      "accept": true,
+      "note": "same x, odd y"
+    },
+    {
+      "name": "v2-signature-against-v3-key",
+      "publicKeyCompressed": "03ad802f2145df548ce1fc418b851cb32669c5a6bb939e6caf744de90310f8f1ff",
+      "digest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "signature": "0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000102",
+      "accept": false,
+      "note": "wrong branch"
+    },
+    {
+      "name": "v3-signature-against-v2-key",
+      "publicKeyCompressed": "02ad802f2145df548ce1fc418b851cb32669c5a6bb939e6caf744de90310f8f1ff",
+      "digest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "signature": "0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000103",
+      "accept": false,
+      "note": "wrong branch"
+    },
+    {
+      "name": "v0-for-v2-signature",
+      "publicKeyCompressed": "02ad802f2145df548ce1fc418b851cb32669c5a6bb939e6caf744de90310f8f1ff",
+      "digest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "signature": "0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000100",
+      "accept": false,
+      "note": "same r,s, no overflow lift: recovers another key"
+    },
+    {
+      "name": "r-plus-n-equals-p-v2",
+      "publicKeyCompressed": "02ad802f2145df548ce1fc418b851cb32669c5a6bb939e6caf744de90310f8f1ff",
+      "digest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "signature": "000000000000000000000000000000014551231950b75fc4402da1722fc9baee000000000000000000000000000000000000000000000000000000000000000102",
+      "accept": false,
+      "note": "x = p is not a field element"
+    },
+    {
+      "name": "r-plus-n-equals-p-v3",
+      "publicKeyCompressed": "02ad802f2145df548ce1fc418b851cb32669c5a6bb939e6caf744de90310f8f1ff",
+      "digest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "signature": "000000000000000000000000000000014551231950b75fc4402da1722fc9baee000000000000000000000000000000000000000000000000000000000000000103",
+      "accept": false
+    },
+    {
+      "name": "r-plus-n-overflow-v2",
+      "publicKeyCompressed": "02ad802f2145df548ce1fc418b851cb32669c5a6bb939e6caf744de90310f8f1ff",
+      "digest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "signature": "000000000000000000000000000000014551231950b75fc4402da1722fc9baf3000000000000000000000000000000000000000000000000000000000000000102",
+      "accept": false,
+      "note": "r+n \u003e p"
+    },
+    {
+      "name": "r-near-n-overflow-v3",
+      "publicKeyCompressed": "02ad802f2145df548ce1fc418b851cb32669c5a6bb939e6caf744de90310f8f1ff",
+      "digest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "signature": "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364140000000000000000000000000000000000000000000000000000000000000000103",
+      "accept": false,
+      "note": "r = n-1, x = r+n \u003e\u003e p"
+    },
+    {
+      "name": "decompression-failure-v0",
+      "publicKeyCompressed": "02ad802f2145df548ce1fc418b851cb32669c5a6bb939e6caf744de90310f8f1ff",
+      "digest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "signature": "0000000000000000000000000000000000000000000000000000000000000005000000000000000000000000000000000000000000000000000000000000000100",
+      "accept": false,
+      "note": "x=5 is not on the curve"
+    },
+    {
+      "name": "decompression-failure-v1",
+      "publicKeyCompressed": "02ad802f2145df548ce1fc418b851cb32669c5a6bb939e6caf744de90310f8f1ff",
+      "digest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "signature": "0000000000000000000000000000000000000000000000000000000000000005000000000000000000000000000000000000000000000000000000000000000101",
+      "accept": false
+    },
+    {
+      "name": "recovered-identity",
+      "publicKeyCompressed": "02ad802f2145df548ce1fc418b851cb32669c5a6bb939e6caf744de90310f8f1ff",
+      "digest": "0000000000000000000000000000000000000000000000000000000000000001",
+      "signature": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798000000000000000000000000000000000000000000000000000000000000000100",
+      "accept": false,
+      "note": "R=G, s=z=1: Q' is the point at infinity"
+    },
+    {
+      "name": "zero-digest",
+      "publicKeyCompressed": "026b2abaa3eb647258bd2bf0df4edc5f3bd660b905299fa4b0e883b00c33915e6d",
+      "digest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "signature": "72956bcfdf23a1cfac13212fdbd4a5bbd1c506c1bd3d4d5780b47eddac4f86036586a29530108505f26af869aed81b78ed577ef2f442031eaffd455f32a1aac701",
+      "accept": true,
+      "note": "digest 0 is a valid message representative"
+    },
+    {
+      "name": "digest-all-ones-ge-n",
+      "publicKeyCompressed": "026b2abaa3eb647258bd2bf0df4edc5f3bd660b905299fa4b0e883b00c33915e6d",
+      "digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "signature": "ad3fdf0d3bf4ecd83101f6c3af4fc4fb1e4ea74789716655e10a3b08fd954f3a10534c931a5dc89900a62aa5865d1d1b540b4e8eb34744b15e724fc8cc62142c01",
+      "accept": true,
+      "note": "digest \u003e= n is reduced mod n"
+    },
+    {
+      "name": "digest-equals-n",
+      "publicKeyCompressed": "026b2abaa3eb647258bd2bf0df4edc5f3bd660b905299fa4b0e883b00c33915e6d",
+      "digest": "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141",
+      "signature": "2462ba99c5bb0a8c2c2dc15ce3f1adb5c007b3a117fa7dc64d4b669d8b143d05000c0c4e5ba2688f884debbe2f0ada1aeb59f84527efb8c14867140d9c469df101",
+      "accept": true,
+      "note": "z = 0 after reduction"
+    },
+    {
+      "name": "signature-of-zero-digest-for-digest-n",
+      "publicKeyCompressed": "026b2abaa3eb647258bd2bf0df4edc5f3bd660b905299fa4b0e883b00c33915e6d",
+      "digest": "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141",
+      "signature": "72956bcfdf23a1cfac13212fdbd4a5bbd1c506c1bd3d4d5780b47eddac4f86036586a29530108505f26af869aed81b78ed577ef2f442031eaffd455f32a1aac701",
+      "accept": true,
+      "note": "n reduces to the zero digest: the same signature verifies"
+    },
+    {
+      "name": "signature-of-digest-1-for-digest-n-plus-1",
+      "publicKeyCompressed": "026b2abaa3eb647258bd2bf0df4edc5f3bd660b905299fa4b0e883b00c33915e6d",
+      "digest": "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364142",
+      "signature": "bf7849c41762eab1ae3d879e6794b476a5e7c94094e23d0c37def4a8cf8970150facade6b2e9ebbde02584161afed98f0d0e14b685febf615ff8d3c9fb3914df01",
+      "accept": true,
+      "note": "n+1 reduces to 1"
+    },
+    {
+      "name": "signature-of-zero-digest-for-digest-1",
+      "publicKeyCompressed": "026b2abaa3eb647258bd2bf0df4edc5f3bd660b905299fa4b0e883b00c33915e6d",
+      "digest": "0000000000000000000000000000000000000000000000000000000000000001",
+      "signature": "72956bcfdf23a1cfac13212fdbd4a5bbd1c506c1bd3d4d5780b47eddac4f86036586a29530108505f26af869aed81b78ed577ef2f442031eaffd455f32a1aac701",
+      "accept": false,
+      "note": "different representative"
+    }
+  ],
+  "seal": {
+    "description": "4 nodes, stake 1 each, quorum 3, network local, epoch 1",
+    "networkId": 3,
+    "epoch": 1,
+    "quorumThreshold": 3,
+    "nodes": [
+      {
+        "id": "node1",
+        "publicKeyCompressed": "022c66d2f8cb8681c89caaf08c825adf27b4f78bbb7d1e53521075182fd9729616",
+        "stake": 1
+      },
+      {
+        "id": "node2",
+        "publicKeyCompressed": "02bbd16a295ae6b79d93360b98e2d4bf0208c9c9b253a1813a1d4facaf33de89da",
+        "stake": 1
+      },
+      {
+        "id": "node3",
+        "publicKeyCompressed": "030e6e472eb59617644758346215734e3beab85bee85ed5f315455061b6f3e4e9b",
+        "stake": 1
+      },
+      {
+        "id": "node4",
+        "publicKeyCompressed": "02cb1c9861dde29ff6899832f914299c6f5dd8f58aecc8f49b673b4893075d44cb",
+        "stake": 1
+      }
+    ],
+    "trustBaseCbor": "d998588a010301008483656e6f6465315821022c66d2f8cb8681c89caaf08c825adf27b4f78bbb7d1e53521075182fd97296160183656e6f646532582102bbd16a295ae6b79d93360b98e2d4bf0208c9c9b253a1813a1d4facaf33de89da0183656e6f6465335821030e6e472eb59617644758346215734e3beab85bee85ed5f315455061b6f3e4e9b0183656e6f646534582102cb1c9861dde29ff6899832f914299c6f5dd8f58aecc8f49b673b4893075d44cb0103f6f6f6a0",
+    "cases": [
+      {
+        "name": "valid-all-four",
+        "sealCbor": "d9985d88010307011a6440d78d5820010101010101010101010101010101010101010101010101010101010101010158200202020202020202020202020202020202020202020202020202020202020202a4656e6f64653158414365560072b0872ed527be0deaab93e87b17d9b86222f08e2f3446f5ed9cb6ae5a4629afed8baf830323c96500cb23612920b618076bc506fc6690590f74dd6d00656e6f6465325841eb34479642573edc4d87b5a3f06ef8af51a4900294af6af0833f8fb2b3f05d564734d4ffbfae0e47ffb70da67760303c3650c93f46c5ded47016a46c8c3d3cef00656e6f646533584103fb52be7a6e7480577c0f329d237d8cb7101770b70ebdc5d0f52318d50d450901c7611261159b7e5a67fa40037e95d49ed2d7b924a2e66f5d6cef61dd50fe2101656e6f64653458414b5fe0d20c25e39f562bc2f8f30347acd7f0204731472827902732fb1f3b78244b44769199dfdbede18a9f3a012cd9085bc151a24d40c48f30b8c9543b0abb3000",
+        "accept": true
+      },
+      {
+        "name": "one-v-flipped-quorum-still-met",
+        "sealCbor": "d9985d88010307011a6440d78d5820010101010101010101010101010101010101010101010101010101010101010158200202020202020202020202020202020202020202020202020202020202020202a4656e6f64653158414365560072b0872ed527be0deaab93e87b17d9b86222f08e2f3446f5ed9cb6ae5a4629afed8baf830323c96500cb23612920b618076bc506fc6690590f74dd6d01656e6f6465325841eb34479642573edc4d87b5a3f06ef8af51a4900294af6af0833f8fb2b3f05d564734d4ffbfae0e47ffb70da67760303c3650c93f46c5ded47016a46c8c3d3cef00656e6f646533584103fb52be7a6e7480577c0f329d237d8cb7101770b70ebdc5d0f52318d50d450901c7611261159b7e5a67fa40037e95d49ed2d7b924a2e66f5d6cef61dd50fe2101656e6f64653458414b5fe0d20c25e39f562bc2f8f30347acd7f0204731472827902732fb1f3b78244b44769199dfdbede18a9f3a012cd9085bc151a24d40c48f30b8c9543b0abb3000",
+        "accept": true,
+        "note": "bad recovery id contributes zero votes; surplus invalid signature tolerated"
+      },
+      {
+        "name": "two-v-flipped-quorum-lost",
+        "sealCbor": "d9985d88010307011a6440d78d5820010101010101010101010101010101010101010101010101010101010101010158200202020202020202020202020202020202020202020202020202020202020202a4656e6f64653158414365560072b0872ed527be0deaab93e87b17d9b86222f08e2f3446f5ed9cb6ae5a4629afed8baf830323c96500cb23612920b618076bc506fc6690590f74dd6d01656e6f6465325841eb34479642573edc4d87b5a3f06ef8af51a4900294af6af0833f8fb2b3f05d564734d4ffbfae0e47ffb70da67760303c3650c93f46c5ded47016a46c8c3d3cef01656e6f646533584103fb52be7a6e7480577c0f329d237d8cb7101770b70ebdc5d0f52318d50d450901c7611261159b7e5a67fa40037e95d49ed2d7b924a2e66f5d6cef61dd50fe2101656e6f64653458414b5fe0d20c25e39f562bc2f8f30347acd7f0204731472827902732fb1f3b78244b44769199dfdbede18a9f3a012cd9085bc151a24d40c48f30b8c9543b0abb3000",
+        "accept": false,
+        "note": "only 2 valid votes of 3 needed"
+      },
+      {
+        "name": "one-signature-dropped-quorum-met",
+        "sealCbor": "d9985d88010307011a6440d78d5820010101010101010101010101010101010101010101010101010101010101010158200202020202020202020202020202020202020202020202020202020202020202a3656e6f64653158414365560072b0872ed527be0deaab93e87b17d9b86222f08e2f3446f5ed9cb6ae5a4629afed8baf830323c96500cb23612920b618076bc506fc6690590f74dd6d00656e6f6465325841eb34479642573edc4d87b5a3f06ef8af51a4900294af6af0833f8fb2b3f05d564734d4ffbfae0e47ffb70da67760303c3650c93f46c5ded47016a46c8c3d3cef00656e6f646533584103fb52be7a6e7480577c0f329d237d8cb7101770b70ebdc5d0f52318d50d450901c7611261159b7e5a67fa40037e95d49ed2d7b924a2e66f5d6cef61dd50fe2101",
+        "accept": true
+      },
+      {
+        "name": "one-dropped-one-v-flipped-quorum-lost",
+        "sealCbor": "d9985d88010307011a6440d78d5820010101010101010101010101010101010101010101010101010101010101010158200202020202020202020202020202020202020202020202020202020202020202a3656e6f64653158414365560072b0872ed527be0deaab93e87b17d9b86222f08e2f3446f5ed9cb6ae5a4629afed8baf830323c96500cb23612920b618076bc506fc6690590f74dd6d01656e6f6465325841eb34479642573edc4d87b5a3f06ef8af51a4900294af6af0833f8fb2b3f05d564734d4ffbfae0e47ffb70da67760303c3650c93f46c5ded47016a46c8c3d3cef00656e6f646533584103fb52be7a6e7480577c0f329d237d8cb7101770b70ebdc5d0f52318d50d450901c7611261159b7e5a67fa40037e95d49ed2d7b924a2e66f5d6cef61dd50fe2101",
+        "accept": false
+      },
+      {
+        "name": "one-v-out-of-range-quorum-met",
+        "sealCbor": "d9985d88010307011a6440d78d5820010101010101010101010101010101010101010101010101010101010101010158200202020202020202020202020202020202020202020202020202020202020202a4656e6f64653158414365560072b0872ed527be0deaab93e87b17d9b86222f08e2f3446f5ed9cb6ae5a4629afed8baf830323c96500cb23612920b618076bc506fc6690590f74dd6d04656e6f6465325841eb34479642573edc4d87b5a3f06ef8af51a4900294af6af0833f8fb2b3f05d564734d4ffbfae0e47ffb70da67760303c3650c93f46c5ded47016a46c8c3d3cef00656e6f646533584103fb52be7a6e7480577c0f329d237d8cb7101770b70ebdc5d0f52318d50d450901c7611261159b7e5a67fa40037e95d49ed2d7b924a2e66f5d6cef61dd50fe2101656e6f64653458414b5fe0d20c25e39f562bc2f8f30347acd7f0204731472827902732fb1f3b78244b44769199dfdbede18a9f3a012cd9085bc151a24d40c48f30b8c9543b0abb3000",
+        "accept": true,
+        "note": "v=4 is rejected, three valid signatures remain"
+      },
+      {
+        "name": "two-high-s-quorum-lost",
+        "sealCbor": "d9985d88010307011a6440d78d5820010101010101010101010101010101010101010101010101010101010101010158200202020202020202020202020202020202020202020202020202020202020202a4656e6f64653158414365560072b0872ed527be0deaab93e87b17d9b86222f08e2f3446f5ed9cb6aea5b9d6501274507cfcdc369aff34dc9d918e26cea7dcdb34c36bce33c0c163d401656e6f6465325841eb34479642573edc4d87b5a3f06ef8af51a4900294af6af0833f8fb2b3f05d56b8cb2b004051f1b80048f259889fcfc2845e13a76882c1674fbbba2043f9045201656e6f646533584103fb52be7a6e7480577c0f329d237d8cb7101770b70ebdc5d0f52318d50d450901c7611261159b7e5a67fa40037e95d49ed2d7b924a2e66f5d6cef61dd50fe2101656e6f64653458414b5fe0d20c25e39f562bc2f8f30347acd7f0204731472827902732fb1f3b78244b44769199dfdbede18a9f3a012cd9085bc151a24d40c48f30b8c9543b0abb3000",
+        "accept": false
+      },
+      {
+        "name": "surplus-compact-quorum-met",
+        "sealCbor": "d9985d88010307011a6440d78d5820010101010101010101010101010101010101010101010101010101010101010158200202020202020202020202020202020202020202020202020202020202020202a4656e6f64653158414365560072b0872ed527be0deaab93e87b17d9b86222f08e2f3446f5ed9cb6ae5a4629afed8baf830323c96500cb23612920b618076bc506fc6690590f74dd6d00656e6f6465325841eb34479642573edc4d87b5a3f06ef8af51a4900294af6af0833f8fb2b3f05d564734d4ffbfae0e47ffb70da67760303c3650c93f46c5ded47016a46c8c3d3cef00656e6f646533584103fb52be7a6e7480577c0f329d237d8cb7101770b70ebdc5d0f52318d50d450901c7611261159b7e5a67fa40037e95d49ed2d7b924a2e66f5d6cef61dd50fe2101656e6f64653458404b5fe0d20c25e39f562bc2f8f30347acd7f0204731472827902732fb1f3b78244b44769199dfdbede18a9f3a012cd9085bc151a24d40c48f30b8c9543b0abb30",
+        "accept": true,
+        "note": "a surplus 64-byte compact entry contributes zero votes next to a met quorum"
+      },
+      {
+        "name": "two-compact-quorum-lost",
+        "sealCbor": "d9985d88010307011a6440d78d5820010101010101010101010101010101010101010101010101010101010101010158200202020202020202020202020202020202020202020202020202020202020202a4656e6f64653158404365560072b0872ed527be0deaab93e87b17d9b86222f08e2f3446f5ed9cb6ae5a4629afed8baf830323c96500cb23612920b618076bc506fc6690590f74dd6d656e6f6465325840eb34479642573edc4d87b5a3f06ef8af51a4900294af6af0833f8fb2b3f05d564734d4ffbfae0e47ffb70da67760303c3650c93f46c5ded47016a46c8c3d3cef656e6f646533584103fb52be7a6e7480577c0f329d237d8cb7101770b70ebdc5d0f52318d50d450901c7611261159b7e5a67fa40037e95d49ed2d7b924a2e66f5d6cef61dd50fe2101656e6f64653458414b5fe0d20c25e39f562bc2f8f30347acd7f0204731472827902732fb1f3b78244b44769199dfdbede18a9f3a012cd9085bc151a24d40c48f30b8c9543b0abb3000",
+        "accept": false
+      },
+      {
+        "name": "copied-signature-under-other-id-quorum-lost",
+        "sealCbor": "d9985d88010307011a6440d78d5820010101010101010101010101010101010101010101010101010101010101010158200202020202020202020202020202020202020202020202020202020202020202a4656e6f64653158414365560072b0872ed527be0deaab93e87b17d9b86222f08e2f3446f5ed9cb6ae5a4629afed8baf830323c96500cb23612920b618076bc506fc6690590f74dd6d00656e6f64653258414365560072b0872ed527be0deaab93e87b17d9b86222f08e2f3446f5ed9cb6ae5a4629afed8baf830323c96500cb23612920b618076bc506fc6690590f74dd6d00656e6f64653358414365560072b0872ed527be0deaab93e87b17d9b86222f08e2f3446f5ed9cb6ae5a4629afed8baf830323c96500cb23612920b618076bc506fc6690590f74dd6d00656e6f64653458414b5fe0d20c25e39f562bc2f8f30347acd7f0204731472827902732fb1f3b78244b44769199dfdbede18a9f3a012cd9085bc151a24d40c48f30b8c9543b0abb3000",
+        "accept": false,
+        "note": "node2/node3 carry node1's signature"
+      }
+    ]
+  }
+}

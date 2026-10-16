@@ -1,0 +1,69 @@
+package types
+
+import (
+	"crypto"
+	"encoding/hex"
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+// Dumps cross-implementation assembly vectors for the JS SDK (not part of bft-go-base).
+func Test_ZZ_DumpJSVectors(t *testing.T) {
+	out := os.Getenv("JS_VECTORS_DIR")
+	if out == "" {
+		t.Skip("JS_VECTORS_DIR not set")
+	}
+	type shardOut struct {
+		Shard string `json:"shard"`
+		UC    string `json:"uc"`
+	}
+	type vecOut struct {
+		Partition     uint32     `json:"partitionId"`
+		View          string     `json:"view"`
+		EnclosingUC   string     `json:"enclosingUc"`
+		Shards        []shardOut `json:"shards"`
+		TreeRoot      string     `json:"shardTreeRoot"`
+		ConfHashes    map[string]string `json:"shardConfigurationHashes"`
+		NetworkID     uint32     `json:"networkId"`
+		Epoch         uint64     `json:"epoch"`
+		EpochStart    uint64     `json:"epochStartRound"`
+		NodeID        string     `json:"nodeId"`
+		SigKey        string     `json:"sigKey"`
+	}
+	for name, bits := range map[string]int{"shards-1": 0, "shards-4": 2, "shards-8": 3, "shards-4-initial": 2} {
+		scheme := pvScheme(bits)
+		topo := pvTopology(scheme)
+		view := pvView(t, scheme)
+		if name == "shards-4-initial" {
+			// leaf 1 is a shard in its initial state: native IR with null hash and summary value
+			view.Leaves[1].InputRecord = &InputRecord{Version: 1}
+		}
+		f := pvEnclose(t, view, topo)
+		ucs, err := view.AssembleCertificates(f.uc, pvTestPartition, topo, TrustBaseSealVerifier(f.tb), crypto.SHA256)
+		require.NoError(t, err)
+		vb, err := view.MarshalCBOR()
+		require.NoError(t, err)
+		eb, err := f.uc.MarshalCBOR()
+		require.NoError(t, err)
+		nodes := f.tb.GetRootNodes()
+		require.Len(t, nodes, 1)
+		o := vecOut{Partition: uint32(pvTestPartition), View: hex.EncodeToString(vb), EnclosingUC: hex.EncodeToString(eb),
+			TreeRoot: hex.EncodeToString(f.tree.RootHash()), ConfHashes: map[string]string{},
+			NetworkID: uint32(f.tb.GetNetworkID()), Epoch: f.tb.GetEpoch(), EpochStart: f.tb.GetEpochStart(),
+			NodeID: nodes[0].NodeID, SigKey: hex.EncodeToString(nodes[0].SigKey)}
+		for i, uc := range ucs {
+			b, err := uc.MarshalCBOR()
+			require.NoError(t, err)
+			o.Shards = append(o.Shards, shardOut{Shard: view.Leaves[i].ShardID.String(), UC: hex.EncodeToString(b)})
+			require.NoError(t, uc.Verify(f.tb, crypto.SHA256, pvTestPartition, view.Leaves[i].ShardID, topo.ShardConfHashes[view.Leaves[i].ShardID.Key()]))
+			o.ConfHashes[view.Leaves[i].ShardID.String()] = hex.EncodeToString(topo.ShardConfHashes[view.Leaves[i].ShardID.Key()])
+		}
+		b, err := json.MarshalIndent(o, "", "  ")
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(filepath.Join(out, "assembly-"+name[len("shards-"):]+".json"), append(b, '\n'), 0o644))
+	}
+}

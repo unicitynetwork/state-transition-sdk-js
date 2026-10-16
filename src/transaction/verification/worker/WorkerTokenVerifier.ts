@@ -1,9 +1,8 @@
-import { ITokenVerifier } from '../ITokenVerifier.js';
-import { IVerificationContext } from '../IVerificationContext.js';
 import { IWorker } from './IWorker.js';
 import { RootTrustBase } from '../../../api/bft/RootTrustBase.js';
 import { UnicityCertificateVerifier } from '../../../api/bft/verification/UnicityCertificateVerifier.js';
 import { DataHash } from '../../../crypto/hash/DataHash.js';
+import { beginOperationContext } from '../../../internal/OperationContext.js';
 import { EncodedPredicate } from '../../../predicate/EncodedPredicate.js';
 import { PredicateVerifierService } from '../../../predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../../../serialization/cbor/CborDeserializer.js';
@@ -12,6 +11,8 @@ import { VerificationResult } from '../../../verification/VerificationResult.js'
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
 import { CertifiedTransferTransaction } from '../../CertifiedTransferTransaction.js';
 import type { Token } from '../../Token.js';
+import { ITokenVerifier } from '../ITokenVerifier.js';
+import { IVerificationContext } from '../IVerificationContext.js';
 import { CertifiedMintTransactionVerificationRule } from '../rule/CertifiedMintTransactionVerificationRule.js';
 import { CertifiedTransferTransactionVerificationRule } from '../rule/CertifiedTransferTransactionVerificationRule.js';
 
@@ -195,13 +196,17 @@ export abstract class TransferTransactionVerifier {
     try {
       const trustBase = RootTrustBase.fromJSON(request.trustBase);
 
+      // one operation per request: the transfers of a batch share certificates and seals
+      const unicityCertificateVerifier =
+        this.unicityCertificateVerifier.beginOperation?.() ?? this.unicityCertificateVerifier;
+
       const results: ITransferTransactionVerificationResult[] = [];
       for (const transfer of request.transfers) {
         const transaction = decodeSelfContained(transfer.bytes);
         const result = await CertifiedTransferTransactionVerificationRule.verify(transaction, {
           predicateVerifier: this.predicateVerifier,
           trustBase,
-          unicityCertificateVerifier: this.unicityCertificateVerifier,
+          unicityCertificateVerifier,
         });
         results.push({ index: transfer.index, message: result.message, status: result.status });
       }
@@ -342,7 +347,9 @@ export abstract class WorkerTokenVerifier implements ITokenVerifier {
   /**
    * @inheritDoc
    */
-  public async verify(token: Token, context: IVerificationContext): Promise<VerificationResult<VerificationStatus>> {
+  public async verify(token: Token, outer: IVerificationContext): Promise<VerificationResult<VerificationStatus>> {
+    // the genesis checks of the token and of every nested token run in one operation on this thread
+    const context = beginOperationContext(outer);
     const trustBaseJson = context.trustBase.toJSON();
     const pending: Token[] = [token];
     const collectNestedToken = (nested: Token): void => {

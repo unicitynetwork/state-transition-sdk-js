@@ -1,0 +1,9 @@
+{
+  "base": "shards-4",
+  "description": "the same original evidence twice",
+  "stage": "evidence",
+  "outcome": "invalid_input",
+  "changedFiles": [
+    "requests.json"
+  ]
+}

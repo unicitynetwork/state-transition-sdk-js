@@ -1,0 +1,17 @@
+{
+  "base": "shards-4",
+  "description": "peer batch call failed with a JSON-RPC error: Proof unavailable",
+  "stage": "rpc",
+  "outcome": "unsupported",
+  "rpc": {
+    "role": "peer",
+    "shard": "11",
+    "code": -32008,
+    "reason": "proof_unavailable",
+    "detail": "unsupported_configuration",
+    "retryable": false
+  },
+  "changedFiles": [
+    "responses.json"
+  ]
+}

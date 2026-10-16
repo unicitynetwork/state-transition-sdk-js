@@ -1,4 +1,5 @@
 import { UnicityCertificate } from './bft/UnicityCertificate.js';
+import { UnicityCertificateInterner } from './bft/UnicityCertificateInterner.js';
 import { CertificationData } from './CertificationData.js';
 import { InclusionCertificate } from './InclusionCertificate.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
@@ -40,17 +41,14 @@ export class InclusionProof {
   }
 
   /**
-   * Decodes an InclusionProof from CBOR bytes.
-   *
-   * The bytes must describe a certified leaf. The same wire form can also say that no leaf is
-   * certified yet, but that is not an InclusionProof — {@link InclusionProofResponse} is the type
-   * that carries it, and it decodes that case itself.
+   * Decodes an InclusionProof from CBOR bytes within a decoding operation sharing identical wire certificates.
    *
    * @param bytes The CBOR-encoded bytes.
+   * @param interner Decoding operation, or none to parse every certificate.
    * @returns An InclusionProof instance.
    * @throws {CborError} On a wrong tag, an unsupported version, or bytes describing no leaf.
    */
-  public static fromCBOR(bytes: Uint8Array): InclusionProof {
+  public static decodeWith(bytes: Uint8Array, interner?: UnicityCertificateInterner): InclusionProof {
     const tag = CborDeserializer.decodeTag(bytes);
     if (tag.tag !== InclusionProof.CBOR_TAG) {
       throw new CborError(`Invalid CBOR tag for InclusionProof: ${tag.tag}`);
@@ -75,8 +73,23 @@ export class InclusionProof {
       certificationData,
       referenceTime,
       inclusionCertificate,
-      UnicityCertificate.fromCBOR(data[4]),
+      UnicityCertificate.decodeWith(data[4], interner),
     );
+  }
+
+  /**
+   * Decodes an InclusionProof from CBOR bytes.
+   *
+   * The bytes must describe a certified leaf. The same wire form can also say that no leaf is
+   * certified yet, but that is not an InclusionProof — {@link InclusionProofResponse} is the type
+   * that carries it, and it decodes that case itself.
+   *
+   * @param bytes The CBOR-encoded bytes.
+   * @returns An InclusionProof instance.
+   * @throws {CborError} On a wrong tag, an unsupported version, or bytes describing no leaf.
+   */
+  public static fromCBOR(bytes: Uint8Array): InclusionProof {
+    return InclusionProof.decodeWith(bytes);
   }
 
   /**

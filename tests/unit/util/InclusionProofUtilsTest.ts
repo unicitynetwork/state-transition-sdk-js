@@ -5,7 +5,9 @@ import { CertificationResponse } from '../../../src/api/CertificationResponse.js
 import { IAggregatorClient } from '../../../src/api/IAggregatorClient.js';
 import { InclusionProof } from '../../../src/api/InclusionProof.js';
 import { InclusionProofResponse } from '../../../src/api/InclusionProofResponse.js';
+import { InclusionProofUnknownError } from '../../../src/api/InclusionProofStatusError.js';
 import { IRequestOptions } from '../../../src/api/IRequestOptions.js';
+import { JsonRpcDataError } from '../../../src/api/json-rpc/JsonRpcDataError.js';
 import { JsonRpcNetworkError } from '../../../src/api/json-rpc/JsonRpcNetworkError.js';
 import { NetworkId } from '../../../src/api/NetworkId.js';
 import { StateId } from '../../../src/api/StateId.js';
@@ -272,6 +274,87 @@ describe('waitInclusionProof', () => {
 
     await expect(wait(client, controller.signal, 1)).rejects.toThrow(SleepError);
     expect(client.callCount).toBe(3);
+  });
+
+  const hinted = (
+    client: IAggregatorClient,
+    options: { intervalMs?: number; signal?: AbortSignal; statusHints?: boolean; unknownGraceMs?: number },
+  ): Promise<InclusionProof> =>
+    waitInclusionProof(
+      new StateTransitionClient(client),
+      trustBase,
+      predicateVerifier,
+      unicityCertificateVerifier,
+      transaction,
+      options,
+    );
+
+  it('should keep polling on -32021, with and without status hints', async () => {
+    for (const statusHints of [true, false]) {
+      const controller = new AbortController();
+      const client = new StubAggregatorClient((call) => {
+        if (call >= 3) {
+          controller.abort(new Error('deadline reached'));
+        }
+        return Promise.reject(new JsonRpcDataError({ code: -32021, message: 'certification is pending' }));
+      });
+
+      await expect(
+        hinted(client, { intervalMs: 1, signal: controller.signal, statusHints, unknownGraceMs: 0 }),
+      ).rejects.toThrow(SleepError);
+      expect(client.callCount).toBe(3);
+    }
+  });
+
+  const notFoundErrors: [string, () => Error][] = [
+    ['-32020', (): Error => new JsonRpcDataError({ code: -32020, message: 'not found' })],
+    ['HTTP 404', (): Error => new JsonRpcNetworkError(404, 'Inclusion proof not found')],
+  ];
+
+  it.each(notFoundErrors)('should keep polling on %s without status hints', async (_name, error) => {
+    const controller = new AbortController();
+    const client = new StubAggregatorClient((call) => {
+      if (call >= 3) {
+        controller.abort(new Error('deadline reached'));
+      }
+      return Promise.reject(error());
+    });
+
+    await expect(hinted(client, { intervalMs: 1, signal: controller.signal, statusHints: false })).rejects.toThrow(
+      SleepError,
+    );
+    expect(client.callCount).toBe(3);
+  });
+
+  it.each(notFoundErrors)('should fail %s as unknown at once with status hints and no grace', async (_name, error) => {
+    const client = new StubAggregatorClient(() => Promise.reject(error()));
+
+    await expect(hinted(client, { signal: AbortSignal.timeout(1000), unknownGraceMs: 0 })).rejects.toThrow(
+      InclusionProofUnknownError,
+    );
+    expect(client.callCount).toBe(1);
+    expect(client.requests[0]).toMatchObject({ includeStatusHint: true });
+  });
+
+  it.each(notFoundErrors)(
+    'should tolerate %s for the grace period with status hints, then fail as unknown',
+    async (_name, error) => {
+      const client = new StubAggregatorClient(() => Promise.reject(error()));
+
+      await expect(
+        hinted(client, { intervalMs: 5, signal: AbortSignal.timeout(2000), unknownGraceMs: 40 }),
+      ).rejects.toThrow(InclusionProofUnknownError);
+      expect(client.callCount).toBeGreaterThan(1);
+    },
+  );
+
+  it('should still propagate other JSON-RPC errors', async () => {
+    const client = new StubAggregatorClient(() =>
+      Promise.reject(new JsonRpcDataError({ code: -32603, message: 'internal error' })),
+    );
+
+    await expect(wait(client, AbortSignal.timeout(1000))).rejects.toThrow(JsonRpcDataError);
+    expect(client.callCount).toBe(1);
   });
 
   it('should not accumulate abort listeners across polls', async () => {

@@ -1,0 +1,82 @@
+{
+  "partitionId": 168496141,
+  "shardBits": 3,
+  "blocks": [
+    {
+      "name": "E",
+      "round": "5",
+      "timestamp": "1731504100",
+      "changes": [
+        {
+          "shard": 2,
+          "hash": "31c6e8a15e69517ed376acb97ebbe97e6ef9663b19d0186a05c3671d4bd297c1",
+          "fees": "33"
+        },
+        {
+          "shard": 0,
+          "hash": "7624b7ebeebe62b857344dc5f81d7a3ed7f9db80ab9121bc12a5e450a1d7ac98",
+          "fees": "31"
+        },
+        {
+          "shard": 5,
+          "hash": "1677076bda2f4e8dad0bf3109b978b06a822349433025057ecb7b7569b7e9f6b",
+          "fees": "36"
+        },
+        {
+          "shard": 7,
+          "hash": "b8130bd137b043642997fa2a86108625acb1d49a396742eb2e98acd0e544b91e",
+          "fees": "38"
+        }
+      ]
+    },
+    {
+      "name": "P",
+      "round": "9",
+      "timestamp": "1731504200",
+      "changes": [
+        {
+          "shard": 2,
+          "hash": "a440fbcc5d8f2490e48547e73e26d0c8c593b79a7c97b17e2e2f30234c427dbf",
+          "fees": "33"
+        },
+        {
+          "shard": 0,
+          "hash": "919efefd311c847572d8a4bc91478711a46a77479c6cb768710152b5ee78eefa",
+          "fees": "31"
+        },
+        {
+          "shard": 5,
+          "hash": "dbc193f80bae0bccd48f73436808538083b08e3b78908dc545d4f27ac264dda7",
+          "fees": "36"
+        },
+        {
+          "shard": 7,
+          "hash": "c5207bf52dbf91e647ca69ca26ac71b5abedadf0c106b95c617c50bff29a08c1",
+          "fees": "38"
+        }
+      ]
+    },
+    {
+      "name": "F",
+      "round": "12",
+      "timestamp": "1731504300",
+      "changes": [
+        {
+          "shard": 2,
+          "hash": "a440fbcc5d8f2490e48547e73e26d0c8c593b79a7c97b17e2e2f30234c427dbf"
+        }
+      ]
+    },
+    {
+      "name": "L",
+      "round": "20",
+      "timestamp": "1731504400",
+      "changes": [
+        {
+          "shard": 0,
+          "hash": "f10ab48271476aa7721e1c82c79b3d0ef2cdab8bc1e3a3682b9216b3d1831dea"
+        }
+      ]
+    }
+  ]
+}

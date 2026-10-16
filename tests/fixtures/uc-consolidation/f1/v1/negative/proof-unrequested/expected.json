@@ -1,0 +1,9 @@
+{
+  "base": "shards-4",
+  "description": "a proof nobody requested",
+  "stage": "consolidate",
+  "outcome": "invalid_input",
+  "changedFiles": [
+    "responses.json"
+  ]
+}

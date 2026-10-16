@@ -1,0 +1,18 @@
+{
+  "base": "shards-4",
+  "description": "peer batch call failed with a JSON-RPC error: Limit exceeded",
+  "stage": "rpc",
+  "outcome": "limit_exceeded",
+  "rpc": {
+    "role": "peer",
+    "shard": "11",
+    "code": -32007,
+    "reason": "limit_exceeded",
+    "detail": "response_bytes",
+    "retryable": false,
+    "limit": 8388608
+  },
+  "changedFiles": [
+    "responses.json"
+  ]
+}

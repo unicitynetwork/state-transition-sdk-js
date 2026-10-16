@@ -1,0 +1,27 @@
+{
+  "corpusVersion": 1,
+  "networkId": 2,
+  "partitionId": 168496141,
+  "shards": [
+    "0",
+    "1"
+  ],
+  "shardConfigs": [
+    {
+      "shard": "0",
+      "file": "shard-configs/0.cbor",
+      "hash": "078b168a16c0317b8a6f6de6e7a413690888a021faa22f571ab2f0f44012b1a6"
+    },
+    {
+      "shard": "1",
+      "file": "shard-configs/1.cbor",
+      "hash": "f1874ba0f9bba20b6349cf8439e53df836f142b55651e785c4899263c6c06d30"
+    }
+  ],
+  "master": "0",
+  "participants": [
+    "0",
+    "1"
+  ],
+  "trustBase": "trust-base.cbor"
+}

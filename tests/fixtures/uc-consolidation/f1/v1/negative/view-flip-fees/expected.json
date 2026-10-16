@@ -1,0 +1,10 @@
+{
+  "base": "shards-4",
+  "description": "committed input record field changed in the view leaf",
+  "stage": "consolidate",
+  "outcome": "invalid_input",
+  "changedFiles": [
+    "partition-view.cbor",
+    "responses.json"
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "partitionId": 168496141,
+  "shardBits": 2,
+  "blocks": [
+    {
+      "name": "E",
+      "round": "5",
+      "timestamp": "1731504100",
+      "changes": [
+        {
+          "shard": 0,
+          "hash": "213499b5445921ed0c50a4a07037bf354bbb9a71bf1ca6ada3251783065adc66",
+          "fees": "21"
+        },
+        {
+          "shard": 3,
+          "hash": "3ca819953dbac8bcdd42c2e854aea6bf943d1fcd67241733b67463b60892ada7",
+          "fees": "24"
+        }
+      ]
+    },
+    {
+      "name": "P",
+      "round": "9",
+      "timestamp": "1731504200",
+      "changes": [
+        {
+          "shard": 0,
+          "hash": "d08966d4bc7cfc4524e0d715ecadb9aea0e1a5cbdeb9ad4c74f823d3ee809191",
+          "fees": "21"
+        },
+        {
+          "shard": 3,
+          "hash": "73b9de5084a1cb4b9ede84cb8b7219ffcd2d049fe2b2651647bb4d0c8972a79c",
+          "fees": "24"
+        }
+      ]
+    },
+    {
+      "name": "F",
+      "round": "12",
+      "timestamp": "1731504300",
+      "signers": [
+        1,
+        2,
+        3
+      ],
+      "changes": [
+        {
+          "shard": 0,
+          "hash": "d08966d4bc7cfc4524e0d715ecadb9aea0e1a5cbdeb9ad4c74f823d3ee809191"
+        }
+      ]
+    },
+    {
+      "name": "L",
+      "round": "20",
+      "timestamp": "1731504400",
+      "changes": [
+        {
+          "shard": 3,
+          "hash": "7245968839b1d394551e67a39472c19b63fa198e4c59e210bf28d2e9c979eae4"
+        }
+      ]
+    }
+  ]
+}

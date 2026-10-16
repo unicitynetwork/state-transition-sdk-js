@@ -6,6 +6,8 @@ import { ISignature } from '../ISignature.js';
 /**
  * secp256k1 recoverable signature: 64 bytes of compact `(r, s)` plus a
  * single recovery byte used to recover the signer's public key.
+ *
+ * @throws {RangeError} On construction, if `recovery` is not an integer in 0..3.
  */
 export class Signature implements ISignature {
   public readonly algorithm: string = 'secp256k1';
@@ -14,6 +16,10 @@ export class Signature implements ISignature {
     private readonly _bytes: Uint8Array,
     public readonly recovery: number,
   ) {
+    // checked before anything is packed into a typed array, which would silently truncate 257 to 1 or 1.5 to 1
+    if (!Number.isInteger(recovery) || recovery < 0 || recovery > 3) {
+      throw new RangeError(`Invalid signature recovery id: ${recovery}.`);
+    }
     this._bytes = new Uint8Array(_bytes);
   }
 

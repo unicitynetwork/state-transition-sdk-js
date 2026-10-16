@@ -1,0 +1,10 @@
+{
+  "base": "shards-4",
+  "description": "a leaf for a shard which is a prefix of another admitted shard",
+  "stage": "consolidate",
+  "outcome": "invalid_input",
+  "changedFiles": [
+    "partition-view.cbor",
+    "responses.json"
+  ]
+}

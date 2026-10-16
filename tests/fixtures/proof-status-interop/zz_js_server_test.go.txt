@@ -1,0 +1,106 @@
+package gateway
+
+import (
+	"context"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"net"
+	"net/http"
+	"os"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+	"github.com/unicitynetwork/bft-go-base/types"
+
+	"github.com/unicitynetwork/aggregator-go/internal/logger"
+	"github.com/unicitynetwork/aggregator-go/pkg/api"
+	"github.com/unicitynetwork/aggregator-go/pkg/jsonrpc"
+)
+
+// Throw-away interop server for the JS SDK (not part of the repository): the real JSON-RPC
+// server, the real get_inclusion_proof.v2 / certification_request handlers and the real batch
+// error constructor, behind a service whose answers follow the first byte of the state ID.
+type jsService struct {
+	Service
+	uc types.RawCBOR
+}
+
+func (s jsService) ProofStatusHint(id api.StateID) api.ProofStatus {
+	switch id[0] {
+	case 1, 4:
+		return api.ProofStatusPending // 4: stale mark, the proof wins
+	case 2:
+		return api.ProofStatusExpired
+	}
+	return api.ProofStatusUnknown
+}
+
+func (s jsService) GetInclusionProofV2(_ context.Context, req *api.GetInclusionProofRequestV2) (*api.GetInclusionProofResponseV2, error) {
+	r := emptyV2Fixture()
+	if req.StateID[0] == 4 {
+		r = v2Fixture()
+	}
+	r.InclusionProof.UnicityCertificate = s.uc
+	return r, nil
+}
+
+func (s jsService) CertificationRequest(context.Context, *api.CertificationRequest) (*api.CertificationResponse, error) {
+	return nil, errors.New("failed to store certificationRequest: failed to store commitment: write exception: write errors: [E11000 duplicate key error collection: aggregator.certification_requests index: stateId_1 dup key: { stateId: \"ab\" }]")
+}
+
+func TestZZServeForJS(t *testing.T) {
+	addr := os.Getenv("JS_SERVER_ADDR")
+	if addr == "" {
+		t.Skip("JS_SERVER_ADDR not set")
+	}
+	ucHex, err := os.ReadFile(os.Getenv("JS_UC_HEX_FILE"))
+	require.NoError(t, err)
+	uc, err := hex.DecodeString(strings.TrimSpace(string(ucHex)))
+	require.NoError(t, err)
+
+	log, err := logger.New("error", "text", "stdout", false)
+	require.NoError(t, err)
+	rpc := jsonrpc.NewServer(log, 8)
+	s := &Server{logger: log, rpcServer: rpc, service: jsService{uc: uc}}
+	rpc.RegisterMethod("get_inclusion_proof.v2", s.handleGetInclusionProofV2)
+	rpc.RegisterMethod("certification_request", s.handleCertificationRequest)
+	rpc.RegisterMethod("get_inclusion_proofs.v1", func(_ context.Context, params json.RawMessage) (interface{}, *jsonrpc.Error) {
+		req, perr := api.ParseGetInclusionProofsRequestV1(params)
+		if perr != nil {
+			return nil, jsonrpc.NewError(jsonrpc.InvalidParamsCode, "Invalid params", perr.Error())
+		}
+		unavailable := func(detail string, retryable bool, idx map[string][]int) *jsonrpc.Error {
+			return jsonrpc.NewDetailedErrorWithIndexes(jsonrpc.ProofUnavailableCode, "Proof unavailable", "proof_unavailable", detail, retryable, idx)
+		}
+		switch req.StateIDs[0][0] {
+		case 1:
+			return nil, unavailable("state_pending", true, map[string][]int{"pending": {0}})
+		case 2:
+			return nil, unavailable("state_expired", false, map[string][]int{"expired": {0}})
+		case 3:
+			return nil, unavailable("state_unknown", false, map[string][]int{"unknown": {0}})
+		case 5:
+			return nil, unavailable("state_unknown", false, map[string][]int{"pending": {0}, "expired": {1}, "unknown": {2}})
+		case 6:
+			if len(req.Root) > 0 {
+				return nil, unavailable("state_not_in_root", false, map[string][]int{"not_in_root": {0}})
+			}
+		}
+		return nil, unavailable("state_not_included", true, nil)
+	})
+	l, err := net.Listen("tcp", addr)
+	require.NoError(t, err)
+	srv := &http.Server{Handler: rpc}
+	go func() { _ = srv.Serve(l) }()
+	t.Cleanup(func() { _ = srv.Close() })
+	deadline := time.Now().Add(120 * time.Second)
+	for time.Now().Before(deadline) {
+		if _, err := os.Stat(os.Getenv("JS_STOP_FILE")); err == nil {
+			return
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+}

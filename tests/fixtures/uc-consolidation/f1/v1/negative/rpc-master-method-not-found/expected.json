@@ -1,0 +1,15 @@
+{
+  "base": "shards-4",
+  "description": "master batch call failed with a JSON-RPC error: Method not found",
+  "stage": "rpc",
+  "outcome": "unsupported_method",
+  "rpc": {
+    "role": "master",
+    "shard": "00",
+    "code": -32601,
+    "retryable": false
+  },
+  "changedFiles": [
+    "responses.json"
+  ]
+}

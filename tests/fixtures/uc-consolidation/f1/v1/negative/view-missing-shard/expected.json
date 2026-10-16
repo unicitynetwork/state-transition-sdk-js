@@ -1,0 +1,10 @@
+{
+  "base": "shards-4",
+  "description": "a shard of the partition is missing from the view",
+  "stage": "consolidate",
+  "outcome": "invalid_input",
+  "changedFiles": [
+    "partition-view.cbor",
+    "responses.json"
+  ]
+}

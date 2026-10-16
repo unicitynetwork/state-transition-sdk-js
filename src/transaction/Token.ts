@@ -4,6 +4,8 @@ import { ITransaction } from './ITransaction.js';
 import { TokenId } from './TokenId.js';
 import { TokenType } from './TokenType.js';
 import { IVerificationContext } from './verification/IVerificationContext.js';
+import { UnicityCertificate } from '../api/bft/UnicityCertificate.js';
+import { UnicityCertificateInterner } from '../api/bft/UnicityCertificateInterner.js';
 import { NetworkId } from '../api/NetworkId.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
 import { CborError } from '../serialization/cbor/CborError.js';
@@ -76,13 +78,14 @@ export class Token {
   }
 
   /**
-   * Create Token from CBOR bytes.
+   * Create Token from CBOR bytes within the given decoding operation, e.g. to share it with other decodes.
    *
    * @param {Uint8Array} bytes CBOR bytes.
+   * @param {UnicityCertificateInterner} interner Decoding operation sharing identical wire certificates.
    * @returns {Promise<Token>} Decoded token.
    * @throws {CborError} On wrong tag or unsupported version.
    */
-  public static async fromCBOR(bytes: Uint8Array): Promise<Token> {
+  public static async decodeWith(bytes: Uint8Array, interner: UnicityCertificateInterner): Promise<Token> {
     const tag = CborDeserializer.decodeTag(bytes);
     if (tag.tag !== Token.CBOR_TAG) {
       throw new CborError(`Invalid CBOR tag for Token: ${tag.tag}`);
@@ -95,23 +98,35 @@ export class Token {
     }
 
     const transactionsBytes = CborDeserializer.decodeArray(data[2]);
-    const genesis = await CertifiedMintTransaction.fromCBOR(data[1]);
+    const genesis = await CertifiedMintTransaction.decodeWith(data[1], interner);
     const transactions: CertifiedTransferTransaction[] = [];
     // Each transfer spends the state the previous one produced. Deriving that here, rather than
     // handing the decoder a half-built token to read it back off, is what makes the chain
     // explicit — and lets a Token be constructed once, from a finished list.
     let previous: ITransaction = genesis;
     for (const transaction of transactionsBytes) {
-      const decoded = CertifiedTransferTransaction.fromCBOR(
+      const decoded = CertifiedTransferTransaction.decodeWith(
         transaction,
         await previous.calculateStateHash(),
         previous.recipient,
+        interner,
       );
       transactions.push(decoded);
       previous = decoded;
     }
 
     return new Token(genesis, transactions);
+  }
+
+  /**
+   * Create Token from CBOR bytes.
+   *
+   * @param {Uint8Array} bytes CBOR bytes.
+   * @returns {Promise<Token>} Decoded token. Identical wire certificates of its proofs are parsed once.
+   * @throws {CborError} On wrong tag or unsupported version.
+   */
+  public static fromCBOR(bytes: Uint8Array): Promise<Token> {
+    return Token.decodeWith(bytes, new UnicityCertificateInterner((b) => UnicityCertificate.fromCBOR(b)));
   }
 
   /**

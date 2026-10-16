@@ -2,6 +2,7 @@ import { ITransaction } from './ITransaction.js';
 import { StateMask } from './StateMask.js';
 import { TransferTransaction } from './TransferTransaction.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
+import { UnicityCertificateInterner } from '../api/bft/UnicityCertificateInterner.js';
 import { UnicityCertificateVerifier } from '../api/bft/verification/UnicityCertificateVerifier.js';
 import { InclusionProof } from '../api/InclusionProof.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
@@ -80,6 +81,27 @@ export class CertifiedTransferTransaction implements ITransaction {
   }
 
   /**
+   * Create CertifiedTransferTransaction from CBOR bytes within a decoding operation sharing identical wire
+   * certificates.
+   *
+   * @param {Uint8Array} bytes CBOR bytes.
+   * @param {DataHash} sourceStateHash Hash of the state the transfer spends.
+   * @param {EncodedPredicate} lockScript Lock script the transfer unlocks.
+   * @param {UnicityCertificateInterner} [interner] Decoding operation, or none to parse every certificate.
+   * @returns {CertifiedTransferTransaction} Decoded certified transaction.
+   */
+  public static decodeWith(
+    bytes: Uint8Array,
+    sourceStateHash: DataHash,
+    lockScript: EncodedPredicate,
+    interner?: UnicityCertificateInterner,
+  ): CertifiedTransferTransaction {
+    const data = CborDeserializer.decodeArray(bytes, 2);
+    const proof = InclusionProof.decodeWith(data[1], interner);
+    return new CertifiedTransferTransaction(TransferTransaction.fromCBOR(data[0], sourceStateHash, lockScript), proof);
+  }
+
+  /**
    * Create CertifiedTransferTransaction from CBOR bytes.
    *
    * @param {Uint8Array} bytes CBOR bytes.
@@ -92,9 +114,7 @@ export class CertifiedTransferTransaction implements ITransaction {
     sourceStateHash: DataHash,
     lockScript: EncodedPredicate,
   ): CertifiedTransferTransaction {
-    const data = CborDeserializer.decodeArray(bytes, 2);
-    const proof = InclusionProof.fromCBOR(data[1]);
-    return new CertifiedTransferTransaction(TransferTransaction.fromCBOR(data[0], sourceStateHash, lockScript), proof);
+    return CertifiedTransferTransaction.decodeWith(bytes, sourceStateHash, lockScript);
   }
 
   /**

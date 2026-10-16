@@ -1,0 +1,10 @@
+{
+  "base": "shards-4",
+  "description": "a shard appears twice, another is missing",
+  "stage": "consolidate",
+  "outcome": "invalid_input",
+  "changedFiles": [
+    "partition-view.cbor",
+    "responses.json"
+  ]
+}

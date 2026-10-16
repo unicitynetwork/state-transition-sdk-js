@@ -1,10 +1,12 @@
 import { InputRecord } from './InputRecord.js';
 import { ShardTreeCertificate } from './ShardTreeCertificate.js';
+import { UnicityCertificateInterner } from './UnicityCertificateInterner.js';
 import { UnicitySeal } from './UnicitySeal.js';
 import { UnicityTreeCertificate } from './UnicityTreeCertificate.js';
 import { DataHash } from '../../crypto/hash/DataHash.js';
 import { DataHasher } from '../../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../../crypto/hash/HashAlgorithm.js';
+import { unicityCertificateMetrics } from '../../internal/bft/UnicityCertificateMetrics.js';
 import { CborDeserializer } from '../../serialization/cbor/CborDeserializer.js';
 import { CborError } from '../../serialization/cbor/CborError.js';
 import { CborSerializer } from '../../serialization/cbor/CborSerializer.js';
@@ -53,6 +55,27 @@ export class UnicityCertificate {
   }
 
   /**
+   * Calculate the shard tree leaf hash: the hash of the committed input record, technical record hash and shard
+   * configuration hash.
+   *
+   * @param {InputRecord} inputRecord            input record
+   * @param {Uint8Array | null} technicalRecordHash    technical record hash
+   * @param {Uint8Array} shardConfigurationHash shard configuration hash
+   * @return leaf hash
+   */
+  public static calculateShardLeafHash(
+    inputRecord: InputRecord,
+    technicalRecordHash: Uint8Array | null,
+    shardConfigurationHash: Uint8Array,
+  ): Promise<DataHash> {
+    return new DataHasher(HashAlgorithm.SHA256)
+      .update(inputRecord.toCBOR())
+      .update(CborSerializer.encodeNullable(technicalRecordHash, CborSerializer.encodeByteString))
+      .update(CborSerializer.encodeByteString(shardConfigurationHash))
+      .digest();
+  }
+
+  /**
    * Calculate the root hash of the shard tree certificate.
    *
    * @param {InputRecord} inputRecord            input record
@@ -67,11 +90,11 @@ export class UnicityCertificate {
     shardConfigurationHash: Uint8Array,
     shardTreeCertificate: ShardTreeCertificate,
   ): Promise<DataHash> {
-    let rootHash = await new DataHasher(HashAlgorithm.SHA256)
-      .update(inputRecord.toCBOR())
-      .update(CborSerializer.encodeNullable(technicalRecordHash, CborSerializer.encodeByteString))
-      .update(CborSerializer.encodeByteString(shardConfigurationHash))
-      .digest();
+    let rootHash = await UnicityCertificate.calculateShardLeafHash(
+      inputRecord,
+      technicalRecordHash,
+      shardConfigurationHash,
+    );
 
     const shardId = shardTreeCertificate.shard;
     const siblingHashes = shardTreeCertificate.siblingHashList;
@@ -94,12 +117,25 @@ export class UnicityCertificate {
   }
 
   /**
+   * Create unicity certificate from CBOR bytes within a decoding operation: a certificate with the same complete bytes
+   * is parsed once per interner.
+   *
+   * @param bytes CBOR bytes
+   * @param interner Decoding operation, or none to parse every occurrence.
+   * @return unicity certificate
+   */
+  public static decodeWith(bytes: Uint8Array, interner?: UnicityCertificateInterner): UnicityCertificate {
+    return interner ? interner.decode(bytes) : UnicityCertificate.fromCBOR(bytes);
+  }
+
+  /**
    * Create unicity certificate from CBOR bytes.
    *
    * @param bytes CBOR bytes
    * @return unicity certificate
    */
   public static fromCBOR(bytes: Uint8Array): UnicityCertificate {
+    unicityCertificateMetrics.decodes++;
     const tag = CborDeserializer.decodeTag(bytes);
     if (tag.tag !== UnicityCertificate.CBOR_TAG) {
       throw new CborError(`Invalid CBOR tag for UnicityCertificate: ${tag.tag}`);

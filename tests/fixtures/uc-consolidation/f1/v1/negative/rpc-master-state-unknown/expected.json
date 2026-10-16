@@ -1,0 +1,17 @@
+{
+  "base": "shards-4",
+  "description": "master batch call failed with a JSON-RPC error: Proof unavailable",
+  "stage": "rpc",
+  "outcome": "unavailable",
+  "rpc": {
+    "role": "master",
+    "shard": "00",
+    "code": -32008,
+    "reason": "proof_unavailable",
+    "detail": "state_unknown",
+    "retryable": false
+  },
+  "changedFiles": [
+    "responses.json"
+  ]
+}

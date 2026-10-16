@@ -7,7 +7,7 @@ import { dedent } from '../../util/StringUtils.js';
 /**
  * Hash step in the certificate.
  */
-class HashStep {
+export class HashStep {
   public constructor(
     public readonly key: bigint,
     private readonly _hash: Uint8Array,

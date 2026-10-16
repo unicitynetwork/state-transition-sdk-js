@@ -1,0 +1,9 @@
+{
+  "base": "shards-4",
+  "description": "peer response carries the master's proofs",
+  "stage": "consolidate",
+  "outcome": "binding_mismatch",
+  "changedFiles": [
+    "responses.json"
+  ]
+}

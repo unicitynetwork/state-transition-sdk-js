@@ -4,15 +4,19 @@
 export class JsonRpcDataError extends Error {
   public readonly code: number;
 
+  /** Structured `error.data` of the response, if the server sent any. Untrusted. */
+  public readonly data: unknown;
+
   public readonly name: string = 'JsonRpcError';
 
   /**
    * JSON-RPC error object constructor.
-   * @param {{code: number; message: string}} data Error data.
+   * @param {{code: number; message: string; data?: unknown}} data Error data.
    */
-  public constructor({ code, message }: { code: number; message: string }) {
+  public constructor({ code, data, message }: { code: number; data?: unknown; message: string }) {
     super(message);
     this.code = code;
+    this.data = data;
   }
 
   /**

@@ -9,3 +9,16 @@ export interface IRequestOptions {
    */
   readonly signal?: AbortSignal;
 }
+
+/**
+ * Options of a single inclusion proof request.
+ */
+export interface IInclusionProofRequestOptions extends IRequestOptions {
+  /**
+   * Ask the aggregator for its status hint (`included` / `pending` / `expired` / `unknown`) next to the proof. Opt-in:
+   * without it the request and the result are exactly what they always were. A server without the feature ignores
+   * the flag (the wire parameter is called `includeStatus`) and answers as before, which is the legacy behavior (no
+   * hint). The hint is **unauthenticated**, see {@link ProofStatusHint}.
+   */
+  readonly includeStatusHint?: boolean;
+}

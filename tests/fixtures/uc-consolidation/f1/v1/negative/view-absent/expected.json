@@ -1,0 +1,9 @@
+{
+  "base": "shards-4",
+  "description": "master response without partition view",
+  "stage": "consolidate",
+  "outcome": "unavailable",
+  "changedFiles": [
+    "responses.json"
+  ]
+}

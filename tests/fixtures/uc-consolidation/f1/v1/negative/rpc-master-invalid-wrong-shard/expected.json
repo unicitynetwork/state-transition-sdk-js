@@ -1,0 +1,17 @@
+{
+  "base": "shards-4",
+  "description": "master batch call failed with a JSON-RPC error: Invalid params",
+  "stage": "rpc",
+  "outcome": "invalid_request",
+  "rpc": {
+    "role": "master",
+    "shard": "00",
+    "code": -32602,
+    "reason": "invalid_request",
+    "detail": "wrong_shard",
+    "retryable": false
+  },
+  "changedFiles": [
+    "responses.json"
+  ]
+}

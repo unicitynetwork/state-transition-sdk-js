@@ -8,11 +8,11 @@ import { ISignatureVerifier } from '../ISignatureVerifier.js';
 /**
  * secp256k1 signature verification.
  *
- * Verification here *is* key recovery: the key recovered from `(r, s)` and the
- * recovery byte over `hash` is by construction the only key under which the
- * signature verifies, so comparing it against the expected key both
- * authenticates the signature and binds the recovery byte — a tampered recovery
- * byte fails. That is one EC operation where recover-then-verify needs two.
+ * Verification here *is* one key recovery: the key selected by `(r, s)` and the recovery byte over `hash` is compared
+ * with the expected key. A signature is accepted only if that recovered key is the expected one, so the recovery byte is
+ * bound to the trusted key and a tampered recovery byte fails, with no separate verification. (A different recovery byte
+ * selects a different key; it is not "the only key under which the signature verifies".) This is one recovery
+ * calculation, not one elementary EC operation, and it is the formulation the other SDKs adopt (arch-o3.md §4).
  *
  * Recovery, unlike `secp256k1.verify` (noble applies `lowS: true` by default),
  * accepts malleable high-s signatures, so the low-s policy is applied

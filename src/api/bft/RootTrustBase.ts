@@ -263,6 +263,26 @@ export class RootTrustBase {
   }
 
   /**
+   * Faithful copy of this trust base: same signer lookup entries (map keys included), threshold and context. Later
+   * changes to either object do not affect the other.
+   *
+   * @returns {RootTrustBase} Independent copy.
+   */
+  public snapshot(): RootTrustBase {
+    return new RootTrustBase(
+      this.networkId,
+      this.epoch,
+      this.epochStartRound,
+      this._rootNodes,
+      this.quorumThreshold,
+      this._stateHash,
+      this._changeRecordHash,
+      this._previousEntryHash,
+      this._signatures,
+    );
+  }
+
+  /**
    * @returns {IRootTrustBaseJson} JSON representation of the trust base (mirrors {@link fromJSON}).
    */
   public toJSON(): IRootTrustBaseJson {

@@ -1,0 +1,9 @@
+{
+  "base": "shards-4",
+  "description": "peer proofs of an older state root instead of the root of the view",
+  "stage": "consolidate",
+  "outcome": "binding_mismatch",
+  "changedFiles": [
+    "responses.json"
+  ]
+}

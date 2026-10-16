@@ -26,7 +26,7 @@ export class UnicitySeal {
     public readonly timestamp: bigint,
     private readonly _previousHash: Uint8Array | null,
     private readonly _hash: Uint8Array,
-    private readonly _signatures: Map<string, Signature> | null,
+    private readonly _witnesses: Map<string, Uint8Array> | null,
   ) {}
 
   /**
@@ -44,10 +44,25 @@ export class UnicitySeal {
   }
 
   /**
-   * @returns {Map<string, Signature>|null} Copy of the signer-to-signature map, or `null` if absent.
+   * The signatures that are well-formed (65 bytes, recovery id 0..3), by signer. A carried witness that is not
+   * (see {@link UnicitySeal.witnesses}) is not listed here: it is kept in the seal, re-encoded and hashed unchanged,
+   * but it can never count as a vote.
+   *
+   * @returns {Map<string, Signature>|null} Signer-to-signature map, or `null` if the seal carries no signature map.
    */
   public get signatures(): Map<string, Signature> | null {
-    return this._signatures ? new Map(this._signatures) : null;
+    if (this._witnesses === null) {
+      return null;
+    }
+    const signatures = new Map<string, Signature>();
+    for (const [signer, witness] of this._witnesses) {
+      try {
+        signatures.set(signer, Signature.decode(witness));
+      } catch {
+        // malformed witness: carried, never counted
+      }
+    }
+    return signatures;
   }
 
   /**
@@ -55,6 +70,18 @@ export class UnicitySeal {
    */
   public get version(): bigint {
     return UnicitySeal.VERSION;
+  }
+
+  /**
+   * Every carried signature witness exactly as received: the byte string of each map entry, well-formed or not. The
+   * quorum rule decodes each one strictly and counts a malformed one as zero votes, like the Go and Rust clients.
+   *
+   * @returns {Map<string, Uint8Array>|null} Copy of the signer-to-witness map, or `null` if the seal carries none.
+   */
+  public get witnesses(): Map<string, Uint8Array> | null {
+    return this._witnesses
+      ? new Map(Array.from(this._witnesses, ([signer, witness]) => [signer, new Uint8Array(witness)]))
+      : null;
   }
 
   /**
@@ -90,11 +117,11 @@ export class UnicitySeal {
       seal._previousHash,
       seal._hash,
       new Map(
-        (await Promise.all(
+        await Promise.all(
           Array.from(signers.entries()).map(([key, signingService]) =>
-            signingService.sign(hash).then((signature) => [key, signature]),
+            signingService.sign(hash).then((signature): [string, Uint8Array] => [key, signature.encode()]),
           ),
-        )) as [string, Signature][],
+        ),
       ),
     );
   }
@@ -104,6 +131,8 @@ export class UnicitySeal {
    *
    * @param bytes CBOR bytes
    * @return unicity seal
+   * @throws {CborError} On malformed CBOR. A signature entry that is a byte string of any length is kept as it is,
+   *   including one that is not a valid signature encoding (it counts as zero votes in the quorum rule).
    */
   public static fromCBOR(bytes: Uint8Array): UnicitySeal {
     const tag = CborDeserializer.decodeTag(bytes);
@@ -127,7 +156,7 @@ export class UnicitySeal {
       new Map(
         CborDeserializer.decodeMap(data[7]).map((entry) => [
           CborDeserializer.decodeTextString(entry.key),
-          Signature.fromCBOR(entry.value),
+          CborDeserializer.decodeByteString(entry.value),
         ]),
       ),
     );
@@ -168,11 +197,12 @@ export class UnicitySeal {
         CborSerializer.encodeUnsignedInteger(this.timestamp),
         CborSerializer.encodeNullable(this._previousHash, CborSerializer.encodeByteString),
         CborSerializer.encodeByteString(this._hash),
-        CborSerializer.encodeNullable(this._signatures, (signatures) =>
+        CborSerializer.encodeNullable(this._witnesses, (signatures) =>
           CborSerializer.encodeMap(
             new CborMap(
               Array.from(signatures.entries()).map(
-                ([key, signature]) => new CborMapEntry(CborSerializer.encodeTextString(key), signature.toCBOR()),
+                ([key, witness]) =>
+                  new CborMapEntry(CborSerializer.encodeTextString(key), CborSerializer.encodeByteString(witness)),
               ),
             ),
           ),
@@ -196,8 +226,8 @@ export class UnicitySeal {
         Previous Hash: ${this._previousHash ? HexConverter.encode(this._previousHash) : 'null'}
         Hash: ${HexConverter.encode(this._hash)}
         Signatures: [
-          ${Array.from(this._signatures?.entries() ?? [])
-            .map(([key, value]) => `${key}: ${value.toString()}`)
+          ${Array.from(this._witnesses?.entries() ?? [])
+            .map(([key, value]) => `${key}: ${HexConverter.encode(value)}`)
             .join('\n')}
         ]`;
   }

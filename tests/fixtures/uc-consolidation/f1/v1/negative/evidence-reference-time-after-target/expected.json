@@ -1,0 +1,9 @@
+{
+  "base": "shards-4",
+  "description": "original proof with a reference time later than its own record timestamp",
+  "stage": "evidence",
+  "outcome": "reference_time_after_target",
+  "changedFiles": [
+    "requests.json"
+  ]
+}

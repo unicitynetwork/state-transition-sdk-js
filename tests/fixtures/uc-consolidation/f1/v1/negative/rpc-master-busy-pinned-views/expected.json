@@ -1,0 +1,17 @@
+{
+  "base": "shards-4",
+  "description": "master batch call failed with a JSON-RPC error: Concurrency limit exceeded",
+  "stage": "rpc",
+  "outcome": "busy",
+  "rpc": {
+    "role": "master",
+    "shard": "00",
+    "code": -32006,
+    "reason": "busy",
+    "detail": "pinned_views",
+    "retryable": true
+  },
+  "changedFiles": [
+    "responses.json"
+  ]
+}

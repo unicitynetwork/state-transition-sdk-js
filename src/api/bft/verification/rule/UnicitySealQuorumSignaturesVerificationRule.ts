@@ -3,6 +3,7 @@ import { DataHasher } from '../../../../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../../../../crypto/hash/HashAlgorithm.js';
 import { ISignatureVerifier } from '../../../../crypto/ISignatureVerifier.js';
 import { Signature } from '../../../../crypto/secp256k1/Signature.js';
+import { authorityIdentity } from '../../../../internal/bft/authorityIdentity.js';
 import { CborSerializer } from '../../../../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../../../util/HexConverter.js';
 import { VerificationResult } from '../../../../verification/VerificationResult.js';
@@ -59,7 +60,7 @@ export class UnicitySealQuorumSignaturesVerificationRule {
     const hash = await new DataHasher(HashAlgorithm.SHA256)
       .update(
         CborSerializer.encodeArray(
-          CborSerializer.encodeTextString(JSON.stringify(trustBase.toJSON())),
+          CborSerializer.encodeTextString(authorityIdentity(trustBase)),
           CborSerializer.encodeByteString(unicitySeal.toCBOR()),
         ),
       )
@@ -92,8 +93,8 @@ export class UnicitySealQuorumSignaturesVerificationRule {
     const hash = await unicitySeal.calculateHash();
 
     const results = await Promise.all(
-      Array.from(unicitySeal.signatures?.entries() ?? []).map(([nodeId, signature]) =>
-        this.verifySignature(trustBase, nodeId, signature, hash),
+      Array.from(unicitySeal.witnesses?.entries() ?? []).map(([nodeId, witness]) =>
+        this.verifySignature(trustBase, nodeId, witness, hash),
       ),
     );
 
@@ -130,9 +131,22 @@ export class UnicitySealQuorumSignaturesVerificationRule {
   private async verifySignature(
     trustBase: RootTrustBase,
     nodeId: string,
-    signature: Signature,
+    witness: Uint8Array,
     hash: DataHash,
   ): Promise<VerificationResult<VerificationStatus>> {
+    // a witness that is not a 65-byte signature with recovery id 0..3 contributes zero votes; it does not veto the
+    // seal (Go and Rust parity), and it stays in the seal bytes, so it is part of every cache key
+    let signature: Signature;
+    try {
+      signature = Signature.decode(witness);
+    } catch {
+      return new VerificationResult(
+        `SignatureVerificationRule[${nodeId}]`,
+        VerificationStatus.FAIL,
+        'Malformed signature encoding',
+      );
+    }
+
     const node = trustBase.rootNodes.get(nodeId) ?? null;
     if (node == null) {
       return new VerificationResult(

@@ -1,0 +1,10 @@
+{
+  "base": "shards-4",
+  "description": "a shard outside the admitted topology is added to the view",
+  "stage": "consolidate",
+  "outcome": "invalid_input",
+  "changedFiles": [
+    "partition-view.cbor",
+    "responses.json"
+  ]
+}

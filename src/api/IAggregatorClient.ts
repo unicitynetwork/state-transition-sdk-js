@@ -1,7 +1,7 @@
 import { CertificationData } from './CertificationData.js';
 import { CertificationResponse } from './CertificationResponse.js';
 import { InclusionProofResponse } from './InclusionProofResponse.js';
-import { IRequestOptions } from './IRequestOptions.js';
+import { IInclusionProofRequestOptions, IRequestOptions } from './IRequestOptions.js';
 import { StateId } from './StateId.js';
 
 /**
@@ -12,10 +12,11 @@ export interface IAggregatorClient {
    * Retrieve an inclusion proof for the given state id.
    *
    * @param {StateId} stateId State identifier to query.
-   * @param {IRequestOptions} options Optional per-request options, e.g. an abort signal.
+   * @param {IInclusionProofRequestOptions} options Optional per-request options, e.g. an abort signal, or
+   *   `includeStatusHint` to receive the aggregator's unauthenticated hint in `InclusionProofResponse.statusHint`.
    * @returns {Promise<InclusionProofResponse>} Inclusion proof response from the aggregator.
    */
-  getInclusionProof(stateId: StateId, options?: IRequestOptions): Promise<InclusionProofResponse>;
+  getInclusionProof(stateId: StateId, options?: IInclusionProofRequestOptions): Promise<InclusionProofResponse>;
 
   /**
    * Submit a transaction commitment for inclusion in the ledger.

@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "partitionId": 168496141,
+  "sha256": {
+    "shards-1.cbor": "2ea6050f5f31629c43522264ab254ef284fb68a2d0ccd003d81eec1d0717ea14",
+    "shards-4.cbor": "1c8e96f99e340736883b91972a40fbc970d764cc4eb1d23382a83c7eeb9853b3",
+    "shards-8.cbor": "445ff358562d1a8fd7516a9117ff06d47eb7c55c8c52c9d599ec7618302baafa"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "base": "shards-4",
+  "description": "declared network of the trusted context differs from the installed authority",
+  "stage": "policy",
+  "outcome": "incompatible_lineage",
+  "changedFiles": [
+    "context.json"
+  ]
+}

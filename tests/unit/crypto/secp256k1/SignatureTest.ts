@@ -12,6 +12,16 @@ describe('Signature', () => {
     expect(() => Signature.decode(sigBytes(255))).toThrow('Invalid signature recovery id');
   });
 
+  it.each([-1, 4, 1.5, 257, 256, NaN, Infinity, -0.5])('should reject constructing with recovery id %s', (recovery) => {
+    expect(() => new Signature(new Uint8Array(64), recovery)).toThrow(RangeError);
+  });
+
+  it('should accept constructing with recovery ids 0 through 3', () => {
+    for (const recovery of [0, 1, 2, 3]) {
+      expect(new Signature(new Uint8Array(64), recovery).encode()[64]).toBe(recovery);
+    }
+  });
+
   it('should accept recovery ids 0 through 3', () => {
     expect(Signature.decode(sigBytes(0)).recovery).toBe(0);
     expect(Signature.decode(sigBytes(1)).recovery).toBe(1);

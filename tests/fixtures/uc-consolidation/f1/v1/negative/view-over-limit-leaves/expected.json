@@ -1,0 +1,11 @@
+{
+  "base": "shards-4",
+  "description": "more leaves than the admission limit",
+  "stage": "view_codec",
+  "outcome": "rejected",
+  "pipelineOutcome": "invalid_input",
+  "changedFiles": [
+    "partition-view.cbor",
+    "responses.json"
+  ]
+}

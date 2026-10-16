@@ -1,0 +1,9 @@
+{
+  "base": "shards-4",
+  "description": "proofs not in request order",
+  "stage": "consolidate",
+  "outcome": "binding_mismatch",
+  "changedFiles": [
+    "responses.json"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "base": "shards-4",
+  "description": "seal field changed without re-signing: round",
+  "stage": "consolidate",
+  "outcome": "unauthenticated",
+  "changedFiles": [
+    "responses.json"
+  ]
+}

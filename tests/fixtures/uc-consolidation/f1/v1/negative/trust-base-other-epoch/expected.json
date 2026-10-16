@@ -1,0 +1,9 @@
+{
+  "base": "shards-4",
+  "description": "same keys in another epoch",
+  "stage": "evidence",
+  "outcome": "unauthenticated",
+  "changedFiles": [
+    "trust-base.cbor"
+  ]
+}

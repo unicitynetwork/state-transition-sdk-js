@@ -5,6 +5,7 @@ import { TokenId } from './TokenId.js';
 import { TokenSalt } from './TokenSalt.js';
 import { TokenType } from './TokenType.js';
 import { RootTrustBase } from '../api/bft/RootTrustBase.js';
+import { UnicityCertificateInterner } from '../api/bft/UnicityCertificateInterner.js';
 import { UnicityCertificateVerifier } from '../api/bft/verification/UnicityCertificateVerifier.js';
 import { InclusionProof } from '../api/InclusionProof.js';
 import { NetworkId } from '../api/NetworkId.js';
@@ -121,15 +122,29 @@ export class CertifiedMintTransaction implements ITransaction {
   }
 
   /**
+   * Create CertifiedMintTransaction from CBOR bytes within a decoding operation sharing identical wire certificates.
+   *
+   * @param {Uint8Array} bytes CBOR bytes.
+   * @param {UnicityCertificateInterner} [interner] Decoding operation, or none to parse every certificate.
+   * @returns {Promise<CertifiedMintTransaction>} Decoded certified transaction.
+   */
+  public static async decodeWith(
+    bytes: Uint8Array,
+    interner?: UnicityCertificateInterner,
+  ): Promise<CertifiedMintTransaction> {
+    const data = CborDeserializer.decodeArray(bytes, 2);
+    const proof = InclusionProof.decodeWith(data[1], interner);
+    return new CertifiedMintTransaction(await MintTransaction.fromCBOR(data[0]), proof);
+  }
+
+  /**
    * Create CertifiedMintTransaction from CBOR bytes.
    *
    * @param {Uint8Array} bytes CBOR bytes.
    * @returns {Promise<CertifiedMintTransaction>} Decoded certified transaction.
    */
-  public static async fromCBOR(bytes: Uint8Array): Promise<CertifiedMintTransaction> {
-    const data = CborDeserializer.decodeArray(bytes, 2);
-    const proof = InclusionProof.fromCBOR(data[1]);
-    return new CertifiedMintTransaction(await MintTransaction.fromCBOR(data[0]), proof);
+  public static fromCBOR(bytes: Uint8Array): Promise<CertifiedMintTransaction> {
+    return CertifiedMintTransaction.decodeWith(bytes);
   }
 
   /**

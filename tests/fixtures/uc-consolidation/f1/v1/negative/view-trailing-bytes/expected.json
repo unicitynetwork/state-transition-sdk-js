@@ -1,0 +1,11 @@
+{
+  "base": "shards-4",
+  "description": "bytes after the view",
+  "stage": "view_codec",
+  "outcome": "rejected",
+  "pipelineOutcome": "invalid_input",
+  "changedFiles": [
+    "partition-view.cbor",
+    "responses.json"
+  ]
+}

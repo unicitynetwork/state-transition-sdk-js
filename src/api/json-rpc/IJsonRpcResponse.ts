@@ -8,6 +8,7 @@ export interface IJsonRpcResponse {
    */
   readonly error?: Readonly<{
     code: number;
+    data?: unknown;
     message: string;
   }>;
   /**

@@ -2,7 +2,7 @@ import { CertificationData } from './api/CertificationData.js';
 import { CertificationResponse } from './api/CertificationResponse.js';
 import { IAggregatorClient } from './api/IAggregatorClient.js';
 import { InclusionProofResponse } from './api/InclusionProofResponse.js';
-import { IRequestOptions } from './api/IRequestOptions.js';
+import { IInclusionProofRequestOptions, IRequestOptions } from './api/IRequestOptions.js';
 import { StateId } from './api/StateId.js';
 
 /**
@@ -17,10 +17,11 @@ export class StateTransitionClient {
    * Retrieve the inclusion proof for a given state id.
    *
    * @param {StateId} stateId State id whose inclusion proof to retrieve.
-   * @param {IRequestOptions} options Optional per-request options, e.g. an abort signal.
+   * @param {IInclusionProofRequestOptions} options Optional per-request options, e.g. an abort signal, or
+   *   `includeStatusHint` for the aggregator's unauthenticated status hint.
    * @returns {Promise<InclusionProofResponse>} Inclusion proof response from the aggregator.
    */
-  public getInclusionProof(stateId: StateId, options?: IRequestOptions): Promise<InclusionProofResponse> {
+  public getInclusionProof(stateId: StateId, options?: IInclusionProofRequestOptions): Promise<InclusionProofResponse> {
     return this.client.getInclusionProof(stateId, options);
   }
 

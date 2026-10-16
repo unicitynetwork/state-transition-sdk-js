@@ -4,6 +4,9 @@ import { CborError } from '../../serialization/cbor/CborError.js';
  * Shard identifier.
  */
 export class ShardId {
+  /** The empty shard id, the only shard of an unsharded partition (encoded `80`). */
+  public static readonly ROOT: ShardId = ShardId.decode(new Uint8Array([0x80]));
+
   private constructor(
     private readonly _bits: Uint8Array,
     public readonly length: number,
@@ -48,6 +51,27 @@ export class ShardId {
   }
 
   /**
+   * Build a shard id from its bit string, e.g. `'01'`; the empty string is {@link ShardId.ROOT}.
+   *
+   * @param {string} bits Bit string of `0` and `1`, at most 256 bits.
+   * @returns {ShardId} Shard id.
+   * @throws {RangeError} If `bits` is not a bit string within the limit.
+   */
+  public static fromBits(bits: string): ShardId {
+    if (!/^[01]*$/.test(bits) || bits.length > 256) {
+      throw new RangeError('A shard id is a string of at most 256 bits, 0 or 1.');
+    }
+    const bytes = new Uint8Array(Math.floor(bits.length / 8) + 1);
+    for (let i = 0; i < bits.length; i++) {
+      if (bits[i] === '1') {
+        bytes[Math.floor(i / 8)] |= 0x80 >> (i % 8);
+      }
+    }
+    bytes[Math.floor(bits.length / 8)] |= 0x80 >> (bits.length % 8);
+    return ShardId.decode(bytes);
+  }
+
+  /**
    * @returns {Uint8Array} Encoded shard id bytes.
    */
   public encode(): Uint8Array {
@@ -62,6 +86,16 @@ export class ShardId {
       result[byteCount] = v | (1 << (7 - bitCount));
     }
     return result;
+  }
+
+  /**
+   * Compare with another shard id by value.
+   *
+   * @param {ShardId} other Other shard id.
+   * @returns {boolean} True if both have the same length and bits.
+   */
+  public equals(other: ShardId): boolean {
+    return this.length === other.length && this.toString() === other.toString();
   }
 
   /**

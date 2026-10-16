@@ -1,0 +1,9 @@
+{
+  "base": "shards-4",
+  "description": "admitted configuration hash of a participant differs",
+  "stage": "evidence",
+  "outcome": "incompatible_lineage",
+  "changedFiles": [
+    "context.json"
+  ]
+}

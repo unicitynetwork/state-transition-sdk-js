@@ -1,0 +1,9 @@
+{
+  "base": "shards-4",
+  "description": "trusted topology with overlapping shard prefixes",
+  "stage": "policy",
+  "outcome": "invalid_input",
+  "changedFiles": [
+    "context.json"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "base": "shards-4",
+  "description": "a consolidated request has no authenticated original evidence",
+  "stage": "consolidate",
+  "outcome": "incompatible_lineage",
+  "changedFiles": [
+    "requests.json"
+  ]
+}

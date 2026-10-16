@@ -1,0 +1,9 @@
+{
+  "base": "shards-4",
+  "description": "expiry of the proof differs from the request",
+  "stage": "consolidate",
+  "outcome": "binding_mismatch",
+  "changedFiles": [
+    "responses.json"
+  ]
+}

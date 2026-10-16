@@ -1,0 +1,9 @@
+{
+  "base": "shards-4",
+  "description": "null entry in the partition path of the enclosing UC",
+  "stage": "consolidate",
+  "outcome": "invalid_input",
+  "changedFiles": [
+    "responses.json"
+  ]
+}

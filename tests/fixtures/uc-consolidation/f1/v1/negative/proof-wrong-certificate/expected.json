@@ -1,0 +1,9 @@
+{
+  "base": "shards-4",
+  "description": "certificate of another request (path does not fold to the target root)",
+  "stage": "consolidate",
+  "outcome": "binding_mismatch",
+  "changedFiles": [
+    "responses.json"
+  ]
+}

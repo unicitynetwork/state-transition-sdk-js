@@ -1,0 +1,9 @@
+{
+  "base": "shards-4",
+  "description": "policy partition differs from the evidence",
+  "stage": "evidence",
+  "outcome": "incompatible_lineage",
+  "changedFiles": [
+    "context.json"
+  ]
+}
