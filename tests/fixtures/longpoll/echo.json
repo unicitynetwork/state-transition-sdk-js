@@ -1,0 +1,669 @@
+{
+  "note": "Frozen wire examples of the long-poll response metadata (revision 3 section 3). Responses are JSON values: member order is not significant; Go emits existing members first, then status, then waitedMs. Proof hex is real, from the golden fixtures. waitedMs values are illustrative; the contract is presence, type (non-negative integer) and placement. A0 only reserves the request field: no server emits these yet.",
+  "cases": [
+    {
+      "name": "v2/no-wait-bare",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "get_inclusion_proof.v2",
+        "params": {
+          "stateId": "abababababababababababababababababababababababababababababababab"
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "result": "8209d998798501d998778602d99878830141015821031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f5820baa501b37267c06d8d20f316622f90a3e343e9e730771f2ce2e314b794e31853582085e7eac2862f1cbd85bc18769c75172c3fdcd899ab468b9e973d59ec620d99911af486570058416ccd2bd923a58cea875b6a3f59a3a319ef3c0e4010d3c80f176992a089a091852940bcf3d0999d2fe3c1d09da718c94f5a9cba06dfa108ce85dfae6cbe749cb6011a689b2cc058404000000000000000000000000000000000000000000000000000000000000000679badfaa2b85f63e19d30d0271a0107187e3e0fad7e077b8c8e8651e5866d15d998598701d9985a8a010900f65820385e7ab1594d114f9a5d60d5a87fe4a70c22875114d448bbbafa3e582cdfa4fdf600f600f6f6f6d9985b83014180f6f6d9985d880100090000f6f6f6",
+        "id": 1
+      },
+      "note": "No waitMs: the legacy bare string. Never carries an echo."
+    },
+    {
+      "name": "v2/no-wait-status-only",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "get_inclusion_proof.v2",
+        "params": {
+          "stateId": "abababababababababababababababababababababababababababababababab",
+          "includeStatus": true
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "proof": "8209d998798501f6f6f6d998598701d9985a8a010900f65820385e7ab1594d114f9a5d60d5a87fe4a70c22875114d448bbbafa3e582cdfa4fdf600f600f6f6f6d9985b83014180f6f6d9985d880100090000f6f6f6",
+          "status": "pending"
+        },
+        "id": 2
+      },
+      "note": "The existing includeStatus object, unchanged and without waitedMs."
+    },
+    {
+      "name": "v2/wait-only-included",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "get_inclusion_proof.v2",
+        "params": {
+          "stateId": "abababababababababababababababababababababababababababababababab",
+          "waitMs": 5000
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "proof": "8209d998798501d998778602d99878830141015821031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f5820baa501b37267c06d8d20f316622f90a3e343e9e730771f2ce2e314b794e31853582085e7eac2862f1cbd85bc18769c75172c3fdcd899ab468b9e973d59ec620d99911af486570058416ccd2bd923a58cea875b6a3f59a3a319ef3c0e4010d3c80f176992a089a091852940bcf3d0999d2fe3c1d09da718c94f5a9cba06dfa108ce85dfae6cbe749cb6011a689b2cc058404000000000000000000000000000000000000000000000000000000000000000679badfaa2b85f63e19d30d0271a0107187e3e0fad7e077b8c8e8651e5866d15d998598701d9985a8a010900f65820385e7ab1594d114f9a5d60d5a87fe4a70c22875114d448bbbafa3e582cdfa4fdf600f600f6f6f6d9985b83014180f6f6d9985d880100090000f6f6f6",
+          "waitedMs": 1200
+        },
+        "id": 3
+      },
+      "note": "waitMs alone opts into {proof, waitedMs}; no status member."
+    },
+    {
+      "name": "v2/wait-only-pending-timeout",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "get_inclusion_proof.v2",
+        "params": {
+          "stateId": "abababababababababababababababababababababababababababababababab",
+          "waitMs": 5000
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "proof": "8209d998798501f6f6f6d998598701d9985a8a010900f65820385e7ab1594d114f9a5d60d5a87fe4a70c22875114d448bbbafa3e582cdfa4fdf600f600f6f6f6d9985b83014180f6f6d9985d880100090000f6f6f6",
+          "waitedMs": 5000
+        },
+        "id": 4
+      },
+      "note": "A timeout is a final normal read: the (empty) proof of a not-yet-included state, no new error."
+    },
+    {
+      "name": "v2/wait-zero",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 5,
+        "method": "get_inclusion_proof.v2",
+        "params": {
+          "stateId": "abababababababababababababababababababababababababababababababab",
+          "waitMs": 0
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "proof": "8209d998798501f6f6f6d998598701d9985a8a010900f65820385e7ab1594d114f9a5d60d5a87fe4a70c22875114d448bbbafa3e582cdfa4fdf600f600f6f6f6d9985b83014180f6f6d9985d880100090000f6f6f6",
+          "waitedMs": 0
+        },
+        "id": 5
+      },
+      "note": "Present zero: metadata without waiting; the zero is explicit."
+    },
+    {
+      "name": "v2/wait-and-status-pending",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 6,
+        "method": "get_inclusion_proof.v2",
+        "params": {
+          "stateId": "abababababababababababababababababababababababababababababababab",
+          "waitMs": 5000,
+          "includeStatus": true
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "proof": "8209d998798501f6f6f6d998598701d9985a8a010900f65820385e7ab1594d114f9a5d60d5a87fe4a70c22875114d448bbbafa3e582cdfa4fdf600f600f6f6f6d9985b83014180f6f6d9985d880100090000f6f6f6",
+          "status": "pending",
+          "waitedMs": 5000
+        },
+        "id": 6
+      }
+    },
+    {
+      "name": "v2/wait-and-status-included",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 7,
+        "method": "get_inclusion_proof.v2",
+        "params": {
+          "stateId": "abababababababababababababababababababababababababababababababab",
+          "waitMs": 5000,
+          "includeStatus": true
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "proof": "8209d998798501d998778602d99878830141015821031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f5820baa501b37267c06d8d20f316622f90a3e343e9e730771f2ce2e314b794e31853582085e7eac2862f1cbd85bc18769c75172c3fdcd899ab468b9e973d59ec620d99911af486570058416ccd2bd923a58cea875b6a3f59a3a319ef3c0e4010d3c80f176992a089a091852940bcf3d0999d2fe3c1d09da718c94f5a9cba06dfa108ce85dfae6cbe749cb6011a689b2cc058404000000000000000000000000000000000000000000000000000000000000000679badfaa2b85f63e19d30d0271a0107187e3e0fad7e077b8c8e8651e5866d15d998598701d9985a8a010900f65820385e7ab1594d114f9a5d60d5a87fe4a70c22875114d448bbbafa3e582cdfa4fdf600f600f6f6f6d9985b83014180f6f6d9985d880100090000f6f6f6",
+          "status": "included",
+          "waitedMs": 300
+        },
+        "id": 7
+      }
+    },
+    {
+      "name": "v2/wait-and-status-expired",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 8,
+        "method": "get_inclusion_proof.v2",
+        "params": {
+          "stateId": "abababababababababababababababababababababababababababababababab",
+          "waitMs": 5000,
+          "includeStatus": true
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "proof": "8209d998798501f6f6f6d998598701d9985a8a010900f65820385e7ab1594d114f9a5d60d5a87fe4a70c22875114d448bbbafa3e582cdfa4fdf600f600f6f6f6d9985b83014180f6f6d9985d880100090000f6f6f6",
+          "status": "expired",
+          "waitedMs": 40
+        },
+        "id": 8
+      }
+    },
+    {
+      "name": "v2/wait-and-status-unknown-cap-full",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 9,
+        "method": "get_inclusion_proof.v2",
+        "params": {
+          "stateId": "abababababababababababababababababababababababababababababababab",
+          "waitMs": 5000,
+          "includeStatus": true
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "proof": "8209d998798501f6f6f6d998598701d9985a8a010900f65820385e7ab1594d114f9a5d60d5a87fe4a70c22875114d448bbbafa3e582cdfa4fdf600f600f6f6f6d9985b83014180f6f6d9985d880100090000f6f6f6",
+          "status": "unknown",
+          "waitedMs": 0
+        },
+        "id": 9
+      },
+      "note": "Capacity zero or full, or no remaining budget, or a drain: the ordinary immediate outcome with a zero echo; never an error."
+    },
+    {
+      "name": "v2/error-no-finalized-view",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 10,
+        "method": "get_inclusion_proof.v2",
+        "params": {
+          "stateId": "abababababababababababababababababababababababababababababababab",
+          "waitMs": 5000
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32008,
+          "message": "Proof unavailable",
+          "data": {
+            "reason": "proof_unavailable",
+            "detail": "no_finalized_view",
+            "retryable": true,
+            "waitedMs": 0
+          }
+        },
+        "id": 10
+      },
+      "note": "Handled errors echo in error.data, keeping the existing members."
+    },
+    {
+      "name": "v2/error-internal-non-object-data",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 11,
+        "method": "get_inclusion_proof.v2",
+        "params": {
+          "stateId": "abababababababababababababababababababababababababababababababab",
+          "waitMs": 5000
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32603,
+          "message": "Failed to get inclusion proof",
+          "data": {
+            "originalData": "db down",
+            "waitedMs": 0
+          }
+        },
+        "id": 11
+      },
+      "note": "Old error data which is not an object is kept as data.originalData."
+    },
+    {
+      "name": "v2/error-validation-echoes-zero",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 12,
+        "method": "get_inclusion_proof.v2",
+        "params": {
+          "stateId": "abcd",
+          "waitMs": 5000
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32000,
+          "message": "stateId must be exactly 32 bytes (v2 wire format), got 2",
+          "data": {
+            "waitedMs": 0
+          }
+        },
+        "id": 12
+      },
+      "note": "Absent old data becomes an object holding the echo. Once the method recognizes a wait-bearing params object its validation errors echo zero."
+    },
+    {
+      "name": "v2/error-invalid-wait-has-no-echo",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 13,
+        "method": "get_inclusion_proof.v2",
+        "params": {
+          "stateId": "abababababababababababababababababababababababababababababababab",
+          "waitMs": -1
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32000,
+          "message": "Invalid parameters: waitMs must be a non-negative integer no greater than 9007199254740991"
+        },
+        "id": 13
+      },
+      "note": "An invalid waitMs is not a recognized wait: no echo. (Message text is Go specific; the code is the contract.)"
+    },
+    {
+      "name": "batch/no-wait-success",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 20,
+        "method": "get_inclusion_proofs.v1",
+        "params": {
+          "stateIds": [
+            "abababababababababababababababababababababababababababababababab",
+            "acacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacac"
+          ]
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "proofs": [
+            "8202d998798501d998778602d998788301410158210202020202020202020202020202020202020202020202020202020202020202025820010003010003010003010003010003010003010003010003010003010003010058200202020202020202020202020202020202020202020202020202020202020202f6584104040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404041903e85880e0000000000000000000000000000000000000000000000000000000000000007e46eaede4df3d86107a5d0630e003fe446f329f6408aee46a5c171479f3aeb6a7b5529e1c0cd30021267bae5b74591bea6a9a07f9a860a150adfa1b9a30d06c30b459b6e0351cd4e3feb23bc456ea8e0ebbacc047956e05f9a6782bead460dbd998598701d9985a8a010200f65820b75d0797a782a93b6f14bb4778b4b71600714508d150b1ef3689dc67e2a016074000f600f6f6f6d9985b83014180f6f6f6",
+            "8202d998798501d998778602d998788301410158210202020202020202020202020202020202020202020202020202020202020202025820000003000003000003000003000003000003000003000003000003000003000058200101010101010101010101010101010101010101010101010101010101010101f6584104040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404041903e85860c0000000000000000000000000000000000000000000000000000000000000001bff238ca2188bf68d477fbb09091fe7aa94faf3591207b59a1e9056facc66fe36ee27c989548c4b1dee00bfb1b5a7c07b21f823e810ab232a18fb1a405d3244d998598701d9985a8a010200f65820b75d0797a782a93b6f14bb4778b4b71600714508d150b1ef3689dc67e2a016074000f600f6f6f6d9985b83014180f6f6f6"
+          ],
+          "partitionView": "707632"
+        },
+        "id": 20
+      },
+      "note": "No waitMs: unchanged result, no waitedMs."
+    },
+    {
+      "name": "batch/wait-success",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 21,
+        "method": "get_inclusion_proofs.v1",
+        "params": {
+          "stateIds": [
+            "abababababababababababababababababababababababababababababababab",
+            "acacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacac"
+          ],
+          "waitMs": 5000
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "proofs": [
+            "8202d998798501d998778602d998788301410158210202020202020202020202020202020202020202020202020202020202020202025820010003010003010003010003010003010003010003010003010003010003010058200202020202020202020202020202020202020202020202020202020202020202f6584104040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404041903e85880e0000000000000000000000000000000000000000000000000000000000000007e46eaede4df3d86107a5d0630e003fe446f329f6408aee46a5c171479f3aeb6a7b5529e1c0cd30021267bae5b74591bea6a9a07f9a860a150adfa1b9a30d06c30b459b6e0351cd4e3feb23bc456ea8e0ebbacc047956e05f9a6782bead460dbd998598701d9985a8a010200f65820b75d0797a782a93b6f14bb4778b4b71600714508d150b1ef3689dc67e2a016074000f600f6f6f6d9985b83014180f6f6f6",
+            "8202d998798501d998778602d998788301410158210202020202020202020202020202020202020202020202020202020202020202025820000003000003000003000003000003000003000003000003000003000003000058200101010101010101010101010101010101010101010101010101010101010101f6584104040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404041903e85860c0000000000000000000000000000000000000000000000000000000000000001bff238ca2188bf68d477fbb09091fe7aa94faf3591207b59a1e9056facc66fe36ee27c989548c4b1dee00bfb1b5a7c07b21f823e810ab232a18fb1a405d3244d998598701d9985a8a010200f65820b75d0797a782a93b6f14bb4778b4b71600714508d150b1ef3689dc67e2a016074000f600f6f6f6d9985b83014180f6f6f6"
+          ],
+          "partitionView": "707632",
+          "waitedMs": 1200
+        },
+        "id": 21
+      },
+      "note": "Success adds result.waitedMs to proofs and partitionView; no per-entry statuses."
+    },
+    {
+      "name": "batch/wait-zero-success",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 22,
+        "method": "get_inclusion_proofs.v1",
+        "params": {
+          "stateIds": [
+            "abababababababababababababababababababababababababababababababab",
+            "acacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacac"
+          ],
+          "waitMs": 0
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "proofs": [
+            "8202d998798501d998778602d998788301410158210202020202020202020202020202020202020202020202020202020202020202025820010003010003010003010003010003010003010003010003010003010003010058200202020202020202020202020202020202020202020202020202020202020202f6584104040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404041903e85880e0000000000000000000000000000000000000000000000000000000000000007e46eaede4df3d86107a5d0630e003fe446f329f6408aee46a5c171479f3aeb6a7b5529e1c0cd30021267bae5b74591bea6a9a07f9a860a150adfa1b9a30d06c30b459b6e0351cd4e3feb23bc456ea8e0ebbacc047956e05f9a6782bead460dbd998598701d9985a8a010200f65820b75d0797a782a93b6f14bb4778b4b71600714508d150b1ef3689dc67e2a016074000f600f6f6f6d9985b83014180f6f6f6",
+            "8202d998798501d998778602d998788301410158210202020202020202020202020202020202020202020202020202020202020202025820000003000003000003000003000003000003000003000003000003000003000058200101010101010101010101010101010101010101010101010101010101010101f6584104040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404040404041903e85860c0000000000000000000000000000000000000000000000000000000000000001bff238ca2188bf68d477fbb09091fe7aa94faf3591207b59a1e9056facc66fe36ee27c989548c4b1dee00bfb1b5a7c07b21f823e810ab232a18fb1a405d3244d998598701d9985a8a010200f65820b75d0797a782a93b6f14bb4778b4b71600714508d150b1ef3689dc67e2a016074000f600f6f6f6d9985b83014180f6f6f6"
+          ],
+          "partitionView": "707632",
+          "waitedMs": 0
+        },
+        "id": 22
+      }
+    },
+    {
+      "name": "batch/wait-pending-timeout",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 23,
+        "method": "get_inclusion_proofs.v1",
+        "params": {
+          "stateIds": [
+            "abababababababababababababababababababababababababababababababab",
+            "acacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacac"
+          ],
+          "waitMs": 8000
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32008,
+          "message": "Proof unavailable",
+          "data": {
+            "reason": "proof_unavailable",
+            "detail": "state_pending",
+            "retryable": true,
+            "indexes": {
+              "pending": [
+                0
+              ]
+            },
+            "waitedMs": 8000
+          }
+        },
+        "id": 23
+      },
+      "note": "The revision-3 example: absence stays an error, the echo is in error.data."
+    },
+    {
+      "name": "batch/wait-unknown-ends-wait",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 24,
+        "method": "get_inclusion_proofs.v1",
+        "params": {
+          "stateIds": [
+            "abababababababababababababababababababababababababababababababab",
+            "acacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacac"
+          ],
+          "waitMs": 8000
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32008,
+          "message": "Proof unavailable",
+          "data": {
+            "reason": "proof_unavailable",
+            "detail": "state_unknown",
+            "retryable": false,
+            "indexes": {
+              "pending": [
+                0
+              ],
+              "unknown": [
+                1
+              ]
+            },
+            "waitedMs": 210
+          }
+        },
+        "id": 24
+      },
+      "note": "Any unknown or expired entry ends the whole wait at once, even with other pending entries."
+    },
+    {
+      "name": "batch/wait-expired-ends-wait",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 25,
+        "method": "get_inclusion_proofs.v1",
+        "params": {
+          "stateIds": [
+            "abababababababababababababababababababababababababababababababab",
+            "acacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacac"
+          ],
+          "waitMs": 8000
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32008,
+          "message": "Proof unavailable",
+          "data": {
+            "reason": "proof_unavailable",
+            "detail": "state_expired",
+            "retryable": false,
+            "indexes": {
+              "pending": [
+                0
+              ],
+              "expired": [
+                1
+              ]
+            },
+            "waitedMs": 3000
+          }
+        },
+        "id": 25
+      }
+    },
+    {
+      "name": "batch/cap-full-pending",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 26,
+        "method": "get_inclusion_proofs.v1",
+        "params": {
+          "stateIds": [
+            "abababababababababababababababababababababababababababababababab",
+            "acacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacac"
+          ],
+          "waitMs": 8000
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32008,
+          "message": "Proof unavailable",
+          "data": {
+            "reason": "proof_unavailable",
+            "detail": "state_pending",
+            "retryable": true,
+            "indexes": {
+              "pending": [
+                0,
+                1
+              ]
+            },
+            "waitedMs": 0
+          }
+        },
+        "id": 26
+      },
+      "note": "Capacity zero/full, no budget, drain: the immediate ordinary outcome with a zero echo."
+    },
+    {
+      "name": "batch/busy-with-echo",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 27,
+        "method": "get_inclusion_proofs.v1",
+        "params": {
+          "stateIds": [
+            "abababababababababababababababababababababababababababababababab",
+            "acacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacac"
+          ],
+          "waitMs": 8000
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32006,
+          "message": "Concurrency limit exceeded",
+          "data": {
+            "reason": "busy",
+            "detail": "deadline",
+            "retryable": true,
+            "waitedMs": 8000
+          }
+        },
+        "id": 27
+      },
+      "note": "An overloaded completion may return the existing busy/deadline error with the echo."
+    },
+    {
+      "name": "batch/validation-error-with-recognized-wait",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 28,
+        "method": "get_inclusion_proofs.v1",
+        "params": {
+          "stateIds": [
+            "abcd"
+          ],
+          "waitMs": 5000
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32602,
+          "message": "Invalid params",
+          "data": {
+            "reason": "invalid_request",
+            "detail": "invalid_state_id",
+            "retryable": false,
+            "waitedMs": 0
+          }
+        },
+        "id": 28
+      },
+      "note": "A wait-bearing params object which fails later validation echoes zero. A params object whose waitMs itself is invalid is malformed_params with no echo."
+    },
+    {
+      "name": "batch/unknown-member-with-valid-wait",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 30,
+        "method": "get_inclusion_proofs.v1",
+        "params": {
+          "stateIds": [
+            "abababababababababababababababababababababababababababababababab",
+            "acacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacac"
+          ],
+          "waitMs": 5000,
+          "foo": 1
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32602,
+          "message": "Invalid params",
+          "data": {
+            "reason": "invalid_request",
+            "detail": "malformed_params",
+            "retryable": false,
+            "waitedMs": 0
+          }
+        },
+        "id": 30
+      },
+      "note": "A full server echoes zero on ANY batch params error when the object carries a valid top-level waitMs member (found by a scan independent of member order). The echo is what tells a client the server understands waitMs: such an error is propagated, never retried without waitMs."
+    },
+    {
+      "name": "batch/exact-root-with-wait",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 31,
+        "method": "get_inclusion_proofs.v1",
+        "params": {
+          "stateIds": [
+            "abababababababababababababababababababababababababababababababab",
+            "acacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacac"
+          ],
+          "stateRoot": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+          "waitMs": 0
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32602,
+          "message": "Invalid params",
+          "data": {
+            "reason": "invalid_request",
+            "detail": "malformed_params",
+            "retryable": false,
+            "waitedMs": 0
+          }
+        },
+        "id": 31
+      },
+      "note": "Exact root plus a present waitMs is invalid; the valid waitMs member is still echoed (zero)."
+    },
+    {
+      "name": "batch/invalid-wait-malformed-params",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 29,
+        "method": "get_inclusion_proofs.v1",
+        "params": {
+          "stateIds": [
+            "abababababababababababababababababababababababababababababababab",
+            "acacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacac"
+          ],
+          "waitMs": "5"
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32602,
+          "message": "Invalid params",
+          "data": {
+            "reason": "invalid_request",
+            "detail": "malformed_params",
+            "retryable": false
+          }
+        },
+        "id": 29
+      },
+      "note": "Also the response of a strict batch parser without the waitMs reservation, to any waitMs: the cue for the one parser-negotiation retry."
+    }
+  ]
+}

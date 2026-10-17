@@ -1,0 +1,560 @@
+{
+  "stateId": "abababababababababababababababababababababababababababababababab",
+  "stateRoot": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+  "errors": {
+    "batch_malformed_params": {
+      "method": "get_inclusion_proofs.v1",
+      "error": {
+        "code": -32602,
+        "message": "Invalid params",
+        "data": {
+          "reason": "invalid_request",
+          "detail": "malformed_params",
+          "retryable": false
+        }
+      },
+      "note": "Exact. Also what a strict batch parser without the waitMs reservation answers, with no field name: the cue for the one parser-negotiation retry."
+    },
+    "v2_validation": {
+      "method": "get_inclusion_proof.v2",
+      "error": {
+        "code": -32000
+      },
+      "note": "The code is the contract. The message text is implementation specific: Go says 'Invalid parameters: waitMs must be a non-negative integer no greater than 9007199254740991' (or 'Invalid parameters: duplicate waitMs'), or its generic JSON decode error for tokens which are not JSON at all. No data member."
+    }
+  },
+  "cases": [
+    {
+      "name": "batch/absent",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"]}",
+      "valid": true,
+      "waitMs": null
+    },
+    {
+      "name": "v2/absent",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\"}",
+      "valid": true,
+      "waitMs": null
+    },
+    {
+      "name": "batch/latest-keyword-absent-wait",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"stateRoot\":\"latest\"}",
+      "valid": true,
+      "waitMs": null
+    },
+    {
+      "name": "batch/valid-0",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":0}",
+      "valid": true,
+      "waitMs": 0
+    },
+    {
+      "name": "v2/valid-0",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":0}",
+      "valid": true,
+      "waitMs": 0
+    },
+    {
+      "name": "batch/valid-1",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":1}",
+      "valid": true,
+      "waitMs": 1
+    },
+    {
+      "name": "v2/valid-1",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":1}",
+      "valid": true,
+      "waitMs": 1
+    },
+    {
+      "name": "batch/valid-20000",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":20000}",
+      "valid": true,
+      "waitMs": 20000
+    },
+    {
+      "name": "v2/valid-20000",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":20000}",
+      "valid": true,
+      "waitMs": 20000
+    },
+    {
+      "name": "batch/valid-3600000",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":3600000}",
+      "valid": true,
+      "waitMs": 3600000,
+      "note": "values above the server limit are valid and clamped later"
+    },
+    {
+      "name": "v2/valid-3600000",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":3600000}",
+      "valid": true,
+      "waitMs": 3600000,
+      "note": "values above the server limit are valid and clamped later"
+    },
+    {
+      "name": "batch/valid-9007199254740991",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":9007199254740991}",
+      "valid": true,
+      "waitMs": 9007199254740991
+    },
+    {
+      "name": "v2/valid-9007199254740991",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":9007199254740991}",
+      "valid": true,
+      "waitMs": 9007199254740991
+    },
+    {
+      "name": "batch/valid-max-safe-plus-one-overflow",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":9007199254740992}",
+      "valid": false,
+      "error": "batch_malformed_params"
+    },
+    {
+      "name": "v2/valid-max-safe-plus-one-overflow",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":9007199254740992}",
+      "valid": false,
+      "error": "v2_validation"
+    },
+    {
+      "name": "batch/overflow-uint64",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":18446744073709551616}",
+      "valid": false,
+      "error": "batch_malformed_params"
+    },
+    {
+      "name": "v2/overflow-uint64",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":18446744073709551616}",
+      "valid": false,
+      "error": "v2_validation"
+    },
+    {
+      "name": "batch/overflow-huge",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":99999999999999999999}",
+      "valid": false,
+      "error": "batch_malformed_params"
+    },
+    {
+      "name": "v2/overflow-huge",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":99999999999999999999}",
+      "valid": false,
+      "error": "v2_validation"
+    },
+    {
+      "name": "batch/invalid-null",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":null}",
+      "valid": false,
+      "error": "batch_malformed_params"
+    },
+    {
+      "name": "v2/invalid-null",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":null}",
+      "valid": false,
+      "error": "v2_validation"
+    },
+    {
+      "name": "batch/invalid-true",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":true}",
+      "valid": false,
+      "error": "batch_malformed_params"
+    },
+    {
+      "name": "v2/invalid-true",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":true}",
+      "valid": false,
+      "error": "v2_validation"
+    },
+    {
+      "name": "batch/invalid-false",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":false}",
+      "valid": false,
+      "error": "batch_malformed_params"
+    },
+    {
+      "name": "v2/invalid-false",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":false}",
+      "valid": false,
+      "error": "v2_validation"
+    },
+    {
+      "name": "batch/invalid-string",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":\"1000\"}",
+      "valid": false,
+      "error": "batch_malformed_params"
+    },
+    {
+      "name": "v2/invalid-string",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":\"1000\"}",
+      "valid": false,
+      "error": "v2_validation"
+    },
+    {
+      "name": "batch/invalid-string-empty",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":\"\"}",
+      "valid": false,
+      "error": "batch_malformed_params"
+    },
+    {
+      "name": "v2/invalid-string-empty",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":\"\"}",
+      "valid": false,
+      "error": "v2_validation"
+    },
+    {
+      "name": "batch/invalid-array",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":[1]}",
+      "valid": false,
+      "error": "batch_malformed_params"
+    },
+    {
+      "name": "v2/invalid-array",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":[1]}",
+      "valid": false,
+      "error": "v2_validation"
+    },
+    {
+      "name": "batch/invalid-array-empty",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":[]}",
+      "valid": false,
+      "error": "batch_malformed_params"
+    },
+    {
+      "name": "v2/invalid-array-empty",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":[]}",
+      "valid": false,
+      "error": "v2_validation"
+    },
+    {
+      "name": "batch/invalid-object",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":{}}",
+      "valid": false,
+      "error": "batch_malformed_params"
+    },
+    {
+      "name": "v2/invalid-object",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":{}}",
+      "valid": false,
+      "error": "v2_validation"
+    },
+    {
+      "name": "batch/invalid-negative",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":-1}",
+      "valid": false,
+      "error": "batch_malformed_params"
+    },
+    {
+      "name": "v2/invalid-negative",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":-1}",
+      "valid": false,
+      "error": "v2_validation"
+    },
+    {
+      "name": "batch/invalid-negative-zero",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":-0}",
+      "valid": false,
+      "error": "batch_malformed_params"
+    },
+    {
+      "name": "v2/invalid-negative-zero",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":-0}",
+      "valid": false,
+      "error": "v2_validation"
+    },
+    {
+      "name": "batch/invalid-fraction",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":1.5}",
+      "valid": false,
+      "error": "batch_malformed_params"
+    },
+    {
+      "name": "v2/invalid-fraction",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":1.5}",
+      "valid": false,
+      "error": "v2_validation"
+    },
+    {
+      "name": "batch/invalid-fraction-integral",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":1.0}",
+      "valid": false,
+      "error": "batch_malformed_params"
+    },
+    {
+      "name": "v2/invalid-fraction-integral",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":1.0}",
+      "valid": false,
+      "error": "v2_validation"
+    },
+    {
+      "name": "batch/invalid-fraction-zero",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":0.0}",
+      "valid": false,
+      "error": "batch_malformed_params"
+    },
+    {
+      "name": "v2/invalid-fraction-zero",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":0.0}",
+      "valid": false,
+      "error": "v2_validation"
+    },
+    {
+      "name": "batch/invalid-exponent",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":1e3}",
+      "valid": false,
+      "error": "batch_malformed_params"
+    },
+    {
+      "name": "v2/invalid-exponent",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":1e3}",
+      "valid": false,
+      "error": "v2_validation"
+    },
+    {
+      "name": "batch/invalid-exponent-upper",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":1E3}",
+      "valid": false,
+      "error": "batch_malformed_params"
+    },
+    {
+      "name": "v2/invalid-exponent-upper",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":1E3}",
+      "valid": false,
+      "error": "v2_validation"
+    },
+    {
+      "name": "batch/invalid-exponent-zero",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":1e0}",
+      "valid": false,
+      "error": "batch_malformed_params"
+    },
+    {
+      "name": "v2/invalid-exponent-zero",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":1e0}",
+      "valid": false,
+      "error": "v2_validation"
+    },
+    {
+      "name": "batch/invalid-exponent-plus",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":1e+3}",
+      "valid": false,
+      "error": "batch_malformed_params"
+    },
+    {
+      "name": "v2/invalid-exponent-plus",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":1e+3}",
+      "valid": false,
+      "error": "v2_validation"
+    },
+    {
+      "name": "batch/invalid-duplicate",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":1,\"waitMs\":2}",
+      "valid": false,
+      "error": "batch_malformed_params"
+    },
+    {
+      "name": "v2/invalid-duplicate",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":1,\"waitMs\":2}",
+      "valid": false,
+      "error": "v2_validation"
+    },
+    {
+      "name": "batch/invalid-duplicate-equal-zero",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":0,\"waitMs\":0}",
+      "valid": false,
+      "error": "batch_malformed_params"
+    },
+    {
+      "name": "v2/invalid-duplicate-equal-zero",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":0,\"waitMs\":0}",
+      "valid": false,
+      "error": "v2_validation"
+    },
+    {
+      "name": "batch/invalid-duplicate-escaped-key",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitMs\":1,\"wait\\u004Ds\":2}",
+      "valid": false,
+      "error": "batch_malformed_params",
+      "note": "a JSON-escaped spelling of the key is the same key"
+    },
+    {
+      "name": "v2/invalid-duplicate-escaped-key",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":1,\"wait\\u004Ds\":2}",
+      "valid": false,
+      "error": "v2_validation",
+      "note": "a JSON-escaped spelling of the key is the same key"
+    },
+    {
+      "name": "batch/valid-escaped-key",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"wait\\u004Ds\":5}",
+      "valid": true,
+      "waitMs": 5
+    },
+    {
+      "name": "v2/valid-escaped-key",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"wait\\u004Ds\":5}",
+      "valid": true,
+      "waitMs": 5
+    },
+    {
+      "name": "batch/valid-wait-first",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"waitMs\":7,\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"]}",
+      "valid": true,
+      "waitMs": 7
+    },
+    {
+      "name": "v2/valid-wait-first",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"waitMs\":7,\"stateId\":\"abababababababababababababababababababababababababababababababab\"}",
+      "valid": true,
+      "waitMs": 7
+    },
+    {
+      "name": "batch/valid-whitespace",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{ \"stateIds\" : [\"abababababababababababababababababababababababababababababababab\"] , \"waitMs\" :  12 }",
+      "valid": true,
+      "waitMs": 12
+    },
+    {
+      "name": "v2/valid-whitespace",
+      "method": "get_inclusion_proof.v2",
+      "params": "{ \"stateId\" : \"abababababababababababababababababababababababababababababababab\" , \"waitMs\" :  12 }",
+      "valid": true,
+      "waitMs": 12
+    },
+    {
+      "name": "batch/valid-with-latest-keyword",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"stateRoot\":\"latest\",\"waitMs\":5}",
+      "valid": true,
+      "waitMs": 5
+    },
+    {
+      "name": "v2/valid-with-include-status",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"includeStatus\":true,\"waitMs\":5}",
+      "valid": true,
+      "waitMs": 5
+    },
+    {
+      "name": "v2/valid-with-include-status-false",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"includeStatus\":false,\"waitMs\":0}",
+      "valid": true,
+      "waitMs": 0
+    },
+    {
+      "name": "batch/exact-root-without-wait",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"stateRoot\":\"cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd\"}",
+      "valid": true,
+      "waitMs": null
+    },
+    {
+      "name": "batch/invalid-exact-root-wait-zero",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"stateRoot\":\"cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd\",\"waitMs\":0}",
+      "valid": false,
+      "error": "batch_malformed_params",
+      "note": "any present waitMs, including zero, is invalid with an exact root"
+    },
+    {
+      "name": "batch/invalid-exact-root-wait-positive",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"stateRoot\":\"cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd\",\"waitMs\":1000}",
+      "valid": false,
+      "error": "batch_malformed_params"
+    },
+    {
+      "name": "batch/invalid-exact-root-wait-first",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"waitMs\":5,\"stateRoot\":\"cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd\",\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"]}",
+      "valid": false,
+      "error": "batch_malformed_params"
+    },
+    {
+      "name": "batch/invalid-wrong-case-is-unknown-field",
+      "method": "get_inclusion_proofs.v1",
+      "params": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\"],\"waitms\":5}",
+      "valid": false,
+      "error": "batch_malformed_params",
+      "note": "the batch parser rejects every unknown member, including other spellings of waitMs"
+    },
+    {
+      "name": "v2/wrong-case-is-ignored",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitms\":5}",
+      "valid": true,
+      "waitMs": null,
+      "note": "v2 ignores unknown members; only the exact name waitMs is the wait"
+    },
+    {
+      "name": "v2/ignored-unknown-member-with-wait",
+      "method": "get_inclusion_proof.v2",
+      "params": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"foo\":1,\"waitMs\":9}",
+      "valid": true,
+      "waitMs": 9
+    }
+  ]
+}

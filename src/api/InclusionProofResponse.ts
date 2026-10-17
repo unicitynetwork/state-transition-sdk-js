@@ -22,6 +22,7 @@ export class InclusionProofResponse {
     public readonly inclusionProof: InclusionProof | null,
     public readonly unicityCertificate: UnicityCertificate,
     private readonly _statusHint: ProofStatusHint | null = null,
+    private readonly _waitedMs: number | null = null,
   ) {}
 
   /**
@@ -34,6 +35,18 @@ export class InclusionProofResponse {
    */
   public get statusHint(): ProofStatusHint | null {
     return this._statusHint;
+  }
+
+  /**
+   * The aggregator's **unauthenticated echo** of the time it held the request (`waitMs`), in milliseconds: present only
+   * when the request asked for a wait and the aggregator echoed it; `null` is the legacy behavior. `0` means it did not
+   * wait. It is timing metadata, not evidence: not part of the proof, not encoded by {@link toCBOR}, and no
+   * promise that a particular duration was honored. A missing echo says nothing about the aggregator's capability.
+   *
+   * @returns {number|null} Milliseconds, or `null`.
+   */
+  public get waitedMs(): number | null {
+    return this._waitedMs;
   }
 
   /**
@@ -142,7 +155,29 @@ export class InclusionProofResponse {
    * @returns {InclusionProofResponse} New response.
    */
   public withStatusHint(hint: ProofStatusHint | null): InclusionProofResponse {
-    return new InclusionProofResponse(this.blockNumber, this.inclusionProof, this.unicityCertificate, hint);
+    return new InclusionProofResponse(
+      this.blockNumber,
+      this.inclusionProof,
+      this.unicityCertificate,
+      hint,
+      this._waitedMs,
+    );
+  }
+
+  /**
+   * The same response with the aggregator's (unauthenticated) wait echo attached. It is not encoded by {@link toCBOR}.
+   *
+   * @param {number|null} waitedMs Milliseconds waited, `null` for no echo.
+   * @returns {InclusionProofResponse} New response.
+   */
+  public withWaitedMs(waitedMs: number | null): InclusionProofResponse {
+    return new InclusionProofResponse(
+      this.blockNumber,
+      this.inclusionProof,
+      this.unicityCertificate,
+      this._statusHint,
+      waitedMs,
+    );
   }
 
   /**

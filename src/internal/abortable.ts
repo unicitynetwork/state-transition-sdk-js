@@ -132,3 +132,32 @@ export function sleep(ms: number, signal: AbortSignal): Promise<void> {
     signal.addEventListener('abort', onAbort, { once: true });
   });
 }
+
+/**
+ * A signal that aborts when either input does (`AbortSignal.any` needs a recent browser). Call `dispose` when the work is
+ * done, so no listener stays on the long lived input.
+ *
+ * @param {AbortSignal} first Signal to join.
+ * @param {AbortSignal} second Signal to join.
+ * @returns {object} The joined signal and its cleanup.
+ */
+export function joinSignals(first: AbortSignal, second: AbortSignal): { signal: AbortSignal; dispose(): void } {
+  const controller = new AbortController();
+  const onFirst = (): void => controller.abort(first.reason);
+  const onSecond = (): void => controller.abort(second.reason);
+  if (first.aborted) {
+    onFirst();
+  } else if (second.aborted) {
+    onSecond();
+  } else {
+    first.addEventListener('abort', onFirst, { once: true });
+    second.addEventListener('abort', onSecond, { once: true });
+  }
+  return {
+    dispose: (): void => {
+      removeAbortListener(first, onFirst);
+      removeAbortListener(second, onSecond);
+    },
+    signal: controller.signal,
+  };
+}

@@ -1,0 +1,218 @@
+{
+  "note": "Client behavior for a LOCALLY VALIDATED latest get_inclusion_proofs.v1 request which carried waitMs. 'retry' means exactly one retry of the same request without waitMs (all other params preserved), within the same overall deadline; the second outcome is final and the choice is kept for the rest of the operation.",
+  "cases": [
+    {
+      "name": "strict-parser-generic-malformed-params",
+      "response": {
+        "error": {
+          "code": -32602,
+          "message": "Invalid params",
+          "data": {
+            "reason": "invalid_request",
+            "detail": "malformed_params",
+            "retryable": false
+          }
+        }
+      },
+      "action": "retry",
+      "note": "No field name is present or required."
+    },
+    {
+      "name": "malformed-params-with-echo",
+      "response": {
+        "error": {
+          "code": -32602,
+          "message": "Invalid params",
+          "data": {
+            "reason": "invalid_request",
+            "detail": "malformed_params",
+            "retryable": false,
+            "waitedMs": 0
+          }
+        }
+      },
+      "action": "propagate",
+      "note": "The echo proves the server parsed waitMs: never retry without it. Only the bare generic shape (no data.waitedMs) triggers the retry."
+    },
+    {
+      "name": "retry-fails-again",
+      "first": "as above",
+      "second": {
+        "error": {
+          "code": -32602,
+          "message": "Invalid params",
+          "data": {
+            "reason": "invalid_request",
+            "detail": "malformed_params",
+            "retryable": false
+          }
+        }
+      },
+      "action": "propagate-second-error",
+      "note": "No third attempt."
+    },
+    {
+      "name": "invalid-state-id",
+      "response": {
+        "error": {
+          "code": -32602,
+          "message": "Invalid params",
+          "data": {
+            "reason": "invalid_request",
+            "detail": "invalid_state_id",
+            "retryable": false
+          }
+        }
+      },
+      "action": "propagate"
+    },
+    {
+      "name": "duplicate-state-id",
+      "response": {
+        "error": {
+          "code": -32602,
+          "message": "Invalid params",
+          "data": {
+            "reason": "invalid_request",
+            "detail": "duplicate_state_id",
+            "retryable": false
+          }
+        }
+      },
+      "action": "propagate"
+    },
+    {
+      "name": "invalid-state-root",
+      "response": {
+        "error": {
+          "code": -32602,
+          "message": "Invalid params",
+          "data": {
+            "reason": "invalid_request",
+            "detail": "invalid_state_root",
+            "retryable": false
+          }
+        }
+      },
+      "action": "propagate"
+    },
+    {
+      "name": "limit-exceeded",
+      "response": {
+        "error": {
+          "code": -32007,
+          "message": "Limit exceeded",
+          "data": {
+            "reason": "limit_exceeded",
+            "detail": "state_count",
+            "retryable": false,
+            "limit": 256
+          }
+        }
+      },
+      "action": "propagate"
+    },
+    {
+      "name": "method-not-found",
+      "response": {
+        "error": {
+          "code": -32601,
+          "message": "Method not found"
+        }
+      },
+      "action": "propagate",
+      "note": "Batch unsupported; sleeping or retrying cannot repair it."
+    },
+    {
+      "name": "jsonrpc-invalid-params-without-batch-data",
+      "response": {
+        "error": {
+          "code": -32602,
+          "message": "Invalid params"
+        }
+      },
+      "action": "propagate",
+      "note": "Not the matched malformed_params shape."
+    },
+    {
+      "name": "busy",
+      "response": {
+        "error": {
+          "code": -32006,
+          "message": "Concurrency limit exceeded",
+          "data": {
+            "reason": "busy",
+            "detail": "deadline",
+            "retryable": true
+          }
+        }
+      },
+      "action": "propagate"
+    },
+    {
+      "name": "proof-unavailable-pending",
+      "response": {
+        "error": {
+          "code": -32008,
+          "message": "Proof unavailable",
+          "data": {
+            "reason": "proof_unavailable",
+            "detail": "state_pending",
+            "retryable": true,
+            "indexes": {
+              "pending": [
+                0
+              ]
+            }
+          }
+        }
+      },
+      "action": "normal-pending-handling",
+      "note": "A valid understood response without echo: pace normal polling and omit waitMs for the remaining calls of this operation (reservation-only or older server). Never cache the absence across operations."
+    },
+    {
+      "name": "success-without-echo",
+      "response": {
+        "result": {
+          "proofs": [
+            "<proof>"
+          ]
+        }
+      },
+      "action": "accept-and-pace",
+      "note": "Missing echo is an operational fallback signal, not proof of no support."
+    },
+    {
+      "name": "success-with-zero-echo",
+      "response": {
+        "result": {
+          "proofs": [
+            "<proof>"
+          ],
+          "waitedMs": 0
+        }
+      },
+      "action": "accept-and-pace",
+      "note": "Zero echo never permits a tight loop."
+    },
+    {
+      "name": "auth-or-proxy-html",
+      "response": "HTTP 401/502, non-JSON body",
+      "action": "propagate",
+      "note": "Transport and pre-dispatch errors are not capability evidence."
+    },
+    {
+      "name": "malformed-echo",
+      "response": {
+        "result": {
+          "proofs": [
+            "<proof>"
+          ],
+          "waitedMs": -1
+        }
+      },
+      "action": "protocol-error",
+      "note": "Also: fractional, string, null, above 2^53-1."
+    }
+  ]
+}

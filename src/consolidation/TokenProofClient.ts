@@ -10,6 +10,7 @@ import {
 import { ShardRouting } from './ShardRouting.js';
 import { ShardId } from '../api/bft/ShardId.js';
 import { SealVerificationSession } from '../api/bft/verification/SealVerificationSession.js';
+import { ILongPollOptions } from '../api/ILongPollOptions.js';
 import { InclusionProof } from '../api/InclusionProof.js';
 import { scopedVerificationContext } from '../internal/OperationContext.js';
 import { CborDeserializer } from '../serialization/cbor/CborDeserializer.js';
@@ -48,6 +49,12 @@ export interface ITokenConsolidationOptions {
     /** Master shard to use instead; it must take part in the token's outer history. */
     readonly master?: ShardId;
   };
+  /**
+   * Opt in to one long poll on the master shard's latest request (`true`, or `{ windowMs, marginMs }`); see
+   * {@link IConsolidationOptions.masterLongPoll}. The other shards' exact-root requests never wait and the attempt is not
+   * repeated.
+   */
+  readonly masterLongPoll?: boolean | ILongPollOptions;
   /** Upper bound on concurrent exact-root requests of the second wave. Default 4. */
   readonly maxParallel?: number;
   /**
@@ -131,6 +138,7 @@ export class TokenProofClient {
   public async consolidate(token: Token, options: ITokenConsolidationOptions = {}): Promise<ConsolidationResult> {
     const attemptOptions: IConsolidationOptions = {
       master: options.advanced?.master,
+      masterLongPoll: options.masterLongPoll,
       maxParallel: options.maxParallel,
       signal: options.signal,
       timeoutMs: options.timeoutMs,
@@ -217,6 +225,7 @@ export class TokenProofClient {
 
     const attempt = await new ProofConsolidator(this.options.routing, session).consolidate(items, {
       master: options.advanced?.master,
+      masterLongPoll: options.masterLongPoll,
       maxParallel: options.maxParallel,
       signal: clock.signal,
       timeoutMs: remainingMs(),

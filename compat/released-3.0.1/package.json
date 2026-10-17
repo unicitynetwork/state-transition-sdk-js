@@ -1,0 +1,14 @@
+{
+  "name": "released-3.0.1-compat",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Runs the RELEASED npm package @unicitylabs/state-transition-sdk@3.0.1 against an aggregator URL. Nothing in this directory is built from this repository's sources.",
+  "scripts": {
+    "check-integrity": "node check-integrity.mjs",
+    "compat": "node run.mjs"
+  },
+  "dependencies": {
+    "@unicitylabs/state-transition-sdk": "3.0.1"
+  }
+}

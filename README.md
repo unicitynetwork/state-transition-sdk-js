@@ -133,6 +133,16 @@ fails with `InclusionProofUnknownError` once it has persisted for a grace period
 starts right after submission can reach an HA instance that has not seen the request yet. Pass `statusHints: false` to get the
 3.0 behavior exactly (the wait ends with a proof, an error or the signal, and no hint is requested or acted on).
 
+**Long poll.** The options form also asks the aggregator to hold each request while the state is pending (`waitMs`), which
+means fewer requests and a faster answer after certification. The wait is sized from the time left: `timeoutMs` is an explicit
+total budget (default 10s when there is neither a `signal` nor a `timeoutMs`); a bare `signal` says nothing about the time left,
+so the preferred 20s window is asked for and the wait stops when the signal fires. `longPoll: false` polls exactly like 3.0;
+`longPoll: { windowMs, marginMs }` tunes it. The aggregator's echo (`response.waitedMs`) is unauthenticated metadata: it never
+extends a deadline, never replaces proof verification, and a missing or zero echo only means normal paced polling for the rest
+of that call (nothing is cached). Low level: `getInclusionProof(id, { waitMs })` and `getInclusionProofs(ids, { waitMs })`
+(latest view only; a server that rejects the unknown field with the generic `malformed_params` gets one repeat without it,
+`batch.requests === 2`). `consolidate(token, { masterLongPoll: true })` (or `{ windowMs, marginMs }`) opts in to one wait on the master's latest request. An invalid `waitMs` is a `RangeError` on `getInclusionProof`, a `BatchProofError` (`rejected`) on `getInclusionProofs` and a `ConsolidationError` (`input`) for consolidation: each surface keeps its own error type.
+
 All waiting errors extend `InclusionProofWaitError` (`code`: `expired` | `unknown` | `conflict`, `resubmittable`, `stateId`);
 the hint-driven ones also extend `InclusionProofStatusError` with the literal `status`. After `expired` or `unknown` the same
 signed request may be submitted again. Resubmitting a request that is still pending never creates a second leaf. The Mongo

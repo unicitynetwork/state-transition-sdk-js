@@ -1,0 +1,102 @@
+[
+  {
+    "name": "included-bare",
+    "request": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"get_inclusion_proof.v2\",\"params\":{\"stateId\":\"72e7d9337db80b150f94e07f9cd82bdf7278593339447ba5c7f4ddc95ab23e99\"}}",
+    "response": "{\"jsonrpc\":\"2.0\",\"result\":\"8209d998798501d998778602d99878830141015821031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f5820baa501b37267c06d8d20f316622f90a3e343e9e730771f2ce2e314b794e31853582085e7eac2862f1cbd85bc18769c75172c3fdcd899ab468b9e973d59ec620d99911af486570058416ccd2bd923a58cea875b6a3f59a3a319ef3c0e4010d3c80f176992a089a091852940bcf3d0999d2fe3c1d09da718c94f5a9cba06dfa108ce85dfae6cbe749cb6011a689b2cc058404000000000000000000000000000000000000000000000000000000000000000679badfaa2b85f63e19d30d0271a0107187e3e0fad7e077b8c8e8651e5866d15d998598701d9985a8a010900f65820385e7ab1594d114f9a5d60d5a87fe4a70c22875114d448bbbafa3e582cdfa4fdf600f600f6f6f6d9985b83014180f6f6d9985d880100090000f6f6f6\",\"id\":1}\n"
+  },
+  {
+    "name": "included-status-false",
+    "request": "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"get_inclusion_proof.v2\",\"params\":{\"stateId\":\"72e7d9337db80b150f94e07f9cd82bdf7278593339447ba5c7f4ddc95ab23e99\",\"includeStatus\":false}}",
+    "response": "{\"jsonrpc\":\"2.0\",\"result\":\"8209d998798501d998778602d99878830141015821031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f5820baa501b37267c06d8d20f316622f90a3e343e9e730771f2ce2e314b794e31853582085e7eac2862f1cbd85bc18769c75172c3fdcd899ab468b9e973d59ec620d99911af486570058416ccd2bd923a58cea875b6a3f59a3a319ef3c0e4010d3c80f176992a089a091852940bcf3d0999d2fe3c1d09da718c94f5a9cba06dfa108ce85dfae6cbe749cb6011a689b2cc058404000000000000000000000000000000000000000000000000000000000000000679badfaa2b85f63e19d30d0271a0107187e3e0fad7e077b8c8e8651e5866d15d998598701d9985a8a010900f65820385e7ab1594d114f9a5d60d5a87fe4a70c22875114d448bbbafa3e582cdfa4fdf600f600f6f6f6d9985b83014180f6f6d9985d880100090000f6f6f6\",\"id\":2}\n"
+  },
+  {
+    "name": "included-status",
+    "request": "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"get_inclusion_proof.v2\",\"params\":{\"stateId\":\"72e7d9337db80b150f94e07f9cd82bdf7278593339447ba5c7f4ddc95ab23e99\",\"includeStatus\":true}}",
+    "response": "{\"jsonrpc\":\"2.0\",\"result\":{\"proof\":\"8209d998798501d998778602d99878830141015821031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f5820baa501b37267c06d8d20f316622f90a3e343e9e730771f2ce2e314b794e31853582085e7eac2862f1cbd85bc18769c75172c3fdcd899ab468b9e973d59ec620d99911af486570058416ccd2bd923a58cea875b6a3f59a3a319ef3c0e4010d3c80f176992a089a091852940bcf3d0999d2fe3c1d09da718c94f5a9cba06dfa108ce85dfae6cbe749cb6011a689b2cc058404000000000000000000000000000000000000000000000000000000000000000679badfaa2b85f63e19d30d0271a0107187e3e0fad7e077b8c8e8651e5866d15d998598701d9985a8a010900f65820385e7ab1594d114f9a5d60d5a87fe4a70c22875114d448bbbafa3e582cdfa4fdf600f600f6f6f6d9985b83014180f6f6d9985d880100090000f6f6f6\",\"status\":\"included\"},\"id\":3}\n"
+  },
+  {
+    "name": "included-unknown-extra-field-ignored",
+    "request": "{\"jsonrpc\":\"2.0\",\"id\":4,\"method\":\"get_inclusion_proof.v2\",\"params\":{\"stateId\":\"72e7d9337db80b150f94e07f9cd82bdf7278593339447ba5c7f4ddc95ab23e99\",\"foo\":1}}",
+    "response": "{\"jsonrpc\":\"2.0\",\"result\":\"8209d998798501d998778602d99878830141015821031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f5820baa501b37267c06d8d20f316622f90a3e343e9e730771f2ce2e314b794e31853582085e7eac2862f1cbd85bc18769c75172c3fdcd899ab468b9e973d59ec620d99911af486570058416ccd2bd923a58cea875b6a3f59a3a319ef3c0e4010d3c80f176992a089a091852940bcf3d0999d2fe3c1d09da718c94f5a9cba06dfa108ce85dfae6cbe749cb6011a689b2cc058404000000000000000000000000000000000000000000000000000000000000000679badfaa2b85f63e19d30d0271a0107187e3e0fad7e077b8c8e8651e5866d15d998598701d9985a8a010900f65820385e7ab1594d114f9a5d60d5a87fe4a70c22875114d448bbbafa3e582cdfa4fdf600f600f6f6f6d9985b83014180f6f6d9985d880100090000f6f6f6\",\"id\":4}\n"
+  },
+  {
+    "name": "not-included-bare",
+    "request": "{\"jsonrpc\":\"2.0\",\"id\":5,\"method\":\"get_inclusion_proof.v2\",\"params\":{\"stateId\":\"8ee1651df0e18850a4558df43264565676a14c8963a333283c3cb280d7cb80ad\"}}",
+    "response": "{\"jsonrpc\":\"2.0\",\"result\":\"8209d998798501f6f6f6d998598701d9985a8a010900f65820385e7ab1594d114f9a5d60d5a87fe4a70c22875114d448bbbafa3e582cdfa4fdf600f600f6f6f6d9985b83014180f6f6d9985d880100090000f6f6f6\",\"id\":5}\n"
+  },
+  {
+    "name": "not-included-status-unknown",
+    "request": "{\"jsonrpc\":\"2.0\",\"id\":6,\"method\":\"get_inclusion_proof.v2\",\"params\":{\"stateId\":\"8ee1651df0e18850a4558df43264565676a14c8963a333283c3cb280d7cb80ad\",\"includeStatus\":true}}",
+    "response": "{\"jsonrpc\":\"2.0\",\"result\":{\"proof\":\"8209d998798501f6f6f6d998598701d9985a8a010900f65820385e7ab1594d114f9a5d60d5a87fe4a70c22875114d448bbbafa3e582cdfa4fdf600f600f6f6f6d9985b83014180f6f6d9985d880100090000f6f6f6\",\"status\":\"unknown\"},\"id\":6}\n"
+  },
+  {
+    "name": "pending-hint-without-shortcut-status",
+    "request": "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"get_inclusion_proof.v2\",\"params\":{\"stateId\":\"8ee1651df0e18850a4558df43264565676a14c8963a333283c3cb280d7cb80ad\",\"includeStatus\":true}}",
+    "response": "{\"jsonrpc\":\"2.0\",\"result\":{\"proof\":\"8209d998798501f6f6f6d998598701d9985a8a010900f65820385e7ab1594d114f9a5d60d5a87fe4a70c22875114d448bbbafa3e582cdfa4fdf600f600f6f6f6d9985b83014180f6f6d9985d880100090000f6f6f6\",\"status\":\"pending\"},\"id\":7}\n"
+  },
+  {
+    "name": "expired-hint-status",
+    "request": "{\"jsonrpc\":\"2.0\",\"id\":8,\"method\":\"get_inclusion_proof.v2\",\"params\":{\"stateId\":\"0f5897f9f953e9ee813eeea1d0823a09606e98864c93748282e1846bb5caa941\",\"includeStatus\":true}}",
+    "response": "{\"jsonrpc\":\"2.0\",\"result\":{\"proof\":\"8209d998798501f6f6f6d998598701d9985a8a010900f65820385e7ab1594d114f9a5d60d5a87fe4a70c22875114d448bbbafa3e582cdfa4fdf600f600f6f6f6d9985b83014180f6f6d9985d880100090000f6f6f6\",\"status\":\"expired\"},\"id\":8}\n"
+  },
+  {
+    "name": "expired-hint-bare",
+    "request": "{\"jsonrpc\":\"2.0\",\"id\":9,\"method\":\"get_inclusion_proof.v2\",\"params\":{\"stateId\":\"0f5897f9f953e9ee813eeea1d0823a09606e98864c93748282e1846bb5caa941\"}}",
+    "response": "{\"jsonrpc\":\"2.0\",\"result\":\"8209d998798501f6f6f6d998598701d9985a8a010900f65820385e7ab1594d114f9a5d60d5a87fe4a70c22875114d448bbbafa3e582cdfa4fdf600f600f6f6f6d9985b83014180f6f6d9985d880100090000f6f6f6\",\"id\":9}\n"
+  },
+  {
+    "name": "known-not-ready-bare",
+    "request": "{\"jsonrpc\":\"2.0\",\"id\":10,\"method\":\"get_inclusion_proof.v2\",\"params\":{\"stateId\":\"8ee1651df0e18850a4558df43264565676a14c8963a333283c3cb280d7cb80ad\"}}",
+    "response": "{\"jsonrpc\":\"2.0\",\"result\":\"8209d998798501f6f6f6d998598701d9985a8a010900f65820385e7ab1594d114f9a5d60d5a87fe4a70c22875114d448bbbafa3e582cdfa4fdf600f600f6f6f6d9985b83014180f6f6d9985d880100090000f6f6f6\",\"id\":10}\n"
+  },
+  {
+    "name": "known-not-ready-status",
+    "request": "{\"jsonrpc\":\"2.0\",\"id\":11,\"method\":\"get_inclusion_proof.v2\",\"params\":{\"stateId\":\"8ee1651df0e18850a4558df43264565676a14c8963a333283c3cb280d7cb80ad\",\"includeStatus\":true}}",
+    "response": "{\"jsonrpc\":\"2.0\",\"result\":{\"proof\":\"8209d998798501f6f6f6d998598701d9985a8a010900f65820385e7ab1594d114f9a5d60d5a87fe4a70c22875114d448bbbafa3e582cdfa4fdf600f600f6f6f6d9985b83014180f6f6d9985d880100090000f6f6f6\",\"status\":\"pending\"},\"id\":11}\n"
+  },
+  {
+    "name": "included-wins-over-stale-status",
+    "request": "{\"jsonrpc\":\"2.0\",\"id\":12,\"method\":\"get_inclusion_proof.v2\",\"params\":{\"stateId\":\"72e7d9337db80b150f94e07f9cd82bdf7278593339447ba5c7f4ddc95ab23e99\",\"includeStatus\":true}}",
+    "response": "{\"jsonrpc\":\"2.0\",\"result\":{\"proof\":\"8209d998798501d998778602d99878830141015821031b84c5567b126440995d3ed5aaba0565d71e1834604819ff9c17f5e9d5dd078f5820baa501b37267c06d8d20f316622f90a3e343e9e730771f2ce2e314b794e31853582085e7eac2862f1cbd85bc18769c75172c3fdcd899ab468b9e973d59ec620d99911af486570058416ccd2bd923a58cea875b6a3f59a3a319ef3c0e4010d3c80f176992a089a091852940bcf3d0999d2fe3c1d09da718c94f5a9cba06dfa108ce85dfae6cbe749cb6011a689b2cc058404000000000000000000000000000000000000000000000000000000000000000679badfaa2b85f63e19d30d0271a0107187e3e0fad7e077b8c8e8651e5866d15d998598701d9985a8a010900f65820385e7ab1594d114f9a5d60d5a87fe4a70c22875114d448bbbafa3e582cdfa4fdf600f600f6f6f6d9985b83014180f6f6d9985d880100090000f6f6f6\",\"status\":\"included\"},\"id\":12}\n"
+  },
+  {
+    "name": "no-finalized-view",
+    "request": "{\"jsonrpc\":\"2.0\",\"id\":13,\"method\":\"get_inclusion_proof.v2\",\"params\":{\"stateId\":\"72e7d9337db80b150f94e07f9cd82bdf7278593339447ba5c7f4ddc95ab23e99\"}}",
+    "response": "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32008,\"message\":\"Proof unavailable\",\"data\":{\"reason\":\"proof_unavailable\",\"detail\":\"no_finalized_view\",\"retryable\":true}},\"id\":13}\n"
+  },
+  {
+    "name": "no-finalized-view-status",
+    "request": "{\"jsonrpc\":\"2.0\",\"id\":14,\"method\":\"get_inclusion_proof.v2\",\"params\":{\"stateId\":\"72e7d9337db80b150f94e07f9cd82bdf7278593339447ba5c7f4ddc95ab23e99\",\"includeStatus\":true}}",
+    "response": "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32008,\"message\":\"Proof unavailable\",\"data\":{\"reason\":\"proof_unavailable\",\"detail\":\"no_finalized_view\",\"retryable\":true}},\"id\":14}\n"
+  },
+  {
+    "name": "internal-error-no-tree",
+    "request": "{\"jsonrpc\":\"2.0\",\"id\":15,\"method\":\"get_inclusion_proof.v2\",\"params\":{\"stateId\":\"72e7d9337db80b150f94e07f9cd82bdf7278593339447ba5c7f4ddc95ab23e99\"}}",
+    "response": "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32603,\"message\":\"Failed to get inclusion proof\",\"data\":\"merkle tree not initialized\"},\"id\":15}\n"
+  },
+  {
+    "name": "state-id-too-short",
+    "request": "{\"jsonrpc\":\"2.0\",\"id\":16,\"method\":\"get_inclusion_proof.v2\",\"params\":{\"stateId\":\"abcd\"}}",
+    "response": "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32000,\"message\":\"stateId must be exactly 32 bytes (v2 wire format), got 2\"},\"id\":16}\n"
+  },
+  {
+    "name": "state-id-missing",
+    "request": "{\"jsonrpc\":\"2.0\",\"id\":17,\"method\":\"get_inclusion_proof.v2\",\"params\":{}}",
+    "response": "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32000,\"message\":\"stateId is required\"},\"id\":17}\n"
+  },
+  {
+    "name": "params-not-an-object",
+    "request": "{\"jsonrpc\":\"2.0\",\"id\":18,\"method\":\"get_inclusion_proof.v2\",\"params\":\"x\"}",
+    "response": "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32000,\"message\":\"Invalid parameters: json: cannot unmarshal string into Go value of type api.GetInclusionProofRequestV2\"},\"id\":18}\n"
+  },
+  {
+    "name": "params-array",
+    "request": "{\"jsonrpc\":\"2.0\",\"id\":19,\"method\":\"get_inclusion_proof.v2\",\"params\":[1]}",
+    "response": "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32000,\"message\":\"Invalid parameters: json: cannot unmarshal array into Go value of type api.GetInclusionProofRequestV2\"},\"id\":19}\n"
+  },
+  {
+    "name": "include-status-wrong-type",
+    "request": "{\"jsonrpc\":\"2.0\",\"id\":20,\"method\":\"get_inclusion_proof.v2\",\"params\":{\"stateId\":\"72e7d9337db80b150f94e07f9cd82bdf7278593339447ba5c7f4ddc95ab23e99\",\"includeStatus\":\"yes\"}}",
+    "response": "{\"jsonrpc\":\"2.0\",\"error\":{\"code\":-32000,\"message\":\"Invalid parameters: json: cannot unmarshal string into Go struct field GetInclusionProofRequestV2.includeStatus of type bool\"},\"id\":20}\n"
+  }
+]

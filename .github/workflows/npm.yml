@@ -26,6 +26,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install the released 3.0.1 package for the compatibility runner
+        run: |
+          npm ci --ignore-scripts
+          node check-integrity.mjs
+        working-directory: compat/released-3.0.1
+
       - name: Build
         run: npm run build
 
