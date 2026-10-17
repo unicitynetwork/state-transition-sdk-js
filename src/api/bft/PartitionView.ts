@@ -134,10 +134,11 @@ export class PartitionViewLeaf {
       throw new PartitionViewError('bounds', 'Input record block hash is nil but state hash changed.');
     }
 
-    if (ir.summaryValue.length > PartitionView.MAX_SUMMARY_VALUE_BYTES) {
+    const summaryLength = ir.nullableSummaryValue?.length ?? 0;
+    if (summaryLength > PartitionView.MAX_SUMMARY_VALUE_BYTES) {
       throw new PartitionViewError(
         'bounds',
-        `Summary value is ${ir.summaryValue.length} bytes, limit is ${PartitionView.MAX_SUMMARY_VALUE_BYTES}.`,
+        `Summary value is ${summaryLength} bytes, limit is ${PartitionView.MAX_SUMMARY_VALUE_BYTES}.`,
       );
     }
     for (const [name, value] of [

@@ -12,8 +12,12 @@ export class JsonRpcDataError extends Error {
   /**
    * JSON-RPC error object constructor.
    * @param {{code: number; message: string; data?: unknown}} data Error data.
+   * @param {boolean} idMatched Whether the envelope carried the id of the request (false: a null id).
    */
-  public constructor({ code, data, message }: { code: number; data?: unknown; message: string }) {
+  public constructor(
+    { code, data, message }: { code: number; data?: unknown; message: string },
+    public readonly idMatched: boolean = true,
+  ) {
     super(message);
     this.code = code;
     this.data = data;

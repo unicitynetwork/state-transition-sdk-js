@@ -1,0 +1,110 @@
+{
+  "before-epoch-start": {
+    "description": "authority whose epoch starts after the certified round",
+    "trustBase": "authority/late-epoch-start.cbor",
+    "trustBaseJson": "authority/late-epoch-start.json",
+    "partition": 161,
+    "nextEpochStart": "0",
+    "minRootRound": "0",
+    "shardConfHash": ""
+  },
+  "config-pin-ok": {
+    "description": "pins the shard configuration hash of the corpus partition",
+    "trustBase": "authority/trust-base.cbor",
+    "trustBaseJson": "authority/trust-base.json",
+    "partition": 161,
+    "nextEpochStart": "0",
+    "minRootRound": "0",
+    "shardConfHash": "24ac52eb429d1e0d4acc9f14e60ee6e1ebcc9b83b7e0449cb9a51df4cbf26762"
+  },
+  "config-pin-other": {
+    "description": "pins another shard configuration hash",
+    "trustBase": "authority/trust-base.cbor",
+    "trustBaseJson": "authority/trust-base.json",
+    "partition": 161,
+    "nextEpochStart": "0",
+    "minRootRound": "0",
+    "shardConfHash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  },
+  "default": {
+    "description": "trusted authority of the fixture network, the corpus partition, no end boundary, no freshness requirement",
+    "trustBase": "authority/trust-base.cbor",
+    "trustBaseJson": "authority/trust-base.json",
+    "partition": 161,
+    "nextEpochStart": "0",
+    "minRootRound": "0",
+    "shardConfHash": ""
+  },
+  "epoch-end-after": {
+    "description": "authenticated end of the epoch is after the certified round (still valid)",
+    "trustBase": "authority/trust-base.cbor",
+    "trustBaseJson": "authority/trust-base.json",
+    "partition": 161,
+    "nextEpochStart": "7",
+    "minRootRound": "0",
+    "shardConfHash": ""
+  },
+  "epoch-end-at-round": {
+    "description": "the next epoch starts at the certified round: the seal is at the retirement boundary and not valid",
+    "trustBase": "authority/trust-base.cbor",
+    "trustBaseJson": "authority/trust-base.json",
+    "partition": 161,
+    "nextEpochStart": "6",
+    "minRootRound": "0",
+    "shardConfHash": ""
+  },
+  "fresh-enough": {
+    "description": "requires a root round not above the certified one",
+    "trustBase": "authority/trust-base.cbor",
+    "trustBaseJson": "authority/trust-base.json",
+    "partition": 161,
+    "nextEpochStart": "0",
+    "minRootRound": "6",
+    "shardConfHash": ""
+  },
+  "too-stale": {
+    "description": "requires a root round above the certified one",
+    "trustBase": "authority/trust-base.cbor",
+    "trustBaseJson": "authority/trust-base.json",
+    "partition": 161,
+    "nextEpochStart": "0",
+    "minRootRound": "7",
+    "shardConfHash": ""
+  },
+  "untrusted-authority": {
+    "description": "a different authority (other keys, same network and node IDs)",
+    "trustBase": "authority/untrusted-keys.cbor",
+    "trustBaseJson": "authority/untrusted-keys.json",
+    "partition": 161,
+    "nextEpochStart": "0",
+    "minRootRound": "0",
+    "shardConfHash": ""
+  },
+  "wrong-epoch": {
+    "description": "authority of the next epoch with the same keys: seals of epoch 1 must not verify",
+    "trustBase": "authority/other-epoch.cbor",
+    "trustBaseJson": "authority/other-epoch.json",
+    "partition": 161,
+    "nextEpochStart": "0",
+    "minRootRound": "0",
+    "shardConfHash": ""
+  },
+  "wrong-network": {
+    "description": "authority of another network with the same keys and node IDs",
+    "trustBase": "authority/other-network.cbor",
+    "trustBaseJson": "authority/other-network.json",
+    "partition": 161,
+    "nextEpochStart": "0",
+    "minRootRound": "0",
+    "shardConfHash": ""
+  },
+  "wrong-partition": {
+    "description": "expects another application partition",
+    "trustBase": "authority/trust-base.cbor",
+    "trustBaseJson": "authority/trust-base.json",
+    "partition": 162,
+    "nextEpochStart": "0",
+    "minRootRound": "0",
+    "shardConfHash": ""
+  }
+}

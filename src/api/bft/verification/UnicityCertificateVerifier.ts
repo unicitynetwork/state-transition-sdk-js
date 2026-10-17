@@ -159,8 +159,11 @@ export class OperationUnicityCertificateVerifier extends UnicityCertificateVerif
   private static readonly MAX_BODIES = 256;
 
   private readonly bodies = new Map<string, VerificationResult<VerificationStatus>>();
+
   private readonly counters = { bodyChecks: 0, bodyHits: 0, encodes: 0 };
+
   private readonly inFlight = new Map<string, Promise<VerificationResult<VerificationStatus>>>();
+
   private readonly sessions = new Map<RootTrustBase, SealVerificationSession>();
 
   /**
@@ -203,6 +206,17 @@ export class OperationUnicityCertificateVerifier extends UnicityCertificateVerif
    */
   public override beginOperation(): OperationUnicityCertificateVerifier {
     return this;
+  }
+
+  /**
+   * The operation's seal session for a trust base (created on first use): whoever authenticates seals strictly in this
+   * operation, e.g. `verifyNonInclusion`, shares the quorum checks of the proofs verified through this verifier.
+   *
+   * @param {RootTrustBase} trustBase Trusted authority.
+   * @returns {SealVerificationSession} The session.
+   */
+  public sessionFor(trustBase: RootTrustBase): SealVerificationSession {
+    return this.session(trustBase);
   }
 
   /**

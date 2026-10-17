@@ -93,11 +93,12 @@ export class InclusionProofVerificationRule {
 
     const stateId = await StateId.fromCertificationData(certificationData);
     const leafValue = await calculateLeafValue(certificationData.transactionHash, referenceTime);
-    const result = await inclusionProof.inclusionCertificate.verify(
-      stateId,
-      leafValue,
-      new DataHash(HashAlgorithm.SHA256, inclusionProof.unicityCertificate.inputRecord.hash),
-    );
+    // inclusion is rooted in a 32-byte state hash: an authenticated null (the empty tree) or an empty byte string
+    // contains no leaf and is never read as a root
+    const root = inclusionProof.unicityCertificate.inputRecord.nullableHash;
+    const result =
+      root?.length === 32 &&
+      (await inclusionProof.inclusionCertificate.verify(stateId, leafValue, new DataHash(HashAlgorithm.SHA256, root)));
     if (!result) {
       return new VerificationResult('InclusionProofVerificationRule', InclusionProofVerificationStatus.PATH_INVALID);
     }

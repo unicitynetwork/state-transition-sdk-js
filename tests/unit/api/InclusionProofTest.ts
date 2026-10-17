@@ -25,6 +25,7 @@ import {
   InclusionProofVerificationStatus,
 } from '../../../src/transaction/verification/rule/InclusionProofVerificationRule.js';
 import { HexConverter } from '../../../src/util/HexConverter.js';
+import { VerificationStatus } from '../../../src/verification/VerificationStatus.js';
 import { expiresAt } from '../../utils/ExpiresAt.js';
 import { REFERENCE_TIME } from '../../utils/ReferenceTime.js';
 import { createRootTrustBase } from '../../utils/RootTrustBaseFixture.js';
@@ -320,5 +321,31 @@ describe('InclusionProof', () => {
         transaction.sourceStateHash,
       ).then((result) => result.status),
     ).resolves.toEqual(InclusionProofVerificationStatus.INVALID_TRUSTBASE);
+  });
+
+  // The state root of an inclusion is a 32-byte hash. The authenticated empty tree (native null), an empty byte string
+  // and a short root contain no leaf: a typed verdict, never an exception and never a root read as empty.
+  it.each([
+    ['null (the empty tree)', null],
+    ['the empty byte string', new Uint8Array(0)],
+    ['a 31-byte root', new Uint8Array(31).fill(1)],
+  ])('verification fails with PATH_INVALID for a signed unicity certificate with root %s', async (_name, root) => {
+    const uc = await createUnicityCertificate(root, signingService);
+    // the certificate itself is genuine: only the root is not an inclusion root
+    const proof = new InclusionProof(certificationData, REFERENCE_TIME, inclusionCertificate, uc);
+    expect((await unicityCertificateVerifier.verify(trustBase, proof)).status).toEqual(VerificationStatus.OK);
+    expect(uc.inputRecord.nullableHash === null).toEqual(root === null);
+
+    const result = await InclusionProofVerificationRule.verify(
+      trustBase,
+      predicateVerifier,
+      unicityCertificateVerifier,
+      proof,
+      await transaction.calculateTransactionHash(),
+      transaction.expiresAt,
+      transaction.lockScript,
+      transaction.sourceStateHash,
+    );
+    expect(result.status).toEqual(InclusionProofVerificationStatus.PATH_INVALID);
   });
 });

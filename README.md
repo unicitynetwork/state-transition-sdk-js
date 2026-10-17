@@ -183,6 +183,21 @@ for the empty shard with an empty shard path under the same pins, path and stric
 without its view stays `unavailable` (`partition_view_unavailable`), and there is no option to relax it.
 See the [consolidation example](./tests/examples/consolidation/ExampleTest.ts).
 
+### Non-inclusion (absence at a certified snapshot)
+
+`AggregatorClient.getNonInclusionProof(stateId, { signal })` calls `get_non_inclusion_proof.v1` once (no polling) and returns
+either an unverified `NonInclusionProof` (bound to the state you asked about, never read from the wire) or
+`{ kind: 'state_included_hint' }`, the service's **unauthenticated** claim that the state is included (ask for an inclusion
+proof and verify that). `verifyNonInclusion(proof, { trustBase, unicityCertificateVerifier }, { expectedPartition, minRound?,
+nextEpochStartRound?, shardConfigurationHash? })` authenticates the unicity certificate (empty shard id and path, partition,
+strict seal authentication: network, exact epoch, epoch start, quorum) and the state tree path, and returns a
+`VerificationResult` whose `absence` (`VerifiedAbsence`, only obtainable there) says the state was **absent at that round's
+snapshot**. That is a historical fact: not current absence and not spendability. An authenticated snapshot older than
+`minRound` is `stale`, never accepted. Failures of the request are one `NonInclusionProofError` (`kind`, `retryable`; on
+cancellation `cause` is your `signal.reason`); the same service codes (`-32020` unavailable, `-32022` included claim,
+`-32023` busy) are recognized over HTTP 200, 404, 409 and 429. `fetchMembershipEvidence` is two independent calls, not atomic,
+and returns unverified evidence. The shared corpus is `tests/fixtures/non-inclusion/v1` (from aggregator-go).
+
 ## Security
 
 Unicity Proofs provide independently verifiable evidence of certified state transitions being unique, backed by the network's Byzantine fault tolerant consensus. Together with ownership verification, they protect against double-spending without publishing token contents to a public ledger.

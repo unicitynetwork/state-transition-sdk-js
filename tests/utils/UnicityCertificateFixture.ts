@@ -15,11 +15,21 @@ import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
 import { CborSerializer } from '../../src/serialization/cbor/CborSerializer.js';
 
 export async function createUnicityCertificate(
-  rootHash: DataHash,
+  rootHash: DataHash | Uint8Array | null,
   signingService: SigningService,
   timestamp: bigint = REFERENCE_TIME,
 ): Promise<UnicityCertificate> {
-  const inputRecord = new InputRecord(0n, 0n, null, rootHash.data, new Uint8Array(0), timestamp, null, 0n, null);
+  const inputRecord = new InputRecord(
+    0n,
+    0n,
+    null,
+    rootHash instanceof DataHash ? rootHash.data : rootHash,
+    new Uint8Array(0),
+    timestamp,
+    null,
+    0n,
+    null,
+  );
   const technicalRecordHash = null;
   const shardConfigurationHash = new Uint8Array(32);
   const shardTreeCertificate = new ShardTreeCertificate(ShardId.decode(new Uint8Array([0b10000000])), []);

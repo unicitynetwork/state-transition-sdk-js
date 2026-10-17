@@ -1,0 +1,68 @@
+{
+  "description": "latest batch absence details (#209). Precedence unknown \u003e expired \u003e pending selects data.detail; data.indexes lists the zero-based request positions per class, ascending, at most 256 in total. Hints are node-local and unauthenticated. Exact-root absence is state_not_in_root whatever the live pending state.",
+  "examples": [
+    {
+      "code": -32008,
+      "data": {
+        "detail": "state_pending",
+        "indexes": {
+          "pending": [
+            1,
+            3
+          ]
+        },
+        "reason": "proof_unavailable",
+        "retryable": true
+      },
+      "name": "pending-only"
+    },
+    {
+      "code": -32008,
+      "data": {
+        "detail": "state_unknown",
+        "indexes": {
+          "expired": [
+            2
+          ],
+          "pending": [
+            0
+          ],
+          "unknown": [
+            1,
+            4
+          ]
+        },
+        "reason": "proof_unavailable",
+        "retryable": false
+      },
+      "name": "mixed-unknown-wins"
+    },
+    {
+      "code": -32008,
+      "data": {
+        "detail": "state_expired",
+        "indexes": {
+          "expired": [
+            2
+          ],
+          "pending": [
+            0
+          ]
+        },
+        "reason": "proof_unavailable",
+        "retryable": false
+      },
+      "name": "expired-over-pending"
+    },
+    {
+      "code": -32008,
+      "data": {
+        "detail": "state_not_in_root",
+        "indexes": {},
+        "reason": "proof_unavailable",
+        "retryable": false
+      },
+      "name": "exact-root-absent"
+    }
+  ]
+}

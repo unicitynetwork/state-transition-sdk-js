@@ -1,0 +1,165 @@
+{
+  "cases": [
+    {
+      "name": "result-200",
+      "httpStatus": 200,
+      "requestId": 7,
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":\"00\"}",
+      "expected": "result",
+      "note": "the result string is decoded by the wrapper rules"
+    },
+    {
+      "name": "not-found-404",
+      "httpStatus": 404,
+      "requestId": 7,
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"error\":{\"code\":-32020,\"message\":\"not found\"}}",
+      "expected": "unavailable",
+      "note": "rugregator: no certified snapshot"
+    },
+    {
+      "name": "not-found-200",
+      "httpStatus": 200,
+      "requestId": 7,
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"error\":{\"code\":-32020,\"message\":\"not found\"}}",
+      "expected": "unavailable",
+      "note": "aggregator-go transport: the same code in a 200"
+    },
+    {
+      "name": "state-included-200",
+      "httpStatus": 200,
+      "requestId": 7,
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"error\":{\"code\":-32022,\"message\":\"state included\"}}",
+      "expected": "state_included",
+      "note": "false at the selected root; not a cryptographic statement"
+    },
+    {
+      "name": "state-included-409",
+      "httpStatus": 409,
+      "requestId": 7,
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"error\":{\"code\":-32022,\"message\":\"state included\"}}",
+      "expected": "state_included",
+      "note": "the code decides, not the status"
+    },
+    {
+      "name": "busy-429",
+      "httpStatus": 429,
+      "requestId": 7,
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"error\":{\"code\":-32023,\"message\":\"busy\"}}",
+      "expected": "busy",
+      "note": "retryable"
+    },
+    {
+      "name": "busy-200",
+      "httpStatus": 200,
+      "requestId": 7,
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"error\":{\"code\":-32023,\"message\":\"busy\"}}",
+      "expected": "busy"
+    },
+    {
+      "name": "invalid-params",
+      "httpStatus": 200,
+      "requestId": 7,
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"error\":{\"code\":-32602,\"message\":\"invalid params\"}}",
+      "expected": "invalid_params"
+    },
+    {
+      "name": "method-not-found",
+      "httpStatus": 200,
+      "requestId": 7,
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"error\":{\"code\":-32601,\"message\":\"method not found\"}}",
+      "expected": "method_not_found"
+    },
+    {
+      "name": "internal-500",
+      "httpStatus": 500,
+      "requestId": 7,
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"error\":{\"code\":-32603,\"message\":\"internal\"}}",
+      "expected": "internal",
+      "note": "message is not trusted diagnostics"
+    },
+    {
+      "name": "unknown-code",
+      "httpStatus": 200,
+      "requestId": 7,
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"error\":{\"code\":-32099,\"message\":\"x\"}}",
+      "expected": "rpc_error:-32099",
+      "note": "unknown codes are preserved, never mapped to absence"
+    },
+    {
+      "name": "string-data",
+      "httpStatus": 429,
+      "requestId": 7,
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"error\":{\"code\":-32023,\"message\":\"busy\",\"data\":\"limit\"}}",
+      "expected": "busy",
+      "note": "data may be a string (rugregator) or an object (aggregator-go)"
+    },
+    {
+      "name": "object-data",
+      "httpStatus": 200,
+      "requestId": 7,
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"error\":{\"code\":-32023,\"message\":\"busy\",\"data\":{\"reason\":\"busy\",\"detail\":\"active_requests\",\"retryable\":true}}}",
+      "expected": "busy"
+    },
+    {
+      "name": "proxy-html-404",
+      "httpStatus": 404,
+      "requestId": 7,
+      "body": "\u003chtml\u003e\u003cbody\u003e404 Not Found\u003c/body\u003e\u003c/html\u003e",
+      "expected": "transport_error",
+      "note": "a bare proxy 404 is not proof-service unavailability"
+    },
+    {
+      "name": "empty-body-429",
+      "httpStatus": 429,
+      "requestId": 7,
+      "body": "",
+      "expected": "transport_error"
+    },
+    {
+      "name": "wrong-id",
+      "httpStatus": 200,
+      "requestId": 7,
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":8,\"error\":{\"code\":-32022,\"message\":\"state included\"}}",
+      "expected": "transport_error",
+      "note": "the id is validated before the error is interpreted"
+    },
+    {
+      "name": "wrong-version",
+      "httpStatus": 200,
+      "requestId": 7,
+      "body": "{\"jsonrpc\":\"1.0\",\"id\":7,\"result\":\"00\"}",
+      "expected": "transport_error"
+    },
+    {
+      "name": "result-and-error",
+      "httpStatus": 200,
+      "requestId": 7,
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":\"00\",\"error\":{\"code\":-32020,\"message\":\"x\"}}",
+      "expected": "transport_error",
+      "note": "exclusive result/error"
+    },
+    {
+      "name": "neither",
+      "httpStatus": 200,
+      "requestId": 7,
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7}",
+      "expected": "transport_error"
+    },
+    {
+      "name": "non-integer-code",
+      "httpStatus": 200,
+      "requestId": 7,
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"error\":{\"code\":\"-32020\",\"message\":\"x\"}}",
+      "expected": "transport_error"
+    },
+    {
+      "name": "result-not-a-string",
+      "httpStatus": 200,
+      "requestId": 7,
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"proof\":\"00\"}}",
+      "expected": "transport_error",
+      "note": "the result of this method is a string"
+    }
+  ],
+  "description": "client classification of the responses of get_non_inclusion_proof.v1 (requests carry id 7); expected values: result, unavailable, state_included, busy, invalid_params, method_not_found, internal, rpc_error:\u003ccode\u003e, transport_error"
+}
