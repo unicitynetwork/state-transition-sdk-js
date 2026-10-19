@@ -496,7 +496,7 @@ With `statusHints` enabled, `waitInclusionProof` requests the hint on every poll
 
 #### Long polling
 
-With the options form, `waitInclusionProof` also asks the aggregator to hold each request while the state is pending (`waitMs`). This means fewer requests and an earlier answer after certification. Each wait is sized from the time left: `timeoutMs` is the total budget (default 10 s when neither `signal` nor `timeoutMs` is given). A `signal` alone does not tell how much time is left, so the full 20 s window is requested and the wait stops when the signal fires. `longPoll: false` polls as in 3.0; `longPoll: { windowMs, marginMs }` tunes the window. The positional form never long polls.
+With the options form, `waitInclusionProof` also asks the aggregator to hold each request while the state is pending (`waitMs`). This means fewer requests and an earlier answer after certification. Each wait is sized from the time left: `timeoutMs` is the total budget (default 15 s when neither `signal` nor `timeoutMs` is given). A `signal` alone does not tell how much time is left, so the full 20 s window is requested and the wait stops when the signal fires. `longPoll: false` polls as in 3.0; `longPoll: { windowMs, marginMs }` tunes the window. The positional form never long polls.
 
 The aggregator echoes the time it waited in `response.waitedMs`. The echo is unauthenticated metadata: it never extends a deadline and never replaces proof verification. A missing or zero echo makes the rest of that call poll at `intervalMs`; nothing is cached across calls.
 

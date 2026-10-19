@@ -91,13 +91,13 @@ describe('waitInclusionProof long poll', () => {
       call >= n ? boom() : answer;
 
   describe('request options', () => {
-    it('long polls by default: a wait that fits the 10s default budget less the 2s margin', async () => {
-      const client = new Scripted([endsAt(2, pending(8000))]);
+    it('long polls by default: a wait that fits the 15s default budget less the 2s margin', async () => {
+      const client = new Scripted([endsAt(2, pending(13_000))]);
       await expect(run(client, { intervalMs: 1 })).rejects.toThrow('boom');
       const first = client.calls[0].options;
       expect(first?.includeStatusHint).toBe(true);
-      expect(first?.waitMs).toBeLessThanOrEqual(8000);
-      expect(first?.waitMs).toBeGreaterThan(7000);
+      expect(first?.waitMs).toBeLessThanOrEqual(13_000);
+      expect(first?.waitMs).toBeGreaterThan(12_000);
       expect(Number.isInteger(first?.waitMs)).toBe(true);
       // the next wait is sized from what is left, never renewed
       expect(client.calls[1].options?.waitMs).toBeLessThanOrEqual(first?.waitMs as number);
@@ -116,7 +116,7 @@ describe('waitInclusionProof long poll', () => {
       expect(windowed.calls[0].options?.waitMs).toBe(400);
     });
 
-    it('asks for the preferred window of a signal-only caller, not for the 10s default', async () => {
+    it('asks for the preferred window of a signal-only caller, not for the 15s default', async () => {
       const controller = new AbortController();
       const client = new Scripted([endsAt(2, pending(20_000))]);
       await expect(run(client, { intervalMs: 1, signal: controller.signal })).rejects.toThrow('boom');
