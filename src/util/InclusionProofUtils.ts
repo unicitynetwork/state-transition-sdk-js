@@ -69,7 +69,7 @@ export interface IWaitInclusionProofOptions {
   readonly unknownGraceMs?: number;
 }
 
-/** Budget of a wait that has neither a signal nor a `timeoutMs`: the behavior of SDK 3.0. */
+/** Budget of a wait that has neither a signal nor a `timeoutMs`: 15 s. */
 const DEFAULT_BUDGET_MS = 15_000;
 /** Pause that a long poll never undercuts, so that an instant or zero echo cannot make a tight loop. */
 const MIN_POLL_GAP_MS = 10;
@@ -203,7 +203,7 @@ export function waitInclusionProof(
   options?: IWaitInclusionProofOptions,
 ): Promise<InclusionProof>;
 /**
- * @deprecated Positional form of SDK 3.0, kept as it was (no status hints, they need the options form): pass
+ * @deprecated Positional form, kept (default budget 15 s, no status hints, they need the options form): pass
  *   `{ signal, intervalMs }` instead.
  * @param {StateTransitionClient} client Client used to fetch inclusion proofs.
  * @param {RootTrustBase} trustBase Root trust base used to verify the inclusion certificate.
