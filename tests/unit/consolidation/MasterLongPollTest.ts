@@ -103,6 +103,33 @@ describe('consolidation masterLongPoll', () => {
     expect(seen[0].waitMs).toBeLessThanOrEqual(4500);
   });
 
+  it('cuts a hung master call at wait plus margin, not at the attempt deadline', async () => {
+    const s = await scenario(0);
+    const token = await s.history(3);
+    const routing = new ShardRouting({
+      endpoints: s.world.bits.map((bits) => {
+        const real = s.world.client(bits);
+        const client: IBatchAggregatorClient = {
+          getInclusionProof: (id, options) => real.getInclusionProof(id, options),
+          getInclusionProofs: (_ids, options) =>
+            new Promise((_resolve, reject) => {
+              options?.signal?.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
+            }),
+          submitCertificationRequest: (data) => real.submitCertificationRequest(data),
+        };
+        return { client, shard: shardIdFromBits(bits) };
+      }),
+      scheme: s.world.scheme,
+    });
+    const started = performance.now();
+    const failure = await new TokenProofClient({ routing, verificationContext: s.context })
+      .consolidate(token, { masterLongPoll: { marginMs: 200, windowMs: 300 }, timeoutMs: 10_000 })
+      .catch((e: unknown) => e);
+    expect(failure).toBeInstanceOf(ConsolidationError);
+    expect((failure as ConsolidationError).kind).toBe('timeout');
+    expect(performance.now() - started).toBeLessThan(3000);
+  });
+
   it('false and a zero window send nothing, so no negotiation cost', async () => {
     const s = await scenario(0);
     const token = await s.history(3);
