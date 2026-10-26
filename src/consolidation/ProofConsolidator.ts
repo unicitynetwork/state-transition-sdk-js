@@ -27,7 +27,7 @@ import { NetworkId } from '../api/NetworkId.js';
 import { StateId } from '../api/StateId.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
-import { abortable, SleepError } from '../internal/abortable.js';
+import { abortable, joinSignals, SleepError } from '../internal/abortable.js';
 import { longPollSettings, longPollWindow } from '../internal/longPoll.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
 import { VerificationStatus } from '../verification/VerificationStatus.js';
@@ -296,11 +296,19 @@ export class ProofConsolidator {
     this.pins = new Map(routing.shardConfigurationPins?.map((pin) => [pin.shard.toString(), pin.hash]));
   }
 
-  /** The wait that fits the attempt deadline, or none: `min(window, left - margin)`. */
-  private static masterWait(option: boolean | ILongPollOptions | undefined, clock: AttemptClock): number | undefined {
+  /**
+   * The wait that fits the attempt deadline, or none: `min(window, left - margin)`, with the transport timeout of the
+   * call that carries it: `wait + margin`, never more than the attempt has left.
+   */
+  private static masterWait(
+    option: boolean | ILongPollOptions | undefined,
+    clock: AttemptClock,
+  ): { readonly callTimeoutMs: number; readonly waitMs: number } | undefined {
     const settings = longPollSettings(option, false);
-    const wait = settings === null ? 0 : longPollWindow(settings, clock.remainingMs());
-    return wait > 0 ? wait : undefined;
+    const waitMs = settings === null ? 0 : longPollWindow(settings, clock.remainingMs());
+    return settings === null || waitMs <= 0
+      ? undefined
+      : { callTimeoutMs: Math.min(waitMs + settings.marginMs, clock.remainingMs()), waitMs };
   }
 
   private static requestFailure(
@@ -590,19 +598,38 @@ export class ProofConsolidator {
     clock: AttemptClock,
     role: 'master' | 'peer',
     signal: AbortSignal = clock.signal,
-    waitMs?: number,
+    wait?: { readonly callTimeoutMs: number; readonly waitMs: number },
   ): Promise<IShardBatch> {
     clock.throwIfDone();
     const ids = group.indexes.map((i) => stateIds[i]);
     // only the latest request of the master can wait: an exact root is never waited on
-    const requestOptions: IBatchRequestOptions =
-      waitMs === undefined || root !== undefined ? { signal, stateRoot: root } : { signal, stateRoot: root, waitMs };
+    const waits = wait !== undefined && root === undefined;
+    const requestOptions: IBatchRequestOptions = waits
+      ? { signal, stateRoot: root, waitMs: wait.waitMs }
+      : { signal, stateRoot: root };
+    // a call that waits is cut at wait + margin, not only at the attempt deadline
+    let callTimedOut = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let joined: { signal: AbortSignal; dispose(): void } | undefined;
+    let callSignal = signal;
+    if (waits) {
+      const transport = new AbortController();
+      timer = setTimeout(() => {
+        callTimedOut = true;
+        transport.abort();
+      }, wait.callTimeoutMs);
+      joined = joinSignals(signal, transport.signal);
+      callSignal = joined.signal;
+    }
     try {
       // raced against the signal: a transport that ignores it cannot hang the attempt past its deadline
       const client = group.endpoint.client as unknown as {
         getInclusionProofs(ids: readonly StateId[], options: IBatchRequestOptions): Promise<InclusionProofBatch>;
       };
-      const batch = await abortable((s) => client.getInclusionProofs(ids, { ...requestOptions, signal: s }), signal);
+      const batch = await abortable(
+        (s) => client.getInclusionProofs(ids, { ...requestOptions, signal: s }),
+        callSignal,
+      );
       clock.throwIfDone();
       if (batch.proofs.length !== ids.length) {
         throw new ConsolidationError(
@@ -613,7 +640,17 @@ export class ProofConsolidator {
       }
       return { batch, group };
     } catch (e) {
+      if (callTimedOut && clock.done() === null) {
+        throw new ConsolidationError('timeout', 'The master call outlived its wait plus margin.', {
+          cause: e,
+          retryable: true,
+          shard: group.endpoint.shard,
+        });
+      }
       throw ProofConsolidator.requestFailure(e, group.endpoint.shard, role, clock, group.indexes);
+    } finally {
+      clearTimeout(timer);
+      joined?.dispose();
     }
   }
 
