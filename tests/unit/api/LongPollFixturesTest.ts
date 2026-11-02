@@ -244,6 +244,65 @@ describe('long-poll A0 fixtures', () => {
     });
   });
 
+  describe('echo.json invalid-waitMs answers (T2, injected replies)', () => {
+    // The SDK rejects an invalid waitMs locally, so these requests cannot be built from the typed API. What is tested here
+    // is how a valid, locally validated wait request decodes the server's invalid-wait answers: an echoed rejection
+    // (waitedMs: 0) is final and never retried without waitMs, a preflight rejection carries no echo.
+    const all = json<{ cases: IEchoCase[] }>('echo.json').cases.filter(
+      (c) => c.name.startsWith('batch/invalid-wait') || c.name.startsWith('v2/error-invalid-wait'),
+    );
+    const echoed = (c: IEchoCase): boolean => JSON.stringify(c.response).includes('waitedMs');
+
+    it('has echoed and preflight cases for both methods', () => {
+      for (const method of ['get_inclusion_proof.v2', 'get_inclusion_proofs.v1']) {
+        const own = all.filter((c) => c.request.method === method);
+        expect(own.filter(echoed).length).toBeGreaterThan(3);
+        expect(own.filter((c) => !echoed(c)).length).toBeGreaterThan(0);
+      }
+    });
+
+    it.each(all.filter((c) => c.request.method === 'get_inclusion_proof.v2' && echoed(c)))(
+      'v2 echoed rejection is final: $name',
+      async (c) => {
+        const { bodies } = serve(c.response);
+        const outcome = await settle(client.getInclusionProof(stateId, { waitMs: 5000 }));
+        expect(bodies).toHaveLength(1);
+        expect(outcome).toBeInstanceOf(JsonRpcDataError);
+        expect((outcome as JsonRpcDataError).code).toBe(c.response.error?.code);
+        expect((outcome as JsonRpcDataError).data).toEqual({ waitedMs: 0 });
+      },
+    );
+
+    it.each(all.filter((c) => c.request.method === 'get_inclusion_proofs.v1' && echoed(c)))(
+      'batch echoed rejection is final, never retried without waitMs: $name',
+      async (c) => {
+        const { bodies } = serve(c.response);
+        const outcome = await settle(client.getInclusionProofs([stateId], { waitMs: 5000 }));
+        expect(bodies).toHaveLength(1);
+        expect(bodies[0].params.waitMs).toBe(5000);
+        expect(outcome).toBeInstanceOf(BatchProofError);
+        expect((outcome as BatchProofError).code).toBe(c.response.error?.code);
+        expect((outcome as BatchProofError).waitedMs).toBe(0);
+      },
+    );
+
+    it.each(all.filter((c) => !echoed(c)))('a preflight rejection has no echo and is not retried: $name', async (c) => {
+      const { bodies } = serve(c.response);
+      const outcome = await settle(
+        c.request.method === 'get_inclusion_proofs.v1'
+          ? client.getInclusionProofs([stateId], { waitMs: 5000 })
+          : client.getInclusionProof(stateId, { waitMs: 5000 }),
+      );
+      expect(bodies).toHaveLength(1);
+      expect(outcome).toMatchObject({ code: c.response.error?.code });
+      expect((outcome as { waitedMs?: number | null }).waitedMs ?? null).toBeNull();
+      if (c.request.method === 'get_inclusion_proof.v2') {
+        expect(outcome).toBeInstanceOf(JsonRpcDataError);
+        expect(Object.prototype.hasOwnProperty.call((outcome as JsonRpcDataError).data ?? {}, 'waitedMs')).toBe(false);
+      }
+    });
+  });
+
   describe('capability.json (T8)', () => {
     const cases = json<{ cases: ICapabilityCase[] }>('capability.json').cases;
     const byName = (name: string): ICapabilityCase => cases.find((c) => c.name === name) as ICapabilityCase;
