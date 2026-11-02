@@ -1,5 +1,5 @@
 {
-  "note": "Frozen wire examples of the long-poll response metadata (revision 3 section 3). Responses are JSON values: member order is not significant; Go emits existing members first, then status, then waitedMs. Proof hex is real, from the golden fixtures. waitedMs values are illustrative; the contract is presence, type (non-negative integer) and placement. A0 only reserves the request field: no server emits these yet.",
+  "note": "Frozen wire examples of the long-poll response metadata (revision 3 section 3). Responses are JSON values: member order is not significant; Go emits existing members first, then status, then waitedMs. Proof hex is real, from the golden fixtures. waitedMs values are illustrative; the contract is presence, type (non-negative integer) and placement. The echo means the server recognizes the waitMs extension, not that the value was valid or that anything waited: every validation error of a wait-bearing call, an invalid or duplicate waitMs included, echoes zero. Requests rejected by preflight (request bytes, params bytes, RPC ID) and anything before method dispatch carry no echo. Cases may carry rawParams or rawRequest, the exact text of what cannot be expressed as a parsed JSON object (duplicates, escaped member names); their request member is then a lossy rendering. Revision 4 (invalid-waitMs echo ruling, 2026-11-02).",
   "cases": [
     {
       "name": "v2/no-wait-bare",
@@ -268,7 +268,7 @@
       "note": "Absent old data becomes an object holding the echo. Once the method recognizes a wait-bearing params object its validation errors echo zero."
     },
     {
-      "name": "v2/error-invalid-wait-has-no-echo",
+      "name": "v2/error-invalid-wait-echoes-zero",
       "request": {
         "jsonrpc": "2.0",
         "id": 13,
@@ -282,11 +282,166 @@
         "jsonrpc": "2.0",
         "error": {
           "code": -32000,
-          "message": "Invalid parameters: waitMs must be a non-negative integer no greater than 9007199254740991"
+          "message": "Invalid parameters: waitMs must be a non-negative integer no greater than 9007199254740991",
+          "data": {
+            "waitedMs": 0
+          }
         },
         "id": 13
       },
-      "note": "An invalid waitMs is not a recognized wait: no echo. (Message text is Go specific; the code is the contract.)"
+      "note": "A present but invalid waitMs is still a recognized wait-bearing params object: the validation error echoes zero. The echo says the server understands waitMs, not that the value was accepted or that anything waited, so an echoed rejection is never retried without waitMs. An invalid waitMs never waits. (Message text is Go specific; the code is the contract.)"
+    },
+    {
+      "name": "v2/error-invalid-wait-duplicate-echoes-zero",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 40,
+        "method": "get_inclusion_proof.v2",
+        "params": {
+          "stateId": "abababababababababababababababababababababababababababababababab",
+          "waitMs": "duplicate"
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32000,
+          "message": "Invalid parameters: duplicate waitMs",
+          "data": {
+            "waitedMs": 0
+          }
+        },
+        "id": 40
+      },
+      "note": "Duplicate waitMs: the member is present, the call is invalid, the error echoes zero. request.params is a lossy rendering; rawParams is the exact params text.",
+      "rawParams": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":1,\"waitMs\":2}"
+    },
+    {
+      "name": "v2/error-invalid-wait-escaped-duplicate-echoes-zero",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 41,
+        "method": "get_inclusion_proof.v2",
+        "params": {
+          "stateId": "abababababababababababababababababababababababababababababababab",
+          "waitMs": "duplicate"
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32000,
+          "message": "Invalid parameters: duplicate waitMs",
+          "data": {
+            "waitedMs": 0
+          }
+        },
+        "id": 41
+      },
+      "note": "The member name is matched after JSON unescaping: an escaped spelling duplicates waitMs. rawParams is the exact params text.",
+      "rawParams": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":1,\"wait\\u004Ds\":2}"
+    },
+    {
+      "name": "v2/error-invalid-wait-escaped-name-echoes-zero",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 42,
+        "method": "get_inclusion_proof.v2",
+        "params": {
+          "stateId": "abababababababababababababababababababababababababababababababab",
+          "waitMs": "escaped"
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32000,
+          "message": "Invalid parameters: waitMs must be a non-negative integer no greater than 9007199254740991",
+          "data": {
+            "waitedMs": 0
+          }
+        },
+        "id": 42
+      },
+      "note": "An escaped spelling alone is the waitMs member: invalid value, echo zero. rawParams is the exact params text.",
+      "rawParams": "{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"wait\\u004Ds\":-1}"
+    },
+    {
+      "name": "v2/error-invalid-wait-member-order-echoes-zero",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 43,
+        "method": "get_inclusion_proof.v2",
+        "params": {
+          "stateId": "abababababababababababababababababababababababababababababababab",
+          "waitMs": "first"
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32000,
+          "message": "Invalid parameters: waitMs must be a non-negative integer no greater than 9007199254740991",
+          "data": {
+            "waitedMs": 0
+          }
+        },
+        "id": 43
+      },
+      "note": "Member order does not matter: the invalid waitMs comes first and the call is still recognized. rawParams is the exact params text.",
+      "rawParams": "{\"waitMs\":-1,\"stateId\":\"abababababababababababababababababababababababababababababababab\"}"
+    },
+    {
+      "name": "v2/error-invalid-wait-before-state-id-check-echoes-zero",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 44,
+        "method": "get_inclusion_proof.v2",
+        "params": {
+          "stateId": "abcd",
+          "waitMs": "invalid"
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32000,
+          "message": "Invalid parameters: waitMs must be a non-negative integer no greater than 9007199254740991",
+          "data": {
+            "waitedMs": 0
+          }
+        },
+        "id": 44
+      },
+      "note": "Validation precedence is unchanged: the invalid waitMs is reported before the stateId length check, and gains only the echo. rawParams is the exact params text.",
+      "rawParams": "{\"stateId\":\"abcd\",\"waitMs\":-1}"
+    },
+    {
+      "name": "v2/error-invalid-wait-preflight-invalid-id-no-echo",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": true,
+        "method": "get_inclusion_proof.v2",
+        "params": {
+          "stateId": "abababababababababababababababababababababababababababababababab",
+          "waitMs": "invalid"
+        }
+      },
+      "rawRequest": "{\"jsonrpc\":\"2.0\",\"id\":true,\"method\":\"get_inclusion_proof.v2\",\"params\":{\"stateId\":\"abababababababababababababababababababababababababababababababab\",\"waitMs\":-1}}",
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32602,
+          "message": "Invalid params",
+          "data": {
+            "reason": "invalid_request",
+            "detail": "invalid_id",
+            "retryable": false
+          }
+        },
+        "id": null
+      },
+      "note": "Preflight (request bytes, params bytes, RPC ID) runs before waitMs is validated, even for a wait-bearing call, and a preflight rejection never carries the echo. An id which is neither a string nor a number is invalid; the id is not echoed. The size cases (64 KiB request, 32 KiB params, 128 ID bytes) behave the same but are not part of this corpus: they are exercised by the Go server tests. rawRequest is the exact request body."
     },
     {
       "name": "batch/no-wait-success",
@@ -572,7 +727,7 @@
         },
         "id": 28
       },
-      "note": "A wait-bearing params object which fails later validation echoes zero. A params object whose waitMs itself is invalid is malformed_params with no echo."
+      "note": "A wait-bearing params object which fails later validation echoes zero, whatever the value of waitMs (valid or not)."
     },
     {
       "name": "batch/unknown-member-with-valid-wait",
@@ -634,7 +789,7 @@
         },
         "id": 31
       },
-      "note": "Exact root plus a present waitMs is invalid; the valid waitMs member is still echoed (zero)."
+      "note": "Exact root plus a present waitMs is invalid; the waitMs member is still echoed (zero)."
     },
     {
       "name": "batch/invalid-wait-malformed-params",
@@ -658,12 +813,228 @@
           "data": {
             "reason": "invalid_request",
             "detail": "malformed_params",
-            "retryable": false
+            "retryable": false,
+            "waitedMs": 0
           }
         },
         "id": 29
       },
-      "note": "Also the response of a strict batch parser without the waitMs reservation, to any waitMs: the cue for the one parser-negotiation retry."
+      "note": "A present but invalid waitMs is malformed_params and echoes zero (the server recognizes waitMs): a client must not retry it without waitMs. The bare generic shape without the echo is what a strict old parser returns; see capability.json for that case."
+    },
+    {
+      "name": "batch/invalid-wait-duplicate",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 50,
+        "method": "get_inclusion_proofs.v1",
+        "params": {
+          "stateIds": [
+            "abababababababababababababababababababababababababababababababab",
+            "acacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacac"
+          ],
+          "waitMs": "duplicate"
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32602,
+          "message": "Invalid params",
+          "data": {
+            "reason": "invalid_request",
+            "detail": "malformed_params",
+            "retryable": false,
+            "waitedMs": 0
+          }
+        },
+        "id": 50
+      },
+      "note": "Duplicate waitMs: present, invalid, echo zero. request.params is a lossy rendering; rawParams is the exact params text.",
+      "rawParams": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\",\"acacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacac\"],\"waitMs\":1,\"waitMs\":2}"
+    },
+    {
+      "name": "batch/invalid-wait-escaped-duplicate",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 51,
+        "method": "get_inclusion_proofs.v1",
+        "params": {
+          "stateIds": [
+            "abababababababababababababababababababababababababababababababab",
+            "acacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacac"
+          ],
+          "waitMs": "duplicate"
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32602,
+          "message": "Invalid params",
+          "data": {
+            "reason": "invalid_request",
+            "detail": "malformed_params",
+            "retryable": false,
+            "waitedMs": 0
+          }
+        },
+        "id": 51
+      },
+      "note": "An escaped spelling is the same member, so this duplicates waitMs. rawParams is the exact params text.",
+      "rawParams": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\",\"acacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacac\"],\"waitMs\":1,\"wait\\u004Ds\":2}"
+    },
+    {
+      "name": "batch/invalid-wait-escaped-name",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 52,
+        "method": "get_inclusion_proofs.v1",
+        "params": {
+          "stateIds": [
+            "abababababababababababababababababababababababababababababababab",
+            "acacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacac"
+          ],
+          "waitMs": "escaped"
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32602,
+          "message": "Invalid params",
+          "data": {
+            "reason": "invalid_request",
+            "detail": "malformed_params",
+            "retryable": false,
+            "waitedMs": 0
+          }
+        },
+        "id": 52
+      },
+      "note": "An escaped spelling alone is the waitMs member: invalid value, echo zero. rawParams is the exact params text.",
+      "rawParams": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\",\"acacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacac\"],\"wait\\u004Ds\":\"5\"}"
+    },
+    {
+      "name": "batch/invalid-wait-member-order",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 53,
+        "method": "get_inclusion_proofs.v1",
+        "params": {
+          "stateIds": [
+            "abababababababababababababababababababababababababababababababab",
+            "acacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacac"
+          ],
+          "waitMs": "first"
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32602,
+          "message": "Invalid params",
+          "data": {
+            "reason": "invalid_request",
+            "detail": "malformed_params",
+            "retryable": false,
+            "waitedMs": 0
+          }
+        },
+        "id": 53
+      },
+      "note": "Member order does not matter: an invalid waitMs first is still recognized. rawParams is the exact params text.",
+      "rawParams": "{\"waitMs\":null,\"stateIds\":[\"abababababababababababababababababababababababababababababababab\",\"acacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacac\"]}"
+    },
+    {
+      "name": "batch/invalid-wait-with-unknown-member",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 54,
+        "method": "get_inclusion_proofs.v1",
+        "params": {
+          "stateIds": [
+            "abababababababababababababababababababababababababababababababab",
+            "acacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacac"
+          ],
+          "waitMs": "unknown"
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32602,
+          "message": "Invalid params",
+          "data": {
+            "reason": "invalid_request",
+            "detail": "malformed_params",
+            "retryable": false,
+            "waitedMs": 0
+          }
+        },
+        "id": 54
+      },
+      "note": "An invalid waitMs next to an unknown member: one malformed_params error, echoed. rawParams is the exact params text.",
+      "rawParams": "{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\",\"acacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacac\"],\"waitMs\":-1,\"foo\":1}"
+    },
+    {
+      "name": "batch/invalid-wait-invalid-state-id",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 55,
+        "method": "get_inclusion_proofs.v1",
+        "params": {
+          "stateIds": [
+            "abcd"
+          ],
+          "waitMs": "invalid"
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32602,
+          "message": "Invalid params",
+          "data": {
+            "reason": "invalid_request",
+            "detail": "invalid_state_id",
+            "retryable": false,
+            "waitedMs": 0
+          }
+        },
+        "id": 55
+      },
+      "note": "Validation precedence is unchanged: the strict parser reports the invalid state ID (it comes first in member order) with its specific detail, which gains only the echo. rawParams is the exact params text.",
+      "rawParams": "{\"stateIds\":[\"abcd\"],\"waitMs\":-1}"
+    },
+    {
+      "name": "batch/invalid-wait-preflight-invalid-id-no-echo",
+      "request": {
+        "jsonrpc": "2.0",
+        "id": true,
+        "method": "get_inclusion_proofs.v1",
+        "params": {
+          "stateIds": [
+            "abababababababababababababababababababababababababababababababab",
+            "acacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacac"
+          ],
+          "waitMs": "invalid"
+        }
+      },
+      "rawRequest": "{\"jsonrpc\":\"2.0\",\"id\":true,\"method\":\"get_inclusion_proofs.v1\",\"params\":{\"stateIds\":[\"abababababababababababababababababababababababababababababababab\",\"acacacacacacacacacacacacacacacacacacacacacacacacacacacacacacacac\"],\"waitMs\":-1}}",
+      "response": {
+        "jsonrpc": "2.0",
+        "error": {
+          "code": -32602,
+          "message": "Invalid params",
+          "data": {
+            "reason": "invalid_request",
+            "detail": "invalid_id",
+            "retryable": false
+          }
+        },
+        "id": null
+      },
+      "note": "Preflight (request bytes, params bytes, RPC ID) precedes waitMs validation and its rejection never carries the echo. The size cases are exercised by the Go server tests. rawRequest is the exact request body."
     }
   ]
 }

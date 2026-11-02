@@ -6,7 +6,9 @@ by the Go server (package A) and consumed by the JS SDK (B) and the Rust SDK / r
 which copy them byte-for-byte into their own test data and check the checksums below.
 
 Source: aggregator-go `origin/non-inclusion` @ `a352752144ec40ae5ab8b2daf1c324013dca8213`
-(the base of the `long-poll` integration branch). JS compatibility baseline: npm
+(the base of the `long-poll` integration branch). `echo.json` was revised on aggregator-go `main`
+@ `4e09b47` (invalid-`waitMs` echo ruling of 2026-11-02, "revision 4"; the sha256 above is the
+revised file). `params.json`, `capability.json` and `golden/` are unchanged by that revision. JS compatibility baseline: npm
 `@unicitylabs/state-transition-sdk@3.0.1`, tag `v3.0.1` @ `f5f0737306901215860aa920a6ab570b699efba8`.
 
 ## Files
@@ -14,7 +16,7 @@ Source: aggregator-go `origin/non-inclusion` @ `a352752144ec40ae5ab8b2daf1c32401
 | File | Checksum (sha256) |
 |---|---|
 | `params.json` | 4558bd8047b6fb5f0a00c84a167a0fa8f678c4dd325880e3036c3b033b48cb5e |
-| `echo.json` | a287d35cdad196c55d1661430e6547b5cb730d3baf6b87549cdb5d5247289e4e |
+| `echo.json` | a9dad238857c6953b3f65b5c8680cd8dda2786bccb85a6c633b47644b6c4cd86 |
 | `capability.json` | b00701917858d6e2671bec24b9f917de5bb53f4303bdeb6e6795b343ca379c35 |
 | `golden/v2-nowait.json` | 62305006cdf18995f8a02b54863468713f905f09ee2f1eb330f530679b1f35a7 |
 | `golden/batch-nowait.json` | 5c36869bef6c9298ed9323b3bc606029ba69690936aa0311a0c6b56136fb331e |
@@ -42,15 +44,28 @@ Not covered: envelopes which are not valid JSON (e.g. a bare `01`) fail before a
 ### `echo.json` (T2)
 Frozen response examples with the echo: v2 wait-only / wait+status / zero / cap-full / errors
 (including `originalData` for non-object error data), batch success, and every batch error class
-with `error.data.waitedMs`. A0 only reserves the request field; no server emits these yet (A3).
-No-wait requests never carry `waitedMs`.
+with `error.data.waitedMs`. No-wait requests never carry `waitedMs`.
 
-Echo on batch `malformed_params` (frozen): a full server echoes `waitedMs:0` on any batch params
-error iff the params object carries a **valid** top-level `waitMs` member (detected by a scan that
-does not depend on member order) - e.g. an unknown member next to a valid `waitMs`, or an exact
-root plus `waitMs`. A `waitMs` which is itself invalid (duplicate, wrong type, overflow) is not a
-recognized wait and gets no echo: exactly the bytes an old strict parser returns. The echo is what
-tells a client the server understands `waitMs`; see `capability.json`.
+Echo rule (revision 4, ruling of 2026-11-02): the echo means the server recognizes the `waitMs`
+extension, not that the value was valid or that anything waited. After a valid envelope and the
+request-byte / params-byte / RPC-ID preflight, a top-level params member whose decoded name is
+exactly `waitMs` opts into metadata, independent of its value (invalid, duplicate, escaped spelling),
+of member order and of other invalid fields. Every ensuing method validation error echoes
+`waitedMs:0` - invalid `waitMs` (v2 `-32000`; batch `-32602/invalid_request/malformed_params`),
+invalid or missing state IDs, unknown batch members, count violations, exact root plus any wait -
+and keeps its existing code, detail and validation precedence. An invalid wait never waits.
+No echo: omitted `waitMs`; nested or look-alike names (`waitms`); non-object params; invalid
+envelopes; unsupported methods; and preflight rejections (`limit_exceeded/request_bytes`, `invalid_id`),
+which are decided before `waitMs` is looked at. The `*-preflight-invalid-id-no-echo` cases pin the
+no-echo side; the size limits are exercised by the Go server tests only (they would bloat the corpus).
+Echo-bearing cases whose exact bytes a parsed object cannot express (duplicates, escaped member names)
+carry `rawParams` (exact params text) and `request.params` is then a lossy rendering; cases that fail
+preflight carry `rawRequest` (exact request body). Typed SDK clients reject invalid waits locally and
+skip these cases (their names start with `v2/error-invalid-wait` or `batch/invalid-wait`).
+
+The echo is also what tells a client the server understands `waitMs`: a bare generic
+`malformed_params` (no `waitedMs`) is what an old strict parser returns and triggers the single
+parser-negotiation retry; an echoed one is propagated. See `capability.json`.
 
 ### `capability.json` (T8)
 Client reaction table for the parser-negotiation retry (exactly one retry without `waitMs`,
