@@ -19,7 +19,7 @@ import {
   sleep,
   throwIfAborted,
 } from '../internal/abortable.js';
-import { longPollSettings, longPollWindow } from '../internal/longPoll.js';
+import { isWireMilliseconds, longPollSettings, longPollWindow } from '../internal/longPoll.js';
 import { PredicateVerifierService } from '../predicate/verification/PredicateVerifierService.js';
 import { StateTransitionClient } from '../StateTransitionClient.js';
 import { ITransaction } from '../transaction/ITransaction.js';
@@ -153,6 +153,16 @@ class Deadline {
 
 /** Aggregator answer: accepted, not yet certified. */
 const CERTIFICATION_PENDING_CODE = -32021;
+
+/** Whether a JSON-RPC error carries an own `data.waitedMs` member (any value: the caller validates it). */
+function hasWaitedMs(err: unknown): err is JsonRpcDataError & { data: object } {
+  return (
+    err instanceof JsonRpcDataError &&
+    typeof err.data === 'object' &&
+    err.data !== null &&
+    Object.prototype.hasOwnProperty.call(err.data, 'waitedMs')
+  );
+}
 /** Aggregator answer: no proof known for the state (the JSON-RPC form of HTTP 404). */
 const NOT_FOUND_CODE = -32020;
 
@@ -479,7 +489,7 @@ export async function waitInclusionProof(
         // unknown: it is inconclusive, pause max(interval, Retry-After), fail fast when that does not fit the budget, and
         // poll plainly (no waitMs) for the rest of the wait.
         // A missing proof is the expected "not certified yet" answer. JSON-RPC -32021 (certification pending) always keeps
-        // polling. HTTP 404 and -32020 (no proof known for the state) are the legacy "unknown" answer: without status hints
+        // polling (it keeps long polling only when it echoes `data.waitedMs`). HTTP 404 and -32020 (no proof known for the state) are the legacy "unknown" answer: without status hints
         // they keep polling, with hints they follow the `unknown` hint (grace period, then InclusionProofUnknownError).
         // Anything else, including the {@link SleepError} raised on abort, ends the wait.
         const overload = overloadOf(err);
@@ -509,8 +519,16 @@ export async function waitInclusionProof(
         if (unknown && statusHints && Date.now() - started >= unknownGraceMs) {
           throw new InclusionProofUnknownError(stateId, Date.now() - started);
         }
-        // these legacy errors carry no echo: the endpoint is not long polling
-        if (waitMs > 0) {
+        // A pending error that echoes `data.waitedMs` comes from a long-poll capable server: keep long polling, and a
+        // malformed echo is a protocol error. Every other legacy error carries no echo: the endpoint is not long polling.
+        const echoed = pending && waitMs > 0 && hasWaitedMs(err);
+        if (echoed) {
+          if (!isWireMilliseconds((err.data as { waitedMs?: unknown }).waitedMs)) {
+            throw new JsonRpcResponseError('Malformed waitedMs in the data of the certification pending error.', {
+              cause: err,
+            });
+          }
+        } else if (waitMs > 0) {
           longPolling = false;
         }
       }

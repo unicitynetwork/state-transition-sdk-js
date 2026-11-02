@@ -5,6 +5,7 @@ import { InclusionProofResponse } from '../../../src/api/InclusionProofResponse.
 import { InclusionProofConflictError } from '../../../src/api/InclusionProofStatusError.js';
 import { IInclusionProofRequestOptions } from '../../../src/api/IRequestOptions.js';
 import { JsonRpcDataError } from '../../../src/api/json-rpc/JsonRpcDataError.js';
+import { JsonRpcResponseError } from '../../../src/api/json-rpc/JsonRpcResponseError.js';
 import { NetworkId } from '../../../src/api/NetworkId.js';
 import { ProofStatusHint } from '../../../src/api/ProofStatusHint.js';
 import { StateId } from '../../../src/api/StateId.js';
@@ -294,6 +295,32 @@ describe('waitInclusionProof long poll', () => {
       ]);
       await expect(run(client, { intervalMs: 1, timeoutMs: 5000 })).rejects.toThrow('boom');
       expect(client.calls[0].options?.waitMs).toBeGreaterThan(0);
+      expect(client.calls[1].options).not.toHaveProperty('waitMs');
+    });
+  });
+
+  describe('a legacy -32021 pending error that echoes the wait', () => {
+    const pendingError = (data?: unknown) => (): Promise<InclusionProofResponse> =>
+      Promise.reject(new JsonRpcDataError({ code: -32021, data, message: 'pending' }));
+
+    it('keeps long polling on', async () => {
+      const client = new Scripted([entry((call) => (call >= 3 ? boom() : pendingError({ waitedMs: 0 })))]);
+      await expect(run(client, { intervalMs: 1, timeoutMs: 5000 })).rejects.toThrow('boom');
+      expect(client.calls[0].options?.waitMs).toBeGreaterThan(0);
+      expect(client.calls[1].options?.waitMs).toBeGreaterThan(0);
+    });
+
+    it('rejects a malformed echo', async () => {
+      for (const waitedMs of [-1, 1.5, '3', null, 2 ** 53]) {
+        const client = new Scripted([entry(() => pendingError({ waitedMs }))]);
+        await expect(run(client, { intervalMs: 1, timeoutMs: 5000 })).rejects.toBeInstanceOf(JsonRpcResponseError);
+        expect(client.calls).toHaveLength(1);
+      }
+    });
+
+    it('without an echo the wait is still dropped (data present but no waitedMs)', async () => {
+      const client = new Scripted([entry((call) => (call >= 3 ? boom() : pendingError({ detail: 'x' })))]);
+      await expect(run(client, { intervalMs: 1, timeoutMs: 5000 })).rejects.toThrow('boom');
       expect(client.calls[1].options).not.toHaveProperty('waitMs');
     });
   });
