@@ -296,6 +296,10 @@ describe('long-poll A0 fixtures', () => {
       expect(bodies).toHaveLength(1);
       expect(outcome).toMatchObject({ code: c.response.error?.code });
       expect((outcome as { waitedMs?: number | null }).waitedMs ?? null).toBeNull();
+      if (c.request.method === 'get_inclusion_proof.v2') {
+        expect(outcome).toBeInstanceOf(JsonRpcDataError);
+        expect(Object.prototype.hasOwnProperty.call((outcome as JsonRpcDataError).data ?? {}, 'waitedMs')).toBe(false);
+      }
     });
   });
 
