@@ -94,7 +94,7 @@ describe('Certification request timeout', () => {
     it.each(rejected)(
       'rejects a transfer deadline that is %s',
       async (_label, deadline) => {
-        const token = await mintToken(client, context, recipient, null, trustBase.networkId);
+        const token = await mintToken(client, context, recipient, null, NetworkId.LOCAL);
 
         await expect(
           TransferTransaction.create(token, recipient, StateMask.generate(), { expiresAt: deadline }),

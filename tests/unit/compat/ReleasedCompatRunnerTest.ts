@@ -10,6 +10,7 @@ import { StateId } from '../../../src/api/StateId.js';
 import { CborDeserializer } from '../../../src/serialization/cbor/CborDeserializer.js';
 import { HexConverter } from '../../../src/util/HexConverter.js';
 import { ShardedWorld } from '../../utils/ShardedWorld.js';
+import { legacyTrustBaseJson } from '../../utils/TrustBaseHistoryFixture.js';
 
 /**
  * Self-test of `compat/released-3.0.1/run.mjs`: the runner (which drives the npm release 3.0.1) against an in-process
@@ -74,7 +75,7 @@ async function runAgainst(mode: Mode): Promise<IOutcome> {
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const dir = mkdtempSync(join(tmpdir(), 'compat-'));
-  writeFileSync(join(dir, 'trust-base.json'), JSON.stringify(world.trustBase.toJSON()));
+  writeFileSync(join(dir, 'trust-base.json'), JSON.stringify(legacyTrustBaseJson(world.trustBase)));
   const report = join(dir, 'report.json');
   try {
     const code = await new Promise<number | null>((resolve) => {

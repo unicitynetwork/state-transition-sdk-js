@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { RootTrustBase } from '../../../src/api/bft/RootTrustBase.js';
+import { TrustBaseHistory } from '../../../src/api/bft/trustbase/TrustBaseHistory.js';
 import { UnicitySealQuorumSignaturesVerificationRule } from '../../../src/api/bft/verification/rule/UnicitySealQuorumSignaturesVerificationRule.js';
 import { UnicityCertificateVerifier } from '../../../src/api/bft/verification/UnicityCertificateVerifier.js';
 import { NonInclusionProof } from '../../../src/api/NonInclusionProof.js';
@@ -10,6 +10,7 @@ import { StateId } from '../../../src/api/StateId.js';
 import { Secp256k1SignatureVerifier } from '../../../src/crypto/secp256k1/Secp256k1SignatureVerifier.js';
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../../src/util/HexConverter.js';
+import { loadAuthorityHistory } from '../../utils/TrustBaseHistoryFixture.js';
 
 const ROOT = join(process.cwd(), 'tests/fixtures/non-inclusion/v2');
 const read = (path: string): string => readFileSync(join(ROOT, path), 'utf8');
@@ -20,12 +21,15 @@ const read = (path: string): string => readFileSync(join(ROOT, path), 'utf8');
  */
 describe('non-inclusion example (API reference)', () => {
   const golden = JSON.parse(read('cases/historical-snapshot-absent.json')) as { query: string; wrapper: string };
-  const trustedContext = {
-    trustBase: RootTrustBase.fromJSON(JSON.parse(read('authority/trust-base.json'))),
-    unicityCertificateVerifier: new UnicityCertificateVerifier(
-      new UnicitySealQuorumSignaturesVerificationRule(new Secp256k1SignatureVerifier()),
-    ),
-  };
+  let trustedContext: { trustBase: TrustBaseHistory; unicityCertificateVerifier: UnicityCertificateVerifier };
+  beforeAll(async () => {
+    trustedContext = {
+      trustBase: await loadAuthorityHistory(join(ROOT, 'authority/trust-base.json')),
+      unicityCertificateVerifier: new UnicityCertificateVerifier(
+        new UnicitySealQuorumSignaturesVerificationRule(new Secp256k1SignatureVerifier()),
+      ),
+    };
+  });
   const proof = NonInclusionProof.decode(
     StateId.fromCBOR(CborSerializer.encodeByteString(HexConverter.decode(golden.query))),
     HexConverter.decode(golden.wrapper),

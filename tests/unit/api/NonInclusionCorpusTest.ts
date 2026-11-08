@@ -3,7 +3,6 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { AggregatorClient } from '../../../src/api/AggregatorClient.js';
-import { RootTrustBase } from '../../../src/api/bft/RootTrustBase.js';
 import { ShardId } from '../../../src/api/bft/ShardId.js';
 import { UnicitySealQuorumSignaturesVerificationRule } from '../../../src/api/bft/verification/rule/UnicitySealQuorumSignaturesVerificationRule.js';
 import { UnicityCertificateVerifier } from '../../../src/api/bft/verification/UnicityCertificateVerifier.js';
@@ -19,6 +18,7 @@ import { StateId } from '../../../src/api/StateId.js';
 import { Secp256k1SignatureVerifier } from '../../../src/crypto/secp256k1/Secp256k1SignatureVerifier.js';
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../../src/util/HexConverter.js';
+import { loadAuthorityHistory } from '../../utils/TrustBaseHistoryFixture.js';
 
 /** Corpus aggregator-go `testdata/non-inclusion/v2`, vendored byte for byte, see PROVENANCE.md. */
 const ROOT = join(process.cwd(), 'tests/fixtures/non-inclusion/v2');
@@ -110,11 +110,7 @@ async function run(
     return { outcome: 'malformed' };
   }
   // the corpus writes uint64 values of the authority as JSON numbers: quote them before parsing, a double would round
-  const trustBase = RootTrustBase.fromJSON(
-    JSON.parse(
-      read(context.trustBaseJson).replace(/("(?:epoch|epochStartRound|stake|quorumThreshold)":\s*)(\d+)/g, '$1"$2"'),
-    ),
-  );
+  const trustBase = await loadAuthorityHistory(join(ROOT, context.trustBaseJson));
   const result = await verifyNonInclusion(
     proof,
     { trustBase, unicityCertificateVerifier: verifier },

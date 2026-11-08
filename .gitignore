@@ -142,3 +142,7 @@ txf
 
 # docker output for integration tests
 tests/integration/docker/aggregator/mongo-data
+
+# Sources of the integration stack's images, checked out by tests/integration/support/build-images.sh
+tests/integration/docker/build/
+tests/integration/docker/data/

@@ -1,5 +1,6 @@
 import { getEventListeners } from 'node:events';
 
+import { TrustBaseHistory } from '../../../src/api/bft/trustbase/TrustBaseHistory.js';
 import { UnicityCertificate } from '../../../src/api/bft/UnicityCertificate.js';
 import { CertificationResponse } from '../../../src/api/CertificationResponse.js';
 import { IAggregatorClient } from '../../../src/api/IAggregatorClient.js';
@@ -22,7 +23,7 @@ import { TokenSalt } from '../../../src/transaction/TokenSalt.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
 import { SleepError, waitInclusionProof } from '../../../src/util/InclusionProofUtils.js';
 import { expiresAt } from '../../utils/ExpiresAt.js';
-import { createRootTrustBase } from '../../utils/RootTrustBaseFixture.js';
+import { createTrustBaseHistory } from '../../utils/TrustBaseHistoryFixture.js';
 import { createUnicityCertificate } from '../../utils/UnicityCertificateFixture.js';
 import { createUnicityCertificateVerifier } from '../../utils/UnicityCertificateVerifierFixture.js';
 
@@ -67,7 +68,7 @@ class StubAggregatorClient implements IAggregatorClient {
 
 describe('waitInclusionProof', () => {
   const signingService = SigningService.generate();
-  const trustBase = createRootTrustBase(signingService.publicKey);
+  let trustBase: TrustBaseHistory;
   const predicateVerifier = PredicateVerifierService.create();
   const unicityCertificateVerifier = createUnicityCertificateVerifier();
 
@@ -75,6 +76,7 @@ describe('waitInclusionProof', () => {
   let pendingCertificate: UnicityCertificate;
 
   beforeAll(async () => {
+    trustBase = await createTrustBaseHistory(signingService.publicKey);
     transaction = await MintTransaction.create(NetworkId.LOCAL, SignaturePredicate.create(signingService.publicKey), {
       expiresAt: expiresAt(),
       salt: TokenSalt.generate(),

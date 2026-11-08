@@ -12,7 +12,7 @@ import { TokenSalt } from '../../../src/transaction/TokenSalt.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
 import { SleepError, waitInclusionProof } from '../../../src/util/InclusionProofUtils.js';
 import { expiresAt } from '../../utils/ExpiresAt.js';
-import { createRootTrustBase } from '../../utils/RootTrustBaseFixture.js';
+import { createTrustBaseHistory } from '../../utils/TrustBaseHistoryFixture.js';
 import { createUnicityCertificateVerifier } from '../../utils/UnicityCertificateVerifierFixture.js';
 
 /** What rugregator answers for a state it has not indexed: HTTP 404 with a JSON-RPC error envelope. */
@@ -52,7 +52,7 @@ describe('an error envelope on a non-2xx status', () => {
     await expect(
       waitInclusionProof(
         new StateTransitionClient(new AggregatorClient('https://example.com')),
-        createRootTrustBase(signing.publicKey),
+        await createTrustBaseHistory(signing.publicKey),
         PredicateVerifierService.create(),
         createUnicityCertificateVerifier(),
         transaction,

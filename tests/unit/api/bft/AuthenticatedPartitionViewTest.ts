@@ -7,14 +7,15 @@ import {
   PartitionViewAuthenticator,
 } from '../../../../src/api/bft/AuthenticatedPartitionView.js';
 import { PartitionView } from '../../../../src/api/bft/PartitionView.js';
-import { RootTrustBase } from '../../../../src/api/bft/RootTrustBase.js';
 import { ShardId } from '../../../../src/api/bft/ShardId.js';
+import { TrustBaseHistory } from '../../../../src/api/bft/trustbase/TrustBaseHistory.js';
 import { UnicityCertificate } from '../../../../src/api/bft/UnicityCertificate.js';
 import { UnicityTreeCertificate } from '../../../../src/api/bft/UnicityTreeCertificate.js';
 import { UnicitySealQuorumSignaturesVerificationRule } from '../../../../src/api/bft/verification/rule/UnicitySealQuorumSignaturesVerificationRule.js';
 import { SealVerificationSession } from '../../../../src/api/bft/verification/SealVerificationSession.js';
 import { Secp256k1SignatureVerifier } from '../../../../src/crypto/secp256k1/Secp256k1SignatureVerifier.js';
 import { HexConverter } from '../../../../src/util/HexConverter.js';
+import { createTrustBaseHistoryFromAuthority } from '../../../utils/TrustBaseHistoryFixture.js';
 
 const DIR = join(process.cwd(), 'tests/fixtures/uc-consolidation/partition-view/v1');
 
@@ -34,18 +35,13 @@ function vector(name: string): IVector {
   return JSON.parse(readFileSync(join(DIR, `assembly-${name}.json`), 'utf8')) as IVector;
 }
 
-function trustBase(v: IVector): RootTrustBase {
-  return RootTrustBase.fromJSON({
-    changeRecordHash: null,
+function trustBase(v: IVector): Promise<TrustBaseHistory> {
+  return createTrustBaseHistoryFromAuthority({
     epoch: String(v.epoch),
     epochStartRound: String(v.epochStartRound),
     networkId: v.networkId,
-    previousEntryHash: null,
     quorumThreshold: '1',
     rootNodes: [{ nodeId: v.nodeId, sigKey: v.sigKey, stake: '1' }],
-    signatures: {},
-    stateHash: '00',
-    version: '1',
   });
 }
 
@@ -57,10 +53,13 @@ describe('AuthenticatedPartitionView', () => {
   let verifySpy: jest.SpyInstance;
   let session: SealVerificationSession;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     verifier = new Secp256k1SignatureVerifier();
     verifySpy = jest.spyOn(verifier, 'verify');
-    session = new SealVerificationSession(trustBase(v), new UnicitySealQuorumSignaturesVerificationRule(verifier));
+    session = new SealVerificationSession(
+      await trustBase(v),
+      new UnicitySealQuorumSignaturesVerificationRule(verifier),
+    );
   });
 
   it('is only obtainable from the authenticator', () => {
@@ -108,7 +107,7 @@ describe('AuthenticatedPartitionView', () => {
 
   it('does not authenticate when the tree matches but the anchored authority does not', async () => {
     const other = new SealVerificationSession(
-      RootTrustBase.fromJSON({ ...trustBase(v).toJSON(), epoch: String(v.epoch + 1) }),
+      await trustBase({ ...v, epoch: v.epoch + 1 }),
       new UnicitySealQuorumSignaturesVerificationRule(verifier),
     );
     await expect(new PartitionViewAuthenticator(other).authenticate(viewBytes, ucBytes)).rejects.toMatchObject({
@@ -121,7 +120,7 @@ describe('AuthenticatedPartitionView', () => {
     const foreign = vector('4-partition-8');
     expect(BigInt(foreign.partitionId)).not.toEqual(AGGREGATION_PARTITION_ID);
     const foreignSession = new SealVerificationSession(
-      trustBase(foreign),
+      await trustBase(foreign),
       new UnicitySealQuorumSignaturesVerificationRule(verifier),
     );
     await expect(
@@ -169,7 +168,7 @@ describe('AuthenticatedPartitionView', () => {
   it('keeps initial-state leaves null in the derived certificates', async () => {
     const initial = vector('4-initial');
     const s = new SealVerificationSession(
-      trustBase(initial),
+      await trustBase(initial),
       new UnicitySealQuorumSignaturesVerificationRule(verifier),
     );
     const authenticated = await new PartitionViewAuthenticator(s).authenticate(

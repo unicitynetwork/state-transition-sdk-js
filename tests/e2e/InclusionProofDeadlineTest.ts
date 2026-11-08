@@ -4,6 +4,7 @@ import { CertificationResponse } from '../../src/api/CertificationResponse.js';
 import { IAggregatorClient } from '../../src/api/IAggregatorClient.js';
 import { InclusionProofResponse } from '../../src/api/InclusionProofResponse.js';
 import { IRequestOptions } from '../../src/api/IRequestOptions.js';
+import { NetworkId } from '../../src/api/NetworkId.js';
 import { StateId } from '../../src/api/StateId.js';
 import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
 import { SignaturePredicate } from '../../src/predicate/builtin/SignaturePredicate.js';
@@ -49,7 +50,9 @@ class DeadlineDuringRequestClient implements IAggregatorClient {
 }
 
 describe('E2E waitInclusionProof deadline', () => {
-  const { aggregatorClient, trustBase } = createE2EContext();
+  const { aggregatorClient, ready, trustBase } = createE2EContext();
+
+  beforeAll(() => ready);
   const predicateVerifier = PredicateVerifierService.create();
   const unicityCertificateVerifier = createUnicityCertificateVerifier();
 
@@ -59,7 +62,7 @@ describe('E2E waitInclusionProof deadline', () => {
     // Never submitted, so the aggregator never certifies it and every wait for
     // it can only end at its deadline.
     transaction = await MintTransaction.create(
-      trustBase.networkId,
+      NetworkId.LOCAL,
       SignaturePredicate.create(SigningService.generate().publicKey),
       {
         expiresAt: expiresAt(),

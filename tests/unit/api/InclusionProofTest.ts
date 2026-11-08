@@ -1,5 +1,5 @@
 import { InputRecord } from '../../../src/api/bft/InputRecord.js';
-import { RootTrustBase } from '../../../src/api/bft/RootTrustBase.js';
+import { TrustBaseHistory } from '../../../src/api/bft/trustbase/TrustBaseHistory.js';
 import { UnicityCertificate } from '../../../src/api/bft/UnicityCertificate.js';
 import { UnicityCertificateVerifier } from '../../../src/api/bft/verification/UnicityCertificateVerifier.js';
 import { CertificationData } from '../../../src/api/CertificationData.js';
@@ -29,7 +29,7 @@ import { HexConverter } from '../../../src/util/HexConverter.js';
 import { VerificationStatus } from '../../../src/verification/VerificationStatus.js';
 import { expiresAt } from '../../utils/ExpiresAt.js';
 import { REFERENCE_TIME } from '../../utils/ReferenceTime.js';
-import { createRootTrustBase } from '../../utils/RootTrustBaseFixture.js';
+import { createTrustBaseHistory } from '../../utils/TrustBaseHistoryFixture.js';
 import { createUnicityCertificate } from '../../utils/UnicityCertificateFixture.js';
 import { createUnicityCertificateVerifier } from '../../utils/UnicityCertificateVerifierFixture.js';
 
@@ -45,7 +45,7 @@ describe('InclusionProof', () => {
   let inclusionCertificate: InclusionCertificate;
   let unicityCertificate: UnicityCertificate;
   let rootHash: DataHash;
-  let trustBase: RootTrustBase;
+  let trustBase: TrustBaseHistory;
 
   beforeAll(async () => {
     transaction = await MintTransaction.create(NetworkId.LOCAL, SignaturePredicate.fromSigningService(signingService), {
@@ -63,7 +63,7 @@ describe('InclusionProof', () => {
     inclusionCertificate = InclusionCertificate.create(root, stateId.data);
 
     unicityCertificate = await createUnicityCertificate(rootHash, signingService);
-    trustBase = createRootTrustBase(signingService.publicKey);
+    trustBase = await createTrustBaseHistory(signingService.publicKey);
     predicateVerifier = PredicateVerifierService.create();
     unicityCertificateVerifier = createUnicityCertificateVerifier();
   });
@@ -348,7 +348,7 @@ describe('InclusionProof', () => {
 
     await expect(
       InclusionProofVerificationRule.verify(
-        createRootTrustBase(HexConverter.decode('0000000000000000000000000000000000000000000000000000000000000001')),
+        await createTrustBaseHistory(SigningService.generate().publicKey),
         predicateVerifier,
         unicityCertificateVerifier,
         inclusionProof,

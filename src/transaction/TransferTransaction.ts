@@ -4,7 +4,7 @@ import { ITransaction } from './ITransaction.js';
 import { ITransferOptions } from './ITransferOptions.js';
 import { StateMask } from './StateMask.js';
 import { Token } from './Token.js';
-import { RootTrustBase } from '../api/bft/RootTrustBase.js';
+import { ITrustBaseHistory } from '../api/bft/trustbase/ITrustBaseHistory.js';
 import { UnicityCertificateVerifier } from '../api/bft/verification/UnicityCertificateVerifier.js';
 import { InclusionProof } from '../api/InclusionProof.js';
 import { DataHash } from '../crypto/hash/DataHash.js';
@@ -167,14 +167,14 @@ export class TransferTransaction implements ITransaction {
   /**
    * Bundle this transaction with its inclusion proof into a CertifiedTransferTransaction.
    *
-   * @param {RootTrustBase} trustBase Root trust base used to verify the inclusion certificate.
+   * @param {ITrustBaseHistory} trustBase Trust-base history used to verify the inclusion certificate.
    * @param {PredicateVerifierService} predicateVerifier Verifier for any embedded predicates.
    * @param {UnicityCertificateVerifier} unicityCertificateVerifier Unicity certificate verifier.
    * @param {InclusionProof} inclusionProof Inclusion proof for this transaction.
    * @returns {Promise<CertifiedTransferTransaction>} Verified certified transaction.
    */
   public toCertifiedTransaction(
-    trustBase: RootTrustBase,
+    trustBase: ITrustBaseHistory,
     predicateVerifier: PredicateVerifierService,
     unicityCertificateVerifier: UnicityCertificateVerifier,
     inclusionProof: InclusionProof,

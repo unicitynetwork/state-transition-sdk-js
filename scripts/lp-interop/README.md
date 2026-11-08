@@ -8,7 +8,7 @@ verified state, failed states counted separately).
 
 ```sh
 npm ci && npm run build
-node scripts/lp-interop/run.mjs --url http://localhost:3000 --trust-base tests/e2e/trust-base.json --label S2-LP \
+node scripts/lp-interop/run.mjs --url http://localhost:3000 --trust-base <trust-base bundle file> --genesis-pin <genesis entry id, hex> --label S2-LP \
   --scenario l2,l3,l4,l5,l6,l7 --wait-ms 5000 --states 50 --concurrency 10 --report /tmp/js-s2-lp.json
 ```
 

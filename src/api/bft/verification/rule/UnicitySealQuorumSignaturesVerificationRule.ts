@@ -3,12 +3,11 @@ import { DataHasher } from '../../../../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../../../../crypto/hash/HashAlgorithm.js';
 import { ISignatureVerifier } from '../../../../crypto/ISignatureVerifier.js';
 import { Signature } from '../../../../crypto/secp256k1/Signature.js';
-import { authorityIdentity } from '../../../../internal/bft/authorityIdentity.js';
 import { CborSerializer } from '../../../../serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../../../util/HexConverter.js';
 import { VerificationResult } from '../../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../../verification/VerificationStatus.js';
-import { RootTrustBase } from '../../RootTrustBase.js';
+import { RootTrustBaseV2 } from '../../trustbase/RootTrustBaseV2.js';
 import { UnicitySeal } from '../../UnicitySeal.js';
 import { VerifiedSealCache } from '../VerifiedSealCache.js';
 
@@ -30,7 +29,7 @@ export class UnicitySealQuorumSignaturesVerificationRule {
   ) {}
 
   /**
-   * Build the cache key for a (trust base, seal) pair.
+   * Build the cache key for a (trust-base entry, seal) pair.
    *
    * Both halves are addressed by content, and both are load-bearing:
    *
@@ -39,11 +38,9 @@ export class UnicitySealQuorumSignaturesVerificationRule {
    *    is the digest the root nodes sign — so keying on that would let a seal's
    *    valid signatures be swapped for garbage and still hit a cached OK.
    *    `toCBOR()` encodes the signatures too, so a hit means identical bytes.
-   * 2. The trust base decides the outcome through its root nodes and quorum
-   *    threshold, and is keyed by content rather than identity because
-   *    `RootTrustBase` exposes `_rootNodes` as a `Map`: `readonly` stops only
-   *    reassignment, so an in-place edit would otherwise keep hitting verdicts
-   *    computed under the old root keys.
+   * 2. The entry decides the outcome through its members, their weights and
+   *    the quorum threshold, and is keyed by content: its complete tagged
+   *    encoding (signatures included), not its identity.
    *
    * The signature verifier needs no representation here: a cache is reachable
    * only through the rule that owns it, and a rule owns exactly one verifier.
@@ -52,15 +49,15 @@ export class UnicitySealQuorumSignaturesVerificationRule {
    * what makes one hash safe, since concatenating two variable-length encodings
    * raw would let a different (trust base, seal) split produce the same bytes.
    *
-   * @param {RootTrustBase} trustBase Trust base the seal is verified against.
+   * @param {RootTrustBaseV2} entry Trust-base entry the seal is verified against.
    * @param {UnicitySeal} unicitySeal Seal being verified.
    * @returns {Promise<string>} Cache key.
    */
-  private static async cacheKeyFor(trustBase: RootTrustBase, unicitySeal: UnicitySeal): Promise<string> {
+  private static async cacheKeyFor(entry: RootTrustBaseV2, unicitySeal: UnicitySeal): Promise<string> {
     const hash = await new DataHasher(HashAlgorithm.SHA256)
       .update(
         CborSerializer.encodeArray(
-          CborSerializer.encodeTextString(authorityIdentity(trustBase)),
+          CborSerializer.encodeByteString(entry.encode()),
           CborSerializer.encodeByteString(unicitySeal.toCBOR()),
         ),
       )
@@ -70,18 +67,27 @@ export class UnicitySealQuorumSignaturesVerificationRule {
   }
 
   /**
-   * Verify the unicity seal carries a quorum of valid root-node signatures.
+   * Verify the unicity seal carries valid signatures of members whose weight reaches the entry's quorum threshold. A signer that is not a
+   * member, or a signature that does not verify, counts zero (the upstream seal rule); each member counts once, as the signatures are a map.
    *
-   * @param {RootTrustBase} trustBase Root trust base.
+   * @param {RootTrustBaseV2} entry Trust-base entry of the seal's epoch.
    * @param {UnicitySeal} unicitySeal Seal to verify.
    * @returns {Promise<VerificationResult<VerificationStatus>>} Verification outcome.
    */
   public async verify(
-    trustBase: RootTrustBase,
+    entry: RootTrustBaseV2,
     unicitySeal: UnicitySeal,
   ): Promise<VerificationResult<VerificationStatus>> {
+    // A resource bound before anything is encoded, hashed, keyed or verified: unknown signers and bad values count like any other witness.
+    if ((unicitySeal.witnesses?.size ?? 0) > UnicitySeal.MAX_WITNESSES) {
+      return new VerificationResult(
+        'UnicitySealQuorumSignaturesVerificationRule',
+        VerificationStatus.FAIL,
+        `${unicitySeal.witnesses?.size} signatures exceed ${UnicitySeal.MAX_WITNESSES}.`,
+      );
+    }
     const cacheKey = this.cache
-      ? await UnicitySealQuorumSignaturesVerificationRule.cacheKeyFor(trustBase, unicitySeal)
+      ? await UnicitySealQuorumSignaturesVerificationRule.cacheKeyFor(entry, unicitySeal)
       : null;
     if (cacheKey !== null) {
       const cached = this.cache?.get(cacheKey) ?? null;
@@ -93,21 +99,24 @@ export class UnicitySealQuorumSignaturesVerificationRule {
     const hash = await unicitySeal.calculateHash();
 
     const results = await Promise.all(
-      Array.from(unicitySeal.witnesses?.entries() ?? []).map(([nodeId, witness]) =>
-        this.verifySignature(trustBase, nodeId, witness, hash),
+      Array.from(unicitySeal.signatures?.entries() ?? []).map(([nodeId, signature]) =>
+        this.verifySignature(entry, nodeId, signature, hash),
       ),
     );
 
-    const successful = results.reduce(
-      (previousValue, currentValue) =>
-        currentValue.status === VerificationStatus.OK ? previousValue + 1 : previousValue,
-      0,
-    );
-    if (successful >= trustBase.quorumThreshold) {
+    // The weight of the members whose signature verified, each counted once (the map has one signature per node id).
+    const weights = new Map(entry.members.map((member) => [member.nodeId, member.weight]));
+    let signed = 0n;
+    for (const [index, [nodeId]] of Array.from(unicitySeal.signatures?.entries() ?? []).entries()) {
+      if (results[index].status === VerificationStatus.OK) {
+        signed += weights.get(nodeId) ?? 0n;
+      }
+    }
+    if (signed >= entry.quorumThreshold) {
       const result = new VerificationResult(
         'UnicitySealQuorumSignaturesVerificationRule',
         VerificationStatus.OK,
-        'Unicity quorum signatures verification threshold reached',
+        `Unicity quorum weight ${signed} reached the threshold ${entry.quorumThreshold}`,
         results,
       );
       // Only quorum-reaching outcomes are memoised: a failure is the abnormal
@@ -123,32 +132,19 @@ export class UnicitySealQuorumSignaturesVerificationRule {
     return new VerificationResult(
       'UnicitySealQuorumSignaturesVerificationRule',
       VerificationStatus.FAIL,
-      'Not enough unicity quorum signatures verification succeeded',
+      `Unicity quorum weight ${signed} is below the threshold ${entry.quorumThreshold}`,
       results,
     );
   }
 
   private async verifySignature(
-    trustBase: RootTrustBase,
+    entry: RootTrustBaseV2,
     nodeId: string,
-    witness: Uint8Array,
+    signature: Signature,
     hash: DataHash,
   ): Promise<VerificationResult<VerificationStatus>> {
-    // a witness that is not a 65-byte signature with recovery id 0..3 contributes zero votes; it does not veto the
-    // seal (Go and Rust parity), and it stays in the seal bytes, so it is part of every cache key
-    let signature: Signature;
-    try {
-      signature = Signature.decode(witness);
-    } catch {
-      return new VerificationResult(
-        `SignatureVerificationRule[${nodeId}]`,
-        VerificationStatus.FAIL,
-        'Malformed signature encoding',
-      );
-    }
-
-    const node = trustBase.rootNodes.get(nodeId) ?? null;
-    if (node == null) {
+    const node = entry.members.find((member) => member.nodeId === nodeId) ?? null;
+    if (node === null) {
       return new VerificationResult(
         `SignatureVerificationRule[${nodeId}]`,
         VerificationStatus.FAIL,
@@ -156,7 +152,7 @@ export class UnicitySealQuorumSignaturesVerificationRule {
       );
     }
 
-    const result = await this.signatureVerifier.verify(hash, signature, node.signingKey);
+    const result = await this.signatureVerifier.verify(hash, signature, node.sigKey);
     if (!result) {
       return new VerificationResult(
         `SignatureVerificationRule[${nodeId}]`,

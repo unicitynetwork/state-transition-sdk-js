@@ -1,4 +1,4 @@
-import { RootTrustBase } from '../../api/bft/RootTrustBase.js';
+import { RootTrustBaseV2 } from '../../api/bft/trustbase/RootTrustBaseV2.js';
 import { HexConverter } from '../../util/HexConverter.js';
 
 let authorityIdentityBuilds = 0;
@@ -11,25 +11,14 @@ export function authorityIdentityBuildCount(): number {
 }
 
 /**
- * Canonical text identity of everything the quorum verdict depends on: network, epoch, quorum threshold and the
- * actual signer lookup entries (map key, node id, signing key, stake) as {@link RootTrustBase.rootNodes} resolves
- * them. The trust base JSON is not enough: it lists the node values only, while signatures are resolved by map key,
- * and the map is publicly mutable.
+ * Canonical text identity of everything the quorum verdict depends on: the complete tagged encoding of the trust-base entry (network, epoch, start
+ * round, quorum threshold, the members with their keys and weights). Entries are immutable, so no snapshot is needed to keep a verdict and its key
+ * from disagreeing.
  *
- * @param {RootTrustBase} trustBase Trust base.
+ * @param {RootTrustBaseV2} entry Trust-base entry.
  * @returns {string} Identity text.
  */
-export function authorityIdentity(trustBase: RootTrustBase): string {
+export function authorityIdentity(entry: RootTrustBaseV2): string {
   authorityIdentityBuilds++;
-  const nodes = Array.from(trustBase.rootNodes.entries())
-    .map(([key, node]) => [key, node.nodeId, HexConverter.encode(node.signingKey), node.stakedAmount.toString()])
-    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-  return JSON.stringify([
-    trustBase.networkId.id,
-    trustBase.epoch.toString(),
-    trustBase.epochStartRound.toString(),
-    trustBase.quorumThreshold.toString(),
-    nodes,
-    JSON.stringify(trustBase.toJSON()),
-  ]);
+  return HexConverter.encode(entry.encode());
 }

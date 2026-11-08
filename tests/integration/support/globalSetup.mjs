@@ -17,4 +17,5 @@ export default async function globalSetup() {
   globalThis.__AGGREGATOR_STACK__ = stack;
   process.env.AGGREGATOR_URL = stack.url;
   process.env.TRUST_BASE_PATH = stack.trustBasePath;
+  process.env.STACK_GENESIS_ID = stack.genesisId;
 }

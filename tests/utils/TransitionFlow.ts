@@ -1,5 +1,6 @@
 import { mintToken, transferToken } from './TokenUtils.js';
-import { RootTrustBase } from '../../src/api/bft/RootTrustBase.js';
+import { ITrustBaseHistory } from '../../src/api/bft/trustbase/ITrustBaseHistory.js';
+import { NetworkId } from '../../src/api/NetworkId.js';
 import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
 import { SignaturePredicate } from '../../src/predicate/builtin/SignaturePredicate.js';
 import { PredicateVerifierService } from '../../src/predicate/verification/PredicateVerifierService.js';
@@ -20,7 +21,7 @@ const DEADLINE_MODES: ReadonlyArray<{ deadline: () => bigint | null; name: strin
   { deadline: expiresAt, name: 'an explicit deadline' },
 ];
 
-export const transitionFlowTest = (client: StateTransitionClient, trustBase: RootTrustBase): void => {
+export const transitionFlowTest = (client: StateTransitionClient, trustBase: ITrustBaseHistory): void => {
   const ALICE_SIGNING_SERVICE = SigningService.generate();
   const BOB_SIGNING_SERVICE = SigningService.generate();
   const CAROL_SIGNING_SERVICE = SigningService.generate();
@@ -49,7 +50,7 @@ export const transitionFlowTest = (client: StateTransitionClient, trustBase: Roo
           verificationContext,
           targetPredicate,
           null,
-          trustBase.networkId,
+          NetworkId.LOCAL,
           undefined,
           undefined,
           null,

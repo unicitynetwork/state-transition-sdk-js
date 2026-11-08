@@ -17,6 +17,11 @@ import { NetworkId } from '../NetworkId.js';
  */
 export class UnicitySeal {
   public static readonly CBOR_TAG = 39005n;
+  /**
+   * Most witnesses (supplied signatures) a seal may carry, whoever signed: 256, the ceiling of a committee (§49). It is a resource bound that
+   * holds before anything is hashed, keyed or verified; it is not the quorum rule.
+   */
+  public static readonly MAX_WITNESSES = 256;
   private static readonly VERSION = 1n;
 
   private constructor(
@@ -146,6 +151,11 @@ export class UnicitySeal {
       throw new CborError(`Unsupported UnicitySeal version: ${version}`);
     }
 
+    const witnessEntries = CborDeserializer.decodeMap(data[7]);
+    if (witnessEntries.length > UnicitySeal.MAX_WITNESSES) {
+      throw new CborError(`${witnessEntries.length} witnesses exceed ${UnicitySeal.MAX_WITNESSES}.`);
+    }
+
     return new UnicitySeal(
       NetworkId.fromId(CborDeserializer.decodeUnsignedInteger(data[1])),
       CborDeserializer.decodeUnsignedInteger(data[2]),
@@ -154,7 +164,7 @@ export class UnicitySeal {
       CborDeserializer.decodeNullable(data[5], CborDeserializer.decodeByteString),
       CborDeserializer.decodeByteString(data[6]),
       new Map(
-        CborDeserializer.decodeMap(data[7]).map((entry) => [
+        witnessEntries.map((entry) => [
           CborDeserializer.decodeTextString(entry.key),
           CborDeserializer.decodeByteString(entry.value),
         ]),

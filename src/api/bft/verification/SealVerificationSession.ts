@@ -1,5 +1,6 @@
 import { ISealAuthenticator } from './ISealAuthenticator.js';
 import { UnicitySealQuorumSignaturesVerificationRule } from './rule/UnicitySealQuorumSignaturesVerificationRule.js';
+import { UnicitySealTrustBaseEntryRule } from './rule/UnicitySealTrustBaseEntryRule.js';
 import { DataHasher } from '../../../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../../../crypto/hash/HashAlgorithm.js';
 import { authorityIdentity } from '../../../internal/bft/authorityIdentity.js';
@@ -9,7 +10,8 @@ import { VerificationResult } from '../../../verification/VerificationResult.js'
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
 import { NetworkId } from '../../NetworkId.js';
 import { SdkError } from '../../SdkError.js';
-import { RootTrustBase } from '../RootTrustBase.js';
+import { ITrustBaseHistory } from '../trustbase/ITrustBaseHistory.js';
+import { RootTrustBaseV2 } from '../trustbase/RootTrustBaseV2.js';
 import { UnicitySeal } from '../UnicitySeal.js';
 
 /**
@@ -48,9 +50,10 @@ export interface ISealVerificationSessionStats {
  * shared too, so concurrent leaf checks do not all miss and each repeat the signatures. Failures are never memoized
  * and a failed or throwing check is dropped from the in-flight set.
  *
- * The memo key commits to the length-delimited complete seal encoding (signatures included, so altered signature
- * witnesses cannot hit an entry), the trust base content (network, epoch, nodes, quorum) and the verifier policy id.
- * Network, epoch and epoch start of the seal are always checked against the trust base, independently of the memo.
+ * The authority is a trust-base history: each seal is checked against the entry of its own epoch. The memo key commits
+ * to the length-delimited complete seal encoding (signatures included, so altered signature witnesses cannot hit an
+ * entry), the complete encoding of that entry (network, epoch, start round, members, weights, quorum) and the verifier
+ * policy id. Network, epoch and round of the seal are always placed in the history, independently of the memo.
  *
  * The session owns exactly one quorum rule (and so one signature verifier); it is not shared between workers or
  * operations and no verified flag can be supplied from outside.
@@ -59,17 +62,16 @@ export class SealVerificationSession implements ISealAuthenticator {
   /** Minimum seal timestamp: Thursday, April 20, 2023 6:11:24 AM GMT+00:00. */
   public static readonly GENESIS_TIME = 1681971084n;
 
-  private readonly authorityId: string;
+  private readonly authorityIds = new Map<RootTrustBaseV2, string>();
   private readonly completed = new Map<string, VerificationResult<VerificationStatus>>();
   private readonly counters = { inFlightJoins: 0, memoHits: 0, quorumChecks: 0 };
   private readonly customRule: boolean;
-  private readonly identityText: string;
+  private readonly history: ITrustBaseHistory;
   private readonly inFlight = new Map<string, Promise<VerificationResult<VerificationStatus>>>();
-  private readonly source: RootTrustBase;
-  private readonly trustBase: RootTrustBase;
+  private readonly policy: string;
 
   /**
-   * @param {RootTrustBase} trustBase Trusted authority the seals are authenticated against.
+   * @param {ITrustBaseHistory} history Trusted authority the seals are authenticated against: the held trust-base history.
    * @param {UnicitySealQuorumSignaturesVerificationRule} quorumRule Quorum rule, runs on every distinct miss.
    * @param {object} [options] Options.
    * @param {number} [options.maxEntries] Upper bound on retained successful checks, the oldest is evicted first.
@@ -78,7 +80,7 @@ export class SealVerificationSession implements ISealAuthenticator {
    * @throws {Error} If `maxEntries` is not a positive integer.
    */
   public constructor(
-    trustBase: RootTrustBase,
+    history: ITrustBaseHistory,
     private readonly quorumRule: UnicitySealQuorumSignaturesVerificationRule,
     private readonly options: {
       readonly maxEntries?: number;
@@ -94,29 +96,38 @@ export class SealVerificationSession implements ISealAuthenticator {
     if (!Number.isInteger(maxInFlight) || maxInFlight <= 0) {
       throw new RangeError('SealVerificationSession maxInFlight must be a positive integer');
     }
-    // The operation's authority is snapshotted once: every check of this session verifies against the snapshot and
-    // every memo key commits to its identity, which is computed exactly once. Later changes to the caller's object
-    // cannot make the verdicts and the keys disagree, and a new operation sees the new state.
-    this.source = trustBase;
-    this.trustBase = trustBase.snapshot();
-    // a customized rule is not wrapped: it is asked about the caller's own object and its verdicts are never remembered
+    // Entries are immutable and the history only grows, so a verdict and its memo key cannot disagree; each entry's identity is built once
+    this.history = history;
+    // a customized rule is not wrapped: it is asked about the entry itself and its verdicts are never remembered
     this.customRule = Object.getPrototypeOf(quorumRule) !== UnicitySealQuorumSignaturesVerificationRule.prototype;
-    this.authorityId = authorityIdentity(this.trustBase);
-    this.identityText = JSON.stringify([options.policy ?? '', this.authorityId]);
+    this.policy = options.policy ?? '';
   }
 
   /**
-   * @returns {string} Identity of the anchored authority and the verifier policy.
+   * @returns {number} Number of distinct entries whose identity this session built (once each).
+   */
+  public get authorityBuilds(): number {
+    return this.authorityIds.size;
+  }
+
+  /**
+   * @returns {string} Identity of the anchored authority (the genesis pin and the held tip) and the verifier policy. It changes when the
+   *   history grows, which only costs a cache miss.
    */
   public get identity(): string {
-    return this.identityText;
+    const tip = this.history.tip;
+    return JSON.stringify([
+      this.policy,
+      HexConverter.encode(this.history.genesisPin),
+      tip === null ? null : HexConverter.encode(tip.encode()),
+    ]);
   }
 
   /**
-   * @returns {RootTrustBase} The trust base object this session was created for (its authority is a snapshot).
+   * @returns {ITrustBaseHistory} The trust-base history this session was created for.
    */
-  public get sourceTrustBase(): RootTrustBase {
-    return this.source;
+  public get sourceTrustBase(): ITrustBaseHistory {
+    return this.history;
   }
 
   /**
@@ -127,35 +138,10 @@ export class SealVerificationSession implements ISealAuthenticator {
   }
 
   /**
-   * @returns {NetworkId} Network of the trusted authority.
+   * @returns {NetworkId|null} Network of the trusted authority, or null while the history is empty.
    */
-  public get trustBaseNetwork(): NetworkId {
-    return this.trustBase.networkId;
-  }
-
-  /**
-   * Check the seal belongs to the authority the trust base represents: structure, network, epoch and epoch start.
-   * Quorum signatures are NOT checked.
-   *
-   * @param {RootTrustBase} trustBase Trusted authority.
-   * @param {UnicitySeal} seal Seal.
-   * @returns {string|null} Failure description or null if the seal is within the authority.
-   */
-  public static checkAuthority(trustBase: RootTrustBase, seal: UnicitySeal): string | null {
-    const structure = SealVerificationSession.checkSealStructure(seal);
-    if (structure !== null) {
-      return structure;
-    }
-    if (!seal.networkId.equals(trustBase.networkId)) {
-      return `Seal is of network ${seal.networkId.id}, trust base is of network ${trustBase.networkId.id}.`;
-    }
-    if (seal.epoch !== trustBase.epoch) {
-      return `Seal is of epoch ${seal.epoch}, trust base is of epoch ${trustBase.epoch}.`;
-    }
-    if (seal.rootChainRoundNumber < trustBase.epochStartRound) {
-      return `Seal round ${seal.rootChainRoundNumber} is before the start of epoch ${trustBase.epoch} (round ${trustBase.epochStartRound}).`;
-    }
-    return null;
+  public get trustBaseNetwork(): NetworkId | null {
+    return this.history.networkId;
   }
 
   /**
@@ -181,6 +167,9 @@ export class SealVerificationSession implements ISealAuthenticator {
     if (!signatures?.size) {
       return 'Seal has no signatures.';
     }
+    if (signatures.size > UnicitySeal.MAX_WITNESSES) {
+      return `Seal has ${signatures.size} signatures, more than ${UnicitySeal.MAX_WITNESSES}.`;
+    }
     for (const [signer, signature] of signatures) {
       if (signer === '') {
         return 'Seal has a signature without signer ID.';
@@ -193,40 +182,53 @@ export class SealVerificationSession implements ISealAuthenticator {
   }
 
   /**
-   * Authenticate the seal: authority context first, then the quorum signatures, once per distinct seal.
+   * Authenticate the seal: structure, then its place in the history (network, the entry of its epoch, the round inside that epoch), then the
+   * quorum signatures of that entry, once per distinct seal. A seal of an epoch the history does not hold fails with the typed no-entry result.
    *
    * @param {UnicitySeal} seal Seal.
    * @returns {Promise<VerificationResult<VerificationStatus>>} Outcome.
    */
   public authenticate(seal: UnicitySeal): Promise<VerificationResult<VerificationStatus>> {
-    const failure = SealVerificationSession.checkAuthority(this.trustBase, seal);
-    if (failure !== null) {
-      return Promise.resolve(new VerificationResult('SealAuthority', VerificationStatus.FAIL, failure));
+    const structure = SealVerificationSession.checkSealStructure(seal);
+    if (structure !== null) {
+      return Promise.resolve(new VerificationResult('SealAuthority', VerificationStatus.FAIL, structure));
+    }
+    const placed = UnicitySealTrustBaseEntryRule.verify(this.history, seal);
+    if (placed.entry === null) {
+      return Promise.resolve(
+        new VerificationResult('SealAuthority', VerificationStatus.FAIL, placed.message, [placed]),
+      );
     }
 
-    return this.verifyQuorumSignaturesOnly(seal);
+    return this.verifyQuorum(placed.entry, seal);
   }
 
   /**
-   * **Weaker than {@link SealVerificationSession.authenticate}; use that one.** Checks only the quorum signatures of
-   * the seal against the session's trust base: no structure, network, epoch or epoch start checks. Ordinary token
-   * verification needs exactly this, because it has always accepted original proofs' seals on signatures alone
-   * (including seals of earlier epochs and fixtures without a timestamp). Results are memoized and in-flight
-   * deduplicated like `authenticate`'s, in a memo shared with it, so a distinct complete seal is checked once.
-   * The structure check is deliberately not applied here, as it would reject seals the SDK has always accepted; the
-   * shared memo is still safe because `authenticate` runs its structure and authority checks before every memo lookup,
-   * so a quorum-only success can never admit a seal through the strict path.
+   * Quorum signatures of the seal against a given entry of the session's history (the caller placed the seal in it), memoized and in-flight
+   * deduplicated per distinct (policy, entry, seal).
    *
    * @internal
+   * @param {RootTrustBaseV2} entry Entry of the seal's epoch.
    * @param {UnicitySeal} seal Seal.
    * @returns {Promise<VerificationResult<VerificationStatus>>} Outcome.
    */
-  public async verifyQuorumSignaturesOnly(seal: UnicitySeal): Promise<VerificationResult<VerificationStatus>> {
+  public async verifyQuorum(
+    entry: RootTrustBaseV2,
+    seal: UnicitySeal,
+  ): Promise<VerificationResult<VerificationStatus>> {
+    // Before the memo key is built (which encodes and hashes the whole seal) and before any signature work.
+    if ((seal.witnesses?.size ?? 0) > UnicitySeal.MAX_WITNESSES) {
+      return new VerificationResult(
+        'SealAuthority',
+        VerificationStatus.FAIL,
+        `Seal has ${seal.witnesses?.size} signatures, more than ${UnicitySeal.MAX_WITNESSES}.`,
+      );
+    }
     if (this.customRule) {
       this.counters.quorumChecks++;
-      return this.quorumRule.verify(this.source, seal);
+      return this.quorumRule.verify(entry, seal);
     }
-    const key = await this.keyFor(seal);
+    const key = await this.keyFor(entry, seal);
     const done = this.completed.get(key);
     if (done) {
       this.counters.memoHits++;
@@ -243,7 +245,7 @@ export class SealVerificationSession implements ISealAuthenticator {
     }
 
     this.counters.quorumChecks++;
-    const check = this.quorumRule.verify(this.trustBase, seal).then(
+    const check = this.quorumRule.verify(entry, seal).then(
       (result) => {
         this.inFlight.delete(key);
         if (result.status === VerificationStatus.OK) {
@@ -260,11 +262,16 @@ export class SealVerificationSession implements ISealAuthenticator {
     return check;
   }
 
-  private async keyFor(seal: UnicitySeal): Promise<string> {
+  private async keyFor(entry: RootTrustBaseV2, seal: UnicitySeal): Promise<string> {
+    let authorityId = this.authorityIds.get(entry);
+    if (authorityId === undefined) {
+      authorityId = authorityIdentity(entry);
+      this.authorityIds.set(entry, authorityId);
+    }
     const hash = await new DataHasher(HashAlgorithm.SHA256)
       .update(
         CborSerializer.encodeArray(
-          CborSerializer.encodeTextString(this.identity),
+          CborSerializer.encodeTextString(JSON.stringify([this.policy, authorityId])),
           CborSerializer.encodeByteString(seal.toCBOR()),
         ),
       )

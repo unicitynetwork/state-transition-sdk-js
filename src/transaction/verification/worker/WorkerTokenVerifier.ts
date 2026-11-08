@@ -1,5 +1,7 @@
 import { IWorker } from './IWorker.js';
-import { RootTrustBase } from '../../../api/bft/RootTrustBase.js';
+import { RootTrustBaseV2 } from '../../../api/bft/trustbase/RootTrustBaseV2.js';
+import { TrustBaseHistory } from '../../../api/bft/trustbase/TrustBaseHistory.js';
+import { findNoTrustBaseEntry, NoTrustBaseEntryResult } from '../../../api/bft/verification/TrustBaseEntryResult.js';
 import { UnicityCertificateVerifier } from '../../../api/bft/verification/UnicityCertificateVerifier.js';
 import { DataHash } from '../../../crypto/hash/DataHash.js';
 import { beginOperationContext } from '../../../internal/OperationContext.js';
@@ -7,6 +9,7 @@ import { EncodedPredicate } from '../../../predicate/EncodedPredicate.js';
 import { PredicateVerifierService } from '../../../predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../../../serialization/cbor/CborDeserializer.js';
 import { CborSerializer } from '../../../serialization/cbor/CborSerializer.js';
+import { HexConverter } from '../../../util/HexConverter.js';
 import { VerificationResult } from '../../../verification/VerificationResult.js';
 import { VerificationStatus } from '../../../verification/VerificationStatus.js';
 import { CertifiedTransferTransaction } from '../../CertifiedTransferTransaction.js';
@@ -26,12 +29,20 @@ export interface IEncodedTransferTransaction {
 }
 
 /**
- * The message posted to a worker: the transfers of one batch and the trust base serialised
- * as an opaque JSON blob for `RootTrustBase.fromJSON`.
+ * The trust-base history as it crosses the worker boundary: the pinned genesis entry id and the held entries, hex encoded. The worker appends
+ * them again, so it checks the chain itself rather than trusting the main thread's word.
+ */
+export interface IEncodedTrustBaseHistory {
+  readonly entries: readonly string[];
+  readonly genesisPin: string;
+}
+
+/**
+ * The message posted to a worker: the transfers of one batch and the trust-base history.
  */
 export interface ITransferTransactionVerificationRequest {
   readonly transfers: readonly IEncodedTransferTransaction[];
-  readonly trustBase: unknown;
+  readonly trustBase: IEncodedTrustBaseHistory;
 }
 
 /**
@@ -40,6 +51,8 @@ export interface ITransferTransactionVerificationRequest {
 export interface ITransferTransactionVerificationResult {
   readonly index: number;
   readonly message: string;
+  /** Set when the failure is the typed "no trust-base entry for this epoch" (epoch and held tip epoch as decimal strings; tip empty if none). */
+  readonly noEntry?: { readonly epoch: string; readonly tipEpoch: string };
   readonly status: VerificationStatus;
 }
 
@@ -91,7 +104,12 @@ function toValidatedBatchResults(
       throw new Error('Invalid worker response: result is not an object.');
     }
 
-    const { index, message, status } = result as { index?: unknown; message?: unknown; status?: unknown };
+    const { index, message, noEntry, status } = result as {
+      index?: unknown;
+      message?: unknown;
+      noEntry?: unknown;
+      status?: unknown;
+    };
     if (typeof index !== 'number' || !Number.isInteger(index)) {
       throw new Error('Invalid worker response: transfer index is not an integer.');
     }
@@ -110,6 +128,19 @@ function toValidatedBatchResults(
 
     if (status !== VerificationStatus.OK && status !== VerificationStatus.FAIL) {
       throw new Error(`Invalid worker response: invalid status of transfer ${index}.`);
+    }
+
+    if (noEntry !== undefined) {
+      const { epoch, tipEpoch } = (noEntry ?? {}) as { epoch?: unknown; tipEpoch?: unknown };
+      if (
+        status !== VerificationStatus.FAIL ||
+        typeof epoch !== 'string' ||
+        !/^\d+$/.test(epoch) ||
+        typeof tipEpoch !== 'string' ||
+        !/^\d*$/.test(tipEpoch)
+      ) {
+        throw new Error(`Invalid worker response: invalid no-entry failure of transfer ${index}.`);
+      }
     }
 
     pending.delete(index);
@@ -163,6 +194,9 @@ function decodeSelfContained(bytes: Uint8Array): CertifiedTransferTransaction {
  * instance.
  */
 export abstract class TransferTransactionVerifier {
+  /** The history of the last request: batches of one token carry the same one, and building it checks every signature of the chain. */
+  private lastHistory: { readonly history: TrustBaseHistory; readonly key: string } | null = null;
+
   /**
    * The predicate verifier to verify batches with.
    *
@@ -194,7 +228,7 @@ export abstract class TransferTransactionVerifier {
     request: ITransferTransactionVerificationRequest,
   ): Promise<TransferTransactionVerificationResponse> {
     try {
-      const trustBase = RootTrustBase.fromJSON(request.trustBase);
+      const trustBase = await this.historyOf(request.trustBase);
 
       // one operation per request: the transfers of a batch share certificates and seals
       const unicityCertificateVerifier =
@@ -208,13 +242,34 @@ export abstract class TransferTransactionVerifier {
           trustBase,
           unicityCertificateVerifier,
         });
-        results.push({ index: transfer.index, message: result.message, status: result.status });
+        const noEntry = findNoTrustBaseEntry(result);
+        results.push({
+          index: transfer.index,
+          message: result.message,
+          ...(noEntry === null
+            ? {}
+            : { noEntry: { epoch: noEntry.epoch.toString(), tipEpoch: noEntry.tipEpoch?.toString() ?? '' } }),
+          status: result.status,
+        });
       }
 
       return results;
     } catch (error) {
       return { error: (error instanceof Error && error.stack) || String(error) };
     }
+  }
+
+  private async historyOf(encoded: IEncodedTrustBaseHistory): Promise<TrustBaseHistory> {
+    const key = JSON.stringify([encoded.genesisPin, encoded.entries]);
+    if (this.lastHistory?.key === key) {
+      return this.lastHistory.history;
+    }
+    const history = TrustBaseHistory.create(HexConverter.decode(encoded.genesisPin));
+    for (const entry of encoded.entries) {
+      await history.append(RootTrustBaseV2.decode(HexConverter.decode(entry)));
+    }
+    this.lastHistory = { history, key };
+    return history;
   }
 }
 
@@ -350,7 +405,10 @@ export abstract class WorkerTokenVerifier implements ITokenVerifier {
   public async verify(token: Token, outer: IVerificationContext): Promise<VerificationResult<VerificationStatus>> {
     // the genesis checks of the token and of every nested token run in one operation on this thread
     const context = beginOperationContext(outer);
-    const trustBaseJson = context.trustBase.toJSON();
+    const trustBaseEncoded: IEncodedTrustBaseHistory = {
+      entries: context.trustBase.entries.map((entry) => HexConverter.encode(entry.encode())),
+      genesisPin: HexConverter.encode(context.trustBase.genesisPin),
+    };
     const pending: Token[] = [token];
     const collectNestedToken = (nested: Token): void => {
       pending.push(nested);
@@ -391,7 +449,7 @@ export abstract class WorkerTokenVerifier implements ITokenVerifier {
                   bytes: encodeSelfContained(transactions[index]),
                   index,
                 })),
-                trustBase: trustBaseJson,
+                trustBase: trustBaseEncoded,
               })
               .then((batch) => toValidatedBatchResults(batch, indices)),
           ),
@@ -403,6 +461,14 @@ export abstract class WorkerTokenVerifier implements ITokenVerifier {
               'CertifiedTransferTransactionVerificationRule',
               result.status,
               result.message,
+              result.noEntry === undefined
+                ? []
+                : [
+                    new NoTrustBaseEntryResult(
+                      BigInt(result.noEntry.epoch),
+                      result.noEntry.tipEpoch === '' ? null : BigInt(result.noEntry.tipEpoch),
+                    ),
+                  ],
             );
           }
         }

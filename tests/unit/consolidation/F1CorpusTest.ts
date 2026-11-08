@@ -6,6 +6,7 @@ import { AGGREGATION_PARTITION_ID } from '../../../src/api/bft/AggregationPartit
 import { PartitionView } from '../../../src/api/bft/PartitionView.js';
 import { UnicitySealQuorumSignaturesVerificationRule } from '../../../src/api/bft/verification/rule/UnicitySealQuorumSignaturesVerificationRule.js';
 import { SealVerificationSession } from '../../../src/api/bft/verification/SealVerificationSession.js';
+import { NetworkId } from '../../../src/api/NetworkId.js';
 import { ConsolidationError } from '../../../src/consolidation/ConsolidationError.js';
 import { ConsolidationAttempt, ProofConsolidator } from '../../../src/consolidation/ProofConsolidator.js';
 import { ShardRouting } from '../../../src/consolidation/ShardRouting.js';
@@ -21,6 +22,7 @@ import {
   sha256Hex,
   shardIdOf,
 } from '../../utils/F1Corpus.js';
+import { createTrustBaseHistoryFromAuthority } from '../../utils/TrustBaseHistoryFixture.js';
 
 function shardUrl(bits: string): string {
   return `http://shard-${bits || 'root'}.test`;
@@ -50,11 +52,11 @@ function fakeFetch(c: IF1Case, calls: { body: Record<string, unknown>; shard: st
   });
 }
 
-function build(c: IF1Case): {
+async function build(c: IF1Case): Promise<{
   consolidator: ProofConsolidator;
   routing: ShardRouting;
   session: SealVerificationSession;
-} {
+}> {
   // the corpus context's partition is an equality assertion against the fixed aggregation partition (the SDK takes no
   // partition option): any other value is rejected as invalid input before anything is sent
   if (BigInt(c.context.partitionId) !== AGGREGATION_PARTITION_ID) {
@@ -75,7 +77,7 @@ function build(c: IF1Case): {
     })),
   });
   const session = new SealVerificationSession(
-    c.trustBase,
+    await createTrustBaseHistoryFromAuthority(c.trustBase),
     new UnicitySealQuorumSignaturesVerificationRule(new Secp256k1SignatureVerifier()),
   );
   return { consolidator: new ProofConsolidator(routing, session), routing, session };
@@ -118,7 +120,7 @@ async function execute(c: IF1Case): Promise<ConsolidationAttempt | Consolidation
   const calls: { body: Record<string, unknown>; shard: string }[] = [];
   const spy = fakeFetch(c, calls);
   try {
-    const { consolidator } = build(c);
+    const { consolidator } = await build(c);
     let items;
     try {
       items = evidenceOf(c.requests);
@@ -249,9 +251,9 @@ describe('F1 negative cases', () => {
       // the trusted context itself is refused when it is configured
       let observed = 'ok';
       try {
-        build(c);
+        await build(c);
         // the declared network of the context is the one of the trust base: no separate routing field to disagree
-        if (!networkOf(c.context).equals(c.trustBase.networkId)) {
+        if (!networkOf(c.context).equals(NetworkId.fromId(c.trustBase.networkId))) {
           throw new ConsolidationError('input', 'The context is for another network than the trust base.', {
             outcome: 'incompatible_lineage',
           });

@@ -1,6 +1,6 @@
 import config from './config.json' with { type: 'json' };
 import { AggregatorClient } from '../../../src/api/AggregatorClient.js';
-import { RootTrustBase } from '../../../src/api/bft/RootTrustBase.js';
+import { TrustBaseHistory } from '../../../src/api/bft/trustbase/TrustBaseHistory.js';
 import { CertificationData } from '../../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../../src/api/CertificationResponse.js';
 import { NetworkId } from '../../../src/api/NetworkId.js';
@@ -22,10 +22,10 @@ import { VerificationContext } from '../../../src/transaction/verification/Verif
 import { HexConverter } from '../../../src/util/HexConverter.js';
 import { waitInclusionProof } from '../../../src/util/InclusionProofUtils.js';
 import { VerificationStatus } from '../../../src/verification/VerificationStatus.js';
+import { loadTrustBaseHistorySync, requiredEnv } from '../../utils/TrustBaseFile.js';
 import { createUnicityCertificateVerifier } from '../../utils/UnicityCertificateVerifierFixture.js';
-import trustBaseJson from '../trust-base.json' with { type: 'json' };
 
-async function receiveToken(client: StateTransitionClient, trustBase: RootTrustBase): Promise<string> {
+async function receiveToken(client: StateTransitionClient, trustBase: TrustBaseHistory): Promise<string> {
   const predicateVerifier = PredicateVerifierService.create();
   const unicityCertificateVerifier = createUnicityCertificateVerifier();
   const verificationContext = new VerificationContext(
@@ -63,7 +63,11 @@ async function receiveToken(client: StateTransitionClient, trustBase: RootTrustB
 
 it('Token transfer', async () => {
   const aggregatorClient = new AggregatorClient(config.aggregatorUrl);
-  const trustBase = RootTrustBase.fromJSON(trustBaseJson);
+  const { history: trustBase, ready } = loadTrustBaseHistorySync(
+    requiredEnv('TRUST_BASE_PATH'),
+    requiredEnv('TRUST_BASE_GENESIS_PIN'),
+  );
+  await ready;
   const client = new StateTransitionClient(aggregatorClient);
   const predicateVerifier = PredicateVerifierService.create();
   const unicityCertificateVerifier = createUnicityCertificateVerifier();

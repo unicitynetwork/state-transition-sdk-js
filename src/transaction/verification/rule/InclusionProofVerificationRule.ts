@@ -1,5 +1,5 @@
 import { ShardIdMatchesStateIdRule } from './ShardIdMatchesStateIdRule.js';
-import { RootTrustBase } from '../../../api/bft/RootTrustBase.js';
+import { ITrustBaseHistory } from '../../../api/bft/trustbase/ITrustBaseHistory.js';
 import { UnicityCertificateVerifier } from '../../../api/bft/verification/UnicityCertificateVerifier.js';
 import { InclusionProof } from '../../../api/InclusionProof.js';
 import { calculateLeafValue } from '../../../api/LeafValue.js';
@@ -35,7 +35,7 @@ export class InclusionProofVerificationRule {
    * attests to: its canonical hash, the lock script being unlocked, and the source state
    * being spent.
    *
-   * @param {RootTrustBase} trustBase Root trust base.
+   * @param {ITrustBaseHistory} trustBase Trust-base history.
    * @param {PredicateVerifierService} predicateVerifierFactory Predicate verifier service.
    * @param {InclusionProof} inclusionProof Inclusion proof to verify.
    * @param {DataHash} transactionHash Canonical hash of the transaction.
@@ -45,7 +45,7 @@ export class InclusionProofVerificationRule {
    * @returns {Promise<VerificationResult<InclusionProofVerificationStatus>>} Verification outcome.
    */
   public static async verify(
-    trustBase: RootTrustBase,
+    trustBase: ITrustBaseHistory,
     predicateVerifierFactory: PredicateVerifierService,
     unicityCertificateVerifier: UnicityCertificateVerifier,
     inclusionProof: InclusionProof,

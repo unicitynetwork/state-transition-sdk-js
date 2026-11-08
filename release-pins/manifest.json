@@ -1,0 +1,30 @@
+{
+  "networks": [
+    {
+      "bundle": "unicity-trustbase.mainnet.cbor",
+      "bundleSha256": "9d01b8713cab42dab269e1ad6e244cf11e7f8c4b580682a98402db348b37bd52",
+      "genesisEntryId": "0b6f8143e19e2a585be3534e8f1062f36c3b9621e506158f10abfbc9a56f4e4c",
+      "genesisEpoch": "1",
+      "name": "mainnet",
+      "networkId": 1,
+      "pinnedEntryId": "0b6f8143e19e2a585be3534e8f1062f36c3b9621e506158f10abfbc9a56f4e4c",
+      "pinnedEpoch": "1"
+    },
+    {
+      "bundle": "unicity-trustbase.testnet2.cbor",
+      "bundleSha256": "5b0a4fb7bd6c2d71068c0e65659aa60733dcc9083e9290fc22c2dd8e8e60f08a",
+      "genesisEntryId": "4b49eb2bb0729051b89a48668fd6ef1fda284aad2e10b7d5f23aad4b5faef37f",
+      "genesisEpoch": "1",
+      "name": "testnet2",
+      "networkId": 4,
+      "pinnedEntryId": "4b49eb2bb0729051b89a48668fd6ef1fda284aad2e10b7d5f23aad4b5faef37f",
+      "pinnedEpoch": "1"
+    }
+  ],
+  "source": {
+    "commit": "513dc4fcf01ee802a97d59a5bc4e50ba64786d45",
+    "pullRequest": 11,
+    "repository": "unicitynetwork/unicity-ids"
+  },
+  "version": 1
+}

@@ -472,8 +472,9 @@ export class ProofConsolidator {
   }
 
   /**
-   * Authenticate every original proof (shard and partition path to its seal hash, leaf rules, seal quorum under the
-   * trusted authority) and derive R_min: the highest root round among them. All seals must be of one network.
+   * Authenticate every original proof (shard and partition path to its seal hash, leaf rules, seal structure, then the seal
+   * placed in the trusted history: its network, the entry of its epoch, the round inside that epoch, and the quorum of that
+   * entry) and derive R_min: the highest root round among them. All seals must be of one network.
    */
   private async authenticateEvidence(
     items: readonly IConsolidationItem[],
@@ -497,10 +498,13 @@ export class ProofConsolidator {
       if (best !== null && !seal.networkId.equals(best.network)) {
         throw integrity('incompatible_lineage', `Evidence ${i}: seal of another network than earlier evidence.`);
       }
-      if (!seal.networkId.equals(this.session.trustBaseNetwork)) {
+      const authorityNetwork = this.session.trustBaseNetwork;
+      if (authorityNetwork === null || !seal.networkId.equals(authorityNetwork)) {
         throw integrity('unauthenticated', `Evidence ${i}: seal of another network than the trusted authority.`);
       }
-      const quorum = await this.session.verifyQuorumSignaturesOnly(seal);
+      // the strict path: the seal is placed in the history (network, the entry of its epoch, the round inside that epoch) and its quorum is
+      // checked against that entry; an original proof of an earlier epoch is checked against that epoch's entry, not against the newest
+      const quorum = await this.session.authenticate(seal);
       if (quorum.status !== VerificationStatus.OK) {
         throw integrity('unauthenticated', `Evidence ${i}: the seal is not authenticated.`, shard);
       }

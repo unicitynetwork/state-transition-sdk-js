@@ -27,7 +27,8 @@ export class CertifiedMintTransactionVerificationRule {
   ): Promise<VerificationResult<VerificationStatus>> {
     const results: VerificationResult<unknown>[] = [];
 
-    if (!genesis.networkId.equals(verificationContext.trustBase.networkId)) {
+    const trustBaseNetwork = verificationContext.trustBase.networkId;
+    if (trustBaseNetwork === null || !genesis.networkId.equals(trustBaseNetwork)) {
       results.push(new VerificationResult('MintNetworkMatchesTrustBaseRule', VerificationStatus.FAIL));
       return new VerificationResult(
         'CertifiedMintTransactionVerificationRule',

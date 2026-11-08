@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { RootTrustBase } from '../../../../src/api/bft/RootTrustBase.js';
+import { RootTrustBaseV2 } from '../../../../src/api/bft/trustbase/RootTrustBaseV2.js';
 import { UnicitySeal } from '../../../../src/api/bft/UnicitySeal.js';
 import { UnicitySealQuorumSignaturesVerificationRule } from '../../../../src/api/bft/verification/rule/UnicitySealQuorumSignaturesVerificationRule.js';
 import { VerifiedSealCache } from '../../../../src/api/bft/verification/VerifiedSealCache.js';
@@ -12,6 +12,7 @@ import { Secp256k1SignatureVerifier } from '../../../../src/crypto/secp256k1/Sec
 import { Signature } from '../../../../src/crypto/secp256k1/Signature.js';
 import { HexConverter } from '../../../../src/util/HexConverter.js';
 import { VerificationStatus } from '../../../../src/verification/VerificationStatus.js';
+import { createTrustBaseHistoryFromAuthority } from '../../../utils/TrustBaseHistoryFixture.js';
 
 interface IFixture {
   primitive: {
@@ -68,21 +69,20 @@ describe('shared O3 signature recovery fixtures', () => {
   });
 
   describe('seal quorum cases', () => {
-    const trustBase = RootTrustBase.fromJSON({
-      changeRecordHash: null,
-      epoch: String(fixture.seal.epoch),
-      epochStartRound: '0',
-      networkId: fixture.seal.networkId,
-      previousEntryHash: null,
-      quorumThreshold: String(fixture.seal.quorumThreshold),
-      rootNodes: fixture.seal.nodes.map((n) => ({
-        nodeId: n.id,
-        sigKey: n.publicKeyCompressed,
-        stake: String(n.stake),
-      })),
-      signatures: {},
-      stateHash: '00',
-      version: '1',
+    let trustBase: RootTrustBaseV2;
+    beforeAll(async () => {
+      const history = await createTrustBaseHistoryFromAuthority({
+        epoch: String(fixture.seal.epoch),
+        epochStartRound: '0',
+        networkId: fixture.seal.networkId,
+        quorumThreshold: String(fixture.seal.quorumThreshold),
+        rootNodes: fixture.seal.nodes.map((n) => ({
+          nodeId: n.id,
+          sigKey: n.publicKeyCompressed,
+          stake: String(n.stake),
+        })),
+      });
+      trustBase = history.tip as RootTrustBaseV2;
     });
     const rule = new UnicitySealQuorumSignaturesVerificationRule(verifier);
 

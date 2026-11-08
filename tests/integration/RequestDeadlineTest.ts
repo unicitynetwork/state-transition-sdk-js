@@ -2,6 +2,7 @@ import { createIntegrationContext } from './IntegrationConfig.js';
 import { CertificationData } from '../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../src/api/CertificationResponse.js';
 import { InclusionProof } from '../../src/api/InclusionProof.js';
+import { NetworkId } from '../../src/api/NetworkId.js';
 import { StateId } from '../../src/api/StateId.js';
 import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
 import { SignaturePredicate } from '../../src/predicate/builtin/SignaturePredicate.js';
@@ -23,13 +24,15 @@ import { createUnicityCertificateVerifier } from '../utils/UnicityCertificateVer
  * ./support/aggregatorStack.mjs.
  */
 describe('Integration request deadline', () => {
-  const { aggregatorClient, client, trustBase } = createIntegrationContext();
+  const { aggregatorClient, client, ready, trustBase } = createIntegrationContext();
+
+  beforeAll(() => ready);
   const predicateVerifier = PredicateVerifierService.create();
   const unicityCertificateVerifier = createUnicityCertificateVerifier();
 
   /** Build a mint request for a fresh recipient under the given deadline. */
   const mintTransaction = (deadline: bigint | null): Promise<MintTransaction> =>
-    MintTransaction.create(trustBase.networkId, SignaturePredicate.create(SigningService.generate().publicKey), {
+    MintTransaction.create(NetworkId.LOCAL, SignaturePredicate.create(SigningService.generate().publicKey), {
       expiresAt: deadline,
     });
 
