@@ -1,4 +1,6 @@
 import { readFileSync } from 'node:fs';
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 
 import { AggregatorClient, SDK_VERSION_HEADER } from '../../../src/api/AggregatorClient.js';
 import { JsonRpcNetworkError } from '../../../src/api/json-rpc/JsonRpcNetworkError.js';
@@ -50,6 +52,50 @@ describe('AggregatorClient', () => {
   describe('getTrustBasePage', () => {
     const request = { fromEpoch: 4n, maxEntries: 16, network: NetworkId.LOCAL, snapshot: null };
 
+    it('fails at its own deadline when a source sends the headers and then stalls the body', async () => {
+      const server = createServer((_req, res) => {
+        res.writeHead(200, { 'Content-Length': '100', 'Content-Type': 'application/cbor' });
+        res.write(new Uint8Array([1]));
+      });
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+      try {
+        const { port } = server.address() as AddressInfo;
+        const client = new AggregatorClient(`http://127.0.0.1:${port}`, null, false, { trustBasePageTimeoutMs: 300 });
+        const started = Date.now();
+        await expect(client.getTrustBasePage(request)).rejects.toMatchObject({ name: 'TimeoutError' });
+        expect(Date.now() - started).toBeLessThan(5000);
+      } finally {
+        server.closeAllConnections();
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+      }
+    });
+
+    it('control: the default deadline is 30 seconds, and a bad one is refused', () => {
+      expect(AggregatorClient.TRUST_BASE_PAGE_TIMEOUT_MS).toBe(30_000);
+      expect(() => new AggregatorClient('https://example.com', null, false, { trustBasePageTimeoutMs: 0 })).toThrow(
+        RangeError,
+      );
+    });
+
+    it("the caller's signal still cancels it", async () => {
+      const fetchMock = jest.spyOn(global, 'fetch').mockImplementation(
+        (_url, init) =>
+          new Promise((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () => reject(init.signal?.reason as Error));
+          }),
+      );
+      try {
+        const controller = new AbortController();
+        const pending = new AggregatorClient('https://example.com').getTrustBasePage(request, {
+          signal: controller.signal,
+        });
+        controller.abort(new Error('caller'));
+        await expect(pending).rejects.toThrow('caller');
+      } finally {
+        fetchMock.mockRestore();
+      }
+    });
+
     const withFetch = async (
       response: Response,
       run: (fetchMock: jest.SpiedFunction<typeof fetch>) => Promise<void>,
@@ -98,11 +144,16 @@ describe('AggregatorClient', () => {
       });
     });
 
-    it('forwards the abort signal', async () => {
+    it('forwards the abort signal (joined with its own deadline)', async () => {
       await withFetch(new Response(new Uint8Array(0)), async (fetchMock) => {
         const controller = new AbortController();
         await new AggregatorClient('https://example.com').getTrustBasePage(request, { signal: controller.signal });
-        expect((fetchMock.mock.calls[0][1] as RequestInit).signal).toBe(controller.signal);
+        const forwarded = (fetchMock.mock.calls[0][1] as RequestInit).signal as AbortSignal;
+        expect(forwarded.aborted).toBe(false);
+        const reason = new Error('caller');
+        controller.abort(reason);
+        // the joined signal is released once the request is done: it no longer follows the caller
+        expect(forwarded.aborted).toBe(false);
       });
     });
 

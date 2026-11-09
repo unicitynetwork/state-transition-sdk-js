@@ -31,7 +31,7 @@ import { NonInclusionProofError } from './NonInclusionProofError.js';
 import { parseProofStatusHint } from './ProofStatusHint.js';
 import { StateId } from './StateId.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
-import { abortable } from '../internal/abortable.js';
+import { abortable, joinSignals } from '../internal/abortable.js';
 import { checkWaitMs, isMalformedParams, isWireMilliseconds } from '../internal/longPoll.js';
 import { classifyNonInclusionFailure } from '../internal/nonInclusionFailure.js';
 import { SDK_VERSION } from '../SdkVersion.js';
@@ -54,6 +54,12 @@ export interface IAggregatorClientOptions {
    * allow). Never used as a retry fallback.
    */
   readonly sdkVersionHeader?: boolean | string;
+  /**
+   * Deadline of one trust-base page request ({@link AggregatorClient.getTrustBasePage}), headers and body, in milliseconds. A source that sends
+   * the headers and then stalls fails at this deadline, so an update moves on to the next source. The caller's signal still applies. Default
+   * {@link AggregatorClient.TRUST_BASE_PAGE_TIMEOUT_MS}; a positive safe integer.
+   */
+  readonly trustBasePageTimeoutMs?: number;
 }
 
 /**
@@ -64,8 +70,11 @@ export class AggregatorClient
 {
   /** Largest trust-base response read: the GetTrustBase page cap plus slack for the HTTP framing. */
   public static readonly MAX_TRUST_BASE_RESPONSE_BYTES = (1 << 20) + 1024;
+  /** Default deadline of one trust-base page request: 30 seconds. */
+  public static readonly TRUST_BASE_PAGE_TIMEOUT_MS = 30_000;
 
   private readonly transport: JsonRpcHttpTransport;
+  private readonly trustBasePageTimeoutMs: number;
   private readonly url: string;
   private readonly versionHeader: string | null;
   readonly #key: string | null;
@@ -90,6 +99,11 @@ export class AggregatorClient
       throw new Error('API key must not be sent over plaintext HTTP; use an https URL.');
     }
 
+    const pageTimeout = options.trustBasePageTimeoutMs ?? AggregatorClient.TRUST_BASE_PAGE_TIMEOUT_MS;
+    if (!Number.isSafeInteger(pageTimeout) || pageTimeout <= 0) {
+      throw new RangeError(`trustBasePageTimeoutMs must be a positive safe integer, got ${pageTimeout}.`);
+    }
+    this.trustBasePageTimeoutMs = pageTimeout;
     this.#key = key;
     this.url = url;
     const version = AggregatorClient.versionHeaderValue(options.sdkVersionHeader);
@@ -512,12 +526,21 @@ export class AggregatorClient
     if (this.#key) {
       headers.set('X-API-Key', this.#key);
     }
-    const response = await fetch(url, { headers, method: 'GET', redirect: 'error', signal: options?.signal });
-    const body = await readBoundedBytes(response, AggregatorClient.MAX_TRUST_BASE_RESPONSE_BYTES);
-    if (!response.ok) {
-      throw new JsonRpcNetworkError(response.status, new TextDecoder().decode(body));
+    // a deadline of its own over the headers and the body, joined with the caller's signal
+    const deadline = AbortSignal.timeout(this.trustBasePageTimeoutMs);
+    const joined = options?.signal
+      ? joinSignals(options.signal, deadline)
+      : { dispose: (): void => {}, signal: deadline };
+    try {
+      const response = await fetch(url, { headers, method: 'GET', redirect: 'error', signal: joined.signal });
+      const body = await readBoundedBytes(response, AggregatorClient.MAX_TRUST_BASE_RESPONSE_BYTES);
+      if (!response.ok) {
+        throw new JsonRpcNetworkError(response.status, new TextDecoder().decode(body));
+      }
+      return body;
+    } finally {
+      joined.dispose();
     }
-    return body;
   }
 
   /**
