@@ -56,7 +56,7 @@ describe('the release table (mainnet and testnet2)', () => {
 
   it('names its source, which is a full commit of unicity-ids#11', () => {
     expect(manifest.source).toEqual({
-      commit: '513dc4fcf01ee802a97d59a5bc4e50ba64786d45',
+      commit: 'ef00ff25972e4db23485cc982e059a7022c2e463',
       pullRequest: 11,
       repository: 'unicitynetwork/unicity-ids',
     });
