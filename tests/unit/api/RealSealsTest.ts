@@ -4,7 +4,11 @@ import { join } from 'node:path';
 import { TrustBaseBundle } from '../../../src/api/bft/trustbase/TrustBaseBundle.js';
 import { TrustBaseHistory } from '../../../src/api/bft/trustbase/TrustBaseHistory.js';
 import { UnicitySealQuorumSignaturesVerificationRule } from '../../../src/api/bft/verification/rule/UnicitySealQuorumSignaturesVerificationRule.js';
+import { NoTrustBaseEntryResult } from '../../../src/api/bft/verification/TrustBaseEntryResult.js';
 import { UnicityCertificateVerifier } from '../../../src/api/bft/verification/UnicityCertificateVerifier.js';
+import { verifyWithUpdate } from '../../../src/api/bft/verification/verifyWithUpdate.js';
+import { ITrustBaseRequest } from '../../../src/api/ITrustBaseSource.js';
+import { NetworkId } from '../../../src/api/NetworkId.js';
 import { NonInclusionProof } from '../../../src/api/NonInclusionProof.js';
 import { verifyNonInclusion } from '../../../src/api/NonInclusionVerification.js';
 import { StateId } from '../../../src/api/StateId.js';
@@ -101,6 +105,47 @@ describe('real seals of the existing networks verify through the V2 bundle', () 
       expect(await damaged(1)).toBe('absent_at_snapshot');
       expect(await damaged(signatures.length)).toBe('authority_rejected');
       expect(await damaged(signatures.length - 1)).toBe('authority_rejected');
+    });
+  });
+
+  describe('a seal of an epoch the history does not hold yet keeps the typed missing-entry cause (shared rule 3)', () => {
+    it("non-inclusion: authority_rejected with the seal's epoch and the held tip as its cause", async () => {
+      const empty = TrustBaseHistory.create(HexConverter.decode(TESTNET2_ID));
+      const result = await verify(proofOf('testnet2'), empty);
+      expect(result.verdict).toBe('authority_rejected');
+      expect(result.cause).toBeInstanceOf(NoTrustBaseEntryResult);
+      expect(result.cause?.epoch).toBe(1n);
+      expect(result.cause?.tipEpoch).toBeNull();
+    });
+
+    it('control: a bad quorum in an epoch that is held has no such cause', async () => {
+      const history = await historyOf('testnet2', TESTNET2_ID);
+      const raw = HexConverter.decode(read('testnet2.non-inclusion.hex'));
+      const bad = new Uint8Array(raw);
+      for (const signature of proofOf('testnet2').unicityCertificate.unicitySeal.witnesses?.values() ?? []) {
+        bad[indexOf(bad, signature) + 10] ^= 1;
+      }
+      const result = await verify(proofOf('testnet2', bad), history);
+      expect(result.verdict).toBe('authority_rejected');
+      expect(result.cause).toBeNull();
+    });
+
+    it('verifyWithUpdate drives it: fetches the missing entry and verifies again', async () => {
+      const empty = TrustBaseHistory.create(HexConverter.decode(TESTNET2_ID));
+      const bundle = new Uint8Array(readFileSync(join(DIR, 'unicity-trustbase.testnet2.cbor')));
+      const requests: ITrustBaseRequest[] = [];
+      const source = {
+        getTrustBasePage: (request: ITrustBaseRequest): Promise<Uint8Array> => {
+          requests.push(request);
+          return Promise.resolve(bundle);
+        },
+      };
+      const result = await verifyWithUpdate(empty, [source], () => verify(proofOf('testnet2'), empty), {
+        backoffMs: 1,
+        network: NetworkId.fromId(4),
+      });
+      expect(result.verdict).toBe('absent_at_snapshot');
+      expect(requests.map((r) => r.fromEpoch)).toEqual([1n]);
     });
   });
 });

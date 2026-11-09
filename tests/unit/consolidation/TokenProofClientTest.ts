@@ -1,8 +1,10 @@
 import { BatchProofError } from '../../../src/api/BatchProofError.js';
 import { PartitionView } from '../../../src/api/bft/PartitionView.js';
+import { TrustBaseHistory } from '../../../src/api/bft/trustbase/TrustBaseHistory.js';
 import { UnicityCertificate } from '../../../src/api/bft/UnicityCertificate.js';
 import { UnicitySeal } from '../../../src/api/bft/UnicitySeal.js';
 import { UnicitySealQuorumSignaturesVerificationRule } from '../../../src/api/bft/verification/rule/UnicitySealQuorumSignaturesVerificationRule.js';
+import { NoTrustBaseEntryResult } from '../../../src/api/bft/verification/TrustBaseEntryResult.js';
 import {
   UnicityCertificateVerificationResult,
   UnicityCertificateVerifier,
@@ -20,6 +22,7 @@ import { ShardRouting } from '../../../src/consolidation/ShardRouting.js';
 import { TokenProofClient } from '../../../src/consolidation/TokenProofClient.js';
 import { Secp256k1SignatureVerifier } from '../../../src/crypto/secp256k1/Secp256k1SignatureVerifier.js';
 import { Token } from '../../../src/transaction/Token.js';
+import { VerificationContext } from '../../../src/transaction/verification/VerificationContext.js';
 import { HexConverter } from '../../../src/util/HexConverter.js';
 import { VerificationResult } from '../../../src/verification/VerificationResult.js';
 import { VerificationStatus } from '../../../src/verification/VerificationStatus.js';
@@ -489,6 +492,43 @@ describe('TokenProofClient', () => {
         await s.world.idle(1);
         const error = await expectError(clientOf(s).consolidate(token), 'integrity');
         expect(error.outcome).toEqual('unauthenticated');
+      });
+
+      it('a seal of an epoch the client does not hold yet is unauthenticated with the typed missing-entry cause (shared rule 3)', async () => {
+        const s = await scenario(bits, new AcceptingVerifier());
+        const token = await s.history(2);
+        // the client's history stops at epoch 1; the world moves on to epoch 2 and seals the master there
+        const lagging = TrustBaseHistory.create(s.world.trustBase.genesisPin);
+        await lagging.append(s.world.trustBase.entries[0]);
+        await s.world.idle(1);
+        await s.world.startNextEpoch(s.world.latest.number + 1n);
+        await s.world.idle(1);
+        const c = s.context;
+        const context = new VerificationContext(
+          lagging,
+          c.predicateVerifier,
+          c.unicityCertificateVerifier,
+          c.mintJustificationVerifier,
+          c.tokenIssuanceVerifier,
+        );
+        const error = await expectError(
+          new TokenProofClient({ routing: routingOf(s), verificationContext: context }).consolidate(token),
+          'integrity',
+        );
+        expect(error.outcome).toEqual('unauthenticated');
+        expect(error.cause).toBeInstanceOf(NoTrustBaseEntryResult);
+        expect((error.cause as NoTrustBaseEntryResult).epoch).toBe(2n);
+        expect((error.cause as NoTrustBaseEntryResult).tipEpoch).toBe(1n);
+      });
+
+      it('control: a seal at or past the end of its held epoch has no missing-entry cause', async () => {
+        const s = await scenario(bits, new AcceptingVerifier());
+        const token = await s.history(2);
+        await s.world.startNextEpoch(roundsOf(token).reduce((a, b) => (a > b ? a : b)));
+        await s.world.idle(1);
+        const error = await expectError(clientOf(s).consolidate(token), 'integrity');
+        expect(error.outcome).toEqual('unauthenticated');
+        expect(error.cause).toBeUndefined();
       });
 
       it('is accepted when every original proof lies inside its epoch', async () => {
