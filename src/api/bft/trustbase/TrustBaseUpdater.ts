@@ -43,8 +43,12 @@ export interface ITrustBaseUpdateOptions {
  * the same cursor. An authenticated prefix is kept even when a later page fails.
  */
 export class TrustBaseUpdater {
-  /** Updates in flight, so concurrent callers of one history share one fetch. */
-  private static readonly IN_FLIGHT = new WeakMap<ITrustBaseUpdateTarget, Promise<number>>();
+  /**
+   * The last update queued on each history. Concurrent calls on one history run one after another, each with its own sources and signal: a later
+   * call waits for the one before it (its own signal ends the wait), then fetches from the tip that one left, which usually means one request per
+   * source answering "nothing newer". No call is answered with another call's sources, signal or result.
+   */
+  private static readonly IN_FLIGHT = new WeakMap<ITrustBaseUpdateTarget, Promise<void>>();
 
   /**
    * Fetch and append the entries after the held tip.
@@ -61,14 +65,20 @@ export class TrustBaseUpdater {
     sources: readonly ITrustBaseSource[],
     options: ITrustBaseUpdateOptions = {},
   ): Promise<number> {
-    const running = TrustBaseUpdater.IN_FLIGHT.get(history);
-    if (running !== undefined) {
-      return running;
-    }
-    const promise = TrustBaseUpdater.run(history, sources, options).finally(() => {
-      TrustBaseUpdater.IN_FLIGHT.delete(history);
+    const before = TrustBaseUpdater.IN_FLIGHT.get(history);
+    const promise = (before === undefined ? Promise.resolve() : TrustBaseUpdater.settled(before, options.signal)).then(
+      () => TrustBaseUpdater.run(history, sources, options),
+    );
+    const queued = promise.then(
+      () => undefined,
+      () => undefined,
+    );
+    TrustBaseUpdater.IN_FLIGHT.set(history, queued);
+    void queued.then(() => {
+      if (TrustBaseUpdater.IN_FLIGHT.get(history) === queued) {
+        TrustBaseUpdater.IN_FLIGHT.delete(history);
+      }
     });
-    TrustBaseUpdater.IN_FLIGHT.set(history, promise);
     return promise;
   }
 
@@ -94,6 +104,9 @@ export class TrustBaseUpdater {
     // that only knows the older tip cannot end the call as "current" once any source announced a higher end. Both reset when an entry is refused.
     let from = nextFrom();
     let snapshot: ITrustBaseRequest['snapshot'] = null;
+    // The highest end any source announced in this call. It outlives a dropped snapshot: an honest source is then asked without the echo, but its
+    // "nothing newer" counts as current only once the held history reaches the announced end (until then it is transient, asked again next round).
+    let announced: bigint | null = null;
 
     for (let round = 0; round < rounds; round++) {
       if (round > 0) {
@@ -110,6 +123,7 @@ export class TrustBaseUpdater {
             // The history moved on by other means: the frozen range no longer applies.
             from = nextFrom();
             snapshot = null;
+            announced = null;
           }
           const request: ITrustBaseRequest = {
             fromEpoch: from,
@@ -134,15 +148,22 @@ export class TrustBaseUpdater {
           // A source's tip is unauthenticated metadata: a lagging or hostile source must not end the update. Only when every source says there is
           // nothing newer is the history taken as current.
           if (page.status === TrustBaseStatus.NOT_YET_AVAILABLE && snapshot === null && page.effectiveEnd < from) {
-            current++;
+            if (announced === null || announced < from) {
+              current++;
+            }
             break;
           }
           if (page.status !== TrustBaseStatus.OK) {
             causes.push(new TrustBaseUpdateError(`Source ${index}: ${TrustBaseStatus[page.status]}.`, []));
-            if (page.status === TrustBaseStatus.HISTORY_MISMATCH && snapshot !== null) {
+            if (
+              snapshot !== null &&
+              (page.status === TrustBaseStatus.HISTORY_MISMATCH || page.status === TrustBaseStatus.NOT_YET_AVAILABLE)
+            ) {
               // The snapshot was announced by some source's first page and is unauthenticated: a hostile source can announce a fake one, and then
-              // every honest source refuses the echo. That refusal says nothing about this source's own history, so drop the snapshot, restart
-              // from the held tip and ask this source again without it. The next mismatch carries no snapshot and is final, so this ends.
+              // every honest source refuses the echo, with HistoryMismatch (another end entry) or NotYetAvailable (an end above its tip, as
+              // aggregator-go answers; a gateway's lagging backend answers the same to an honest page 2). That refusal says nothing about this
+              // source's own history, so drop the snapshot, restart from the held tip and ask this source again without it. The next request
+              // carries no snapshot, so its refusal is final (or, NotYetAvailable below the held tip, "nothing newer"), and this ends.
               snapshot = null;
               from = nextFrom();
               continue;
@@ -185,6 +206,7 @@ export class TrustBaseUpdater {
               causes.push(error);
               refused = true;
               snapshot = null;
+              announced = null;
               from = nextFrom();
               break;
             }
@@ -196,6 +218,7 @@ export class TrustBaseUpdater {
             return appended;
           }
           snapshot ??= { end: page.effectiveEnd, entryId: new Uint8Array(page.endEntryId ?? []) };
+          announced = announced === null || page.effectiveEnd > announced ? page.effectiveEnd : announced;
           from = page.nextEpoch;
         }
       }
@@ -205,6 +228,33 @@ export class TrustBaseUpdater {
     }
 
     throw new TrustBaseUpdateError('No source served the range.', causes, appended);
+  }
+
+  /** Wait until `before` has settled (whatever its outcome), or reject at once with the reason of `signal`. */
+  private static settled(before: Promise<unknown>, signal?: AbortSignal): Promise<void> {
+    signal?.throwIfAborted();
+    if (signal === undefined) {
+      return before.then(
+        () => undefined,
+        () => undefined,
+      );
+    }
+    return new Promise<void>((resolve, reject) => {
+      const onAbort = (): void => {
+        const reason: unknown = signal.reason;
+        reject(reason instanceof Error ? reason : new Error('The update was aborted.', { cause: reason }));
+      };
+      signal.addEventListener('abort', onAbort, { once: true });
+      void before
+        .then(
+          () => undefined,
+          () => undefined,
+        )
+        .then(() => {
+          signal.removeEventListener('abort', onAbort);
+          resolve();
+        });
+    });
   }
 
   private static sleep(ms: number, signal?: AbortSignal): Promise<void> {

@@ -129,17 +129,26 @@ describe('TrustBaseUpdater', () => {
     expect(history.tip?.epoch).toBe(1n);
   });
 
-  it('a source that lags behind the snapshot is a failure and keeps the authenticated prefix', async () => {
+  it('a source whose page 2 lags behind its own snapshot is asked again without it, and keeps the authenticated prefix', async () => {
     const history = await atGenesis();
     const f = rangeFields();
+    // a gateway: page 1 from an up-to-date backend, then a lagging backend at epoch 2 (NotYetAvailable, as aggregator-go answers)
     const lagging = refusal(TrustBaseStatus.NOT_YET_AVAILABLE, 2n);
     const source = new FakeSource((request) =>
       Promise.resolve(
-        request.snapshot === null ? buildBundle({ ...f, entries: [f.entries[0]], nextEpoch: 3n }) : lagging,
+        request.fromEpoch === 2n ? buildBundle({ ...f, entries: [f.entries[0]], nextEpoch: 3n }) : lagging,
       ),
     );
-    await failure(TrustBaseUpdater.update(history, [source], { ...FAST, rounds: 1 }));
+    // its "nothing newer" is below its own announced end, so it is not "current": a failure, asked again in the next round
+    const error = await failure(TrustBaseUpdater.update(history, [source], { ...FAST, rounds: 2 }));
+    expect(error.appended).toBe(1);
     expect(history.tip?.epoch).toBe(2n);
+    expect(source.requests.map((r) => [r.fromEpoch, r.snapshot === null])).toEqual([
+      [2n, true],
+      [3n, false],
+      [3n, true],
+      [3n, true],
+    ]);
   });
 
   it('falls through to the next source when one is unreachable', async () => {
@@ -227,17 +236,64 @@ describe('TrustBaseUpdater', () => {
     expect(noSource.message).toMatch(/No source/);
   });
 
-  it('shares one update between concurrent callers of the same history', async () => {
+  // an honest source: the range from epoch 2, and "nothing newer than 3" after it
+  const honest = (): FakeSource =>
+    new FakeSource((request) =>
+      Promise.resolve(
+        request.fromEpoch === 2n ? buildBundle(rangeFields()) : refusal(TrustBaseStatus.NOT_YET_AVAILABLE, 3n),
+      ),
+    );
+
+  it('runs concurrent callers of one history one after another, each with its own sources', async () => {
     const history = await atGenesis();
-    const source = serve(buildBundle(rangeFields()));
+    const first = honest();
+    const second = honest();
     const [a, b] = await Promise.all([
-      TrustBaseUpdater.update(history, [source], FAST),
-      TrustBaseUpdater.update(history, [source], FAST),
+      TrustBaseUpdater.update(history, [first], FAST),
+      TrustBaseUpdater.update(history, [second], FAST),
     ]);
-    expect([a, b]).toEqual([2, 2]);
-    expect(source.requests).toHaveLength(1);
-    // and a later update is a new one
-    await expect(TrustBaseUpdater.update(history, [serve(refusal(3))], FAST)).resolves.toBe(0);
+    expect([a, b]).toEqual([2, 0]);
+    expect(first.requests.map((r) => r.fromEpoch)).toEqual([2n]);
+    // the second caller's own source is asked, from the tip the first left
+    expect(second.requests.map((r) => r.fromEpoch)).toEqual([4n]);
+    expect(history.tip?.epoch).toBe(3n);
+  });
+
+  it('aborting one concurrent caller does not reject another', async () => {
+    const history = await atGenesis();
+    const controller = new AbortController();
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    const slow = new FakeSource(async (request) => {
+      await held;
+      return request.fromEpoch === 2n ? buildBundle(rangeFields()) : refusal(TrustBaseStatus.NOT_YET_AVAILABLE, 3n);
+    });
+    const one = TrustBaseUpdater.update(history, [slow], { ...FAST, signal: controller.signal });
+    const two = TrustBaseUpdater.update(history, [honest()], FAST);
+    controller.abort(new Error('caller one gave up'));
+    release();
+    await expect(one).rejects.toThrow('caller one gave up');
+    await expect(two).resolves.toBe(2);
+    expect(history.tip?.epoch).toBe(3n);
+  });
+
+  it('a waiting caller whose signal aborts stops waiting at once', async () => {
+    const history = await atGenesis();
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    const slow = new FakeSource(async (request) => {
+      await held;
+      return request.fromEpoch === 2n ? buildBundle(rangeFields()) : refusal(TrustBaseStatus.NOT_YET_AVAILABLE, 3n);
+    });
+    const one = TrustBaseUpdater.update(history, [slow], FAST);
+    const controller = new AbortController();
+    const waiting = honest();
+    const two = TrustBaseUpdater.update(history, [waiting], { ...FAST, signal: controller.signal });
+    controller.abort(new Error('caller two gave up'));
+    await expect(two).rejects.toThrow('caller two gave up');
+    expect(waiting.requests).toHaveLength(0);
+    release();
+    await expect(one).resolves.toBe(2);
   });
 
   it('stops at an aborted signal without asking', async () => {
@@ -441,6 +497,36 @@ describe('TrustBaseUpdater', () => {
       expect(history.tip?.epoch).toBe(3n);
       expect(honest.requests.map((r) => r.snapshot === null)).toEqual([false, true]);
       expect(honest.requests[1].fromEpoch).toBe(3n);
+    });
+
+    it('NotYetAvailable on an echoed fake end (aggregator-go#273) drops the snapshot and does not end the honest source', async () => {
+      const history = await atGenesis();
+      const f = rangeFields();
+      // The hostile source serves one genuine entry, a cursor and a fake end far above every honest tip, then is gone.
+      const hostile = new FakeSource((_request, call) =>
+        call === 1
+          ? Promise.resolve(buildBundle({ ...f, effectiveEnd: 102n, entries: [f.entries[0]], nextEpoch: 3n }))
+          : Promise.reject(new Error('gone')),
+      );
+      // The honest source answers an end above its tip with NotYetAvailable, as aggregator-go#273 does, and serves from the tip without one.
+      const honest = new FakeSource((request) =>
+        Promise.resolve(
+          request.snapshot === null
+            ? buildBundle({ ...f, entries: [f.entries[1]], fromEpoch: 3n })
+            : refusal(TrustBaseStatus.NOT_YET_AVAILABLE, 3n),
+        ),
+      );
+      await expect(TrustBaseUpdater.update(history, [hostile, honest], FAST)).resolves.toBe(2);
+      expect(history.tip?.epoch).toBe(3n);
+      expect(honest.requests.map((r) => r.snapshot === null)).toEqual([false, true]);
+      expect(honest.requests[1].fromEpoch).toBe(3n);
+    });
+
+    it('control: NotYetAvailable on a request without a snapshot, at or above the wanted epoch, is still final', async () => {
+      const history = await atGenesis();
+      const source = serve(refusal(TrustBaseStatus.NOT_YET_AVAILABLE, 2n));
+      await failure(TrustBaseUpdater.update(history, [source], FAST));
+      expect(source.requests).toHaveLength(1);
     });
 
     it('control: a mismatch on a request without a snapshot is still final', async () => {
