@@ -203,6 +203,9 @@ export class RootTrustBaseV2 {
       for (const entry of signatureEntries) {
         signatures.set(CborDeserializer.decodeTextString(entry.key), CborDeserializer.decodeByteString(entry.value));
       }
+      if (signatures.size !== signatureEntries.length) {
+        throw new TrustBaseEncodingError('Two signature keys decode to the same node id.');
+      }
     }
 
     return new RootTrustBaseV2(

@@ -156,6 +156,16 @@ export class UnicitySeal {
       throw new CborError(`${witnessEntries.length} witnesses exceed ${UnicitySeal.MAX_WITNESSES}.`);
     }
 
+    const witnesses = new Map(
+      witnessEntries.map((entry) => [
+        CborDeserializer.decodeTextString(entry.key),
+        CborDeserializer.decodeByteString(entry.value),
+      ]),
+    );
+    if (witnesses.size !== witnessEntries.length) {
+      throw new CborError('Two witness keys decode to the same node id.');
+    }
+
     return new UnicitySeal(
       NetworkId.fromId(CborDeserializer.decodeUnsignedInteger(data[1])),
       CborDeserializer.decodeUnsignedInteger(data[2]),
@@ -163,12 +173,7 @@ export class UnicitySeal {
       CborDeserializer.decodeUnsignedInteger(data[4]),
       CborDeserializer.decodeNullable(data[5], CborDeserializer.decodeByteString),
       CborDeserializer.decodeByteString(data[6]),
-      new Map(
-        witnessEntries.map((entry) => [
-          CborDeserializer.decodeTextString(entry.key),
-          CborDeserializer.decodeByteString(entry.value),
-        ]),
-      ),
+      witnesses,
     );
   }
 
