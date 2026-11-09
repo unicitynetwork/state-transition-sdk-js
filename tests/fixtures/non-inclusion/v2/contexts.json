@@ -18,7 +18,7 @@
     "trustBaseBundle": "authority/trust-base.cbor",
     "shard": "",
     "nextEpochStart": "0",
-    "shardConfHash": "7243d3acc12f960fdb69ae385b588878b82f29ed49baba8718698ffbb9e5b8f1"
+    "shardConfHash": "b96ac9d593ba756d1812843068f2996c19444e3c730b0dac93e7793deb4f28b2"
   },
   "config-pin-other": {
     "description": "pins another shard configuration hash",
@@ -60,7 +60,7 @@
     "trustBaseBundle": "authority/trust-base.cbor",
     "shard": "00",
     "nextEpochStart": "0",
-    "shardConfHash": "87cf67430cf3df8890cafc1b8865afccc54e7ae3e83b3168a4fb1c659c8c4112"
+    "shardConfHash": "e8883d2c22a31a51be038ba098c200cc298c458f0b870e6b34182ccd6313b373"
   },
   "shard-00-config-pin-other": {
     "description": "shard 00 pinning another configuration hash",

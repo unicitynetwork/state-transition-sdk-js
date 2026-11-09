@@ -5,7 +5,7 @@
       "name": "historical-absence-meets-its-own-round",
       "vector": "cases/historical-snapshot-absent",
       "snapshot": {
-        "networkId": 2,
+        "networkId": 3,
         "partitionId": 7,
         "shardId": "",
         "rootRound": "16",
@@ -16,7 +16,7 @@
         "stateRoot": "7e9f358e96811c556061a484c6691f74dc3845f0ba7c758fca91785d5f576423"
       },
       "checkpoint": {
-        "networkId": 2,
+        "networkId": 3,
         "requiredRootRound": "16"
       },
       "decision": "accept",
@@ -26,7 +26,7 @@
       "name": "historical-absence-is-older-than-required",
       "vector": "cases/historical-snapshot-absent",
       "snapshot": {
-        "networkId": 2,
+        "networkId": 3,
         "partitionId": 7,
         "shardId": "",
         "rootRound": "16",
@@ -37,7 +37,7 @@
         "stateRoot": "7e9f358e96811c556061a484c6691f74dc3845f0ba7c758fca91785d5f576423"
       },
       "checkpoint": {
-        "networkId": 2,
+        "networkId": 3,
         "requiredRootRound": "17"
       },
       "decision": "reject",
@@ -47,7 +47,7 @@
       "name": "historical-absence-wrong-network",
       "vector": "cases/historical-snapshot-absent",
       "snapshot": {
-        "networkId": 2,
+        "networkId": 3,
         "partitionId": 7,
         "shardId": "",
         "rootRound": "16",
@@ -68,7 +68,7 @@
       "name": "later-snapshot-included-is-not-absence",
       "vector": "cases/later-snapshot-included",
       "snapshot": {
-        "networkId": 2,
+        "networkId": 3,
         "partitionId": 7,
         "shardId": "",
         "rootRound": "17",
@@ -79,7 +79,7 @@
         "stateRoot": "1ad5e794a9a82dd4c3874cb40bf70206a297c217795e8a509d78b6f834387a91"
       },
       "checkpoint": {
-        "networkId": 2,
+        "networkId": 3,
         "requiredRootRound": "16"
       },
       "decision": "accept",
@@ -89,7 +89,7 @@
       "name": "timestamp-policy-accepts-equal",
       "vector": "cases/historical-snapshot-absent",
       "snapshot": {
-        "networkId": 2,
+        "networkId": 3,
         "partitionId": 7,
         "shardId": "",
         "rootRound": "16",
@@ -100,7 +100,7 @@
         "stateRoot": "7e9f358e96811c556061a484c6691f74dc3845f0ba7c758fca91785d5f576423"
       },
       "checkpoint": {
-        "networkId": 2,
+        "networkId": 3,
         "requiredRootRound": "1",
         "minSealTimestampSeconds": "1731504150"
       },
@@ -111,7 +111,7 @@
       "name": "timestamp-policy-rejects-older",
       "vector": "cases/historical-snapshot-absent",
       "snapshot": {
-        "networkId": 2,
+        "networkId": 3,
         "partitionId": 7,
         "shardId": "",
         "rootRound": "16",
@@ -122,7 +122,7 @@
         "stateRoot": "7e9f358e96811c556061a484c6691f74dc3845f0ba7c758fca91785d5f576423"
       },
       "checkpoint": {
-        "networkId": 2,
+        "networkId": 3,
         "requiredRootRound": "1",
         "minSealTimestampSeconds": "1731504151"
       },
@@ -133,7 +133,7 @@
       "name": "large-round-meets-requirement",
       "vector": "cases/large-uint64-fields",
       "snapshot": {
-        "networkId": 2,
+        "networkId": 3,
         "partitionId": 7,
         "shardId": "",
         "rootRound": "18446744073709551613",
@@ -144,7 +144,7 @@
         "stateRoot": "23595af0c41f1dd99aaf49c7f810285ae0c85efbcef498e11aa82872c5ff6549"
       },
       "checkpoint": {
-        "networkId": 2,
+        "networkId": 3,
         "requiredRootRound": "18446744073709551613"
       },
       "decision": "accept",
@@ -154,7 +154,7 @@
       "name": "large-round-one-below-requirement",
       "vector": "cases/large-uint64-fields",
       "snapshot": {
-        "networkId": 2,
+        "networkId": 3,
         "partitionId": 7,
         "shardId": "",
         "rootRound": "18446744073709551613",
@@ -165,7 +165,7 @@
         "stateRoot": "23595af0c41f1dd99aaf49c7f810285ae0c85efbcef498e11aa82872c5ff6549"
       },
       "checkpoint": {
-        "networkId": 2,
+        "networkId": 3,
         "requiredRootRound": "18446744073709551614"
       },
       "decision": "reject",
@@ -175,7 +175,7 @@
       "name": "large-round-vs-2-53",
       "vector": "cases/large-uint64-fields",
       "snapshot": {
-        "networkId": 2,
+        "networkId": 3,
         "partitionId": 7,
         "shardId": "",
         "rootRound": "18446744073709551613",
@@ -186,7 +186,7 @@
         "stateRoot": "23595af0c41f1dd99aaf49c7f810285ae0c85efbcef498e11aa82872c5ff6549"
       },
       "checkpoint": {
-        "networkId": 2,
+        "networkId": 3,
         "requiredRootRound": "9007199254740993"
       },
       "decision": "accept",
@@ -196,7 +196,7 @@
       "name": "sharded-absence-meets-requirement",
       "vector": "cases/sharded-absent",
       "snapshot": {
-        "networkId": 2,
+        "networkId": 3,
         "partitionId": 7,
         "shardId": "00",
         "rootRound": "2",
@@ -207,7 +207,7 @@
         "stateRoot": "464d3f32d63b70cc2bec925ced155c76e40912f4d88ad7cd4fa0b83e61dec5ed"
       },
       "checkpoint": {
-        "networkId": 2,
+        "networkId": 3,
         "requiredRootRound": "2"
       },
       "decision": "accept",

@@ -1,6 +1,6 @@
 {
   "corpusVersion": 1,
-  "networkId": 2,
+  "networkId": 3,
   "partitionId": 7,
   "shards": [
     "00",
@@ -12,22 +12,22 @@
     {
       "shard": "00",
       "file": "shard-configs/00.cbor",
-      "hash": "853f23e9457a0c40a5be0a95db8e0a8b6e1524650043b691dce733905e733ab4"
+      "hash": "9f4739e3008e1245a73fd00e07e9938553ae786ec38bc2745d72cbb90d89dd74"
     },
     {
       "shard": "01",
       "file": "shard-configs/01.cbor",
-      "hash": "5da391a6520614ec0919acbd855935a6004a1cdb3e3caaf017730126fbb0f491"
+      "hash": "00ee312dd9a01654ee50e0bac5a624cb958e08a40a1b69d6b41b94eafda17060"
     },
     {
       "shard": "10",
       "file": "shard-configs/10.cbor",
-      "hash": "5646ec9503dcdd9c9302294f441d7dad9e624f53f804994d165c827002095216"
+      "hash": "fe6100d729dede517d859988e27bb881b578b439870eafcbe3ca6eb103344641"
     },
     {
       "shard": "11",
       "file": "shard-configs/11.cbor",
-      "hash": "dc3eac36c4a940b49966607d433e2e0b9c540507991a4b2f8cb656758154c433"
+      "hash": "3ef53257e101b8cfbbb37d150b14ef383be9b3f32196d14b9928e4c9bc5abd48"
     }
   ],
   "master": "00",

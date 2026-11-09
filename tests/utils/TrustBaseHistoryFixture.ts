@@ -100,8 +100,8 @@ export async function appendNextEpoch(
   return next;
 }
 
-/** The authority of a corpus, as the single-record JSON the corpora spell it in (uint64 values as decimal strings). */
-export interface IAuthorityJson {
+/** The fields of a one-entry authority a test spells (uint64 values as decimal strings). */
+export interface IAuthorityFields {
   readonly epoch: string;
   readonly epochStartRound: string;
   readonly networkId: number;
@@ -113,7 +113,7 @@ export interface IAuthorityJson {
  * A history holding the one entry a corpus authority spells: its epoch, start round, members and quorum as given (the entry rules still apply).
  * The pin is the entry's own id.
  */
-export async function createTrustBaseHistoryFromAuthority(authority: IAuthorityJson): Promise<TrustBaseHistory> {
+export async function createTrustBaseHistoryFromAuthority(authority: IAuthorityFields): Promise<TrustBaseHistory> {
   const fields: IEntryFields = {
     changeRecordHash: null,
     epoch: BigInt(authority.epoch),
@@ -141,11 +141,10 @@ function hexBytes(hex: string): Uint8Array {
 /**
  * A corpus authority (a trust base v2 bundle, tag 39015, holding the genesis entry) as a history pinned to that genesis.
  *
- * @param {string} path Authority bundle file.
+ * @param {Uint8Array} bytes The bundle.
  * @returns {Promise<TrustBaseHistory>} The history of the bundle's entries.
  */
-export async function loadAuthorityHistory(path: string): Promise<TrustBaseHistory> {
-  const bytes = new Uint8Array(readFileSync(path));
+export async function historyFromBundle(bytes: Uint8Array): Promise<TrustBaseHistory> {
   const bundle = await TrustBaseBundle.decode(bytes, { maxBytes: bytes.length, maxEntries: 1024 });
   const entries = bundle.entries;
   const history = TrustBaseHistory.create(await entries[0].entryId());
@@ -153,6 +152,16 @@ export async function loadAuthorityHistory(path: string): Promise<TrustBaseHisto
     await history.append(entry);
   }
   return history;
+}
+
+/**
+ * A corpus authority bundle file as a history.
+ *
+ * @param {string} path Authority bundle file.
+ * @returns {Promise<TrustBaseHistory>} The history of the bundle's entries.
+ */
+export function loadAuthorityHistory(path: string): Promise<TrustBaseHistory> {
+  return historyFromBundle(new Uint8Array(readFileSync(path)));
 }
 
 /** The complete bundle (tag 39015, status OK, genesis to tip) of a history, as the file a deployment under test serves. */
@@ -172,25 +181,4 @@ export async function bundleOfHistory(history: TrustBaseHistory): Promise<Uint8A
     status: 0n,
     version: 1n,
   });
-}
-
-/** The single-record JSON the released 3.0.1 client reads, for the first entry of a history (the compat runners drive that client). */
-export function legacyTrustBaseJson(history: TrustBaseHistory): Record<string, unknown> {
-  const entry = history.entries[0];
-  return {
-    changeRecordHash: null,
-    epoch: entry.epoch.toString(),
-    epochStartRound: entry.epochStartRound.toString(),
-    networkId: entry.networkId.id,
-    previousEntryHash: null,
-    quorumThreshold: entry.quorumThreshold.toString(),
-    rootNodes: entry.members.map((member) => ({
-      nodeId: member.nodeId,
-      sigKey: Buffer.from(member.sigKey).toString('hex'),
-      stake: member.weight.toString(),
-    })),
-    signatures: {},
-    stateHash: '00',
-    version: '1',
-  };
 }

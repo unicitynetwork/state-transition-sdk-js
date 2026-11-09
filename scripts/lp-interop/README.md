@@ -12,7 +12,7 @@ node scripts/lp-interop/run.mjs --url http://localhost:3000 --trust-base <trust-
   --scenario l2,l3,l4,l5,l6,l7 --wait-ms 5000 --states 50 --concurrency 10 --report /tmp/js-s2-lp.json
 ```
 
-The released 3.0.1 runner is `compat/released-3.0.1` (`run.mjs`, `--report` now includes `requestCounts`). The driver reports
+The driver reports
 facts; it does not decide PASS/FAIL of a matrix cell. `tests/unit/compat/LpInteropRunnerTest.ts` self-tests it against a
 server that ignores `waitMs` (needs the build).
 

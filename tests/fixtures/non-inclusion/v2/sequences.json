@@ -12,7 +12,7 @@
             "outcome": "absent_at_snapshot",
             "stateId": "1100000000000000000000000000000000000000000000000000000000000000",
             "snapshot": {
-              "networkId": 2,
+              "networkId": 3,
               "partitionId": 7,
               "shardId": "",
               "rootRound": "6",
@@ -30,7 +30,7 @@
             "outcome": "absent_at_snapshot",
             "stateId": "1100000000000000000000000000000000000000000000000000000000000000",
             "snapshot": {
-              "networkId": 2,
+              "networkId": 3,
               "partitionId": 7,
               "shardId": "",
               "rootRound": "6",
@@ -48,7 +48,7 @@
             "outcome": "included_at_snapshot",
             "stateId": "1000000000000000000000000000000000000000000000000000000000000000",
             "snapshot": {
-              "networkId": 2,
+              "networkId": 3,
               "partitionId": 7,
               "shardId": "",
               "rootRound": "6",
@@ -73,7 +73,7 @@
             "outcome": "absent_at_snapshot",
             "stateId": "1100000000000000000000000000000000000000000000000000000000000000",
             "snapshot": {
-              "networkId": 2,
+              "networkId": 3,
               "partitionId": 7,
               "shardId": "",
               "rootRound": "6",
@@ -112,7 +112,7 @@
             "outcome": "absent_at_snapshot",
             "stateId": "1100000000000000000000000000000000000000000000000000000000000000",
             "snapshot": {
-              "networkId": 2,
+              "networkId": 3,
               "partitionId": 7,
               "shardId": "",
               "rootRound": "6",
@@ -137,7 +137,7 @@
             "outcome": "absent_at_snapshot",
             "stateId": "2001000000000000000000000000000000000000000000000000000000000000",
             "snapshot": {
-              "networkId": 2,
+              "networkId": 3,
               "partitionId": 7,
               "shardId": "00",
               "rootRound": "10",
@@ -162,7 +162,7 @@
             "outcome": "absent_at_snapshot",
             "stateId": "2001000000000000000000000000000000000000000000000000000000000000",
             "snapshot": {
-              "networkId": 2,
+              "networkId": 3,
               "partitionId": 7,
               "shardId": "00",
               "rootRound": "10",

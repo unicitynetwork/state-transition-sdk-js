@@ -45,11 +45,11 @@ describe('non-inclusion example (API reference)', () => {
   }
 
   it('accepts a snapshot that meets the application policy', async () => {
-    await expect(check({ networkId: 2, requiredRootRound: 16n })).resolves.toBeUndefined();
+    await expect(check({ networkId: 3, requiredRootRound: 16n })).resolves.toBeUndefined();
   });
 
   it('refuses a snapshot older than the requirement, and a snapshot of another network', async () => {
-    await expect(check({ networkId: 2, requiredRootRound: 17n })).rejects.toThrow('does not meet application policy');
+    await expect(check({ networkId: 3, requiredRootRound: 17n })).rejects.toThrow('does not meet application policy');
     await expect(check({ networkId: 1, requiredRootRound: 1n })).rejects.toThrow('does not meet application policy');
   });
 });

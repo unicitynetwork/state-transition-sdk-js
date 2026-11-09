@@ -22,7 +22,7 @@ import {
   sha256Hex,
   shardIdOf,
 } from '../../utils/F1Corpus.js';
-import { createTrustBaseHistoryFromAuthority } from '../../utils/TrustBaseHistoryFixture.js';
+import { historyFromBundle } from '../../utils/TrustBaseHistoryFixture.js';
 
 function shardUrl(bits: string): string {
   return `http://shard-${bits || 'root'}.test`;
@@ -77,7 +77,7 @@ async function build(c: IF1Case): Promise<{
     })),
   });
   const session = new SealVerificationSession(
-    await createTrustBaseHistoryFromAuthority(c.trustBase),
+    await historyFromBundle(c.trustBase),
     new UnicitySealQuorumSignaturesVerificationRule(new Secp256k1SignatureVerifier()),
   );
   return { consolidator: new ProofConsolidator(routing, session), routing, session };
@@ -253,7 +253,8 @@ describe('F1 negative cases', () => {
       try {
         await build(c);
         // the declared network of the context is the one of the trust base: no separate routing field to disagree
-        if (!networkOf(c.context).equals(NetworkId.fromId(c.trustBase.networkId))) {
+        const authority = await historyFromBundle(c.trustBase);
+        if (!networkOf(c.context).equals(NetworkId.fromId(authority.networkId?.id ?? 0))) {
           throw new ConsolidationError('input', 'The context is for another network than the trust base.', {
             outcome: 'incompatible_lineage',
           });

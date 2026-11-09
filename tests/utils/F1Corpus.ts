@@ -2,7 +2,6 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { IAuthorityJson } from './TrustBaseHistoryFixture.js';
 import { ShardId } from '../../src/api/bft/ShardId.js';
 import { CertificationData } from '../../src/api/CertificationData.js';
 import { InclusionProofResponse } from '../../src/api/InclusionProofResponse.js';
@@ -61,8 +60,8 @@ export interface IF1Case {
   readonly partitionView: Uint8Array;
   readonly requests: IF1Requests;
   readonly responses: IF1Responses;
-  /** The authority the corpus spells; `createTrustBaseHistoryFromAuthority` makes the history of it. */
-  readonly trustBase: IAuthorityJson;
+  /** The authority the corpus spells: a trust base v2 bundle (tag 39015) of one genesis entry; `historyFromBundle` opens it. */
+  readonly trustBase: Uint8Array;
 }
 
 function read(dir: string, file: string): Buffer {
@@ -101,26 +100,6 @@ export function shardIdOf(bits: string): ShardId {
   return ShardId.decode(bytes);
 }
 
-/** Go trust base CBOR: tag 39000 [version, network, epoch, epochStart, [[id, key, stake]...], quorum, ...]. */
-export function trustBaseFromCbor(bytes: Uint8Array): IAuthorityJson {
-  const data = CborDeserializer.decodeArray(CborDeserializer.decodeTag(bytes).data);
-  const nodes = CborDeserializer.decodeArray(data[4]).map((n) => {
-    const [id, key, stake] = CborDeserializer.decodeArray(n, 3);
-    return {
-      nodeId: CborDeserializer.decodeTextString(id),
-      sigKey: HexConverter.encode(CborDeserializer.decodeByteString(key)),
-      stake: CborDeserializer.decodeUnsignedInteger(stake).toString(),
-    };
-  });
-  return {
-    epoch: CborDeserializer.decodeUnsignedInteger(data[2]).toString(),
-    epochStartRound: CborDeserializer.decodeUnsignedInteger(data[3]).toString(),
-    networkId: Number(CborDeserializer.decodeUnsignedInteger(data[1])),
-    quorumThreshold: CborDeserializer.decodeUnsignedInteger(data[5]).toString(),
-    rootNodes: nodes,
-  };
-}
-
 export function loadCase(name: string): IF1Case {
   const get = <T>(file: string): T => {
     const r = resolve(name, file);
@@ -137,7 +116,7 @@ export function loadCase(name: string): IF1Case {
     partitionView: bytes('partition-view.cbor'),
     requests: get<IF1Requests>('requests.json'),
     responses: get<IF1Responses>('responses.json'),
-    trustBase: trustBaseFromCbor(bytes('trust-base.cbor')),
+    trustBase: bytes('trust-base.cbor'),
   };
 }
 
