@@ -12,7 +12,7 @@ Manifest refresh: `v2/manifest.json` was re-vendored byte for byte from aggregat
 bft-go-base `v1.1.1-0.20261018233336-465dccf17fba`); no corpus file changed, so every listed file hash is the same.
 
 Authority refresh (owner decision §55, no JSON or version-1 trust base in 4.0.0): `v2/` was re-vendored byte for byte from ristik/aggregator-go
-`risto/ni-corpus-utb-authority` @ `427da05` (generator commit `b420fd1`, the same generator command). The authorities `authority/*.cbor` are Unicity
+`risto/ni-corpus-utb-authority` @ `f072f4a` (generator commit `5dc9399`, the same generator command). The authorities `authority/*.cbor` are Unicity
 Trust Base v2 bundles (tag 39015, one genesis entry each), contexts name them as `trustBaseBundle`, the `authority/*.json` files and the
 `trustBaseJson` field are gone, and the fixture network is the local network (3), so every case and `policy.json` is regenerated on it. The manifest's
-own SHA-256 is now `559db36b6d0145f61f6751e992a58c88fa7c518123e8e384cbcbd62fc5fd2977`.
+own SHA-256 is now `73889412bf5baf9074a2a2f67a4fee7c7b7221988fc10806a7df957d2cc9f946`.
