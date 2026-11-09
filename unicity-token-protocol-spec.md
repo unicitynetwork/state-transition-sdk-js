@@ -583,3 +583,71 @@ if (r.snapshot.networkId !== checkpoint.networkId ||
 ```
 
 A proof that does not decode is an error of `NonInclusionProof.decode`, not a rejection. Request failures are reported as `NonInclusionProofError` (`kind`, `retryable`; on cancellation, `cause` is the signal's `reason`). The service codes `-32020` (unavailable), `-32022` (included claim) and `-32023` (busy) are recognized over HTTP 200, 404, 409 and 429. `fetchMembershipEvidence` makes two independent calls, is not atomic, and returns unverified evidence. The shared test corpus is `tests/fixtures/non-inclusion/v2` (from aggregator-go, schema 2).
+
+### 12.5 Trust-base Sessions
+
+Verification uses `ITrustBaseHistory`, including the read-only `session.history`, to select the authority for each seal's own epoch and round interval. The session is supporting infrastructure: applications still choose issuance policies, store tokens and decide when to refresh. Opening a session verifies the embedded pin and compatible cached history; it performs no network fetch.
+
+#### Open mainnet, testnet2 or a local network
+
+```ts
+import { NetworkId } from '@unicitylabs/state-transition-sdk/lib/api/NetworkId.js';
+import { TrustBaseSession } from '@unicitylabs/state-transition-sdk/lib/api/bft/trustbase/TrustBaseSession.js';
+import { MemoryTrustBaseStore } from '@unicitylabs/state-transition-sdk/lib/api/bft/trustbase/TrustBaseStore.js';
+
+const { session, diagnostics } = await TrustBaseSession.openPublic(
+  NetworkId.TESTNET2, // Use NetworkId.MAINNET for mainnet.
+  new MemoryTrustBaseStore(),
+);
+const trustBase = session.history; // Pass to the verification context used for tokens.
+```
+
+For a deployment you control, obtain its **complete** CBOR bundle through authenticated operator configuration, then use the same imports:
+
+```ts
+// deploymentBundle: Uint8Array, authenticated independently of an untrusted server response.
+const { session: local } = await TrustBaseSession.openLocal(deploymentBundle, new MemoryTrustBaseStore());
+```
+
+`openLocal` derives the genesis and tip pins from that bundle, uses namespace `local`, and does not check public-network lineage. It is an explicit choice of authority, not a way to discover a public network's trust anchor. A partial page, continuation or non-OK response is not a complete bundle. `openPrivate(namespace, pin, store, options)` accepts an explicit `IReleasePin`; namespaces are 1–64 UTF-8 bytes, contain no `/`, and cannot be `public`. Neither path disables signature or chain checks.
+
+`RELEASE_PINS` in `lib/api/bft/trustbase/ReleasePin.js` embeds the approved mainnet (1) and testnet2 (4) genesis-to-release-tip bundles. Pins bind network, genesis epoch/EntryID, checkpoint epoch/EntryID and bundle SHA-256. These identities come from the authenticated SDK release; a hash beside an untrusted download is not an anchor. `openPublic(..., { override })` accepts only a pin that extends the built-in checkpoint. The `table` option is for release tooling/tests, not for weakening public pins. Generate the table from `release-pins/manifest.json` and its bundles with `node scripts/release-pins/generate.mjs` after building; CI checks the generated file.
+
+#### Refresh and verify
+
+`AggregatorClient` implements `ITrustBaseSource`; `getTrustBasePage(request, options)` reads bounded, unverified CBOR from `GET /api/v1/trustbases` on the gateway origin. With `aggregator` configured as in the README:
+
+```ts
+const updated = await session.refresh([aggregator]);
+if (updated.flush.status === 'pending') {
+  // The verified in-memory history remains usable; report or retry saving.
+  console.warn(updated.flush.error);
+}
+```
+
+`refresh` fetches after the held tip, authenticates each entry, and attempts to flush, including a valid prefix if a later page fails. `ITrustBaseUpdateOptions` controls passes (`rounds`, default 2), backoff (200 ms), page limits and `AbortSignal`. The first page freezes `(effectiveEnd, endEntryID)`; later pages echo it, and another source resumes the same cursor. `NotYetAvailable` is not authenticated freshness; zero appended entries does not prove that no newer epoch exists. A refused or unusable range fails with `TrustBaseUpdateError`.
+
+`NoTrustBaseEntryResult`, found with `findNoTrustBaseEntry` from `lib/api/bft/verification/TrustBaseEntryResult.js`, identifies a missing future epoch (or empty history); bad signatures, another network and seals before genesis are different failures. Fetch missing entries and verify again before accepting a token. `verifyWithUpdate` from `lib/api/bft/verification/verifyWithUpdate.js` performs at most one update and one verification retry on that typed result; it does not save, so call `session.flush()` afterward, also when an update left a valid prefix before failing. Plain verification never fetches automatically.
+
+#### Cache and failure contract
+
+`ITrustBaseStore` supplies async `read(key, maxBytes)` and `compareAndSwap(key, expectedRevision, bytes)`. Reads return a coherent `{ bytes, revision }` or `null`, enforcing the budget before allocation. CAS returns `written` or `changed` and must be atomic across all sharing tabs/processes; a get-then-set implementation is insufficient. A revision is not authentication. Keys are `utb/v1/<network>/<genesis EntryID hex>/<namespace>`; applications add user scoping and choose the storage location.
+
+`MemoryTrustBaseStore` is volatile. Node applications may separately import `FileTrustBaseStore` from `lib/api/bft/trustbase/node/FileTrustBaseStore.js` and construct it with a directory. The core imports no filesystem/browser storage. The file adapter uses an exclusive lock directory, a synced temporary file and atomic rename; contention fails immediately and a crash-left lock is never stolen. Remove such a lock only after establishing that no writer owns it. Browser applications supply a transactional store of their own.
+
+On open, cached bytes are re-verified from genesis. A compatible longer history is retained; a newer release pin extends a shorter cache. Damaged/unreadable caches fall back to the embedded history with `CacheRejected`/`CacheUnavailable` diagnostics. A valid over-budget or checkpoint-conflicting cache is not overwritten. `flush()` re-reads, validates, merges the longer compatible history and CAS-writes a complete bundle, with at most four attempts. A pending save does not undo verification; `dirty` reports unsaved progress. A clean flush does not scan for another writer's changes: reopen to rescan.
+
+A different, authenticated entry at a held epoch after the checkpoint raises `TrustBaseConflictError` and latches the session: subsequent history reads, append and refresh fail with `HistoryConflictedError`. An invalid offer does not latch it, and a pinned-prefix mismatch is `TrustBasePinMismatchError`. `session.conflict` and `exportBundle()` retain evidence. The latch is process-local; applications must record/report the incident themselves rather than silently reopening to forget it.
+
+#### Codecs and limits
+
+`RootTrustBaseV2.decode`/`encode` handles tag 39000, version 2; `entryId()` hashes the unsigned entry, independent of signature witnesses. `TrustBaseBundle.decode`/`encode` handles a complete tag-39015 history; decode checks structure, not authority. Authenticate with `TrustBaseHistory.fromBundle(bundle, genesisPin)` or a session. `TrustBaseHistory.append` checks consecutive epochs, predecessor EntryID, increasing start round, network and the predecessor's weighted quorum. Entry signatures are strict: every supplied signature must be a known member's valid 65-byte low-S recoverable signature, including extras. Seals use their separate verification rules.
+
+| Resource | Limit |
+| --- | --- |
+| Entry members / valid entry signers | 256 / at most 256 (predecessor committee) |
+| Node ID / encoded entry in a page or bundle | 128 UTF-8 bytes / 128 KiB |
+| Served page (`TrustBaseRange.decode`) | 64 entries / 1 MiB |
+| Session bundle/cache defaults | 4,096 entries / 16 MiB / 128 KiB per entry |
+
+The standalone entry decoder has a 272-element structural bound (`RootTrustBaseV2.MAX_ELEMENTS`), including signature-map slack; full verification still rejects every non-member signer. Bound raw entry bytes before standalone decoding. Bundle/session budgets are configurable resource policy, not a reason to prune old epochs: old tokens still need them. Encoding, chain, signature, pin and storage errors remain distinct types in `TrustBaseError.js`. The single-record JSON trust base is no longer the JS verification input; `NetworkId.TESTNET2` replaces the retired `TESTNET` constant.

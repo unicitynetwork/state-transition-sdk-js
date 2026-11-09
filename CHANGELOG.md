@@ -4,6 +4,8 @@
 
 ### Breaking for TypeScript consumers
 
+- Verification now takes a trust-base history instead of a single JSON `RootTrustBase`; use `session.history`. The retired `NetworkId.TESTNET` constant is replaced by `NetworkId.TESTNET2` (network 4).
+
 - `CertificationStatus` has two new members, `STATE_ID_QUEUED` and `ALREADY_SUBMITTED`. An exhaustive `switch` over
   `CertificationStatus` no longer compiles until it has a case for each (a compile-time break only; the wire format is
   unchanged).
@@ -22,6 +24,8 @@
   bytes. A split whose payload did not decode to its declared assets previously failed only at mint verification.
 
 ### Added
+
+- Epoch-aware V2 trust-base histories, pinned public/local sessions, bounded GetTrustBase refresh and compare-and-swap cache stores. Setup, limits and failure handling are documented in [API reference §12.5](./unicity-token-protocol-spec.md#125-trust-base-sessions).
 
 - `AGGREGATION_PARTITION_ID` (`7n`, `lib/api/bft/AggregationPartition.js`): the aggregation partition of every network
   (mainnet network 1, testnet2 network 4, local network 3). It cannot be configured.
