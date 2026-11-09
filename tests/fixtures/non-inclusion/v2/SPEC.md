@@ -93,8 +93,9 @@ bitmap depths in decreasing order; at each junction the child on the terminal's 
    (`certificate_invalid` otherwise)
 5. relation above: `certificate_invalid`, or the outcomes `included_at_snapshot` / `absent_at_snapshot` (success, with the snapshot)
 
-Contexts (`contexts.json`) hold everything the verifier trusts: trust base (`authority/*.cbor`, and the same authority
-as `authority/*.json` in the form the SDKs parse), the expected `shard` (bit string), optional `nextEpochStart`
+Contexts (`contexts.json`) hold everything the verifier trusts: the authority (`trustBaseBundle`, a path under `authority/`: a complete
+Unicity Trust Base v2 bundle, tag 39015, holding the one genesis entry of the authority; a verifier opens it as a trust base history pinned to
+that genesis), the expected `shard` (bit string), optional `nextEpochStart`
 (authenticated end boundary) and optional `shardConfHash` pin. There is no partition and no minimum root round in a
 context. Numbers are decimal strings. A signed old snapshot establishes historical absence; whether it is good enough is the
 caller's policy.
@@ -105,7 +106,7 @@ caller's policy.
 * `negative/*.json` single-fault derivations (`base`): the wrapper bytes under test and the expected result (`rejected` with a class and no snapshot; a few context variants are successes and say so).
 * `policy.json`: caller policy examples (checkpoint vs snapshot: network, root round, seal timestamp, large uint64 values, cross network). Applied after verification; not part of the verifier.
 * `sequences.json`: ordered verifications on ONE verifier (it memoizes authenticated seals): a seal shared by two shards, rejections between successes, repeated verification. Each step has its own expected result.
-* `authority/*.cbor` trust bases; `contexts.json`.
+* `authority/*.cbor` the authorities as trust base v2 bundles (one genesis entry each); `contexts.json`.
 * `direct-unsharded/latest.json`: tree, UC and raw inclusion certificates for the unsharded latest batch. The ordinary UC
   is the consolidation target; **no partition view exists or is sent** for it.
 * `rpc-errors.json`: client classification of status codes and bodies. The RPC code decides for a valid

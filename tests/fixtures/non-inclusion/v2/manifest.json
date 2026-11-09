@@ -639,10 +639,10 @@
   "corpus": "non-inclusion",
   "generator": {
     "command": "UC_FIXTURE_AGGREGATOR_COMMIT=\u003ccommit\u003e go run ./cmd/gen-ni-fixtures -out testdata/non-inclusion/v2",
-    "commit": "b25dd916fba88b18066bf239b6130b386d3347dd",
+    "commit": "7350e8fd1782d54fbe338e839434f06064841a94",
     "modules": {
-      "github.com/unicitynetwork/bft-core": "v1.1.1-0.20261019010732-0800b70ef621",
-      "github.com/unicitynetwork/bft-go-base": "v1.1.1-0.20261018233336-465dccf17fba"
+      "github.com/unicitynetwork/bft-core": "v1.1.1-0.20261021121301-f8a0787aa7a1",
+      "github.com/unicitynetwork/bft-go-base": "v1.1.1-0.20261021120522-d74b49846bb5"
     }
   },
   "limits": {
@@ -652,19 +652,13 @@
   },
   "schema": "outcomes: absent_at_snapshot | included_at_snapshot (stateId + snapshot) | rejected (rejection class, no snapshot); uint64 fields are decimal strings",
   "sha256": {
-    "SPEC.md": "672f904b13e621a6add5d701a1ddb1b786c1a942a11ac192296210b418ae0b46",
-    "authority/big-epoch.cbor": "00de35dbfa7c25a64c971fa4e5356949106e5fd334ef946c617b54f65c301b8e",
-    "authority/big-epoch.json": "d97f20257b080c66ef68995693d1cad31fa94299941da4cbdf85160f0d329893",
-    "authority/late-epoch-start.cbor": "e719e8f39f61e4061d54906cc78cffb577b7d2afcf6a3149657477cb7f7f710a",
-    "authority/late-epoch-start.json": "7dc46736c57dd09f8c17716338bf97fd0a8dd0f2753a36d4f7ed66fe12505a32",
-    "authority/other-epoch.cbor": "40d8223f44a3d0adccda98a75d372265cd45a7a1e20bf0f8e8d589829919b691",
-    "authority/other-epoch.json": "21fc10cfdb30bd4c234fa0cdf2a3ded3371f53d4f29efe926ee73cb87ac94863",
-    "authority/other-network.cbor": "177c2161af86f3709d5c46394099f1018acc0b5ac842deddc27d2e2252e6c7e4",
-    "authority/other-network.json": "e16bb842e9f060de42c8a604d204afc4472edf80df5006a1a1800b5a07ed0232",
-    "authority/trust-base.cbor": "a2909914b7a076efbeb839650f273ade6802f236970461c5dcb19dcbdd204446",
-    "authority/trust-base.json": "28c18ee8af0e1d49b90f4db860b9b7be3c796de681b915a9136942b178017775",
-    "authority/untrusted-keys.cbor": "c0f98a05708723a22621cdf421f39a03998ae7b37270a0cf30ecb2b26e210d92",
-    "authority/untrusted-keys.json": "7d992dd3ba0592b080c08a409a80594fcc48a0308940a80fed99fcc7f99fc65b",
+    "SPEC.md": "de07966f5959d8cabeae425fbd4d060e8d3ed3c685e13e1892588beea3c65749",
+    "authority/big-epoch.cbor": "31a558469d4f5937f66d52bb599d20c58ce6ec2d125abeacf0acd924078de29b",
+    "authority/late-epoch-start.cbor": "4899e137401e7c7b79063d35d547c26dfc21ec464a9be65342efccec536a60c6",
+    "authority/other-epoch.cbor": "f86f68516add6c7e686a75977b08c53f68d92e5904becc17ea282a49d4052858",
+    "authority/other-network.cbor": "75465c5f27dc263bd95110a93e1559c0ef4c03d1b6717476b071ed0ea3f8b746",
+    "authority/trust-base.cbor": "1ed76c9443af00e170a25b7fa227502f85520466b6723c6e2c2ebe17af67ac97",
+    "authority/untrusted-keys.cbor": "b84a82963741c3aac4cd8856882d0a629d9a533dbd322dc370c279df6d1c1cbf",
     "cases/depth-0.json": "9f55864476c74079412c2d11ab9ba6a476349668235294e22dc5ff4daa8f117c",
     "cases/depth-255.json": "c3ee9b948cc78ebb63350fe6a477c4abe9867413be521b451896ca7063e29301",
     "cases/diverges-in-compressed-edge.json": "2af20475c771fead59ef05134f4d2826744785c364a8c17ee54d1335df94bb04",
@@ -692,7 +686,7 @@
     "cases/singleton.json": "6338ace5cfb846d770a0d5ca02cb124f6dff4224cd9ef28866527615215bf143",
     "cases/under-quorum.json": "f139b7d2307da7f5281796387bc52c26e6268d0b78f3a63bee3d3181c4dbdbc9",
     "cases/zero-root.json": "8426ecf4c47226898f3012987cfde8fb9a9b91f7a5d9acedd0ff0ddd67c6f7ed",
-    "contexts.json": "9a0fb40bfe2c01936b2c016a9aa0ad6352d71655739747f7c0c10b6c5d05c466",
+    "contexts.json": "a4fb22a0aa7e460f064c6f366b5d9c718174bd91ca8674a6f15e4d3735cf2e06",
     "direct-unsharded/latest.json": "3a54213083d1885b2acf8b3af04357956cab2e4b68327aba39744e9565bc0f3a",
     "negative/cert-bitmap-bit-moved.json": "608191f8953d8177c928514f634a5bc76977f4000cf6fefae415ed1b18863125",
     "negative/cert-bitmap-extra-bit.json": "99cf2a97dae40a3626b5581748a3ed8bb021c97d88ad5aa2401832b3cd4b5b6e",

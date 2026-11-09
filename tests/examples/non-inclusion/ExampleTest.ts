@@ -24,7 +24,7 @@ describe('non-inclusion example (API reference)', () => {
   let trustedContext: { trustBase: TrustBaseHistory; unicityCertificateVerifier: UnicityCertificateVerifier };
   beforeAll(async () => {
     trustedContext = {
-      trustBase: await loadAuthorityHistory(join(ROOT, 'authority/trust-base.json')),
+      trustBase: await loadAuthorityHistory(join(ROOT, 'authority/trust-base.cbor')),
       unicityCertificateVerifier: new UnicityCertificateVerifier(
         new UnicitySealQuorumSignaturesVerificationRule(new Secp256k1SignatureVerifier()),
       ),

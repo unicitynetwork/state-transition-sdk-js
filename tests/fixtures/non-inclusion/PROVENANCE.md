@@ -10,3 +10,9 @@ and the locally generated sharded vectors (`non-inclusion-sharded`), which the s
 Manifest refresh: `v2/manifest.json` was re-vendored byte for byte from aggregator-go `non-inclusion` at
 `02263dd41dae1d122ec036fc950b158eebc2dd7a`. Only its module lines changed (bft-core `v1.1.1-0.20261019010732-0800b70ef621`,
 bft-go-base `v1.1.1-0.20261018233336-465dccf17fba`); no corpus file changed, so every listed file hash is the same.
+
+Authority refresh (owner decision §55, no JSON trust base in 4.0.0): `v2/` was re-vendored byte for byte from ristik/aggregator-go
+`risto/ni-corpus-utb-authority` (generator commit `7350e8f`, the same generator command). The cases and negative cases are unchanged; the
+authorities `authority/*.cbor` are Unicity Trust Base v2 bundles (tag 39015, one genesis entry each), contexts name them as `trustBaseBundle`,
+and the `authority/*.json` files and the `trustBaseJson` field are gone. The manifest's own SHA-256 is now
+`a4adc4d06fa1f03572d7fd675909df21e36060e7d094365b77a373f052ae64cf`.

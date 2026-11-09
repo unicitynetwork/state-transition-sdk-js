@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { sha256 } from '@noble/hashes/sha2.js';
 
 import { RootTrustBaseV2 } from '../../src/api/bft/trustbase/RootTrustBaseV2.js';
+import { TrustBaseBundle } from '../../src/api/bft/trustbase/TrustBaseBundle.js';
 import { TrustBaseHistory } from '../../src/api/bft/trustbase/TrustBaseHistory.js';
 import { NetworkId } from '../../src/api/NetworkId.js';
 import {
@@ -138,22 +139,20 @@ function hexBytes(hex: string): Uint8Array {
 }
 
 /**
- * A corpus authority file (single-record JSON with the uint64 values as JSON numbers and `0x` keys) as a history: the numbers are quoted before
- * parsing, a double would round them.
+ * A corpus authority (a trust base v2 bundle, tag 39015, holding the genesis entry) as a history pinned to that genesis.
  *
- * @param {string} path Authority file.
- * @returns {Promise<TrustBaseHistory>} The history of the one entry.
+ * @param {string} path Authority bundle file.
+ * @returns {Promise<TrustBaseHistory>} The history of the bundle's entries.
  */
-export function loadAuthorityHistory(path: string): Promise<TrustBaseHistory> {
-  const text = readFileSync(path, 'utf8').replace(
-    /("(?:epoch|epochStartRound|stake|quorumThreshold)":\s*)(\d+)/g,
-    '$1"$2"',
-  );
-  const json = JSON.parse(text) as IAuthorityJson;
-  return createTrustBaseHistoryFromAuthority({
-    ...json,
-    rootNodes: json.rootNodes.map((node) => ({ ...node, sigKey: node.sigKey.replace(/^0x/, '') })),
-  });
+export async function loadAuthorityHistory(path: string): Promise<TrustBaseHistory> {
+  const bytes = new Uint8Array(readFileSync(path));
+  const bundle = await TrustBaseBundle.decode(bytes, { maxBytes: bytes.length, maxEntries: 1024 });
+  const entries = bundle.entries;
+  const history = TrustBaseHistory.create(await entries[0].entryId());
+  for (const entry of entries) {
+    await history.append(entry);
+  }
+  return history;
 }
 
 /** The complete bundle (tag 39015, status OK, genesis to tip) of a history, as the file a deployment under test serves. */

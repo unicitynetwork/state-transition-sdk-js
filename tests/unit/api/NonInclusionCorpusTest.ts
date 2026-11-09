@@ -59,7 +59,7 @@ interface IContext {
   readonly nextEpochStart: string;
   readonly shard: string;
   readonly shardConfHash: string;
-  readonly trustBaseJson: string;
+  readonly trustBaseBundle: string;
 }
 
 const read = (path: string): string => readFileSync(join(ROOT, path), 'utf8');
@@ -109,8 +109,7 @@ async function run(
   } catch {
     return { outcome: 'malformed' };
   }
-  // the corpus writes uint64 values of the authority as JSON numbers: quote them before parsing, a double would round
-  const trustBase = await loadAuthorityHistory(join(ROOT, context.trustBaseJson));
+  const trustBase = await loadAuthorityHistory(join(ROOT, context.trustBaseBundle));
   const result = await verifyNonInclusion(
     proof,
     { trustBase, unicityCertificateVerifier: verifier },
@@ -151,7 +150,7 @@ describe('non-inclusion corpus v2', () => {
       createHash('sha256')
         .update(readFileSync(join(ROOT, 'manifest.json')))
         .digest('hex'),
-    ).toEqual('7bfb40a209b137acdcfa3deea0834a54924ce32e7d9d41c0d9d583ae3dc5dd8b');
+    ).toEqual('a4adc4d06fa1f03572d7fd675909df21e36060e7d094365b77a373f052ae64cf');
     const manifest = json<{ sha256: Record<string, string> }>('manifest.json');
     for (const [path, sha] of Object.entries(manifest.sha256)) {
       expect(

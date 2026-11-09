@@ -44,7 +44,7 @@ const golden = JSON.parse(readFileSync(join(ROOT, 'cases/golden-two-leaf.json'),
 const stateId = StateId.fromCBOR(CborSerializer.encodeByteString(HexConverter.decode(golden.query)));
 let trustBase: TrustBaseHistory;
 beforeAll(async () => {
-  trustBase = await loadAuthorityHistory(join(ROOT, 'authority/trust-base.json'));
+  trustBase = await loadAuthorityHistory(join(ROOT, 'authority/trust-base.cbor'));
 });
 const verifier = new UnicityCertificateVerifier(
   new UnicitySealQuorumSignaturesVerificationRule(new Secp256k1SignatureVerifier()),
@@ -397,7 +397,7 @@ describe('non-inclusion API shape', () => {
   });
 
   it('rejects a context that is not what the verification session was anchored to', async () => {
-    const other = await loadAuthorityHistory(join(ROOT, 'authority/other-network.json'));
+    const other = await loadAuthorityHistory(join(ROOT, 'authority/other-network.cbor'));
     const { SealVerificationSession } = await import('../../../src/api/bft/verification/SealVerificationSession.js');
     const session = new SealVerificationSession(other, verifier.quorumRule);
     await expect(verifyNonInclusion(proof, new PrivateGetterContext(), { session })).rejects.toThrow(TypeError);

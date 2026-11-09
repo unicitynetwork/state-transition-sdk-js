@@ -1,128 +1,112 @@
 {
   "before-epoch-start": {
     "description": "authority whose epoch starts after the certified round",
-    "trustBase": "authority/late-epoch-start.cbor",
-    "trustBaseJson": "authority/late-epoch-start.json",
+    "trustBaseBundle": "authority/late-epoch-start.cbor",
     "shard": "",
     "nextEpochStart": "0",
     "shardConfHash": ""
   },
   "big-epoch-authority": {
     "description": "the authority of root epoch 2^64-3 (same keys): for the vector with large uint64 fields",
-    "trustBase": "authority/big-epoch.cbor",
-    "trustBaseJson": "authority/big-epoch.json",
+    "trustBaseBundle": "authority/big-epoch.cbor",
     "shard": "",
     "nextEpochStart": "0",
     "shardConfHash": ""
   },
   "config-pin-ok": {
     "description": "pins the shard configuration hash of the corpus partition",
-    "trustBase": "authority/trust-base.cbor",
-    "trustBaseJson": "authority/trust-base.json",
+    "trustBaseBundle": "authority/trust-base.cbor",
     "shard": "",
     "nextEpochStart": "0",
     "shardConfHash": "7243d3acc12f960fdb69ae385b588878b82f29ed49baba8718698ffbb9e5b8f1"
   },
   "config-pin-other": {
     "description": "pins another shard configuration hash",
-    "trustBase": "authority/trust-base.cbor",
-    "trustBaseJson": "authority/trust-base.json",
+    "trustBaseBundle": "authority/trust-base.cbor",
     "shard": "",
     "nextEpochStart": "0",
     "shardConfHash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
   },
   "default": {
     "description": "trusted authority of the fixture network, the aggregation partition (7), unsharded, no end boundary",
-    "trustBase": "authority/trust-base.cbor",
-    "trustBaseJson": "authority/trust-base.json",
+    "trustBaseBundle": "authority/trust-base.cbor",
     "shard": "",
     "nextEpochStart": "0",
     "shardConfHash": ""
   },
   "epoch-end-after": {
     "description": "authenticated end of the epoch is after the certified round (still valid)",
-    "trustBase": "authority/trust-base.cbor",
-    "trustBaseJson": "authority/trust-base.json",
+    "trustBaseBundle": "authority/trust-base.cbor",
     "shard": "",
     "nextEpochStart": "7",
     "shardConfHash": ""
   },
   "epoch-end-at-round": {
     "description": "the next epoch starts at the certified round: the seal is at the retirement boundary and not valid",
-    "trustBase": "authority/trust-base.cbor",
-    "trustBaseJson": "authority/trust-base.json",
+    "trustBaseBundle": "authority/trust-base.cbor",
     "shard": "",
     "nextEpochStart": "6",
     "shardConfHash": ""
   },
   "shard-00": {
     "description": "shard 00 of the four shard partition",
-    "trustBase": "authority/trust-base.cbor",
-    "trustBaseJson": "authority/trust-base.json",
+    "trustBaseBundle": "authority/trust-base.cbor",
     "shard": "00",
     "nextEpochStart": "0",
     "shardConfHash": ""
   },
   "shard-00-config-pin-ok": {
     "description": "shard 00 pinning its own configuration hash",
-    "trustBase": "authority/trust-base.cbor",
-    "trustBaseJson": "authority/trust-base.json",
+    "trustBaseBundle": "authority/trust-base.cbor",
     "shard": "00",
     "nextEpochStart": "0",
     "shardConfHash": "87cf67430cf3df8890cafc1b8865afccc54e7ae3e83b3168a4fb1c659c8c4112"
   },
   "shard-00-config-pin-other": {
     "description": "shard 00 pinning another configuration hash",
-    "trustBase": "authority/trust-base.cbor",
-    "trustBaseJson": "authority/trust-base.json",
+    "trustBaseBundle": "authority/trust-base.cbor",
     "shard": "00",
     "nextEpochStart": "0",
     "shardConfHash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
   },
   "shard-01": {
     "description": "shard 01 of the four shard partition",
-    "trustBase": "authority/trust-base.cbor",
-    "trustBaseJson": "authority/trust-base.json",
+    "trustBaseBundle": "authority/trust-base.cbor",
     "shard": "01",
     "nextEpochStart": "0",
     "shardConfHash": ""
   },
   "shard-10": {
     "description": "shard 10 of the four shard partition",
-    "trustBase": "authority/trust-base.cbor",
-    "trustBaseJson": "authority/trust-base.json",
+    "trustBaseBundle": "authority/trust-base.cbor",
     "shard": "10",
     "nextEpochStart": "0",
     "shardConfHash": ""
   },
   "shard-11": {
     "description": "shard 11 of the four shard partition",
-    "trustBase": "authority/trust-base.cbor",
-    "trustBaseJson": "authority/trust-base.json",
+    "trustBaseBundle": "authority/trust-base.cbor",
     "shard": "11",
     "nextEpochStart": "0",
     "shardConfHash": ""
   },
   "untrusted-authority": {
     "description": "a different authority (other keys, same network and node IDs)",
-    "trustBase": "authority/untrusted-keys.cbor",
-    "trustBaseJson": "authority/untrusted-keys.json",
+    "trustBaseBundle": "authority/untrusted-keys.cbor",
     "shard": "",
     "nextEpochStart": "0",
     "shardConfHash": ""
   },
   "wrong-epoch": {
     "description": "authority of the next epoch with the same keys: seals of epoch 1 must not verify",
-    "trustBase": "authority/other-epoch.cbor",
-    "trustBaseJson": "authority/other-epoch.json",
+    "trustBaseBundle": "authority/other-epoch.cbor",
     "shard": "",
     "nextEpochStart": "0",
     "shardConfHash": ""
   },
   "wrong-network": {
     "description": "authority of another network with the same keys and node IDs",
-    "trustBase": "authority/other-network.cbor",
-    "trustBaseJson": "authority/other-network.json",
+    "trustBaseBundle": "authority/other-network.cbor",
     "shard": "",
     "nextEpochStart": "0",
     "shardConfHash": ""
