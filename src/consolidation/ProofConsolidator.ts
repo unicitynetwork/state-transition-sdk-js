@@ -12,6 +12,7 @@ import { UnicitySeal } from '../api/bft/UnicitySeal.js';
 import { UnicityCertificateStructureRule } from '../api/bft/verification/rule/UnicityCertificateStructureRule.js';
 import { UnicitySealHashMatchesWithRootHashRule } from '../api/bft/verification/rule/UnicitySealHashMatchesWithRootHashRule.js';
 import { SealVerificationSession } from '../api/bft/verification/SealVerificationSession.js';
+import { findNoTrustBaseEntry, NoTrustBaseEntryResult } from '../api/bft/verification/TrustBaseEntryResult.js';
 import { CertificationData } from '../api/CertificationData.js';
 import {
   BATCH_MAX_STATE_IDS,
@@ -30,6 +31,7 @@ import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
 import { abortable, joinSignals, SleepError } from '../internal/abortable.js';
 import { longPollSettings, longPollWindow } from '../internal/longPoll.js';
 import { areUint8ArraysEqual } from '../util/TypedArrayUtils.js';
+import { VerificationResult } from '../verification/VerificationResult.js';
 import { VerificationStatus } from '../verification/VerificationStatus.js';
 
 /**
@@ -260,8 +262,17 @@ function integrity(
   return new ConsolidationError('integrity', message, { cause, outcome, shard });
 }
 
+/** The typed no-entry failure of a seal check, as a consolidation error's cause (undefined for any other failure). */
+function missingEntry(result: VerificationResult<unknown>): NoTrustBaseEntryResult | undefined {
+  return findNoTrustBaseEntry(result) ?? undefined;
+}
+
 function viewFailure(e: unknown, shard: ShardId): unknown {
   if (e instanceof PartitionViewError) {
+    if (e.reason === 'seal_invalid' && e.cause instanceof NoTrustBaseEntryResult) {
+      // the same typed cause as the other seal checks of a consolidation
+      return integrity('unauthenticated', e.message, shard, e.cause);
+    }
     return integrity(e.reason === 'seal_invalid' ? 'unauthenticated' : 'invalid_input', e.message, shard, e);
   }
   return e;
@@ -453,7 +464,12 @@ export class ProofConsolidator {
     }
     const result = await this.session.authenticate(enclosing.unicitySeal);
     if (result.status !== VerificationStatus.OK) {
-      throw integrity('unauthenticated', `Authenticating unicity seal: ${result.message || 'failed'}.`, masterShard);
+      throw integrity(
+        'unauthenticated',
+        `Authenticating unicity seal: ${result.message || 'failed'}.`,
+        masterShard,
+        missingEntry(result),
+      );
     }
     const fixed = enclosing;
     return {
@@ -472,8 +488,9 @@ export class ProofConsolidator {
   }
 
   /**
-   * Authenticate every original proof (shard and partition path to its seal hash, leaf rules, seal quorum under the
-   * trusted authority) and derive R_min: the highest root round among them. All seals must be of one network.
+   * Authenticate every original proof (shard and partition path to its seal hash, leaf rules, seal structure, then the seal
+   * placed in the trusted history: its network, the entry of its epoch, the round inside that epoch, and the quorum of that
+   * entry) and derive R_min: the highest root round among them. All seals must be of one network.
    */
   private async authenticateEvidence(
     items: readonly IConsolidationItem[],
@@ -497,12 +514,20 @@ export class ProofConsolidator {
       if (best !== null && !seal.networkId.equals(best.network)) {
         throw integrity('incompatible_lineage', `Evidence ${i}: seal of another network than earlier evidence.`);
       }
-      if (!seal.networkId.equals(this.session.trustBaseNetwork)) {
+      const authorityNetwork = this.session.trustBaseNetwork;
+      if (authorityNetwork === null || !seal.networkId.equals(authorityNetwork)) {
         throw integrity('unauthenticated', `Evidence ${i}: seal of another network than the trusted authority.`);
       }
-      const quorum = await this.session.verifyQuorumSignaturesOnly(seal);
+      // the strict path: the seal is placed in the history (network, the entry of its epoch, the round inside that epoch) and its quorum is
+      // checked against that entry; an original proof of an earlier epoch is checked against that epoch's entry, not against the newest
+      const quorum = await this.session.authenticate(seal);
       if (quorum.status !== VerificationStatus.OK) {
-        throw integrity('unauthenticated', `Evidence ${i}: the seal is not authenticated.`, shard);
+        throw integrity(
+          'unauthenticated',
+          `Evidence ${i}: the seal is not authenticated.`,
+          shard,
+          missingEntry(quorum),
+        );
       }
       if (best === null || seal.rootChainRoundNumber > best.round) {
         best = { network: seal.networkId, round: seal.rootChainRoundNumber, shard };

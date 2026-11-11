@@ -11,6 +11,7 @@ import { StateId } from '../../../src/api/StateId.js';
 import { CborDeserializer } from '../../../src/serialization/cbor/CborDeserializer.js';
 import { HexConverter } from '../../../src/util/HexConverter.js';
 import { ShardedWorld } from '../../utils/ShardedWorld.js';
+import { bundleOfHistory } from '../../utils/TrustBaseHistoryFixture.js';
 
 /**
  * Self-test of `scripts/lp-interop/run.mjs` against in-process aggregators that behave like the interop servers do:
@@ -97,7 +98,8 @@ async function runAgainst(
   });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const dir = mkdtempSync(join(tmpdir(), 'lp-interop-'));
-  writeFileSync(join(dir, 'trust-base.json'), JSON.stringify(world.trustBase.toJSON()));
+  writeFileSync(join(dir, 'trust-base.cbor'), await bundleOfHistory(world.trustBase));
+  const genesisPin = HexConverter.encode(await world.trustBase.entries[0].entryId());
   try {
     const code = await new Promise<number | null>((resolve) => {
       const child = spawn(
@@ -107,7 +109,9 @@ async function runAgainst(
           '--url',
           `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
           '--trust-base',
-          join(dir, 'trust-base.json'),
+          join(dir, 'trust-base.cbor'),
+          '--genesis-pin',
+          genesisPin,
           '--report',
           join(dir, 'report.json'),
           '--scenario',

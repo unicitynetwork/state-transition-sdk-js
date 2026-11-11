@@ -1,9 +1,8 @@
-import { readFileSync } from 'node:fs';
-
 import { AggregatorClient } from '../../src/api/AggregatorClient.js';
-import { RootTrustBase } from '../../src/api/bft/RootTrustBase.js';
+import { ITrustBaseHistory } from '../../src/api/bft/trustbase/ITrustBaseHistory.js';
 import { IAggregatorClient } from '../../src/api/IAggregatorClient.js';
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
+import { openLocalHistorySync } from '../utils/TrustBaseFile.js';
 
 /**
  * Read a value the stack published, or say why it is missing.
@@ -29,8 +28,9 @@ function fromStack(name: string): string {
  * Build the client and trust base the integration suite runs against.
  *
  * The endpoint and trust base come from the stack Testcontainers started for
- * this run — a fresh chain, and a trust base its BFT root node generated at
- * genesis. Nothing here is configurable: a run that could be pointed elsewhere
+ * this run — a fresh chain, and the trust-base history its aggregator serves, whose genesis
+ * entry the root was started with. The suite derives its pin from that bundle
+ * (the local-network path, `TrustBaseSession.openLocal`). Nothing here is configurable: a run that could be pointed elsewhere
  * would not be testing the compose file it exists to exercise, and pointing the
  * SDK at a deployed network is what the e2e suite does.
  *
@@ -39,13 +39,16 @@ function fromStack(name: string): string {
 export function createIntegrationContext(): {
   aggregatorClient: IAggregatorClient;
   client: StateTransitionClient;
-  trustBase: RootTrustBase;
+  ready: Promise<void>;
+  trustBase: ITrustBaseHistory;
 } {
   const aggregatorClient = new AggregatorClient(fromStack('AGGREGATOR_URL'), null);
+  const { history, ready } = openLocalHistorySync(fromStack('TRUST_BASE_PATH'), fromStack('STACK_GENESIS_ID'));
 
   return {
     aggregatorClient,
     client: new StateTransitionClient(aggregatorClient),
-    trustBase: RootTrustBase.fromJSON(JSON.parse(readFileSync(fromStack('TRUST_BASE_PATH'), 'utf-8'))),
+    ready,
+    trustBase: history,
   };
 }

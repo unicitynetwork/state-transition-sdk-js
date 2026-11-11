@@ -1,8 +1,8 @@
 import { AGGREGATION_PARTITION_ID } from '../../../src/api/bft/AggregationPartition.js';
 import { InputRecord } from '../../../src/api/bft/InputRecord.js';
-import { RootTrustBase } from '../../../src/api/bft/RootTrustBase.js';
 import { ShardId } from '../../../src/api/bft/ShardId.js';
 import { ShardTreeCertificate } from '../../../src/api/bft/ShardTreeCertificate.js';
+import { TrustBaseHistory } from '../../../src/api/bft/trustbase/TrustBaseHistory.js';
 import { UnicityCertificate } from '../../../src/api/bft/UnicityCertificate.js';
 import { UnicitySeal } from '../../../src/api/bft/UnicitySeal.js';
 import { HashStep, UnicityTreeCertificate } from '../../../src/api/bft/UnicityTreeCertificate.js';
@@ -18,8 +18,8 @@ import { HashAlgorithm } from '../../../src/crypto/hash/HashAlgorithm.js';
 import { Secp256k1SignatureVerifier } from '../../../src/crypto/secp256k1/Secp256k1SignatureVerifier.js';
 import { SigningService } from '../../../src/crypto/secp256k1/SigningService.js';
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
-import { HexConverter } from '../../../src/util/HexConverter.js';
 import { VerificationStatus } from '../../../src/verification/VerificationStatus.js';
+import { createTrustBaseHistory, FIXTURE_EPOCH } from '../../utils/TrustBaseHistoryFixture.js';
 
 // Architect ruling "Empty-tree ruling" §5: the authenticated empty tree is exactly IR hash = null. An empty byte string,
 // a zero hash and every other representation are not aliases of it, also when a quorum signed that very certificate.
@@ -31,17 +31,9 @@ const TR_HASH = new Uint8Array(32).fill(0x33);
 const CONF_HASH = new Uint8Array(32).fill(0x44);
 const EMPTY = new Uint8Array(0);
 
-const trustBase = RootTrustBase.fromJSON({
-  changeRecordHash: null,
-  epoch: '0',
-  epochStartRound: '0',
-  networkId: NetworkId.LOCAL.id,
-  previousEntryHash: null,
-  quorumThreshold: '1',
-  rootNodes: [{ nodeId: 'NODE', sigKey: HexConverter.encode(NODE.publicKey), stake: '1' }],
-  signatures: {},
-  stateHash: '00',
-  version: '1',
+let trustBase: TrustBaseHistory;
+beforeAll(async () => {
+  trustBase = await createTrustBaseHistory(NODE.publicKey);
 });
 const verifier = new UnicityCertificateVerifier(
   new UnicitySealQuorumSignaturesVerificationRule(new Secp256k1SignatureVerifier()),
@@ -94,7 +86,7 @@ async function signedUc(
   const seal = await UnicitySeal.create(
     NetworkId.LOCAL,
     5n,
-    0n,
+    FIXTURE_EPOCH,
     1700000000n,
     null,
     sealHash.data,

@@ -2,6 +2,7 @@ import { AGGREGATION_PARTITION_ID } from './bft/AggregationPartition.js';
 import { ShardId } from './bft/ShardId.js';
 import { UnicitySealHashMatchesWithRootHashRule } from './bft/verification/rule/UnicitySealHashMatchesWithRootHashRule.js';
 import { SealVerificationSession } from './bft/verification/SealVerificationSession.js';
+import { findNoTrustBaseEntry, NoTrustBaseEntryResult } from './bft/verification/TrustBaseEntryResult.js';
 import { OperationUnicityCertificateVerifier } from './bft/verification/UnicityCertificateVerifier.js';
 import { NonInclusionProof } from './NonInclusionProof.js';
 import { StateId } from './StateId.js';
@@ -150,6 +151,8 @@ export interface INonInclusionVerificationOptions {
  */
 export type NonInclusionVerification =
   | {
+      /** None for a snapshot outcome. */
+      readonly cause: null;
       /** Empty for a snapshot outcome. */
       readonly reason: '';
       readonly snapshot: NonInclusionSnapshot;
@@ -157,6 +160,12 @@ export type NonInclusionVerification =
       readonly verdict: 'absent_at_snapshot' | 'included_at_snapshot';
     }
   | {
+      /**
+       * The typed "no trust-base entry for this epoch" failure, when that is why the seal was not authenticated (verdict
+       * `authority_rejected`): the held history ends before the seal's epoch. Nothing is known to be wrong with the proof; obtain
+       * the missing entries and verify again ({@link verifyWithUpdate} does that). `null` for every other rejection.
+       */
+      readonly cause: NoTrustBaseEntryResult | null;
       /**
        * Diagnostic text for logs only: do not parse it and do not base a decision on it. It may quote values of the
        * unverified proof (for example the epoch of a seal that was not authenticated); the decision is `verdict`.
@@ -167,8 +176,13 @@ export type NonInclusionVerification =
       readonly verdict: NonInclusionRejection;
     };
 
-function reject(stateId: StateId, verdict: NonInclusionRejection, reason: string): NonInclusionVerification {
-  return Object.freeze({ reason, snapshot: null, stateId, verdict });
+function reject(
+  stateId: StateId,
+  verdict: NonInclusionRejection,
+  reason: string,
+  cause: NoTrustBaseEntryResult | null = null,
+): NonInclusionVerification {
+  return Object.freeze({ cause, reason, snapshot: null, stateId, verdict });
 }
 
 /**
@@ -274,7 +288,12 @@ export async function verifyNonInclusion(
       : new SealVerificationSession(trustBase, verifier.quorumRule));
   const authenticated = await session.authenticate(seal);
   if (authenticated.status !== VerificationStatus.OK) {
-    return reject(proof.stateId, 'authority_rejected', authenticated.message || 'The seal is not authenticated.');
+    return reject(
+      proof.stateId,
+      'authority_rejected',
+      authenticated.message || 'The seal is not authenticated.',
+      findNoTrustBaseEntry(authenticated),
+    );
   }
   if (options.nextEpochStartRound !== undefined && seal.rootChainRoundNumber >= options.nextEpochStartRound) {
     return reject(proof.stateId, 'authority_rejected', 'The seal is at or after the end of its epoch.');
@@ -310,6 +329,7 @@ export async function verifyNonInclusion(
     stateRoot: root,
   });
   return Object.freeze({
+    cause: null,
     reason: '',
     snapshot,
     stateId: proof.stateId,

@@ -1,6 +1,6 @@
 {
   "corpusVersion": 1,
-  "networkId": 2,
+  "networkId": 3,
   "partitionId": 7,
   "shards": [
     "000",
@@ -16,42 +16,42 @@
     {
       "shard": "000",
       "file": "shard-configs/000.cbor",
-      "hash": "c983e31d3c1cc6a5b97bfcb8c3283cacf436c2f05efa4cfd707eeeda6d8d54cb"
+      "hash": "7d2e71ac86a93337e48eb94ba2c99779dbddfac39c2302a392c1abb57b04948e"
     },
     {
       "shard": "001",
       "file": "shard-configs/001.cbor",
-      "hash": "ec83152ddec1cee14cf7823e221f04c98da3c73dcb939b4a057065aa4a0f92a7"
+      "hash": "ccabe0eb3183c661dad9086982eec3b687f31ab6f3714a72c3de1d89cddd54e2"
     },
     {
       "shard": "010",
       "file": "shard-configs/010.cbor",
-      "hash": "8168493f01af819e91654cda79d43ce4eaaae1f5df17306fb219f8945cf4d449"
+      "hash": "aa9ad5d4e249bcc0f9c9812871e7a51704c34938ca7c5263c2ba9c4faf91f39e"
     },
     {
       "shard": "011",
       "file": "shard-configs/011.cbor",
-      "hash": "1976a12d8028bf816dd797a089c41bcdc39270041a576b8786b6a0c0c0677bef"
+      "hash": "a6e8517e38665ff9c1d46e2a8c750af689362d11bd4f435af976b65fc71534d7"
     },
     {
       "shard": "100",
       "file": "shard-configs/100.cbor",
-      "hash": "a7164fc0553d198ed82b4dc46bcd4249615d76079806881b9529307ff3bcc951"
+      "hash": "d4c118c7f1553dbaf98a59938a571dfee2c8894a44532414febf8d46d3d2dff5"
     },
     {
       "shard": "101",
       "file": "shard-configs/101.cbor",
-      "hash": "17b3383c7da9a5d78921210d81821b181d54699fc515da4993c4dd50c7082982"
+      "hash": "10ed19ad300767e0a42b2681b78f2f738bed7e2b3e22b4f7497ccd74b0ce021c"
     },
     {
       "shard": "110",
       "file": "shard-configs/110.cbor",
-      "hash": "3626cac1253d43ef16b225092bb42b9b6d0efc9865d9f6976526c6955296b004"
+      "hash": "25b8194ff8f1dd63b23143341181f436294eed29fb40491e24fd6bd5f54738c5"
     },
     {
       "shard": "111",
       "file": "shard-configs/111.cbor",
-      "hash": "496e049f0404e97759096bd3dbf0d810244468adcd98d47b01830d4ccde382b6"
+      "hash": "01a8c06784d8cebed1d174c7c18a09f58624ccfa126111bd17f34fb85ed8ecd1"
     }
   ],
   "master": "010",

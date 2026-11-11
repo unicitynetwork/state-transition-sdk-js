@@ -7,8 +7,8 @@ import { PartitionViewAuthenticator } from '../../../../src/api/bft/Authenticate
 import { InputRecord } from '../../../../src/api/bft/InputRecord.js';
 import { IPartitionViewPolicy, PartitionView, PartitionViewLeaf } from '../../../../src/api/bft/PartitionView.js';
 import { PartitionViewError } from '../../../../src/api/bft/PartitionViewError.js';
-import { RootTrustBase } from '../../../../src/api/bft/RootTrustBase.js';
 import { ShardId } from '../../../../src/api/bft/ShardId.js';
+import { TrustBaseHistory } from '../../../../src/api/bft/trustbase/TrustBaseHistory.js';
 import { UnicityCertificate } from '../../../../src/api/bft/UnicityCertificate.js';
 import { UnicitySeal } from '../../../../src/api/bft/UnicitySeal.js';
 import { UnicityTreeCertificate } from '../../../../src/api/bft/UnicityTreeCertificate.js';
@@ -16,12 +16,14 @@ import { UnicitySealHashMatchesWithRootHashRule } from '../../../../src/api/bft/
 import { UnicitySealQuorumSignaturesVerificationRule } from '../../../../src/api/bft/verification/rule/UnicitySealQuorumSignaturesVerificationRule.js';
 import { SealVerificationSession } from '../../../../src/api/bft/verification/SealVerificationSession.js';
 import { Secp256k1SignatureVerifier } from '../../../../src/crypto/secp256k1/Secp256k1SignatureVerifier.js';
+import { SigningService } from '../../../../src/crypto/secp256k1/SigningService.js';
 import { CborDeserializer } from '../../../../src/serialization/cbor/CborDeserializer.js';
 import { CborMap } from '../../../../src/serialization/cbor/CborMap.js';
 import { CborMapEntry } from '../../../../src/serialization/cbor/CborMapEntry.js';
 import { CborSerializer } from '../../../../src/serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../../../src/util/HexConverter.js';
 import { VerificationStatus } from '../../../../src/verification/VerificationStatus.js';
+import { createTrustBaseHistoryFromAuthority } from '../../../utils/TrustBaseHistoryFixture.js';
 
 const DIR = join(process.cwd(), 'tests/fixtures/uc-consolidation/partition-view/v1');
 const PARTITION = 0x0a0b0c0dn;
@@ -72,18 +74,13 @@ function scheme(bits: number): ShardId[] {
 function trustBaseOf(
   v: IAssemblyVector,
   overrides: { epoch?: number; networkId?: number; sigKey?: string } = {},
-): RootTrustBase {
-  return RootTrustBase.fromJSON({
-    changeRecordHash: null,
+): Promise<TrustBaseHistory> {
+  return createTrustBaseHistoryFromAuthority({
     epoch: String(overrides.epoch ?? v.epoch),
     epochStartRound: String(v.epochStartRound),
     networkId: overrides.networkId ?? v.networkId,
-    previousEntryHash: null,
     quorumThreshold: '1',
     rootNodes: [{ nodeId: v.nodeId, sigKey: overrides.sigKey ?? v.sigKey, stake: '1' }],
-    signatures: {},
-    stateHash: '00',
-    version: '1',
   });
 }
 
@@ -109,7 +106,7 @@ async function assembleVia(
   return (await new PartitionViewAuthenticator(authority, policy).authenticate(view, uc)).assembleCertificates();
 }
 
-function newSession(trustBase: RootTrustBase): SealVerificationSession {
+function newSession(trustBase: TrustBaseHistory): SealVerificationSession {
   return new SealVerificationSession(
     trustBase,
     new UnicitySealQuorumSignaturesVerificationRule(new Secp256k1SignatureVerifier()),
@@ -493,7 +490,7 @@ describe.each([
   });
 
   it('derives byte-identical ordinary unicity certificates and verifies each one fully', async () => {
-    const session = newSession(trustBaseOf(v));
+    const session = newSession(await trustBaseOf(v));
     const ucs = await assembleVia(view, enclosing, session);
     expect(ucs.map((uc) => HexConverter.encode(uc.toCBOR()))).toEqual(v.shards.map((s) => s.uc));
     expect(ucs.map((uc) => uc.shardTreeCertificate.shard.toString())).toEqual(v.shards.map((s) => s.shard));
@@ -523,12 +520,12 @@ describe.each([
 
   it('does not modify the inputs', async () => {
     const before = HexConverter.encode(view.toCBOR());
-    await assembleVia(view, enclosing, newSession(trustBaseOf(v)));
+    await assembleVia(view, enclosing, newSession(await trustBaseOf(v)));
     expect(HexConverter.encode(view.toCBOR())).toEqual(before);
   });
 
   it('needs no pinned topology: the committed scheme and hashes come from the authenticated seal', async () => {
-    const authenticated = await new PartitionViewAuthenticator(newSession(trustBaseOf(v))).authenticate(
+    const authenticated = await new PartitionViewAuthenticator(newSession(await trustBaseOf(v))).authenticate(
       view,
       enclosing,
     );
@@ -542,25 +539,34 @@ describe.each([
   });
 
   it('applies matching pins and rejects mismatching ones', async () => {
-    await expect(assembleVia(view, enclosing, newSession(trustBaseOf(v)), topology)).resolves.toHaveLength(1 << bits);
+    await expect(assembleVia(view, enclosing, newSession(await trustBaseOf(v)), topology)).resolves.toHaveLength(
+      1 << bits,
+    );
     const wrong = [{ hash: new Uint8Array(32).fill(1), shard: view.leaves[0].shardId }];
     await expectReason(
-      assembleVia(view, enclosing, newSession(trustBaseOf(v)), { shardConfigurationPins: wrong }),
+      assembleVia(view, enclosing, newSession(await trustBaseOf(v)), { shardConfigurationPins: wrong }),
       'config_not_admitted',
     );
   });
 
   it('refuses seals of another network or epoch even though the same keys sign', async () => {
-    await expectReason(assembleVia(view, enclosing, newSession(trustBaseOf(v, { networkId: 2 }))), 'seal_invalid');
     await expectReason(
-      assembleVia(view, enclosing, newSession(trustBaseOf(v, { epoch: v.epoch + 1 }))),
+      assembleVia(view, enclosing, newSession(await trustBaseOf(v, { networkId: 2 }))),
+      'seal_invalid',
+    );
+    await expectReason(
+      assembleVia(view, enclosing, newSession(await trustBaseOf(v, { epoch: v.epoch + 1 }))),
       'seal_invalid',
     );
   });
 
   it('refuses an unknown authority', async () => {
-    const other = '02' + '11'.repeat(32);
-    await expectReason(assembleVia(view, enclosing, newSession(trustBaseOf(v, { sigKey: other }))), 'seal_invalid');
+    // a key on the curve that signed nothing
+    const other = HexConverter.encode(new SigningService(new Uint8Array(32).fill(9)).publicKey);
+    await expectReason(
+      assembleVia(view, enclosing, newSession(await trustBaseOf(v, { sigKey: other }))),
+      'seal_invalid',
+    );
   });
 });
 
@@ -608,8 +614,8 @@ describe('PartitionView adversarial assembly', () => {
   const view = PartitionView.fromCBOR(HexConverter.decode(v.view));
   const enclosingBytes = HexConverter.decode(v.enclosingUc);
   const enclosing = PartitionView.decodeEnclosingCertificate(enclosingBytes);
-  const assemble = (pv: PartitionView, uc: UnicityCertificate): Promise<UnicityCertificate[]> =>
-    assembleVia(pv, uc, newSession(trustBaseOf(v)));
+  const assemble = async (pv: PartitionView, uc: UnicityCertificate): Promise<UnicityCertificate[]> =>
+    assembleVia(pv, uc, newSession(await trustBaseOf(v)));
 
   it('is accepted unchanged', async () => {
     await expect(assemble(view, enclosing)).resolves.toHaveLength(4);

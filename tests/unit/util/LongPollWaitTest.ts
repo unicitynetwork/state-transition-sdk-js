@@ -20,8 +20,8 @@ import { TokenSalt } from '../../../src/transaction/TokenSalt.js';
 import { TokenType } from '../../../src/transaction/TokenType.js';
 import { IWaitInclusionProofOptions, SleepError, waitInclusionProof } from '../../../src/util/InclusionProofUtils.js';
 import { expiresAt } from '../../utils/ExpiresAt.js';
-import { createRootTrustBase } from '../../utils/RootTrustBaseFixture.js';
 import { ShardedWorld } from '../../utils/ShardedWorld.js';
+import { createTrustBaseHistorySync } from '../../utils/TrustBaseHistoryFixture.js';
 import { createUnicityCertificate } from '../../utils/UnicityCertificateFixture.js';
 import { createUnicityCertificateVerifier } from '../../utils/UnicityCertificateVerifierFixture.js';
 
@@ -59,7 +59,8 @@ class Scripted implements IAggregatorClient {
 
 describe('waitInclusionProof long poll', () => {
   const owner = SigningService.generate();
-  const trustBase = createRootTrustBase(owner.publicKey);
+  const { history: trustBase, ready } = createTrustBaseHistorySync(owner.publicKey);
+  beforeAll(() => ready);
   const predicateVerifier = PredicateVerifierService.create();
   const verifier = createUnicityCertificateVerifier();
   let transaction: MintTransaction;

@@ -1,4 +1,4 @@
-import { RootTrustBase } from '../api/bft/RootTrustBase.js';
+import { ITrustBaseHistory } from '../api/bft/trustbase/ITrustBaseHistory.js';
 import { UnicityCertificateVerifier } from '../api/bft/verification/UnicityCertificateVerifier.js';
 import { ILongPollOptions } from '../api/ILongPollOptions.js';
 import { InclusionProof } from '../api/InclusionProof.js';
@@ -27,6 +27,7 @@ import {
   InclusionProofVerificationRule,
   InclusionProofVerificationStatus,
 } from '../transaction/verification/rule/InclusionProofVerificationRule.js';
+import { VerificationError } from '../verification/VerificationError.js';
 
 /**
  * Options of {@link waitInclusionProof}.
@@ -254,7 +255,7 @@ function isSignalLike(value: unknown): value is AbortSignal {
  * answers `unknown`.
  *
  * @param {StateTransitionClient} client Client used to fetch inclusion proofs.
- * @param {RootTrustBase} trustBase Root trust base used to verify the inclusion certificate.
+ * @param {ITrustBaseHistory} trustBase Trust-base history used to verify the inclusion certificate.
  * @param {PredicateVerifierService} predicateVerifier Verifier used to check the transaction predicate.
  * @param {UnicityCertificateVerifier} unicityCertificateVerifier Unicity certificate verifier.
  * @param {ITransaction} transaction Transaction whose inclusion is being awaited.
@@ -270,7 +271,7 @@ function isSignalLike(value: unknown): value is AbortSignal {
  */
 export function waitInclusionProof(
   client: StateTransitionClient,
-  trustBase: RootTrustBase,
+  trustBase: ITrustBaseHistory,
   predicateVerifier: PredicateVerifierService,
   unicityCertificateVerifier: UnicityCertificateVerifier,
   transaction: ITransaction,
@@ -280,7 +281,7 @@ export function waitInclusionProof(
  * @deprecated Positional form, kept (default budget 15 s, no status hints, they need the options form): pass
  *   `{ signal, intervalMs }` instead.
  * @param {StateTransitionClient} client Client used to fetch inclusion proofs.
- * @param {RootTrustBase} trustBase Root trust base used to verify the inclusion certificate.
+ * @param {ITrustBaseHistory} trustBase Trust-base history used to verify the inclusion certificate.
  * @param {PredicateVerifierService} predicateVerifier Verifier used to check the transaction predicate.
  * @param {UnicityCertificateVerifier} unicityCertificateVerifier Unicity certificate verifier.
  * @param {ITransaction} transaction Transaction whose inclusion is being awaited.
@@ -290,7 +291,7 @@ export function waitInclusionProof(
  */
 export function waitInclusionProof(
   client: StateTransitionClient,
-  trustBase: RootTrustBase,
+  trustBase: ITrustBaseHistory,
   predicateVerifier: PredicateVerifierService,
   unicityCertificateVerifier: UnicityCertificateVerifier,
   transaction: ITransaction,
@@ -299,7 +300,7 @@ export function waitInclusionProof(
 ): Promise<InclusionProof>;
 export async function waitInclusionProof(
   client: StateTransitionClient,
-  trustBase: RootTrustBase,
+  trustBase: ITrustBaseHistory,
   predicateVerifier: PredicateVerifierService,
   unicityCertificateVerifier: UnicityCertificateVerifier,
   transaction: ITransaction,
@@ -437,7 +438,7 @@ export async function waitInclusionProof(
           throw new InclusionProofConflictError(verificationStatus.status, stateId, inclusionProof);
         }
         // anything else, including a mismatching proof nobody authenticated, is an invalid response, not a conflict
-        throw new Error(`Invalid inclusion proof status: ${verificationStatus.status}`);
+        throw new VerificationError(`Invalid inclusion proof status: ${verificationStatus.status}`, verificationStatus);
       }
 
       return { inclusionProof, pendingHint: false, waitedMs: response.waitedMs };

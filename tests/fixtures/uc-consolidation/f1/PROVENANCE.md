@@ -13,3 +13,8 @@ The manifest records its generator commits and a SHA-256 of every payload file;
 The corpus describes proof bundles (`get_inclusion_proof.v2` results and certification requests), so it drives
 `ProofConsolidator` directly; token level behaviour is tested with locally built tokens. The context's `partitionId` is an
 assertion: the SDK has no partition option, so the harness rejects a context asserting another value as `invalid_input`.
+
+Authority refresh (owner decision §55): `v1/` was re-vendored byte for byte from ristik/aggregator-go `risto/ni-corpus-utb-authority` @ `f072f4a`
+(generator commit `5dc9399`, see `v1/manifest.json`). Every case carries its authority as a Unicity Trust Base v2 bundle in `trust-base.cbor` (tag 39015,
+one genesis entry) on the local network (3); there is no version-1 trust base. Cases are regenerated on that network. The same producer files are in
+bft-core `rootchain/consensus/storage/testdata` (ristik/bft-core#1000).

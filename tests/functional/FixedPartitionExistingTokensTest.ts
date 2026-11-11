@@ -1,8 +1,9 @@
 import { TestPaymentData } from './payment/TestPaymentData.js';
 import { TestAggregatorClient } from './TestAggregatorClient.js';
-import { RootTrustBase } from '../../src/api/bft/RootTrustBase.js';
+import { TrustBaseHistory } from '../../src/api/bft/trustbase/TrustBaseHistory.js';
 import { UnicityCertificateStructureRule } from '../../src/api/bft/verification/rule/UnicityCertificateStructureRule.js';
 import { UnicitySealHashMatchesWithRootHashRule } from '../../src/api/bft/verification/rule/UnicitySealHashMatchesWithRootHashRule.js';
+import { UnicitySealTrustBaseEntryRule } from '../../src/api/bft/verification/rule/UnicitySealTrustBaseEntryRule.js';
 import {
   UnicityCertificateVerificationResult,
   UnicityCertificateVerifier,
@@ -41,12 +42,16 @@ import { createUnicityCertificateVerifier } from '../utils/UnicityCertificateVer
  */
 class PermissiveVerifier extends UnicityCertificateVerifier {
   public override async verify(
-    trustBase: RootTrustBase,
+    trustBase: TrustBaseHistory,
     inclusionProof: InclusionProof,
   ): Promise<UnicityCertificateVerificationResult> {
     const certificate = inclusionProof.unicityCertificate;
     const body = await UnicitySealHashMatchesWithRootHashRule.verify(certificate);
-    const quorum = await this.quorumRule.verify(trustBase, certificate.unicitySeal);
+    const placed = UnicitySealTrustBaseEntryRule.verify(trustBase, certificate.unicitySeal);
+    if (placed.entry === null) {
+      return UnicityCertificateVerificationResult.fail([placed]);
+    }
+    const quorum = await this.quorumRule.verify(placed.entry, certificate.unicitySeal);
     return body.status === VerificationStatus.OK && quorum.status === VerificationStatus.OK
       ? UnicityCertificateVerificationResult.ok([body, quorum])
       : UnicityCertificateVerificationResult.fail([body, quorum]);

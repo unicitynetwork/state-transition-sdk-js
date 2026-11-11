@@ -5,6 +5,7 @@ import { ShardId } from './ShardId.js';
 import { UnicityCertificate } from './UnicityCertificate.js';
 import { UnicitySeal } from './UnicitySeal.js';
 import { ISealAuthenticator } from './verification/ISealAuthenticator.js';
+import { findNoTrustBaseEntry } from './verification/TrustBaseEntryResult.js';
 import { DataHasher } from '../../crypto/hash/DataHasher.js';
 import { HashAlgorithm } from '../../crypto/hash/HashAlgorithm.js';
 import { partitionViewMetrics } from '../../internal/bft/PartitionViewMetrics.js';
@@ -356,7 +357,10 @@ export class PartitionViewAuthenticator {
     const authority = this.sealAuthenticator.identity;
     const result = await this.sealAuthenticator.authenticate(uc.unicitySeal);
     if (result.status !== VerificationStatus.OK) {
-      throw new PartitionViewError('seal_invalid', `Authenticating unicity seal: ${result.message || 'failed'}.`);
+      // the typed no-entry failure (the history ends before the seal's epoch) is the cause, so a caller can update and retry
+      throw new PartitionViewError('seal_invalid', `Authenticating unicity seal: ${result.message || 'failed'}.`, {
+        cause: findNoTrustBaseEntry(result) ?? undefined,
+      });
     }
 
     return createAuthenticated(view, tree, uc, authority, this.policyId);

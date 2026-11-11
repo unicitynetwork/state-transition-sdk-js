@@ -7,7 +7,7 @@ import { DataHash } from '../../../../src/crypto/hash/DataHash.js';
 import { HashAlgorithm } from '../../../../src/crypto/hash/HashAlgorithm.js';
 import { SigningService } from '../../../../src/crypto/secp256k1/SigningService.js';
 import { VerificationStatus } from '../../../../src/verification/VerificationStatus.js';
-import { createRootTrustBase } from '../../../utils/RootTrustBaseFixture.js';
+import { createTrustBaseHistorySync } from '../../../utils/TrustBaseHistoryFixture.js';
 import { createUnicityCertificate, IUnicityCertificateOptions } from '../../../utils/UnicityCertificateFixture.js';
 import { createUnicityCertificateVerifier } from '../../../utils/UnicityCertificateVerifierFixture.js';
 
@@ -16,7 +16,8 @@ const GENESIS_TIME = 1681971084n;
 
 describe('fixed aggregation partition and native certificate structure', () => {
   const signingService = new SigningService(new Uint8Array(32).fill(0x07));
-  const trustBase = createRootTrustBase(signingService.publicKey);
+  const { history: trustBase, ready } = createTrustBaseHistorySync(signingService.publicKey);
+  beforeAll(() => ready);
 
   async function proofOf(options: IUnicityCertificateOptions = {}): Promise<InclusionProof> {
     return {

@@ -13,6 +13,7 @@ export class JsonRpcHttpTransport {
   /** Default maximum response body size in bytes, matching the Rust SDK's `MAX_RESPONSE_BODY_BYTES`. */
   public static readonly DEFAULT_MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
 
+  private readonly defaultHeaders: readonly (readonly [string, string])[];
   private readonly maxResponseBytes: number;
   private readonly url: string;
 
@@ -21,10 +22,16 @@ export class JsonRpcHttpTransport {
    *
    * @param {string} url Endpoint URL.
    * @param {number} maxResponseBytes Maximum response body size in bytes; defaults to {@link JsonRpcHttpTransport.DEFAULT_MAX_RESPONSE_BYTES}.
+   * @param {[string, string][]} defaultHeaders Headers added to every request unless the request sets the same header itself.
    */
-  public constructor(url: string, maxResponseBytes: number = JsonRpcHttpTransport.DEFAULT_MAX_RESPONSE_BYTES) {
+  public constructor(
+    url: string,
+    maxResponseBytes: number = JsonRpcHttpTransport.DEFAULT_MAX_RESPONSE_BYTES,
+    defaultHeaders: readonly (readonly [string, string])[] = [],
+  ) {
     this.url = url;
     this.maxResponseBytes = maxResponseBytes;
+    this.defaultHeaders = defaultHeaders;
   }
 
   /** The error object of an envelope as an error, or a response error if it is not a valid error object. */
@@ -170,6 +177,11 @@ export class JsonRpcHttpTransport {
     options?: IRequestOptions,
   ): Promise<unknown> {
     headers.set('Content-Type', 'application/json');
+    for (const [name, value] of this.defaultHeaders) {
+      if (!headers.has(name)) {
+        headers.set(name, value);
+      }
+    }
 
     const id = uuid();
     const response = await fetch(this.url, {

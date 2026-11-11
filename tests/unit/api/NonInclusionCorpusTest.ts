@@ -3,7 +3,6 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { AggregatorClient } from '../../../src/api/AggregatorClient.js';
-import { RootTrustBase } from '../../../src/api/bft/RootTrustBase.js';
 import { ShardId } from '../../../src/api/bft/ShardId.js';
 import { UnicitySealQuorumSignaturesVerificationRule } from '../../../src/api/bft/verification/rule/UnicitySealQuorumSignaturesVerificationRule.js';
 import { UnicityCertificateVerifier } from '../../../src/api/bft/verification/UnicityCertificateVerifier.js';
@@ -19,6 +18,7 @@ import { StateId } from '../../../src/api/StateId.js';
 import { Secp256k1SignatureVerifier } from '../../../src/crypto/secp256k1/Secp256k1SignatureVerifier.js';
 import { CborSerializer } from '../../../src/serialization/cbor/CborSerializer.js';
 import { HexConverter } from '../../../src/util/HexConverter.js';
+import { loadAuthorityHistory } from '../../utils/TrustBaseHistoryFixture.js';
 
 /** Corpus aggregator-go `testdata/non-inclusion/v2`, vendored byte for byte, see PROVENANCE.md. */
 const ROOT = join(process.cwd(), 'tests/fixtures/non-inclusion/v2');
@@ -59,7 +59,7 @@ interface IContext {
   readonly nextEpochStart: string;
   readonly shard: string;
   readonly shardConfHash: string;
-  readonly trustBaseJson: string;
+  readonly trustBaseBundle: string;
 }
 
 const read = (path: string): string => readFileSync(join(ROOT, path), 'utf8');
@@ -109,12 +109,7 @@ async function run(
   } catch {
     return { outcome: 'malformed' };
   }
-  // the corpus writes uint64 values of the authority as JSON numbers: quote them before parsing, a double would round
-  const trustBase = RootTrustBase.fromJSON(
-    JSON.parse(
-      read(context.trustBaseJson).replace(/("(?:epoch|epochStartRound|stake|quorumThreshold)":\s*)(\d+)/g, '$1"$2"'),
-    ),
-  );
+  const trustBase = await loadAuthorityHistory(join(ROOT, context.trustBaseBundle));
   const result = await verifyNonInclusion(
     proof,
     { trustBase, unicityCertificateVerifier: verifier },
@@ -155,7 +150,7 @@ describe('non-inclusion corpus v2', () => {
       createHash('sha256')
         .update(readFileSync(join(ROOT, 'manifest.json')))
         .digest('hex'),
-    ).toEqual('7bfb40a209b137acdcfa3deea0834a54924ce32e7d9d41c0d9d583ae3dc5dd8b');
+    ).toEqual('73889412bf5baf9074a2a2f67a4fee7c7b7221988fc10806a7df957d2cc9f946');
     const manifest = json<{ sha256: Record<string, string> }>('manifest.json');
     for (const [path, sha] of Object.entries(manifest.sha256)) {
       expect(

@@ -1,0 +1,85 @@
+package types
+
+import (
+	"bytes"
+	"encoding/hex"
+	"encoding/json"
+	"os"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+// Generator of the CBOR text-string vectors (a member id or witness key with a leading U+FEFF, and invalid UTF-8): run with
+// TEXT_VECTORS_OUT=<file> go test ./types -run TestTextStringVectors. Not part of bft-go-base; kept with the SDK copy for provenance.
+func TestTextStringVectors(t *testing.T) {
+	out := os.Getenv("TEXT_VECTORS_OUT")
+	if out == "" {
+		t.Skip("TEXT_VECTORS_OUT not set")
+	}
+	const bom = "\xef\xbb\xbfnode-a"
+	ids := []string{"node-a", "node-b", bom} // ascending by UTF-8 bytes: 0x6e.. < 0xef..
+	g := &RootTrustBaseV2{Version: 2, NetworkID: 5, Epoch: 1, EpochStart: 1, RootNodes: v2Members(t, ids...), QuorumThreshold: 3,
+		StateHash: bytes.Repeat([]byte{0x11}, 32), PreviousEntryID: make([]byte, 32)}
+	require.NoError(t, g.Validate())
+	gb, err := g.MarshalCBOR()
+	require.NoError(t, err)
+	gid, err := g.EntryID()
+	require.NoError(t, err)
+	back, err := DecodeRootTrustBaseV2(gb)
+	require.NoError(t, err)
+	rb, err := back.MarshalCBOR()
+	require.NoError(t, err)
+	require.Equal(t, gb, rb, "round trip")
+	require.Equal(t, bom, back.RootNodes[2].NodeID, "the BOM is kept")
+
+	bad := bytes.Replace(gb, []byte("node-b"), []byte("\xffode-b"), 1)
+	require.NotEqual(t, gb, bad)
+	_, badErr := DecodeRootTrustBaseV2(bad)
+	require.Error(t, badErr)
+
+	seal := func(signers ...string) (string, error) {
+		s := &UnicitySeal{Version: 1, NetworkID: 5, RootChainRoundNumber: 10, Epoch: 1, Timestamp: 1700000000,
+			PreviousHash: bytes.Repeat([]byte{0x44}, 32), Hash: bytes.Repeat([]byte{0x55}, 32)}
+		for _, id := range signers {
+			for i, m := range ids {
+				if m == id {
+					require.NoError(t, s.Sign(id, v2Key(t, byte(i+1))))
+				}
+			}
+		}
+		b, err := s.MarshalCBOR()
+		require.NoError(t, err)
+		sb, err := s.SigBytes()
+		require.NoError(t, err)
+		return hex.EncodeToString(b), g.VerifyQuorumSignatures(sb, s.Signatures)
+	}
+	s3, err3 := seal("node-a", "node-b", bom)
+	require.NoError(t, err3)
+	s2, err2 := seal("node-a", bom)
+	require.Error(t, err2)
+
+	idHex := make([]string, len(ids))
+	for i, id := range ids {
+		idHex[i] = hex.EncodeToString([]byte(id))
+	}
+	doc := map[string]any{
+		"spec": []string{
+			"CBOR text strings decode byte for byte: a leading U+FEFF (ef bb bf) is part of the string, never stripped; invalid UTF-8 is refused.",
+			"Member ids and witness keys that differ only by a leading U+FEFF are different ids: each is its own member and each signature counts.",
+			"committee: genesis, network 5, epoch 1, members node-a, node-b, U+FEFF node-a (keys 0x01.., 0x02.., 0x03.. repeated), weight 1 each, threshold 3.",
+		},
+		"committee": map[string]any{"hex": hex.EncodeToString(gb), "entryId": hex.EncodeToString(gid[:]), "memberIdsHex": idHex},
+		"decode": []map[string]any{
+			{"name": "bom-twin-members", "hex": hex.EncodeToString(gb), "valid": true, "reencodesIdentically": true},
+			{"name": "invalid-utf8-member-id", "hex": hex.EncodeToString(bad), "valid": false, "errorClass": "encoding", "go": badErr.Error()},
+		},
+		"seals": []map[string]any{
+			{"name": "quorum-with-bom-twin", "committee": "committee", "hex": s3, "signers": []string{idHex[0], idHex[1], idHex[2]}, "signedWeight": 3, "valid": true},
+			{"name": "bom-twin-below-quorum", "committee": "committee", "hex": s2, "signers": []string{idHex[0], idHex[2]}, "signedWeight": 2, "valid": false},
+		},
+	}
+	j, err := json.MarshalIndent(doc, "", " ")
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(out, append(j, '\n'), 0o644))
+}

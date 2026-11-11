@@ -1,11 +1,14 @@
 /**
  * Unicity network identifier (α). Used to scope token ids and other
  * network-bound values so they cannot be replayed across networks.
+ *
+ * The named networks are the live ones: MAINNET 1, TESTNET2 4 and the LOCAL development network 3. Network 2, the old testnet, was removed and has no
+ * constant, so no one can pick it by name; `fromId` still accepts any valid id.
  */
 export class NetworkId {
   public static readonly LOCAL = new NetworkId(3, 'LOCAL');
   public static readonly MAINNET = new NetworkId(1, 'MAINNET');
-  public static readonly TESTNET = new NetworkId(2, 'TESTNET');
+  public static readonly TESTNET2 = new NetworkId(4, 'TESTNET2');
 
   private constructor(
     public readonly id: number,
@@ -30,8 +33,8 @@ export class NetworkId {
     switch (numeric) {
       case NetworkId.MAINNET.id:
         return NetworkId.MAINNET;
-      case NetworkId.TESTNET.id:
-        return NetworkId.TESTNET;
+      case NetworkId.TESTNET2.id:
+        return NetworkId.TESTNET2;
       case NetworkId.LOCAL.id:
         return NetworkId.LOCAL;
       default:

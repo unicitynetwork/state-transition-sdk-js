@@ -1,27 +1,72 @@
 # Local aggregator stack the integration suite runs against.
 #
-# Mirrors the topology of aggregator-go's own docker-compose.yml, with two
-# deliberate differences: the aggregator runs from a pinned prebuilt image
-# instead of a local rocksdb build, and DEFAULT_REQUEST_TTL is short enough
-# that the service-assigned request deadline can be observed within a test.
+# Mirrors the topology of aggregator-go's own docker-compose.yml, with these
+# deliberate differences: both the BFT root and the aggregator are built from
+# exact commits of the ristik forks (tests/integration/stack.env, built by
+# tests/integration/support/build-images.sh, nothing pulled prebuilt) because
+# only those speak the signed trust-base history (version 2), the root runs the
+# handoff profile with that history from its genesis, and DEFAULT_REQUEST_TTL is
+# short enough that the service-assigned request deadline can be observed within
+# a test.
 #
 # Testcontainers drives it, from tests/integration/support/aggregatorStack.mjs:
 # that creates the writable genesis directories this file mounts, publishes the
-# aggregator on an ephemeral port, and waits for consensus to produce a
-# reference time before any test runs.
+# aggregator on an ephemeral port, waits for consensus to produce a reference
+# time, and fetches the trust-base history the aggregator serves; the suite
+# derives its pin from that bundle (TrustBaseSession.openLocal).
 
 x-bft: &bft-base
   platform: linux/amd64
   user: "${USER_UID:-1001}:${USER_GID:-1001}"
-  # https://github.com/unicitynetwork/bft-core/pkgs/container/bft-core
-  image: ghcr.io/unicitynetwork/bft-core:ceceacd11b7a735de74ce17884a3a45e0db1748d
+  image: ${BFT_CORE_IMAGE:?run tests/integration/support/build-images.sh}
 
 services:
+  # One genesis for the whole deployment, made once and before any node starts:
+  # the root and its trust base, the aggregator's shard, and the genesis entry of
+  # the signed trust-base history (the version 2 entry of the epoch-1 trust base)
+  # with its EntryID, the pin. The root runs the handoff profile, which refuses
+  # PUT /api/v1/configurations, so the shard configuration is handed to the root
+  # by flag and nothing is uploaded afterwards.
+  bft-genesis:
+    <<: *bft-base
+    volumes:
+      - ./data/genesis-root:/genesis/root
+      - ./data/genesis:/genesis
+    entrypoint: ["/busybox/sh", "-c"]
+    command:
+      - |
+        if [ -s /genesis/utb/genesis.id ]; then
+          echo "Genesis already exists, skipping initialization."
+        else
+          echo "Creating root genesis..." &&
+          ubft root-node init --home /genesis/root -g &&
+          echo "Creating root trust base..." &&
+          ubft trust-base generate --home /genesis --network-id 3 --node-info /genesis/root/node-info.json &&
+          echo "Signing root trust base..." &&
+          ubft trust-base sign --home /genesis/root --trust-base /genesis/trust-base.json &&
+          echo "Creating aggregator genesis..." &&
+          ubft shard-node init --home /genesis/aggregator --generate &&
+          echo "Creating aggregator partition configuration..." &&
+          ubft shard-conf generate --home /genesis --t2-timeout 5000 --network-id 3 --partition-id 7 --partition-type-id 7 --epoch-start 10 --node-info=/genesis/aggregator/node-info.json &&
+          echo "Creating the signed trust-base history genesis..." &&
+          out=$$(ubft trust-base utb-manifest --trust-base /genesis/trust-base.json --out-dir /genesis/utb) &&
+          echo "$$out" &&
+          id=$$(echo "$$out" | sed -n 's/^utb genesis id *//p') &&
+          [ -n "$$id" ] &&
+          echo "$$id" > /genesis/utb/genesis.id
+        fi
+        chmod -R 755 /genesis/aggregator /genesis/root /genesis/utb
+        chmod 644 /genesis/shard-conf-7_0.json /genesis/trust-base.json
+        echo "Genesis ready."
+
   bft-root:
     <<: *bft-base
     volumes:
       - ./data/genesis-root:/genesis/root
       - ./data/genesis:/genesis
+    depends_on:
+      bft-genesis:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "nc", "-zv", "bft-root", "8002"]
       interval: 2s
@@ -30,60 +75,8 @@ services:
     entrypoint: ["/busybox/sh", "-c"]
     command:
       - |
-        if [ -f /genesis/root/node-info.json ] && [ -f /genesis/trust-base.json ] && [ -f /genesis/root/trust-base-signed.json ]; then
-          echo "Genesis files already exist, skipping initialization."
-        else
-          echo "Creating root genesis..." &&
-          ubft root-node init --home /genesis/root -g &&
-          echo "Creating root trust base..." &&
-          ubft trust-base generate --home /genesis --network-id 3 --node-info /genesis/root/node-info.json &&
-          echo "Signing root trust base..." &&
-          ubft trust-base sign --home /genesis/root --trust-base /genesis/trust-base.json
-        fi
         echo "Starting root node..." &&
-        exec ubft root-node run --home /genesis/root --address "/ip4/$(hostname -i)/tcp/8000" --trust-base /genesis/trust-base.json --rpc-server-address "$(hostname -i):8002"
-
-  bft-aggregator-genesis-gen:
-    <<: *bft-base
-    volumes:
-      - ./data/genesis-root:/genesis/root
-      - ./data/genesis:/genesis
-    depends_on:
-      bft-root:
-        condition: service_healthy
-    entrypoint: ["/busybox/sh", "-c"]
-    command:
-      - |
-        if [ -f /genesis/aggregator/node-info.json ] && [ -f /genesis/shard-conf-7_0.json ]; then
-          echo "Aggregator genesis and config already exist, skipping initialization."
-        else
-          echo "Creating aggregator genesis..." &&
-          ubft shard-node init --home /genesis/aggregator --generate &&
-          echo "Creating aggregator partition configuration..." &&
-          ubft shard-conf generate --home /genesis --t2-timeout 5000 --network-id 3 --partition-id 7 --partition-type-id 7 --epoch-start 10 --node-info=/genesis/aggregator/node-info.json
-        fi
-        chmod -R 755 /genesis/aggregator
-        chmod 644 /genesis/shard-conf-7_0.json
-        chmod 644 /genesis/trust-base.json
-        chmod -R 755 /genesis/root
-        echo "Genesis ready."
-
-  upload-configurations:
-    image: curlimages/curl:8.13.0
-    user: "${USER_UID:-1001}:${USER_GID:-1001}"
-    depends_on:
-      bft-root:
-        condition: service_healthy
-      bft-aggregator-genesis-gen:
-        condition: service_completed_successfully
-    restart: on-failure
-    volumes:
-      - ./data/genesis:/genesis
-    command: |
-      /bin/sh -c "
-        echo Uploading aggregator configuration &&
-        curl -sf -X PUT -H 'Content-Type: application/json' -d @/genesis/shard-conf-7_0.json http://bft-root:8002/api/v1/configurations
-      "
+        exec ubft root-node run --home /genesis/root --address "/ip4/$$(hostname -i)/tcp/8000" --trust-base /genesis/trust-base.json --rpc-server-address "$$(hostname -i):8002" --profile-3 --shard-conf /genesis/shard-conf-7_0.json --utb-genesis /genesis/utb/utb-genesis.cbor --utb-genesis-id "$$(tr -d '[:space:]' < /genesis/utb/genesis.id)"
 
   redis:
     image: redis:7-alpine
@@ -109,7 +102,8 @@ services:
       start_period: 5s
 
   aggregator:
-    image: ghcr.io/unicitynetwork/aggregator-go:${AGGREGATOR_IMAGE_TAG:-sha-ae08165}
+    # built by tests/integration/support/build-images.sh from the commit pinned in tests/integration/stack.env; never pulled
+    image: ${AGGREGATOR_IMAGE:?run tests/integration/support/build-images.sh}
     restart: on-failure
     ports:
       - "${AGGREGATOR_PORT:-3000}:3000"
@@ -161,7 +155,12 @@ services:
       BFT_ENABLED: "true"
       BFT_SHARD_CONF_FILE: "/app/bft-config/shard-conf-7_0.json"
       BFT_TRUST_BASE_FILES: "/app/bft-config/trust-base.json"
-      BFT_RPC_ADDRESS: "http://127.0.0.1:8002"
+      # In the signed trust-base history mode the aggregator builds no root REST
+      # client. The history it serves on GET /api/v1/trustbases starts at the
+      # genesis entry below, pinned by the EntryID the genesis step wrote.
+      BFT_RPC_ADDRESS: "http://127.0.0.1:1"
+      UTB_GENESIS_FILE: "/app/bft-config/utb/utb-genesis.cbor"
+      UTB_ENTRIES_DB: "/tmp/utb-entries.db"
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -171,12 +170,13 @@ services:
           exit 1
         fi
         export BFT_BOOTSTRAP_ADDRESSES="/dns4/bft-root/tcp/8000/p2p/$$ROOT_NODE_ID"
+        export UTB_GENESIS_ID="$$(tr -d '[:space:]' < /app/bft-config/utb/genesis.id)"
         exec /app/aggregator
     depends_on:
-      bft-aggregator-genesis-gen:
+      bft-genesis:
         condition: service_completed_successfully
-      upload-configurations:
-        condition: service_completed_successfully
+      bft-root:
+        condition: service_healthy
       redis:
         condition: service_healthy
       mongodb:

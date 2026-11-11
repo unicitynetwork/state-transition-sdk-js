@@ -4,13 +4,19 @@ import { Worker } from 'node:worker_threads';
 
 import { ExampleTransferTransactionVerifierWorker } from './ExampleTransferTransactionVerifierWorker.js';
 import { TestAggregatorClient } from './TestAggregatorClient.js';
+import { findNoTrustBaseEntry } from '../../src/api/bft/verification/TrustBaseEntryResult.js';
 import { UnicityCertificateVerifier } from '../../src/api/bft/verification/UnicityCertificateVerifier.js';
+import { CertificationData } from '../../src/api/CertificationData.js';
+import { NetworkId } from '../../src/api/NetworkId.js';
 import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
 import { SignaturePredicate } from '../../src/predicate/builtin/SignaturePredicate.js';
 import { PredicateVerifierService } from '../../src/predicate/verification/PredicateVerifierService.js';
 import { CborDeserializer } from '../../src/serialization/cbor/CborDeserializer.js';
 import { StateTransitionClient } from '../../src/StateTransitionClient.js';
+import { MintTransaction } from '../../src/transaction/MintTransaction.js';
 import { Token } from '../../src/transaction/Token.js';
+import { TokenSalt } from '../../src/transaction/TokenSalt.js';
+import { TokenType } from '../../src/transaction/TokenType.js';
 import { TransferTransaction } from '../../src/transaction/TransferTransaction.js';
 import { TokenVerifier } from '../../src/transaction/verification/default/TokenVerifier.js';
 import { IVerificationContext } from '../../src/transaction/verification/IVerificationContext.js';
@@ -25,9 +31,12 @@ import {
   TransferTransactionVerifier,
   WorkerTokenVerifier,
 } from '../../src/transaction/verification/worker/WorkerTokenVerifier.js';
+import { waitInclusionProof } from '../../src/util/InclusionProofUtils.js';
+import { VerificationError } from '../../src/verification/VerificationError.js';
 import { VerificationStatus } from '../../src/verification/VerificationStatus.js';
 import { expiresAt } from '../utils/ExpiresAt.js';
 import { mintToken, transferToken } from '../utils/TokenUtils.js';
+import { appendNextEpoch, createTrustBaseHistory, FIXTURE_EPOCH } from '../utils/TrustBaseHistoryFixture.js';
 import { createUnicityCertificateVerifier } from '../utils/UnicityCertificateVerifierFixture.js';
 
 type Responder = (request: ITransferTransactionVerificationRequest) => Promise<TransferTransactionVerificationResponse>;
@@ -119,7 +128,7 @@ describe('WorkerTokenVerifier', () => {
       context,
       SignaturePredicate.create(alice.publicKey),
       null,
-      trustBase.networkId,
+      NetworkId.LOCAL,
       undefined,
       undefined,
       null,
@@ -157,6 +166,108 @@ describe('WorkerTokenVerifier', () => {
       expect(result.status).toEqual(VerificationStatus.OK);
       verifier.dispose();
     }
+  }, 30000);
+
+  it('reports a transfer sealed in an epoch the history lacks as the typed no-entry failure, on both sides of the worker boundary', async () => {
+    const secret = SigningService.generatePrivateKey();
+    const service = TestAggregatorClient.create(secret);
+    const serviceClient = new StateTransitionClient(service);
+    await service.ready;
+
+    // The creator's history knows epoch 2; the verifier's does not.
+    const creatorHistory = await createTrustBaseHistory(new SigningService(secret).publicKey);
+    await appendNextEpoch(creatorHistory, 'NODE', secret, 10n);
+    const verifierContext = new VerificationContext(
+      service.rootTrustBase,
+      PredicateVerifierService.create(),
+      createUnicityCertificateVerifier(),
+      new MintJustificationVerifierService(),
+      new TokenIssuanceVerifierService(false),
+    );
+    const creatorContext = new VerificationContext(
+      creatorHistory,
+      PredicateVerifierService.create(),
+      createUnicityCertificateVerifier(),
+      new MintJustificationVerifierService(),
+      new TokenIssuanceVerifierService(false),
+    );
+
+    const alice = SigningService.generate();
+    const bob = SigningService.generate();
+    const minted = await mintToken(
+      serviceClient,
+      creatorContext,
+      SignaturePredicate.create(alice.publicKey),
+      null,
+      NetworkId.LOCAL,
+    );
+    service.setEpoch(FIXTURE_EPOCH + 1n, 10n);
+    const moved = await transferToken(
+      serviceClient,
+      creatorContext,
+      minted.toCBOR(),
+      SignaturePredicate.create(bob.publicKey),
+      alice,
+      null,
+    );
+
+    expect((await new TokenVerifier().verify(moved, creatorContext)).status).toEqual(VerificationStatus.OK);
+
+    const plain = await new TokenVerifier().verify(moved, verifierContext);
+    expect(plain.status).toEqual(VerificationStatus.FAIL);
+    expect(findNoTrustBaseEntry(plain)?.epoch).toEqual(FIXTURE_EPOCH + 1n);
+
+    const verifier = new TestWorkerTokenVerifier(1);
+    const viaWorker = await verifier.verify(moved, verifierContext);
+    expect(viaWorker.status).toEqual(VerificationStatus.FAIL);
+    const noEntry = findNoTrustBaseEntry(viaWorker);
+    expect(noEntry?.epoch).toEqual(FIXTURE_EPOCH + 1n);
+    expect(noEntry?.tipEpoch).toEqual(FIXTURE_EPOCH);
+
+    // The wait on the submit path keeps the typed failure too, so a caller can fetch, append and retry.
+    const waiting = await MintTransaction.create(NetworkId.LOCAL, SignaturePredicate.create(bob.publicKey), {
+      expiresAt: null,
+      salt: TokenSalt.generate(),
+      tokenType: TokenType.generate(),
+    });
+    await serviceClient.submitCertificationRequest(await CertificationData.fromMintTransaction(waiting));
+    const waited = await waitInclusionProof(
+      serviceClient,
+      verifierContext.trustBase,
+      verifierContext.predicateVerifier,
+      verifierContext.unicityCertificateVerifier,
+      waiting,
+    ).then(
+      () => null,
+      (error: unknown) => error,
+    );
+    expect(waited).toBeInstanceOf(VerificationError);
+    expect(findNoTrustBaseEntry((waited as VerificationError).verificationResult)?.epoch).toEqual(FIXTURE_EPOCH + 1n);
+
+    // The same worker, a new request with another history: the old history must not be reused.
+    verifier.dispose();
+    const body = new ExampleTransferTransactionVerifierWorker();
+    const persistent = new TestWorkerTokenVerifier(1, (request) => body.verify(request));
+    expect((await persistent.verify(moved, verifierContext)).status).toEqual(VerificationStatus.FAIL);
+    expect((await persistent.verify(moved, creatorContext)).status).toEqual(VerificationStatus.OK);
+    expect((await persistent.verify(moved, verifierContext)).status).toEqual(VerificationStatus.FAIL);
+    persistent.dispose();
+  }, 30000);
+
+  it('fails a token minted for another network than the history', async () => {
+    const failure = await mintToken(
+      client,
+      createContext(),
+      SignaturePredicate.create(SigningService.generate().publicKey),
+      null,
+      NetworkId.MAINNET,
+    ).then(
+      () => null,
+      (error: unknown) => error,
+    );
+
+    expect(failure).toBeInstanceOf(VerificationError);
+    expect((failure as VerificationError).verificationResult.toString()).toContain('MintNetworkMatchesTrustBaseRule');
   }, 30000);
 
   it('verifies transfers that carry an explicit deadline', async () => {
@@ -237,7 +348,7 @@ describe('WorkerTokenVerifier', () => {
       freshContext,
       SignaturePredicate.create(alice.publicKey),
       null,
-      trustBase.networkId,
+      NetworkId.LOCAL,
     );
 
     expect(freshToken.transactions.length).toEqual(0);
@@ -381,7 +492,7 @@ describe('WorkerTokenVerifier', () => {
 
     const response = await new Promise((resolve) => {
       worker.onmessage = (event): void => resolve(event.data);
-      worker.postMessage({ transfers: [], trustBase: null });
+      worker.postMessage({ transfers: [], trustBase: { entries: [], genesisPin: '' } });
     });
     expect(response).toEqual([]);
 

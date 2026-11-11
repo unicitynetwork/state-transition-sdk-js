@@ -1,6 +1,7 @@
 import { TestAggregatorClient } from './TestAggregatorClient.js';
 import { InclusionProof } from '../../src/api/InclusionProof.js';
 import { InclusionProofResponse } from '../../src/api/InclusionProofResponse.js';
+import { NetworkId } from '../../src/api/NetworkId.js';
 import { SigningService } from '../../src/crypto/secp256k1/SigningService.js';
 import { SignaturePredicate } from '../../src/predicate/builtin/SignaturePredicate.js';
 import { PredicateVerifierService } from '../../src/predicate/verification/PredicateVerifierService.js';
@@ -47,7 +48,7 @@ describe('Certified transaction wire format', () => {
           context,
           SignaturePredicate.create(alice.publicKey),
           null,
-          trustBase.networkId,
+          NetworkId.LOCAL,
           undefined,
           undefined,
           null,
@@ -113,7 +114,7 @@ describe('Certified transaction wire format', () => {
   // Nine other wire types expose their version; these three lost theirs in the
   // same release that changed their shape, leaving consumers no way to read it.
   it('exposes the wire version of every transaction type', async () => {
-    const mint = await MintTransaction.create(trustBase.networkId, SignaturePredicate.create(alice.publicKey));
+    const mint = await MintTransaction.create(NetworkId.LOCAL, SignaturePredicate.create(alice.publicKey));
     const transfer = await TransferTransaction.create(
       token,
       SignaturePredicate.create(alice.publicKey),

@@ -20,18 +20,21 @@ import {
 import { InclusionProofResponse } from './InclusionProofResponse.js';
 import { INonInclusionAggregatorClient, NonInclusionProofResponse } from './INonInclusionAggregatorClient.js';
 import { IInclusionProofRequestOptions, IRequestOptions } from './IRequestOptions.js';
+import { ITrustBaseRequest, ITrustBaseSource } from './ITrustBaseSource.js';
 import { JsonRpcDataError } from './json-rpc/JsonRpcDataError.js';
 import { JsonRpcHttpTransport } from './json-rpc/JsonRpcHttpTransport.js';
 import { JsonRpcNetworkError } from './json-rpc/JsonRpcNetworkError.js';
 import { JsonRpcResponseError } from './json-rpc/JsonRpcResponseError.js';
+import { readBoundedBytes } from './json-rpc/readBoundedBytes.js';
 import { NonInclusionProof } from './NonInclusionProof.js';
 import { NonInclusionProofError } from './NonInclusionProofError.js';
 import { parseProofStatusHint } from './ProofStatusHint.js';
 import { StateId } from './StateId.js';
 import { HashAlgorithm } from '../crypto/hash/HashAlgorithm.js';
-import { abortable } from '../internal/abortable.js';
+import { abortable, joinSignals } from '../internal/abortable.js';
 import { checkWaitMs, isMalformedParams, isWireMilliseconds } from '../internal/longPoll.js';
 import { classifyNonInclusionFailure } from '../internal/nonInclusionFailure.js';
+import { SDK_VERSION } from '../SdkVersion.js';
 import { HexConverter } from '../util/HexConverter.js';
 
 /** What a batch call sent: the HTTP requests it took so far and the `waitMs` of the one in flight, if any. */
@@ -40,11 +43,40 @@ interface IBatchSend {
   readonly waitMs: number | undefined;
 }
 
+/** Name of the request header that carries the SDK version, so an aggregator operator can count how many clients run which version. */
+export const SDK_VERSION_HEADER = 'X-SDK-Version';
+
+/** Options of {@link AggregatorClient}. */
+export interface IAggregatorClientOptions {
+  /**
+   * The SDK version header on every request. `true` sends `js/<package version>`, a string sends that value, `false` sends nothing.
+   * Default: on outside a browser, off in a browser (a custom header makes the request subject to a CORS preflight that the aggregator has to
+   * allow). Never used as a retry fallback.
+   */
+  readonly sdkVersionHeader?: boolean | string;
+  /**
+   * Deadline of one trust-base page request ({@link AggregatorClient.getTrustBasePage}), headers and body, in milliseconds. A source that sends
+   * the headers and then stalls fails at this deadline, so an update moves on to the next source. The caller's signal still applies. Default
+   * {@link AggregatorClient.TRUST_BASE_PAGE_TIMEOUT_MS}; a positive safe integer.
+   */
+  readonly trustBasePageTimeoutMs?: number;
+}
+
 /**
  * Client implementation for communicating with an aggregator via JSON-RPC.
  */
-export class AggregatorClient implements IAggregatorClient, IBatchAggregatorClient, INonInclusionAggregatorClient {
+export class AggregatorClient
+  implements IAggregatorClient, IBatchAggregatorClient, INonInclusionAggregatorClient, ITrustBaseSource
+{
+  /** Largest trust-base response read: the GetTrustBase page cap plus slack for the HTTP framing. */
+  public static readonly MAX_TRUST_BASE_RESPONSE_BYTES = (1 << 20) + 1024;
+  /** Default deadline of one trust-base page request: 30 seconds. */
+  public static readonly TRUST_BASE_PAGE_TIMEOUT_MS = 30_000;
+
   private readonly transport: JsonRpcHttpTransport;
+  private readonly trustBasePageTimeoutMs: number;
+  private readonly url: string;
+  private readonly versionHeader: string | null;
   readonly #key: string | null;
 
   /**
@@ -54,15 +86,33 @@ export class AggregatorClient implements IAggregatorClient, IBatchAggregatorClie
    * @param key API key for authenticating
    * @param allowInsecureTransport When `true`, permit sending the API key over a non-HTTPS URL
    *   (intended for local development and testing only).
+   * @param options Client options, e.g. the SDK version header.
    * @throws {Error} If an API key is supplied for a non-HTTPS URL and `allowInsecureTransport` is `false`.
    */
-  public constructor(url: string, key: string | null = null, allowInsecureTransport: boolean = false) {
+  public constructor(
+    url: string,
+    key: string | null = null,
+    allowInsecureTransport: boolean = false,
+    options: IAggregatorClientOptions = {},
+  ) {
     if (key != null && !allowInsecureTransport && new URL(url).protocol !== 'https:') {
       throw new Error('API key must not be sent over plaintext HTTP; use an https URL.');
     }
 
+    const pageTimeout = options.trustBasePageTimeoutMs ?? AggregatorClient.TRUST_BASE_PAGE_TIMEOUT_MS;
+    if (!Number.isSafeInteger(pageTimeout) || pageTimeout <= 0) {
+      throw new RangeError(`trustBasePageTimeoutMs must be a positive safe integer, got ${pageTimeout}.`);
+    }
+    this.trustBasePageTimeoutMs = pageTimeout;
     this.#key = key;
-    this.transport = new JsonRpcHttpTransport(url);
+    this.url = url;
+    const version = AggregatorClient.versionHeaderValue(options.sdkVersionHeader);
+    this.versionHeader = version;
+    this.transport = new JsonRpcHttpTransport(
+      url,
+      JsonRpcHttpTransport.DEFAULT_MAX_RESPONSE_BYTES,
+      version === null ? [] : [[SDK_VERSION_HEADER, version]],
+    );
   }
 
   private static batchFailure(e: unknown, options: IBatchRequestOptions | undefined, sent: IBatchSend): unknown {
@@ -269,6 +319,20 @@ export class AggregatorClient implements IAggregatorClient, IBatchAggregatorClie
     return { ...(indexesByClass ? { indexesByClass } : {}), ...(own ? { indexes: own } : {}) };
   }
 
+  private static versionHeaderValue(option: boolean | string | undefined): string | null {
+    if (typeof option === 'string') {
+      if (option === '' || !/^[\x20-\x7e]+$/.test(option)) {
+        throw new Error('sdkVersionHeader must be printable ASCII.');
+      }
+      return option;
+    }
+    // Default on only where the runtime is known to have no CORS (Node, Bun, Deno). Browsers, web/shared/service
+    // workers and any unknown runtime stay off: a refused preflight would fail every request, with no fallback.
+    const g = globalThis as { Deno?: unknown; process?: { versions?: { node?: string } } };
+    const noCors = g.process?.versions?.node !== undefined || g.Deno !== undefined;
+    return (option ?? noCors) ? `js/${SDK_VERSION}` : null;
+  }
+
   /**
    * @inheritDoc
    * @throws {JsonRpcResponseError} If the result cannot be decoded as a proof (not hex, not CBOR, malformed proof
@@ -432,6 +496,50 @@ export class AggregatorClient implements IAggregatorClient, IBatchAggregatorClie
         `Malformed non-inclusion proof: ${e instanceof Error ? e.message : String(e)}`,
         { cause: e },
       );
+    }
+  }
+
+  /**
+   * Fetch one page of signed trust-base entries: `GET /api/v1/trustbases?from=E[&snapshotEnd=E&snapshotEntryId=0x..]&maxEntries=N` on the
+   * aggregator's origin, answered with the GetTrustBase response (tag 39015, `application/cbor`), whatever its status. The bytes are returned
+   * undecoded: the aggregator is untrusted transport, the caller decodes them and appends each entry through the authenticated history.
+   *
+   * @param {ITrustBaseRequest} request The request.
+   * @param {IRequestOptions} [options] Request options.
+   * @returns {Promise<Uint8Array>} The encoded response.
+   * @throws {JsonRpcNetworkError} On a non-success HTTP status (a malformed query is 400).
+   * @throws {JsonRpcResponseError} When the body exceeds {@link AggregatorClient.MAX_TRUST_BASE_RESPONSE_BYTES}.
+   */
+  public async getTrustBasePage(request: ITrustBaseRequest, options?: IRequestOptions): Promise<Uint8Array> {
+    // The trust-base endpoint is on the aggregator's origin, whatever path the JSON-RPC endpoint has.
+    const url = new URL('/api/v1/trustbases', this.url);
+    url.searchParams.set('from', request.fromEpoch.toString());
+    url.searchParams.set('maxEntries', String(request.maxEntries));
+    if (request.snapshot !== null) {
+      url.searchParams.set('snapshotEnd', request.snapshot.end.toString());
+      url.searchParams.set('snapshotEntryId', `0x${HexConverter.encode(request.snapshot.entryId)}`);
+    }
+    const headers = new Headers({ Accept: 'application/cbor' });
+    if (this.versionHeader !== null) {
+      headers.set(SDK_VERSION_HEADER, this.versionHeader);
+    }
+    if (this.#key) {
+      headers.set('X-API-Key', this.#key);
+    }
+    // a deadline of its own over the headers and the body, joined with the caller's signal
+    const deadline = AbortSignal.timeout(this.trustBasePageTimeoutMs);
+    const joined = options?.signal
+      ? joinSignals(options.signal, deadline)
+      : { dispose: (): void => {}, signal: deadline };
+    try {
+      const response = await fetch(url, { headers, method: 'GET', redirect: 'error', signal: joined.signal });
+      const body = await readBoundedBytes(response, AggregatorClient.MAX_TRUST_BASE_RESPONSE_BYTES);
+      if (!response.ok) {
+        throw new JsonRpcNetworkError(response.status, new TextDecoder().decode(body));
+      }
+      return body;
+    } finally {
+      joined.dispose();
     }
   }
 

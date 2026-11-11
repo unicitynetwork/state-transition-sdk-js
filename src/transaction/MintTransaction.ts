@@ -7,7 +7,7 @@ import { StateMask } from './StateMask.js';
 import { TokenId } from './TokenId.js';
 import { TokenSalt } from './TokenSalt.js';
 import { TokenType } from './TokenType.js';
-import { RootTrustBase } from '../api/bft/RootTrustBase.js';
+import { ITrustBaseHistory } from '../api/bft/trustbase/ITrustBaseHistory.js';
 import { UnicityCertificateVerifier } from '../api/bft/verification/UnicityCertificateVerifier.js';
 import { InclusionProof } from '../api/InclusionProof.js';
 import { NetworkId } from '../api/NetworkId.js';
@@ -186,14 +186,14 @@ export class MintTransaction implements ITransaction {
   /**
    * Bundle this transaction with its inclusion proof into a CertifiedMintTransaction.
    *
-   * @param {RootTrustBase} trustBase Root trust base used to verify the inclusion certificate.
+   * @param {ITrustBaseHistory} trustBase Trust-base history used to verify the inclusion certificate.
    * @param {PredicateVerifierService} predicateVerifier Verifier for any predicates.
    * @param {UnicityCertificateVerifier} unicityCertificateVerifier Unicity certificate verifier.
    * @param {InclusionProof} inclusionProof Inclusion proof for this transaction.
    * @returns {Promise<CertifiedMintTransaction>} Verified certified transaction.
    */
   public toCertifiedTransaction(
-    trustBase: RootTrustBase,
+    trustBase: ITrustBaseHistory,
     predicateVerifier: PredicateVerifierService,
     unicityCertificateVerifier: UnicityCertificateVerifier,
     inclusionProof: InclusionProof,

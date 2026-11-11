@@ -1,7 +1,6 @@
 import config from './config.json' with { type: 'json' };
 import { CustomPaymentData } from './CustomPaymentData.js';
 import { AggregatorClient } from '../../../src/api/AggregatorClient.js';
-import { RootTrustBase } from '../../../src/api/bft/RootTrustBase.js';
 import { CertificationData } from '../../../src/api/CertificationData.js';
 import { CertificationStatus } from '../../../src/api/CertificationResponse.js';
 import { NetworkId } from '../../../src/api/NetworkId.js';
@@ -25,12 +24,16 @@ import { TokenIssuanceVerifierService } from '../../../src/transaction/verificat
 import { VerificationContext } from '../../../src/transaction/verification/VerificationContext.js';
 import { HexConverter } from '../../../src/util/HexConverter.js';
 import { waitInclusionProof } from '../../../src/util/InclusionProofUtils.js';
+import { loadTrustBaseHistorySync, requiredEnv } from '../../utils/TrustBaseFile.js';
 import { createUnicityCertificateVerifier } from '../../utils/UnicityCertificateVerifierFixture.js';
-import trustBaseJson from '../trust-base.json' with { type: 'json' };
 
 it('Token splitting', async () => {
   const aggregatorClient = new AggregatorClient(config.aggregatorUrl);
-  const trustBase = RootTrustBase.fromJSON(trustBaseJson);
+  const { history: trustBase, ready } = loadTrustBaseHistorySync(
+    requiredEnv('TRUST_BASE_PATH'),
+    requiredEnv('TRUST_BASE_GENESIS_PIN'),
+  );
+  await ready;
 
   const client = new StateTransitionClient(aggregatorClient);
 

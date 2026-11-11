@@ -1,17 +1,58 @@
-import { mkdir, rm } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 
 import { DockerComposeEnvironment, Wait } from 'testcontainers';
 
 const COMPOSE_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'docker');
 const DATA_DIR = path.join(COMPOSE_DIR, 'data');
-const TRUST_BASE_PATH = path.join(DATA_DIR, 'genesis', 'trust-base.json');
+const SUPPORT_DIR = path.dirname(fileURLToPath(import.meta.url));
+/** The trust-base history the aggregator serves, as fetched once the stack certifies: the bundle the suite derives its pin from. */
+const TRUST_BASE_PATH = path.join(DATA_DIR, 'trust-base-history.cbor');
 
 /** The aggregator's own port inside the container; the host port is ephemeral. */
 const AGGREGATOR_PORT = 3000;
 /** Genesis, a replica-set election and the first certified round, on a cold start. */
 const STARTUP_TIMEOUT_MS = 240000;
+
+/**
+ * The images of the stack, named after the commits pinned in stack.env, built by build-images.sh when the daemon lacks them.
+ *
+ * @returns {Promise<{aggregator: string, bft: string}>} The image tags.
+ */
+async function stackImages() {
+  const pins = Object.fromEntries(
+    (await readFile(path.join(SUPPORT_DIR, '..', 'stack.env'), 'utf8'))
+      .split('\n')
+      .filter((line) => /^[A-Z_]+=/.test(line))
+      .map((line) => line.split('=', 2)),
+  );
+  await promisify(execFile)('bash', [path.join(SUPPORT_DIR, 'build-images.sh')], { maxBuffer: 1 << 26 });
+  return {
+    aggregator: `sdk-it/aggregator:${pins.AGGREGATOR_SHA.slice(0, 12)}`,
+    bft: `sdk-it/bft-core:${pins.BFT_CORE_SHA.slice(0, 12)}`,
+  };
+}
+
+/**
+ * Ask the aggregator for the trust-base history it serves (GET /api/v1/trustbases from the genesis epoch), the way the SDK's own source does.
+ *
+ * @param {string} url Aggregator base URL.
+ * @returns {Promise<Uint8Array>} The complete GetTrustBase answer.
+ * @throws {Error} If the aggregator does not answer with the history.
+ */
+async function fetchTrustBaseHistory(url) {
+  const response = await fetch(`${url}/api/v1/trustbases?from=1&maxEntries=64`, {
+    headers: { Accept: 'application/cbor' },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!response.ok) {
+    throw new Error(`GET /api/v1/trustbases answered ${response.status}: ${await response.text()}`);
+  }
+  return new Uint8Array(await response.arrayBuffer());
+}
 
 /**
  * Ask the aggregator for its block height.
@@ -80,8 +121,11 @@ export async function startAggregatorStack() {
   await mkdir(path.join(DATA_DIR, 'genesis'), { recursive: true });
   await mkdir(path.join(DATA_DIR, 'genesis-root'), { recursive: true });
 
+  const images = await stackImages();
   const environment = await new DockerComposeEnvironment(COMPOSE_DIR, 'docker-compose.yml')
     .withEnvironment({
+      AGGREGATOR_IMAGE: images.aggregator,
+      BFT_CORE_IMAGE: images.bft,
       // Port 0 publishes on an ephemeral host port, so concurrent runs and CI
       // jobs cannot collide on a fixed one.
       AGGREGATOR_PORT: '0',
@@ -98,12 +142,16 @@ export async function startAggregatorStack() {
   const aggregator = environment.getContainer('aggregator-1');
   const url = `http://${aggregator.getHost()}:${aggregator.getMappedPort(AGGREGATOR_PORT)}`;
   await waitForCertification(url);
+  await writeFile(TRUST_BASE_PATH, await fetchTrustBaseHistory(url));
+  // the pin the genesis step wrote beside the genesis entry: the suite cross-checks the one it derives from the served bundle against it
+  const genesisId = (await readFile(path.join(DATA_DIR, 'genesis', 'utb', 'genesis.id'), 'utf8')).trim();
 
   return {
     stop: async () => {
       await environment.down({ removeVolumes: true });
       await rm(DATA_DIR, { force: true, recursive: true });
     },
+    genesisId,
     trustBasePath: TRUST_BASE_PATH,
     url,
   };

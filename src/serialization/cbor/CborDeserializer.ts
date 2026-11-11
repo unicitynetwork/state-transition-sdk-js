@@ -15,6 +15,7 @@ export class CborDeserializer {
   private static readonly FALSE_CBOR = new Uint8Array([0xf4]);
   private static readonly NULL_CBOR = new Uint8Array([0xf6]);
   private static readonly TRUE_CBOR = new Uint8Array([0xf5]);
+  private static readonly UTF8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
 
   /**
    * Decode a CBOR array.
@@ -190,6 +191,7 @@ export class CborDeserializer {
    *
    * @param {Uint8Array} data CBOR bytes.
    * @returns {string} UTF-8 decoded string.
+   * @throws {CborError} If the bytes are not valid UTF-8.
    */
   public static decodeTextString(data: Uint8Array): string {
     const reader = new CborReader(data);
@@ -200,7 +202,13 @@ export class CborDeserializer {
     const result = reader.read(Number(length));
     reader.assertExhausted();
 
-    return new TextDecoder().decode(result);
+    // Byte for byte, as Go, Rust and Java decode: a leading U+FEFF is part of the string (the default decoder strips it), and invalid UTF-8 is
+    // refused rather than replaced, so two different encodings never decode to the same string.
+    try {
+      return CborDeserializer.UTF8.decode(result);
+    } catch {
+      throw new CborError('Text string is not valid UTF-8.');
+    }
   }
 
   /**

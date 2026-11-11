@@ -1,13 +1,19 @@
-import { RootTrustBase } from '../../../../src/api/bft/RootTrustBase.js';
+import { TrustBaseHistory } from '../../../../src/api/bft/trustbase/TrustBaseHistory.js';
 import { UnicitySeal } from '../../../../src/api/bft/UnicitySeal.js';
 import { UnicitySealQuorumSignaturesVerificationRule } from '../../../../src/api/bft/verification/rule/UnicitySealQuorumSignaturesVerificationRule.js';
 import { SealVerificationSession } from '../../../../src/api/bft/verification/SealVerificationSession.js';
+import { findNoTrustBaseEntry } from '../../../../src/api/bft/verification/TrustBaseEntryResult.js';
 import { VerifiedSealCache } from '../../../../src/api/bft/verification/VerifiedSealCache.js';
 import { NetworkId } from '../../../../src/api/NetworkId.js';
 import { Secp256k1SignatureVerifier } from '../../../../src/crypto/secp256k1/Secp256k1SignatureVerifier.js';
 import { SigningService } from '../../../../src/crypto/secp256k1/SigningService.js';
 import { HexConverter } from '../../../../src/util/HexConverter.js';
 import { VerificationStatus } from '../../../../src/verification/VerificationStatus.js';
+import {
+  appendNextEpoch,
+  createTrustBaseHistoryFromAuthority,
+  FIXTURE_EPOCH,
+} from '../../../utils/TrustBaseHistoryFixture.js';
 
 const HASH = new Uint8Array(32).fill(0x11);
 
@@ -18,18 +24,13 @@ function signer(fill: number): SigningService {
 function trustBase(
   key: Uint8Array,
   options: { epoch?: string; epochStartRound?: string; networkId?: number } = {},
-): RootTrustBase {
-  return RootTrustBase.fromJSON({
-    changeRecordHash: null,
-    epoch: options.epoch ?? '0',
+): Promise<TrustBaseHistory> {
+  return createTrustBaseHistoryFromAuthority({
+    epoch: options.epoch ?? String(FIXTURE_EPOCH),
     epochStartRound: options.epochStartRound ?? '0',
     networkId: options.networkId ?? NetworkId.LOCAL.id,
-    previousEntryHash: null,
     quorumThreshold: '1',
     rootNodes: [{ nodeId: 'NODE', sigKey: HexConverter.encode(key), stake: '1' }],
-    signatures: {},
-    stateHash: '00',
-    version: '1',
   });
 }
 
@@ -40,7 +41,7 @@ function seal(
   return UnicitySeal.create(
     options.network ?? NetworkId.LOCAL,
     options.round ?? 5n,
-    options.epoch ?? 0n,
+    options.epoch ?? FIXTURE_EPOCH,
     options.timestamp ?? 1700000000n,
     null,
     HASH,
@@ -53,13 +54,15 @@ describe('SealVerificationSession', () => {
   let verifier: Secp256k1SignatureVerifier;
   let verifySpy: jest.SpyInstance;
   let rule: UnicitySealQuorumSignaturesVerificationRule;
+  let history: TrustBaseHistory;
   let session: SealVerificationSession;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     verifier = new Secp256k1SignatureVerifier();
     verifySpy = jest.spyOn(verifier, 'verify');
     rule = new UnicitySealQuorumSignaturesVerificationRule(verifier);
-    session = new SealVerificationSession(trustBase(node.publicKey), rule);
+    history = await trustBase(node.publicKey);
+    session = new SealVerificationSession(history, rule);
   });
 
   it('checks the signatures of one seal once for sequential repeats', async () => {
@@ -108,34 +111,36 @@ describe('SealVerificationSession', () => {
     const s = await seal(node);
     expect((await session.authenticate(s)).status).toEqual(VerificationStatus.OK);
 
-    const sameKeys = (options: Parameters<typeof trustBase>[1]): SealVerificationSession =>
-      new SealVerificationSession(trustBase(node.publicKey, options), rule);
-    expect((await sameKeys({ networkId: NetworkId.TESTNET.id }).authenticate(s)).status).toEqual(
+    const sameKeys = async (options: Parameters<typeof trustBase>[1]): Promise<SealVerificationSession> =>
+      new SealVerificationSession(await trustBase(node.publicKey, options), rule);
+    expect((await (await sameKeys({ networkId: NetworkId.MAINNET.id })).authenticate(s)).status).toEqual(
       VerificationStatus.FAIL,
     );
-    expect((await sameKeys({ epoch: '1' }).authenticate(s)).status).toEqual(VerificationStatus.FAIL);
-    expect((await sameKeys({ epochStartRound: '6' }).authenticate(s)).status).toEqual(VerificationStatus.FAIL);
-    expect((await sameKeys({ epochStartRound: '5' }).authenticate(s)).status).toEqual(VerificationStatus.OK);
-    // seal of a later epoch than the trust base is not accepted either
-    expect((await session.authenticate(await seal(node, { epoch: 1n }))).status).toEqual(VerificationStatus.FAIL);
+    expect((await (await sameKeys({ epoch: '2' })).authenticate(s)).status).toEqual(VerificationStatus.FAIL);
+    expect((await (await sameKeys({ epochStartRound: '6' })).authenticate(s)).status).toEqual(VerificationStatus.FAIL);
+    expect((await (await sameKeys({ epochStartRound: '5' })).authenticate(s)).status).toEqual(VerificationStatus.OK);
+    // seal of a later epoch than the history holds is not accepted either (the typed no-entry failure)
+    const later = await session.authenticate(await seal(node, { epoch: 2n }));
+    expect(later.status).toEqual(VerificationStatus.FAIL);
+    expect(findNoTrustBaseEntry(later)).not.toBeNull();
     expect((await session.authenticate(await seal(node, { round: 0n }))).status).toEqual(VerificationStatus.FAIL);
   });
 
   it('keys on authority and policy: a memo entry of one does not serve another', async () => {
     const s = await seal(node);
-    const a = new SealVerificationSession(trustBase(node.publicKey), rule, { policy: 'a' });
-    const b = new SealVerificationSession(trustBase(node.publicKey), rule, { policy: 'b' });
+    const a = new SealVerificationSession(await trustBase(node.publicKey), rule, { policy: 'a' });
+    const b = new SealVerificationSession(await trustBase(node.publicKey), rule, { policy: 'b' });
     await a.authenticate(s);
     await b.authenticate(s);
     expect(verifySpy).toHaveBeenCalledTimes(2);
 
     // an authority with another key never gets the success of the first one, even for the same seal
-    const impostorTrust = new SealVerificationSession(trustBase(signer(2).publicKey), rule);
+    const impostorTrust = new SealVerificationSession(await trustBase(signer(2).publicKey), rule);
     expect((await impostorTrust.authenticate(s)).status).toEqual(VerificationStatus.FAIL);
   });
 
   it('bounds retained successes and evicts the oldest', async () => {
-    const small = new SealVerificationSession(trustBase(node.publicKey), rule, { maxEntries: 2 });
+    const small = new SealVerificationSession(await trustBase(node.publicKey), rule, { maxEntries: 2 });
     const seals = await Promise.all([1n, 2n, 3n].map((round) => seal(node, { round })));
     for (const s of seals) {
       await small.authenticate(s);
@@ -162,7 +167,7 @@ describe('SealVerificationSession', () => {
     const extra = await UnicitySeal.create(
       NetworkId.LOCAL,
       5n,
-      0n,
+      FIXTURE_EPOCH,
       1700000000n,
       null,
       HASH,
@@ -175,42 +180,43 @@ describe('SealVerificationSession', () => {
     expect(verifySpy).toHaveBeenCalledTimes(1);
   });
 
-  it('verifies an operation against the authority as it was when the operation began', async () => {
-    const tb = trustBase(node.publicKey);
-    const operation = new SealVerificationSession(tb, rule);
+  it('keeps verdicts of held epochs when the history grows, and authenticates the new epoch', async () => {
+    const history = await trustBase(node.publicKey);
+    const operation = new SealVerificationSession(history, rule);
     const identity = operation.identity;
     const s = await seal(node);
     expect((await operation.authenticate(s)).status).toEqual(VerificationStatus.OK);
 
-    // the caller's object changes afterwards: the signer no longer resolves under that key
-    const info = tb._rootNodes.get('NODE');
-    tb._rootNodes.delete('NODE');
-    tb._rootNodes.set('OTHER', info as NonNullable<typeof info>);
+    // the next epoch (same member) starts at round 100
+    await appendNextEpoch(history, 'NODE', new Uint8Array(32).fill(1), 100n);
 
-    // verdicts and memo keys of the running operation still agree with each other (the snapshot) ...
-    expect(operation.identity).toEqual(identity);
+    // the entry of the first epoch is unchanged: its verdict is served from the memo, while the identity names the new tip
     expect((await operation.authenticate(s)).status).toEqual(VerificationStatus.OK);
     expect(operation.stats).toMatchObject({ memoHits: 1, quorumChecks: 1 });
+    expect(operation.identity).not.toEqual(identity);
 
-    // ... and a new operation sees the new authority, with another identity, and never inherits the old verdict
-    const next = new SealVerificationSession(tb, rule);
-    expect(next.identity).not.toEqual(identity);
-    expect((await next.authenticate(s)).status).toEqual(VerificationStatus.FAIL);
+    // a seal of the new epoch is placed in it, and a round of the first epoch under the new epoch's number is not
+    expect((await operation.authenticate(await seal(node, { epoch: 2n, round: 100n }))).status).toEqual(
+      VerificationStatus.OK,
+    );
+    expect((await operation.authenticate(await seal(node, { epoch: 2n, round: 99n }))).status).toEqual(
+      VerificationStatus.FAIL,
+    );
+    // and a seal of the first epoch at a round that belongs to the second is refused
+    expect((await operation.authenticate(await seal(node, { round: 100n }))).status).toEqual(VerificationStatus.FAIL);
   });
 
-  it('binds the inner seal cache to the actual signer lookup entries too', async () => {
+  it('binds the inner seal cache to the entry the seal is verified against', async () => {
     const cached = new UnicitySealQuorumSignaturesVerificationRule(verifier, new VerifiedSealCache(8));
-    const tb = trustBase(node.publicKey);
     const s = await seal(node);
-    expect((await cached.verify(tb, s)).status).toEqual(VerificationStatus.OK);
-    const info = tb._rootNodes.get('NODE');
-    tb._rootNodes.delete('NODE');
-    tb._rootNodes.set('OTHER', info as NonNullable<typeof info>);
-    expect((await cached.verify(tb, s)).status).toEqual(VerificationStatus.FAIL);
+    const own = (await trustBase(node.publicKey)).tip as NonNullable<TrustBaseHistory['tip']>;
+    const other = (await trustBase(signer(2).publicKey)).tip as NonNullable<TrustBaseHistory['tip']>;
+    expect((await cached.verify(own, s)).status).toEqual(VerificationStatus.OK);
+    expect((await cached.verify(other, s)).status).toEqual(VerificationStatus.FAIL);
   });
 
   it('bounds distinct concurrent checks', async () => {
-    const capped = new SealVerificationSession(trustBase(node.publicKey), rule, { maxInFlight: 2 });
+    const capped = new SealVerificationSession(await trustBase(node.publicKey), rule, { maxInFlight: 2 });
     const seals = await Promise.all([1n, 2n, 3n].map((round) => seal(node, { round })));
     const results = await Promise.allSettled(seals.map((s) => capped.authenticate(s)));
     expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(2);
@@ -218,28 +224,29 @@ describe('SealVerificationSession', () => {
     // same seal joins the running check instead of counting against the bound
     const twice = await Promise.all([capped.authenticate(seals[0]), capped.authenticate(seals[0])]);
     expect(twice.every((r) => r.status === VerificationStatus.OK)).toBe(true);
-    expect(() => new SealVerificationSession(trustBase(node.publicKey), rule, { maxInFlight: 0 })).toThrow();
+    expect(() => new SealVerificationSession(history, rule, { maxInFlight: 0 })).toThrow();
   });
 
-  it('exposes an identity covering authority and policy', () => {
-    const a = new SealVerificationSession(trustBase(node.publicKey), rule, { policy: 'a' });
-    const b = new SealVerificationSession(trustBase(node.publicKey), rule, { policy: 'b' });
-    const c = new SealVerificationSession(trustBase(signer(2).publicKey), rule, { policy: 'a' });
+  it('exposes an identity covering authority and policy', async () => {
+    const a = new SealVerificationSession(await trustBase(node.publicKey), rule, { policy: 'a' });
+    const b = new SealVerificationSession(await trustBase(node.publicKey), rule, { policy: 'b' });
+    const c = new SealVerificationSession(await trustBase(signer(2).publicKey), rule, { policy: 'a' });
     expect(new Set([a.identity, b.identity, c.identity]).size).toEqual(3);
   });
 
-  it('serves the ordinary quorum path from the same memo as the strict path, without the authority context', async () => {
+  it('shares the quorum memo between the strict path and the operation verifier, which already placed the seal', async () => {
     const s = await seal(node);
+    const entry = history.tip as NonNullable<TrustBaseHistory['tip']>;
     expect((await session.authenticate(s)).status).toEqual(VerificationStatus.OK);
-    expect((await session.verifyQuorumSignaturesOnly(s)).status).toEqual(VerificationStatus.OK);
+    expect((await session.verifyQuorum(entry, s)).status).toEqual(VerificationStatus.OK);
     expect(session.stats).toMatchObject({ memoHits: 1, quorumChecks: 1 });
-    // another epoch is not an authority failure for the ordinary path (original proofs may be older) but is for the strict one
-    const older = await seal(node, { epoch: 7n });
-    expect((await session.verifyQuorumSignaturesOnly(older)).status).toEqual(VerificationStatus.OK);
-    expect((await session.authenticate(older)).status).toEqual(VerificationStatus.FAIL);
+    // an epoch the history does not hold is the typed no-entry failure
+    const unknown = await session.authenticate(await seal(node, { epoch: 7n }));
+    expect(unknown.status).toEqual(VerificationStatus.FAIL);
+    expect(findNoTrustBaseEntry(unknown)).not.toBeNull();
   });
 
   it('rejects an invalid memo size', () => {
-    expect(() => new SealVerificationSession(trustBase(node.publicKey), rule, { maxEntries: 0 })).toThrow();
+    expect(() => new SealVerificationSession(history, rule, { maxEntries: 0 })).toThrow();
   });
 });

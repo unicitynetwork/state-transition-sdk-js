@@ -1,4 +1,4 @@
-import { RootTrustBase } from '../../src/api/bft/RootTrustBase.js';
+import { TrustBaseHistory } from '../../src/api/bft/trustbase/TrustBaseHistory.js';
 import { CertificationData } from '../../src/api/CertificationData.js';
 import { CertificationResponse, CertificationStatus } from '../../src/api/CertificationResponse.js';
 import { IAggregatorClient } from '../../src/api/IAggregatorClient.js';
@@ -15,14 +15,16 @@ import { PredicateVerifierService } from '../../src/predicate/verification/Predi
 import { SparseMerkleTree } from '../../src/smt/radix/SparseMerkleTree.js';
 import { BitString } from '../../src/util/BitString.js';
 import { VerificationStatus } from '../../src/verification/VerificationStatus.js';
-import { createRootTrustBase } from '../utils/RootTrustBaseFixture.js';
+import { createTrustBaseHistorySync } from '../utils/TrustBaseHistoryFixture.js';
 import { createUnicityCertificate, IUnicityCertificateOptions } from '../utils/UnicityCertificateFixture.js';
 
 /**
  * Test aggregator client implementation that stores all submitted certification requests in memory.
  */
 export class TestAggregatorClient implements IAggregatorClient {
-  public readonly rootTrustBase: RootTrustBase;
+  /** Settles when the genesis of `rootTrustBase` is appended; the client's own methods wait for it, a test that verifies first awaits it. */
+  public readonly ready: Promise<void>;
+  public readonly rootTrustBase: TrustBaseHistory;
   private certificateOptions: IUnicityCertificateOptions = {};
   private readonly predicateVerifier: PredicateVerifierService;
   /**
@@ -43,7 +45,9 @@ export class TestAggregatorClient implements IAggregatorClient {
     private readonly smt: SparseMerkleTree,
     private readonly signingService: SigningService,
   ) {
-    this.rootTrustBase = createRootTrustBase(this.signingService.publicKey);
+    const fixture = createTrustBaseHistorySync(this.signingService.publicKey);
+    this.rootTrustBase = fixture.history;
+    this.ready = fixture.ready;
     this.predicateVerifier = PredicateVerifierService.create();
   }
 
@@ -62,6 +66,7 @@ export class TestAggregatorClient implements IAggregatorClient {
    * @inheritDoc
    */
   public async getInclusionProof(stateId: StateId): Promise<InclusionProofResponse> {
+    await this.ready;
     const path = BitString.fromBytesBigEndian(stateId.data).toBigInt();
     const root = await this.smt.calculateRoot();
 
@@ -98,6 +103,16 @@ export class TestAggregatorClient implements IAggregatorClient {
    */
   public setCertificateOptions(options: IUnicityCertificateOptions): void {
     this.certificateOptions = options;
+  }
+
+  /**
+   * Epoch of the seals served from now on, so a test can have proofs of an epoch the held history lacks.
+   *
+   * @param {bigint} epoch Epoch.
+   * @param {bigint} round Root chain round of the seals; it has to lie in the epoch's interval.
+   */
+  public setEpoch(epoch: bigint, round: bigint = 1n): void {
+    this.certificateOptions = { ...this.certificateOptions, sealEpoch: epoch, sealRound: round };
   }
 
   /**

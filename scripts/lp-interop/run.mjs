@@ -2,7 +2,7 @@
 // Long-poll interop driver for the CURRENT JS SDK (build it first: `npm run build`, the script imports ../../lib).
 // Counts every HTTP request the SDK makes and reports per scenario; see scripts/lp-interop/README.md.
 //
-//   node scripts/lp-interop/run.mjs --url http://host:3000 --trust-base tests/e2e/trust-base.json \
+//   node scripts/lp-interop/run.mjs --url http://host:3000 --trust-base <bundle file> --genesis-pin <hex> \
 //        [--api-key K] [--label S2-LP] [--scenario l2,l3,l4,l5,l6,l7] [--wait-ms 5000] [--states 50] [--concurrency 10]
 //        [--interval-ms 1000] [--timeout-ms 60000] [--rate STATES_PER_SECOND] [--report out.json]
 //
@@ -25,6 +25,7 @@ const { values } = parseArgs({
     scenario: { default: 'l2,l3,l4,l5,l6,l7', type: 'string' },
     states: { default: '50', type: 'string' },
     'timeout-ms': { default: '60000', type: 'string' },
+    'genesis-pin': { type: 'string' },
     'trust-base': { type: 'string' },
     url: { type: 'string' },
     'wait-ms': { default: '5000', type: 'string' },
@@ -38,8 +39,10 @@ const num = (name) => {
   }
   return n;
 };
-if (!values.url || !values['trust-base']) {
-  console.error('usage: node scripts/lp-interop/run.mjs --url <aggregator> --trust-base <file> [options], see the header');
+if (!values.url || !values['trust-base'] || !values['genesis-pin']) {
+  console.error(
+    'usage: node scripts/lp-interop/run.mjs --url <aggregator> --trust-base <bundle file> --genesis-pin <hex> [options], see the header',
+  );
   process.exit(2);
 }
 const WAIT_MS = num('wait-ms');
@@ -116,7 +119,8 @@ const lib = (path) => import(`../../lib/${path}`);
 const [
   { AggregatorClient },
   { StateTransitionClient },
-  { RootTrustBase },
+  { TrustBaseBundle },
+  { TrustBaseHistory },
   { UnicityCertificateVerifier },
   { UnicitySealQuorumSignaturesVerificationRule },
   { VerifiedSealCache },
@@ -134,7 +138,8 @@ const [
 ] = await Promise.all([
   lib('api/AggregatorClient.js'),
   lib('StateTransitionClient.js'),
-  lib('api/bft/RootTrustBase.js'),
+  lib('api/bft/trustbase/TrustBaseBundle.js'),
+  lib('api/bft/trustbase/TrustBaseHistory.js'),
   lib('api/bft/verification/UnicityCertificateVerifier.js'),
   lib('api/bft/verification/rule/UnicitySealQuorumSignaturesVerificationRule.js'),
   lib('api/bft/verification/VerifiedSealCache.js'),
@@ -151,7 +156,13 @@ const [
   lib('api/NetworkId.js'),
 ]);
 
-const trustBase = RootTrustBase.fromJSON(JSON.parse(readFileSync(values['trust-base'], 'utf8')));
+// the trust-base history of the deployment under test: its bundle file (tag 39015, genesis to tip) and the genesis entry id it is pinned to
+const trustBase = TrustBaseHistory.create(Uint8Array.from(Buffer.from(values['genesis-pin'], 'hex')));
+for (const entry of (
+  await TrustBaseBundle.decode(new Uint8Array(readFileSync(values['trust-base'])), { maxBytes: 1 << 20, maxEntries: 1024 })
+).entries) {
+  await trustBase.append(entry);
+}
 const predicateVerifier = PredicateVerifierService.create();
 const certificateVerifier = new UnicityCertificateVerifier(
   new UnicitySealQuorumSignaturesVerificationRule(new Secp256k1SignatureVerifier(), new VerifiedSealCache(256)),
